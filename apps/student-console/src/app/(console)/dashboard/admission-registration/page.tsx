@@ -142,12 +142,33 @@ export default function CURegistrationPage() {
   const [addressDeclared, setAddressDeclared] = useState(false);
   const [addressErrors, setAddressErrors] = useState<string[]>([]);
 
-  // If NODE_ENV is production, then redirect back and dont render
+  // Removed environment gating; page available in all environments
+
+  // Check subject selection status
+  const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState(false);
+  const [isCheckingSubjectSelection, setIsCheckingSubjectSelection] = React.useState(true);
+
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_APP_ENV !== "staging" && process.env.NEXT_PUBLIC_APP_ENV !== "development") {
-      router.push("/");
-    }
-  }, []);
+    (async () => {
+      try {
+        if (!student?.id) return;
+        const data = await fetchStudentSubjectSelections(Number(student.id)).catch(() => null as any);
+        const completed = !!(
+          data?.hasFormSubmissions ||
+          (Array.isArray(data?.actualStudentSelections) && data.actualStudentSelections.length > 0)
+        );
+        setIsSubjectSelectionCompleted(completed);
+        setIsCheckingSubjectSelection(false);
+      } catch {
+        setIsSubjectSelectionCompleted(false);
+        setIsCheckingSubjectSelection(false);
+      }
+    })();
+  }, [student?.id]);
+
+  const handleSubjectSelectionRedirect = () => {
+    router.push("/dashboard/subject-selection");
+  };
 
   // Note: ID states removed since police station and post office are now input fields
 
@@ -822,6 +843,16 @@ export default function CURegistrationPage() {
     return !correctionRequest?.onlineRegistrationDone;
   };
 
+  // Helper function to determine if subjects correction flag should be shown
+  const shouldShowSubjectsCorrectionFlag = () => {
+    // Don't show correction flag for BBA programs
+    const programName = student?.programCourse?.name || "";
+    const isBBAProgram = programName.toLowerCase().startsWith("bba");
+
+    // Show correction flag only if not BBA program and final submission is not done
+    return !isBBAProgram && !correctionRequest?.onlineRegistrationDone;
+  };
+
   // Helper function to determine if declaration checkboxes should be interactive
   const isDeclarationInteractive = () => {
     // Allow interaction if final submission is not done
@@ -883,6 +914,33 @@ export default function CURegistrationPage() {
     }));
   };
 
+  // Ensure APAAR/ABC ID input accepts digits only and max 12 digits (auto formats 3-3-3-3)
+  const handleApaarIdKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const allowedControlKeys = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Home", "End"];
+    const isCtrlCmd = e.ctrlKey || e.metaKey;
+    if (isCtrlCmd) return; // allow copy/cut/paste/select all shortcuts
+    if (allowedControlKeys.includes(e.key)) return;
+
+    const isDigit = /^\d$/.test(e.key);
+    if (!isDigit) {
+      e.preventDefault();
+      return;
+    }
+
+    // Prevent entering more than 12 digits
+    const currentDigits = (personalInfo.apaarId || "").replace(/\D/g, "");
+    if (currentDigits.length >= 12) {
+      e.preventDefault();
+    }
+  };
+
+  const handleApaarIdPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData("text") || "";
+    const digits = pasted.replace(/\D/g, "").slice(0, 12);
+    e.preventDefault();
+    handleApaarIdChange(digits);
+  };
+
   const handleAddressChange = (type: "residential" | "mailing", field: string, value: string) => {
     setAddressData((prev) => ({
       ...prev,
@@ -891,6 +949,10 @@ export default function CURegistrationPage() {
         [field]: value,
       },
     }));
+  };
+
+  const sanitizeTextOnly = (value: string, maxLen: number = 20) => {
+    return value.replace(/[0-9]/g, "").slice(0, maxLen);
   };
 
   const handleDeclarationChange = async (checked: boolean) => {
@@ -1263,11 +1325,12 @@ export default function CURegistrationPage() {
   const getRequiredDocuments = () => {
     const required = ["classXIIMarksheet", "fatherPhotoId", "motherPhotoId"];
 
-    // Add Aadhaar or APAAR based on personal info
+    // Always require APAAR ID Card (ABC ID) - this is mandatory
+    required.push("apaarIdCard");
+
+    // Add Aadhaar if available (in addition to APAAR)
     if (personalInfo.aadhaarNumber && personalInfo.aadhaarNumber !== "XXXX XXXX XXXX") {
       required.push("aadhaarCard");
-    } else {
-      required.push("apaarIdCard");
     }
 
     // Add EWS certificate if EWS is Yes
@@ -1558,6 +1621,20 @@ export default function CURegistrationPage() {
     );
   }
 
+  // Show loading state while checking subject selection
+  if (isCheckingSubjectSelection) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking subject selection status...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`bg-gray-50 ${
@@ -1566,1429 +1643,1225 @@ export default function CURegistrationPage() {
           : "min-h-screen py-4 sm:py-8"
       }`}
     >
-      <div
-        className={`mx-auto px-3 sm:px-4 ${
-          correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone
-            ? "max-w-7xl h-full"
-            : "max-w-6xl"
-        }`}
-      >
-        {/* Header */}
-        {/* Dynamic heading - Hide for final submission statuses */}
-        {!(correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone) && (
-          <div className="text-center mb-6 sm:mb-8">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Admission & Registration Data</h1>
-          </div>
-        )}
-
-        {/* Success Alert Message with Correction Flags - Show only when all declarations are completed and final submission is done */}
-
-        {/* Status-based messages - Hide for final submission statuses */}
-        {correctionRequestStatus &&
-          correctionRequestStatus !== "PENDING" &&
-          correctionRequestStatus !== "ONLINE_REGISTRATION_DONE" &&
-          correctionRequestStatus !== "PHYSICAL_REGISTRATION_DONE" &&
-          correctionRequestStatus !== "APPROVED" &&
-          showStatusAlert &&
-          correctionRequest?.personalInfoDeclaration &&
-          correctionRequest?.addressInfoDeclaration &&
-          correctionRequest?.subjectsDeclaration &&
-          correctionRequest?.documentsDeclaration &&
-          correctionRequest?.onlineRegistrationDone && (
-            <div className="mb-8">
-              <Card
-                className={`border-2 ${
-                  correctionRequestStatus === "REQUEST_CORRECTION"
-                    ? "border-yellow-200 bg-yellow-50"
-                    : correctionRequestStatus === "APPROVED"
-                      ? "border-green-200 bg-green-50"
-                      : correctionRequestStatus === "REJECTED"
-                        ? "border-red-200 bg-red-50"
-                        : "border-blue-200 bg-blue-50"
-                }`}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-shrink-0">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          correctionRequestStatus === "REQUEST_CORRECTION"
-                            ? "bg-yellow-100"
-                            : correctionRequestStatus === "APPROVED"
-                              ? "bg-green-100"
-                              : correctionRequestStatus === "REJECTED"
-                                ? "bg-red-100"
-                                : "bg-blue-100"
-                        }`}
-                      >
-                        <svg
-                          className={`w-5 h-5 ${
-                            correctionRequestStatus === "REQUEST_CORRECTION"
-                              ? "text-yellow-600"
-                              : correctionRequestStatus === "APPROVED"
-                                ? "text-green-600"
-                                : correctionRequestStatus === "REJECTED"
-                                  ? "text-red-600"
-                                  : "text-blue-600"
-                          }`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          {correctionRequestStatus === "APPROVED" ? (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          ) : correctionRequestStatus === "REJECTED" ? (
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          ) : (
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          )}
-                        </svg>
-                      </div>
-                    </div>
-                    <div>
-                      <h3
-                        className={`text-lg font-medium ${
-                          correctionRequestStatus === "REQUEST_CORRECTION"
-                            ? "text-yellow-800"
-                            : correctionRequestStatus === "APPROVED"
-                              ? "text-green-800"
-                              : correctionRequestStatus === "REJECTED"
-                                ? "text-red-800"
-                                : "text-blue-800"
-                        }`}
-                      >
-                        {correctionRequestStatus === "REQUEST_CORRECTION"
-                          ? "Correction Request Submitted"
-                          : correctionRequestStatus === "APPROVED"
-                            ? "Request Approved"
-                            : correctionRequestStatus === "REJECTED"
-                              ? "Request Rejected"
-                              : "Request Status: " + correctionRequestStatus}
-                      </h3>
-                      <p
-                        className={`${
-                          correctionRequestStatus === "REQUEST_CORRECTION"
-                            ? "text-yellow-700"
-                            : correctionRequestStatus === "APPROVED"
-                              ? "text-green-700"
-                              : correctionRequestStatus === "REJECTED"
-                                ? "text-red-700"
-                                : "text-blue-700"
-                        }`}
-                      >
-                        {correctionRequestStatus === "REQUEST_CORRECTION"
-                          ? "Your correction request has been submitted and is under review."
-                          : correctionRequestStatus === "APPROVED"
-                            ? "Your CU Registration correction request has been approved."
-                            : correctionRequestStatus === "REJECTED"
-                              ? "Your CU Registration correction request has been rejected. Please contact the administration."
-                              : "Your request status is: " + correctionRequestStatus}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+      {/* Only show form content if subject selection is completed */}
+      {isSubjectSelectionCompleted && (
+        <div
+          className={`mx-auto px-3 sm:px-4 ${
+            correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone
+              ? "max-w-7xl h-full"
+              : "max-w-6xl"
+          }`}
+        >
+          {/* Header */}
+          {/* Dynamic heading - Hide for final submission statuses */}
+          {!(correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone) && (
+            <div className="text-center mb-6 sm:mb-8">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Admission & Registration Data</h1>
             </div>
           )}
 
-        {/* Main Form Card - Show tabs for editing, PDF preview for final submission */}
-        <Card className="shadow-lg border border-gray-200 bg-white rounded-lg overflow-hidden">
-          <CardContent className="p-0">
-            {/* Show PDF Preview when online or physical registration is done */}
-            {(() => {
-              const shouldShowPdf =
-                correctionRequest &&
-                (correctionRequest.onlineRegistrationDone || correctionRequest.physicalRegistrationDone) &&
-                correctionRequest?.cuRegistrationApplicationNumber;
+          {/* Success Alert Message with Correction Flags - Show only when all declarations are completed and final submission is done */}
 
-              console.info(`[CU-REG FRONTEND] PDF Preview condition check:`, {
-                correctionRequestStatus,
-                onlineRegistrationDone: correctionRequest?.onlineRegistrationDone,
-                physicalRegistrationDone: correctionRequest?.physicalRegistrationDone,
-                hasApplicationNumber: !!correctionRequest?.cuRegistrationApplicationNumber,
-                applicationNumber: correctionRequest?.cuRegistrationApplicationNumber,
-                shouldShowPdf,
-              });
-
-              return shouldShowPdf;
-            })() ? (
-              <div className="p-4" style={{ height: "calc(100vh - 100px)" }}>
-                {/* PDF Preview */}
-                {pdfUrl && (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden max-w-none h-full flex flex-col">
-                    <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
-                      <h4 className="text-sm font-medium text-gray-800">CU Registration Form Preview</h4>
-                    </div>
-                    <div className="flex-1" style={{ height: "calc(100vh - 150px)", minHeight: "600px" }}>
-                      <iframe
-                        src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
-                        className="w-full h-full border-0"
-                        title="CU Registration Form Preview"
-                        allow="fullscreen"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {pdfLoading && (
-                  <div className="flex items-center justify-center space-x-2 text-blue-600 py-8">
-                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-sm">Loading PDF...</span>
-                  </div>
-                )}
-              </div>
-            ) : !showReviewConfirm ? (
-              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                {/* Tab Navigation */}
-                <div className="border-b border-gray-200 bg-white">
-                  <div className="flex w-full overflow-x-auto no-scrollbar">
-                    <button
-                      onClick={() => handleTabChange("personal")}
-                      disabled={!canNavigateToTab("personal")}
-                      className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                        activeTab === "personal"
-                          ? "text-blue-600 border-blue-600 bg-transparent"
-                          : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                      } ${!canNavigateToTab("personal") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                    >
-                      <span className="hidden sm:inline">Personal Info</span>
-                      <span className="sm:hidden">Personal</span>
-                    </button>
-                    <button
-                      onClick={() => handleTabChange("address")}
-                      disabled={!canNavigateToTab("address")}
-                      className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                        activeTab === "address"
-                          ? "text-blue-600 border-blue-600 bg-transparent"
-                          : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                      } ${!canNavigateToTab("address") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                    >
-                      <span className="hidden sm:inline">Address Info</span>
-                      <span className="sm:hidden">Address</span>
-                    </button>
-                    <button
-                      onClick={() => handleTabChange("subjects")}
-                      disabled={!canNavigateToTab("subjects")}
-                      className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                        activeTab === "subjects"
-                          ? "text-blue-600 border-blue-600 bg-transparent"
-                          : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                      } ${!canNavigateToTab("subjects") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                    >
-                      <span className="hidden sm:inline">Subjects Overview</span>
-                      <span className="sm:hidden">Subjects</span>
-                    </button>
-                    <button
-                      onClick={() => handleTabChange("documents")}
-                      disabled={!canNavigateToTab("documents")}
-                      className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                        activeTab === "documents"
-                          ? "text-blue-600 border-blue-600 bg-transparent"
-                          : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                      } ${!canNavigateToTab("documents") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                    >
-                      Documents
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tab Content */}
-                <div className="p-4 sm:p-6 bg-white">
-                  {/* Personal Info Tab */}
-                  <TabsContent value="personal" className="space-y-6">
-                    <div>
-                      <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Student Name</h2>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {/* Full Name */}
-                        <div className="space-y-2">
-                          <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">
-                            1.1 Full name
-                          </Label>
-                          <Input
-                            id="fullName"
-                            value={personalInfo.fullName}
-                            className={getReadOnlyFieldStyle()}
-                            readOnly
-                            disabled={!isFieldEditable()}
-                          />
-                        </div>
-
-                        {/* Father/Mother Name */}
-                        <div className="space-y-2">
-                          <Label htmlFor="parentName" className="text-sm font-medium text-gray-700">
-                            1.2 Father / Mother's Name
-                          </Label>
-                          <Input
-                            id="parentName"
-                            value={personalInfo.parentName}
-                            className={getReadOnlyFieldStyle()}
-                            readOnly
-                            disabled={!isFieldEditable()}
-                          />
-                        </div>
-
-                        {/* Gender */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">1.3 Gender</Label>
-                          <div className="flex flex-col gap-2">
-                            <div className={getReadOnlyDivStyle()}>{personalInfo.gender}</div>
-                            {shouldShowCorrectionFlags() && (
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-600">1.3 Request correction</span>
-                                <Switch
-                                  checked={correctionFlags.gender}
-                                  onCheckedChange={() => handleCorrectionToggle("gender")}
-                                  disabled={!isFieldEditable()}
-                                  className="data-[state=checked]:bg-blue-600"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Nationality */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">1.4 Nationality</Label>
-                          <div className="flex flex-col gap-2">
-                            <div className={getReadOnlyDivStyle()}>{personalInfo.nationality}</div>
-                            {shouldShowCorrectionFlags() && (
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-600">1.4 Request correction</span>
-                                <Switch
-                                  checked={correctionFlags.nationality}
-                                  onCheckedChange={() => handleCorrectionToggle("nationality")}
-                                  disabled={!isFieldEditable()}
-                                  className="data-[state=checked]:bg-blue-600"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* EWS */}
-                        <div className="space-y-2">
-                          <Label htmlFor="ews" className="text-sm font-medium text-gray-700">
-                            1.5 Whether belong to EWS
-                          </Label>
-                          <Select
-                            value={personalInfo.ews}
-                            onValueChange={(value) => handlePersonalInfoChange("ews", value)}
-                            disabled={!isFieldEditable()}
+          {/* Status-based messages - Hide for final submission statuses */}
+          {correctionRequestStatus &&
+            correctionRequestStatus !== "PENDING" &&
+            correctionRequestStatus !== "ONLINE_REGISTRATION_DONE" &&
+            correctionRequestStatus !== "PHYSICAL_REGISTRATION_DONE" &&
+            correctionRequestStatus !== "APPROVED" &&
+            showStatusAlert &&
+            correctionRequest?.personalInfoDeclaration &&
+            correctionRequest?.addressInfoDeclaration &&
+            correctionRequest?.subjectsDeclaration &&
+            correctionRequest?.documentsDeclaration &&
+            correctionRequest?.onlineRegistrationDone && (
+              <div className="mb-8">
+                <Card
+                  className={`border-2 ${
+                    correctionRequestStatus === "REQUEST_CORRECTION"
+                      ? "border-yellow-200 bg-yellow-50"
+                      : correctionRequestStatus === "APPROVED"
+                        ? "border-green-200 bg-green-50"
+                        : correctionRequestStatus === "REJECTED"
+                          ? "border-red-200 bg-red-50"
+                          : "border-blue-200 bg-blue-50"
+                  }`}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            correctionRequestStatus === "REQUEST_CORRECTION"
+                              ? "bg-yellow-100"
+                              : correctionRequestStatus === "APPROVED"
+                                ? "bg-green-100"
+                                : correctionRequestStatus === "REJECTED"
+                                  ? "bg-red-100"
+                                  : "bg-blue-100"
+                          }`}
+                        >
+                          <svg
+                            className={`w-5 h-5 ${
+                              correctionRequestStatus === "REQUEST_CORRECTION"
+                                ? "text-yellow-600"
+                                : correctionRequestStatus === "APPROVED"
+                                  ? "text-green-600"
+                                  : correctionRequestStatus === "REJECTED"
+                                    ? "text-red-600"
+                                    : "text-blue-600"
+                            }`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
-                            <SelectTrigger className="w-full border-gray-300">
-                              <SelectValue placeholder="Select EWS status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Yes">Yes</SelectItem>
-                              <SelectItem value="No">No</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            {correctionRequestStatus === "APPROVED" ? (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            ) : correctionRequestStatus === "REJECTED" ? (
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            ) : (
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            )}
+                          </svg>
                         </div>
+                      </div>
+                      <div>
+                        <h3
+                          className={`text-lg font-medium ${
+                            correctionRequestStatus === "REQUEST_CORRECTION"
+                              ? "text-yellow-800"
+                              : correctionRequestStatus === "APPROVED"
+                                ? "text-green-800"
+                                : correctionRequestStatus === "REJECTED"
+                                  ? "text-red-800"
+                                  : "text-blue-800"
+                          }`}
+                        >
+                          {correctionRequestStatus === "REQUEST_CORRECTION"
+                            ? "Correction Request Submitted"
+                            : correctionRequestStatus === "APPROVED"
+                              ? "Request Approved"
+                              : correctionRequestStatus === "REJECTED"
+                                ? "Request Rejected"
+                                : "Request Status: " + correctionRequestStatus}
+                        </h3>
+                        <p
+                          className={`${
+                            correctionRequestStatus === "REQUEST_CORRECTION"
+                              ? "text-yellow-700"
+                              : correctionRequestStatus === "APPROVED"
+                                ? "text-green-700"
+                                : correctionRequestStatus === "REJECTED"
+                                  ? "text-red-700"
+                                  : "text-blue-700"
+                          }`}
+                        >
+                          {correctionRequestStatus === "REQUEST_CORRECTION"
+                            ? "Your correction request has been submitted and is under review."
+                            : correctionRequestStatus === "APPROVED"
+                              ? "Your CU Registration correction request has been approved."
+                              : correctionRequestStatus === "REJECTED"
+                                ? "Your CU Registration correction request has been rejected. Please contact the administration."
+                                : "Your request status is: " + correctionRequestStatus}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
-                        {/* Aadhaar Number */}
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">1.6 Aadhaar Number</Label>
-                          <div className="flex flex-col gap-2">
-                            <div className={getReadOnlyDivStyle()}>{personalInfo.aadhaarNumber}</div>
-                            {shouldShowCorrectionFlags() && (
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-600">1.6 Request correction</span>
-                                <Switch
-                                  checked={correctionFlags.aadhaarNumber}
-                                  onCheckedChange={() => handleCorrectionToggle("aadhaarNumber")}
+          {/* Main Form Card - Show tabs for editing, PDF preview for final submission */}
+          <Card className="shadow-lg border border-gray-200 bg-white rounded-lg overflow-hidden">
+            <CardContent className="p-0">
+              {/* Show PDF Preview when online or physical registration is done */}
+              {(() => {
+                const shouldShowPdf =
+                  correctionRequest &&
+                  (correctionRequest.onlineRegistrationDone || correctionRequest.physicalRegistrationDone) &&
+                  correctionRequest?.cuRegistrationApplicationNumber;
+
+                console.info(`[CU-REG FRONTEND] PDF Preview condition check:`, {
+                  correctionRequestStatus,
+                  onlineRegistrationDone: correctionRequest?.onlineRegistrationDone,
+                  physicalRegistrationDone: correctionRequest?.physicalRegistrationDone,
+                  hasApplicationNumber: !!correctionRequest?.cuRegistrationApplicationNumber,
+                  applicationNumber: correctionRequest?.cuRegistrationApplicationNumber,
+                  shouldShowPdf,
+                });
+
+                return shouldShowPdf;
+              })() ? (
+                <div className="p-4" style={{ height: "calc(100vh - 100px)" }}>
+                  {/* PDF Preview */}
+                  {pdfUrl && (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden max-w-none h-full flex flex-col">
+                      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+                        <h4 className="text-sm font-medium text-gray-800">CU Registration Form Preview</h4>
+                      </div>
+                      <div className="flex-1" style={{ height: "calc(100vh - 150px)", minHeight: "600px" }}>
+                        <iframe
+                          src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+                          className="w-full h-full border-0"
+                          title="CU Registration Form Preview"
+                          allow="fullscreen"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {pdfLoading && (
+                    <div className="flex items-center justify-center space-x-2 text-blue-600 py-8">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm">Loading PDF...</span>
+                    </div>
+                  )}
+                </div>
+              ) : !showReviewConfirm ? (
+                <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                  {/* Tab Navigation */}
+                  <div className="border-b border-gray-200 bg-white">
+                    <div className="flex w-full overflow-x-auto no-scrollbar">
+                      <button
+                        onClick={() => handleTabChange("personal")}
+                        disabled={!canNavigateToTab("personal")}
+                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                          activeTab === "personal"
+                            ? "text-blue-600 border-blue-600 bg-transparent"
+                            : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
+                        } ${!canNavigateToTab("personal") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        <span className="hidden sm:inline">Personal Info</span>
+                        <span className="sm:hidden">Personal</span>
+                      </button>
+                      <button
+                        onClick={() => handleTabChange("address")}
+                        disabled={!canNavigateToTab("address")}
+                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                          activeTab === "address"
+                            ? "text-blue-600 border-blue-600 bg-transparent"
+                            : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
+                        } ${!canNavigateToTab("address") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        <span className="hidden sm:inline">Address Info</span>
+                        <span className="sm:hidden">Address</span>
+                      </button>
+                      <button
+                        onClick={() => handleTabChange("subjects")}
+                        disabled={!canNavigateToTab("subjects")}
+                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                          activeTab === "subjects"
+                            ? "text-blue-600 border-blue-600 bg-transparent"
+                            : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
+                        } ${!canNavigateToTab("subjects") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        <span className="hidden sm:inline">Subjects Overview</span>
+                        <span className="sm:hidden">Subjects</span>
+                      </button>
+                      <button
+                        onClick={() => handleTabChange("documents")}
+                        disabled={!canNavigateToTab("documents")}
+                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                          activeTab === "documents"
+                            ? "text-blue-600 border-blue-600 bg-transparent"
+                            : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
+                        } ${!canNavigateToTab("documents") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        Documents
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Tab Content */}
+                  <div className="p-4 sm:p-6 bg-white">
+                    {/* Personal Info Tab */}
+                    <TabsContent value="personal" className="space-y-6">
+                      <div>
+                        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Student Name</h2>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {/* Full Name */}
+                          <div className="space-y-2">
+                            <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">
+                              1.1 Full name
+                            </Label>
+                            <Input
+                              id="fullName"
+                              value={personalInfo.fullName}
+                              className={getReadOnlyFieldStyle()}
+                              readOnly
+                              disabled={!isFieldEditable()}
+                            />
+                          </div>
+
+                          {/* Father/Mother Name */}
+                          <div className="space-y-2">
+                            <Label htmlFor="parentName" className="text-sm font-medium text-gray-700">
+                              1.2 Father / Mother's Name
+                            </Label>
+                            <Input
+                              id="parentName"
+                              value={personalInfo.parentName}
+                              className={getReadOnlyFieldStyle()}
+                              readOnly
+                              disabled={!isFieldEditable()}
+                            />
+                          </div>
+
+                          {/* Gender */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">1.3 Gender</Label>
+                            <div className="flex flex-col gap-2">
+                              <div className={getReadOnlyDivStyle()}>{personalInfo.gender}</div>
+                              {shouldShowCorrectionFlags() && (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm text-gray-600">1.3 Request correction</span>
+                                  <Switch
+                                    checked={correctionFlags.gender}
+                                    onCheckedChange={() => handleCorrectionToggle("gender")}
+                                    disabled={!isFieldEditable()}
+                                    className="data-[state=checked]:bg-blue-600"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Nationality */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">1.4 Nationality</Label>
+                            <div className="flex flex-col gap-2">
+                              <div className={getReadOnlyDivStyle()}>{personalInfo.nationality}</div>
+                              {shouldShowCorrectionFlags() && (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm text-gray-600">1.4 Request correction</span>
+                                  <Switch
+                                    checked={correctionFlags.nationality}
+                                    onCheckedChange={() => handleCorrectionToggle("nationality")}
+                                    disabled={!isFieldEditable()}
+                                    className="data-[state=checked]:bg-blue-600"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* EWS */}
+                          <div className="space-y-2">
+                            <Label htmlFor="ews" className="text-sm font-medium text-gray-700">
+                              1.5 Whether belong to EWS
+                            </Label>
+                            <Select
+                              value={personalInfo.ews}
+                              onValueChange={(value) => handlePersonalInfoChange("ews", value)}
+                              disabled={!isFieldEditable()}
+                            >
+                              <SelectTrigger className="w-full border-gray-300">
+                                <SelectValue placeholder="Select EWS status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Yes">Yes</SelectItem>
+                                <SelectItem value="No">No</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Aadhaar Number */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">1.6 Aadhaar Number</Label>
+                            <div className="flex flex-col gap-2">
+                              <div className={getReadOnlyDivStyle()}>
+                                {formatAadhaarNumber(personalInfo.aadhaarNumber)}
+                              </div>
+                              {shouldShowCorrectionFlags() && (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm text-gray-600">1.6 Request correction</span>
+                                  <Switch
+                                    checked={correctionFlags.aadhaarNumber}
+                                    onCheckedChange={() => handleCorrectionToggle("aadhaarNumber")}
+                                    disabled={!isFieldEditable()}
+                                    className="data-[state=checked]:bg-blue-600"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* APAAR ID */}
+                          <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="apaarId" className="text-sm font-medium text-gray-700">
+                              1.7 APAAR (ABC) ID
+                            </Label>
+                            <div className="flex flex-col gap-2">
+                              {(() => {
+                                // Check if APAAR ID came from backend (not null/empty) vs user input
+                                const hasBackendApaarId = student?.apaarId && student.apaarId.trim() !== "";
+
+                                if (hasBackendApaarId) {
+                                  // If backend has APAAR ID, show as read-only with correction flag
+                                  return (
+                                    <>
+                                      <div className={getReadOnlyDivStyle()}>
+                                        {formatApaarId(personalInfo.apaarId) || "Not provided"}
+                                      </div>
+                                      {shouldShowCorrectionFlags() && (
+                                        <div className="flex items-center space-x-2">
+                                          <span className="text-sm text-gray-600">1.7 Request correction</span>
+                                          <Switch
+                                            checked={correctionFlags.apaarId}
+                                            onCheckedChange={() => handleCorrectionToggle("apaarId")}
+                                            disabled={!isFieldEditable()}
+                                            className="data-[state=checked]:bg-blue-600"
+                                          />
+                                        </div>
+                                      )}
+                                    </>
+                                  );
+                                } else {
+                                  // If backend has no APAAR ID, allow editing
+                                  return (
+                                    <Input
+                                      id="apaarId"
+                                      value={personalInfo.apaarId}
+                                      onChange={(e) => handleApaarIdChange(e.target.value)}
+                                      onKeyDown={handleApaarIdKeyDown}
+                                      onPaste={handleApaarIdPaste}
+                                      placeholder="Enter APAAR ID (12 digits)"
+                                      className="border-gray-300"
+                                      disabled={!isFieldEditable()}
+                                      maxLength={15} // 12 digits + 3 hyphens = 15 characters
+                                      inputMode="numeric"
+                                      pattern="\\d*"
+                                    />
+                                  );
+                                }
+                              })()}
+                            </div>
+                          </div>
+
+                          {/* Declaration - Always show, but disable when completed */}
+                          <div className="pt-2 md:col-span-2">
+                            <div className="flex items-start space-x-3">
+                              <Checkbox
+                                id="personalDeclaration"
+                                checked={personalDeclared || correctionRequest?.personalInfoDeclaration}
+                                onCheckedChange={handleDeclarationChange}
+                                disabled={false}
+                                className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                              />
+                              <Label
+                                htmlFor="personalDeclaration"
+                                className="text-sm text-gray-700 leading-relaxed cursor-pointer"
+                                onClick={() => {
+                                  console.info("[CU-REG FRONTEND] Declaration label clicked");
+                                  handleDeclarationChange(true);
+                                }}
+                              >
+                                {getDeclarationText()}
+                                {correctionRequest?.personalInfoDeclaration && (
+                                  <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                                )}
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    {/* Address Info Tab */}
+                    <TabsContent value="address" className="space-y-6">
+                      <div>
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+                          {/* Residential Address */}
+                          <div className="space-y-4 xl:pr-8 xl:border-r xl:border-gray-200">
+                            <h3 className="text-sm sm:text-base font-medium text-gray-900">Residential Address</h3>
+                            <div className="space-y-3">
+                              {/* 1. Address Line */}
+                              <div className="space-y-2">
+                                <Label htmlFor="residential-address" className="text-sm font-medium text-gray-700">
+                                  2.1 Address Line
+                                </Label>
+                                <div className={getReadOnlyDivStyle()}>
+                                  {addressData.residential.addressLine || "Not provided"}
+                                </div>
+                              </div>
+
+                              {/* 2. Country */}
+                              <div className="space-y-2">
+                                <Label htmlFor="residential-country" className="text-sm font-medium text-gray-700">
+                                  2.2 Country
+                                </Label>
+                                <Input
+                                  id="residential-country"
+                                  value={addressData.residential.country}
+                                  className={getReadOnlyFieldStyle()}
+                                  readOnly
                                   disabled={!isFieldEditable()}
-                                  className="data-[state=checked]:bg-blue-600"
                                 />
                               </div>
-                            )}
+
+                              {/* 3. State */}
+                              <div className="space-y-2">
+                                <Label htmlFor="residential-state" className="text-sm font-medium text-gray-700">
+                                  2.3 State
+                                </Label>
+                                <Input
+                                  id="residential-state"
+                                  value={addressData.residential.state}
+                                  className={getReadOnlyFieldStyle()}
+                                  readOnly
+                                  disabled={!isFieldEditable()}
+                                />
+                              </div>
+
+                              {/* 4. District */}
+                              <div className="space-y-2">
+                                <Label htmlFor="residential-district" className="text-sm font-medium text-gray-700">
+                                  2.4 District
+                                </Label>
+                                <div className={getReadOnlyDivStyle()}>
+                                  {addressData.residential.district || "Not provided"}
+                                </div>
+                              </div>
+
+                              {/* 5. City */}
+                              <div className="space-y-2">
+                                <Label htmlFor="residential-city" className="text-sm font-medium text-gray-700">
+                                  2.5 City
+                                </Label>
+                                <div className={getReadOnlyDivStyle()}>
+                                  {addressData.residential.city || "Not provided"}
+                                </div>
+                              </div>
+
+                              {/* 6. Pin Code */}
+                              <div className="space-y-2">
+                                <Label htmlFor="residential-pin" className="text-sm font-medium text-gray-700">
+                                  2.6 Pin Code
+                                </Label>
+                                <Input
+                                  id="residential-pin"
+                                  value={addressData.residential.pinCode}
+                                  onChange={(e) => handleAddressChange("residential", "pinCode", e.target.value)}
+                                  placeholder="Enter pin code"
+                                  className="border-gray-300"
+                                  disabled={!isFieldEditable()}
+                                />
+                              </div>
+
+                              {/* 7. Police Station */}
+                              <div className="space-y-2">
+                                <Label htmlFor="residential-police" className="text-sm font-medium text-gray-700">
+                                  2.7 Police Station
+                                </Label>
+                                <Input
+                                  id="residential-police"
+                                  value={addressData.residential.policeStation}
+                                  onChange={(e) =>
+                                    handleAddressChange(
+                                      "residential",
+                                      "policeStation",
+                                      sanitizeTextOnly(e.target.value),
+                                    )
+                                  }
+                                  placeholder="Enter police station name"
+                                  className="border-gray-300"
+                                  disabled={!isFieldEditable()}
+                                  maxLength={20}
+                                />
+                              </div>
+
+                              {/* 8. Post Office */}
+                              <div className="space-y-2">
+                                <Label htmlFor="residential-post" className="text-sm font-medium text-gray-700">
+                                  2.8 Post Office
+                                </Label>
+                                <Input
+                                  id="residential-post"
+                                  value={addressData.residential.postOffice}
+                                  onChange={(e) =>
+                                    handleAddressChange("residential", "postOffice", sanitizeTextOnly(e.target.value))
+                                  }
+                                  placeholder="Enter post office name"
+                                  className="border-gray-300"
+                                  disabled={!isFieldEditable()}
+                                  maxLength={20}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Mailing Address */}
+                          <div className="space-y-4 xl:pl-8">
+                            <h3 className="text-sm sm:text-base font-medium text-gray-900">Mailing Address</h3>
+                            <div className="space-y-3">
+                              {/* 1. Address Line */}
+                              <div className="space-y-2">
+                                <Label htmlFor="mailing-address" className="text-sm font-medium text-gray-700">
+                                  2.9 Address Line
+                                </Label>
+                                <div className={getReadOnlyDivStyle()}>
+                                  {addressData.mailing.addressLine || "Not provided"}
+                                </div>
+                              </div>
+
+                              {/* 2. Country */}
+                              <div className="space-y-2">
+                                <Label htmlFor="mailing-country" className="text-sm font-medium text-gray-700">
+                                  2.10 Country
+                                </Label>
+                                <Input
+                                  id="mailing-country"
+                                  value={addressData.mailing.country}
+                                  className={getReadOnlyFieldStyle()}
+                                  readOnly
+                                  disabled={!isFieldEditable()}
+                                />
+                              </div>
+
+                              {/* 3. State */}
+                              <div className="space-y-2">
+                                <Label htmlFor="mailing-state" className="text-sm font-medium text-gray-700">
+                                  2.11 State
+                                </Label>
+                                <Input
+                                  id="mailing-state"
+                                  value={addressData.mailing.state}
+                                  className={getReadOnlyFieldStyle()}
+                                  readOnly
+                                  disabled={!isFieldEditable()}
+                                />
+                              </div>
+
+                              {/* 4. District */}
+                              <div className="space-y-2">
+                                <Label htmlFor="mailing-district" className="text-sm font-medium text-gray-700">
+                                  2.12 District
+                                </Label>
+                                <div className={getReadOnlyDivStyle()}>
+                                  {addressData.mailing.district || "Not provided"}
+                                </div>
+                              </div>
+
+                              {/* 5. City */}
+                              <div className="space-y-2">
+                                <Label htmlFor="mailing-city" className="text-sm font-medium text-gray-700">
+                                  2.13 City
+                                </Label>
+                                <div className={getReadOnlyDivStyle()}>
+                                  {addressData.mailing.city || "Not provided"}
+                                </div>
+                              </div>
+
+                              {/* 6. Pin Code */}
+                              <div className="space-y-2">
+                                <Label htmlFor="mailing-pin" className="text-sm font-medium text-gray-700">
+                                  2.14 Pin Code
+                                </Label>
+                                <Input
+                                  id="mailing-pin"
+                                  value={addressData.mailing.pinCode}
+                                  onChange={(e) => handleAddressChange("mailing", "pinCode", e.target.value)}
+                                  placeholder="Enter pin code"
+                                  className="border-gray-300"
+                                  disabled={!isFieldEditable()}
+                                />
+                              </div>
+
+                              {/* 7. Police Station */}
+                              <div className="space-y-2">
+                                <Label htmlFor="mailing-police" className="text-sm font-medium text-gray-700">
+                                  2.15 Police Station
+                                </Label>
+                                <Input
+                                  id="mailing-police"
+                                  value={addressData.mailing.policeStation}
+                                  onChange={(e) =>
+                                    handleAddressChange("mailing", "policeStation", sanitizeTextOnly(e.target.value))
+                                  }
+                                  placeholder="Enter police station name"
+                                  className="border-gray-300"
+                                  disabled={!isFieldEditable()}
+                                  maxLength={20}
+                                />
+                              </div>
+
+                              {/* 8. Post Office */}
+                              <div className="space-y-2">
+                                <Label htmlFor="mailing-post" className="text-sm font-medium text-gray-700">
+                                  2.16 Post Office
+                                </Label>
+                                <Input
+                                  id="mailing-post"
+                                  value={addressData.mailing.postOffice}
+                                  onChange={(e) =>
+                                    handleAddressChange("mailing", "postOffice", sanitizeTextOnly(e.target.value))
+                                  }
+                                  placeholder="Enter post office name"
+                                  className="border-gray-300"
+                                  disabled={!isFieldEditable()}
+                                  maxLength={20}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
 
-                        {/* APAAR ID */}
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="apaarId" className="text-sm font-medium text-gray-700">
-                            1.7 APAAR (ABC) ID
-                          </Label>
-                          <div className="flex flex-col gap-2">
-                            {(() => {
-                              // Check if APAAR ID came from backend (not null/empty) vs user input
-                              const hasBackendApaarId = student?.apaarId && student.apaarId.trim() !== "";
-
-                              if (hasBackendApaarId) {
-                                // If backend has APAAR ID, show as read-only with correction flag
-                                return (
-                                  <>
-                                    <div className={getReadOnlyDivStyle()}>
-                                      {personalInfo.apaarId || "Not provided"}
-                                    </div>
-                                    {shouldShowCorrectionFlags() && (
-                                      <div className="flex items-center space-x-2">
-                                        <span className="text-sm text-gray-600">1.7 Request correction</span>
-                                        <Switch
-                                          checked={correctionFlags.apaarId}
-                                          onCheckedChange={() => handleCorrectionToggle("apaarId")}
-                                          disabled={!isFieldEditable()}
-                                          className="data-[state=checked]:bg-blue-600"
-                                        />
-                                      </div>
-                                    )}
-                                  </>
-                                );
-                              } else {
-                                // If backend has no APAAR ID, allow editing
-                                return (
-                                  <Input
-                                    id="apaarId"
-                                    value={personalInfo.apaarId}
-                                    onChange={(e) => handleApaarIdChange(e.target.value)}
-                                    placeholder="Enter APAAR ID (12 digits)"
-                                    className="border-gray-300"
-                                    disabled={!isFieldEditable()}
-                                    maxLength={15} // 12 digits + 3 hyphens = 15 characters
-                                  />
-                                );
-                              }
-                            })()}
-                          </div>
-                        </div>
-
-                        {/* Declaration - Always show, but disable when completed */}
-                        <div className="pt-2 md:col-span-2">
+                        {/* Declaration and Error Messages */}
+                        <div className="mt-6 space-y-3">
+                          {/* Declaration - Always show, but disable when completed */}
                           <div className="flex items-start space-x-3">
                             <Checkbox
-                              id="personalDeclaration"
-                              checked={personalDeclared || correctionRequest?.personalInfoDeclaration}
-                              onCheckedChange={handleDeclarationChange}
+                              id="addressDeclaration"
+                              checked={addressDeclared || correctionRequest?.addressInfoDeclaration}
+                              onCheckedChange={() => handleAddressDeclarationChange(true)}
                               disabled={false}
                               className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                             />
                             <Label
-                              htmlFor="personalDeclaration"
-                              className="text-sm text-gray-700 leading-relaxed cursor-pointer"
-                              onClick={() => {
-                                console.info("[CU-REG FRONTEND] Declaration label clicked");
-                                handleDeclarationChange(true);
-                              }}
+                              htmlFor="addressDeclaration"
+                              className={`text-sm text-gray-700 leading-relaxed ${
+                                isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
+                              }`}
+                              onClick={() => handleAddressDeclarationChange(true)}
                             >
-                              {getDeclarationText()}
-                              {correctionRequest?.personalInfoDeclaration && (
+                              I declare that the addresses provided are correct (all fields mandatory).
+                              {correctionRequest?.addressInfoDeclaration && (
+                                <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                              )}
+                            </Label>
+                          </div>
+
+                          {/* Error Messages */}
+                          {addressErrors.length > 0 && (
+                            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                              <div className="text-sm text-red-800">
+                                <p className="font-medium mb-1">Please complete all address fields. Missing:</p>
+                                <p className="text-red-600">{addressErrors.join(", ")}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    {/* Subjects Overview Tab */}
+                    <TabsContent value="subjects" className="space-y-6">
+                      <div>
+                        <div className="flex justify-between items-center mb-4">
+                          <h2 className="text-lg font-semibold text-gray-900">3.1 Subjects Overview (Semesters 1-4)</h2>
+                          {shouldShowSubjectsCorrectionFlag() && (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm text-gray-600">Request correction</span>
+                              <Switch
+                                checked={correctionFlags.subjects}
+                                onCheckedChange={() => handleCorrectionToggle("subjects")}
+                                disabled={!isFieldEditable()}
+                                className="data-[state=checked]:bg-blue-600"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Subjects Table */}
+                        {subjectsLoading ? (
+                          <div className="flex justify-center items-center py-8">
+                            <div className="text-gray-500">Loading subjects...</div>
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto no-scrollbar">
+                            <table className="min-w-[800px] w-full border-collapse border border-gray-300">
+                              <thead>
+                                <tr className="bg-gray-50">
+                                  <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700 min-w-[120px]">
+                                    Category
+                                  </th>
+                                  <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
+                                    Semester I
+                                  </th>
+                                  <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
+                                    Semester II
+                                  </th>
+                                  <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
+                                    Semester III
+                                  </th>
+                                  <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
+                                    Semester IV
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {Object.entries(subjectsData).map(([category, semesters]) => (
+                                  <tr key={category} className="hover:bg-gray-50">
+                                    <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
+                                      {category}
+                                    </td>
+                                    {Object.entries(semesters).map(([sem, value]) => {
+                                      const mandatorySubjectsList =
+                                        (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
+                                          sem as keyof typeof semesters
+                                        ] as string[]) || [];
+                                      const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
+
+                                      return (
+                                        <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
+                                          <div className="text-sm text-gray-900">
+                                            {(() => {
+                                              // Combine all subjects (mandatory + optional) into one array
+                                              let allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
+
+                                              // Add mandatory subjects
+                                              mandatorySubjectsList.forEach((subject) => {
+                                                allSubjects.push({ name: subject, isMandatory: true });
+                                              });
+
+                                              // Add optional subjects (filter out duplicates)
+                                              const filteredSubjects = studentSubjectsList.filter(
+                                                (subject) => !mandatorySubjectsList.includes(subject),
+                                              );
+                                              filteredSubjects.forEach((subject) => {
+                                                allSubjects.push({ name: subject, isMandatory: false });
+                                              });
+
+                                              // For Minor category, if sem4 is empty and sem3 has subjects, duplicate sem3 subjects to sem4
+                                              if (category === "Minor" && sem === "sem4" && allSubjects.length === 0) {
+                                                const sem3Mandatory =
+                                                  (mandatorySubjects[category as keyof typeof mandatorySubjects]
+                                                    ?.sem3 as string[]) || [];
+                                                const sem3Student = Array.isArray(semesters.sem3)
+                                                  ? semesters.sem3
+                                                  : semesters.sem3
+                                                    ? [semesters.sem3]
+                                                    : [];
+
+                                                // Add sem3 mandatory subjects
+                                                sem3Mandatory.forEach((subject) => {
+                                                  allSubjects.push({ name: subject, isMandatory: true });
+                                                });
+
+                                                // Add sem3 student subjects (filter out duplicates)
+                                                const filteredSem3Subjects = sem3Student.filter(
+                                                  (subject) => !sem3Mandatory.includes(subject),
+                                                );
+                                                filteredSem3Subjects.forEach((subject) => {
+                                                  allSubjects.push({ name: subject, isMandatory: false });
+                                                });
+                                              }
+
+                                              // If no subjects, display Not Applicable
+                                              if (allSubjects.length === 0) {
+                                                return <span className="text-gray-500 italic">Not Applicable</span>;
+                                              }
+
+                                              // Render all subjects as ordered list
+                                              return (
+                                                <div className="text-sm text-gray-900">
+                                                  {allSubjects.map((subject, index) => (
+                                                    <span key={`subject-${index}`}>
+                                                      {subject.name}
+                                                      {index < allSubjects.length - 1 && ", "}
+                                                    </span>
+                                                  ))}
+                                                </div>
+                                              );
+                                            })()}
+                                          </div>
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
+                        {/* Declaration - Always show, but disable when completed */}
+                        <div className="mt-6">
+                          <div className="flex items-start space-x-3">
+                            <Checkbox
+                              id="subjectsDeclaration"
+                              checked={subjectsDeclared || correctionRequest?.subjectsDeclaration}
+                              onCheckedChange={() => handleSubjectsDeclarationChange(true)}
+                              disabled={false}
+                              className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                            />
+                            <Label
+                              htmlFor="subjectsDeclaration"
+                              className={`text-sm text-gray-700 leading-relaxed ${
+                                isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
+                              }`}
+                              onClick={() => handleSubjectsDeclarationChange(true)}
+                            >
+                              {correctionFlags.subjects && shouldShowSubjectsCorrectionFlag()
+                                ? "I confirm the subjects listed above for Semesters 1-4. Note: Corrections will be reviewed by staff."
+                                : "I confirm the subjects listed above for Semesters 1-4."}
+                              {correctionRequest?.subjectsDeclaration && (
                                 <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
                               )}
                             </Label>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </TabsContent>
+                    </TabsContent>
 
-                  {/* Address Info Tab */}
-                  <TabsContent value="address" className="space-y-6">
-                    <div>
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
-                        {/* Residential Address */}
-                        <div className="space-y-4 xl:pr-8 xl:border-r xl:border-gray-200">
-                          <h3 className="text-sm sm:text-base font-medium text-gray-900">Residential Address</h3>
-                          <div className="space-y-3">
-                            {/* 1. Address Line */}
-                            <div className="space-y-2">
-                              <Label htmlFor="residential-address" className="text-sm font-medium text-gray-700">
-                                2.1 Address Line
-                              </Label>
-                              <Textarea
-                                id="residential-address"
-                                value={addressData.residential.addressLine}
-                                onChange={(e) => handleAddressChange("residential", "addressLine", e.target.value)}
-                                placeholder="Enter address line"
-                                className="border-gray-300 min-h-[80px]"
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
+                    {/* Documents Tab */}
+                    <TabsContent value="documents" className="space-y-6">
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Uploads</h2>
 
-                            {/* 2. Country */}
-                            <div className="space-y-2">
-                              <Label htmlFor="residential-country" className="text-sm font-medium text-gray-700">
-                                2.2 Country
-                              </Label>
-                              <Input
-                                id="residential-country"
-                                value={addressData.residential.country}
-                                className={getReadOnlyFieldStyle()}
-                                readOnly
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 3. State */}
-                            <div className="space-y-2">
-                              <Label htmlFor="residential-state" className="text-sm font-medium text-gray-700">
-                                2.3 State
-                              </Label>
-                              <Input
-                                id="residential-state"
-                                value={addressData.residential.state}
-                                className={getReadOnlyFieldStyle()}
-                                readOnly
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 4. District */}
-                            <div className="space-y-2">
-                              <Label htmlFor="residential-district" className="text-sm font-medium text-gray-700">
-                                2.4 District
-                              </Label>
-                              <Combobox
-                                dataArr={districts.map((d) => ({ value: String(d.id), label: d.name }))}
-                                value={(() => {
-                                  const id = districts.find(
-                                    (d) =>
-                                      d.name.trim().toLowerCase() ===
-                                      (addressData.residential.district || "").trim().toLowerCase(),
-                                  )?.id;
-                                  return id ? String(id) : "";
-                                })()}
-                                onChange={(val) => {
-                                  const name = districts.find((d) => String(d.id) === val)?.name || "";
-                                  handleAddressChange("residential", "district", name);
-                                }}
-                                placeholder={addressData.residential.district || "Select district"}
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 5. City */}
-                            <div className="space-y-2">
-                              <Label htmlFor="residential-city" className="text-sm font-medium text-gray-700">
-                                2.5 City
-                              </Label>
-                              <Combobox
-                                dataArr={cities.map((c) => ({ value: String(c.id), label: c.name }))}
-                                value={(() => {
-                                  const id = cities.find(
-                                    (c) =>
-                                      c.name.trim().toLowerCase() ===
-                                      (addressData.residential.city || "").trim().toLowerCase(),
-                                  )?.id;
-                                  return id ? String(id) : "";
-                                })()}
-                                onChange={(val) => {
-                                  const name = cities.find((c) => String(c.id) === val)?.name || "";
-                                  handleAddressChange("residential", "city", name);
-                                }}
-                                placeholder={addressData.residential.city || "Select city"}
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 6. Pin Code */}
-                            <div className="space-y-2">
-                              <Label htmlFor="residential-pin" className="text-sm font-medium text-gray-700">
-                                2.6 Pin Code
-                              </Label>
-                              <Input
-                                id="residential-pin"
-                                value={addressData.residential.pinCode}
-                                onChange={(e) => handleAddressChange("residential", "pinCode", e.target.value)}
-                                placeholder="Enter pin code"
-                                className="border-gray-300"
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 7. Police Station */}
-                            <div className="space-y-2">
-                              <Label htmlFor="residential-police" className="text-sm font-medium text-gray-700">
-                                2.7 Police Station
-                              </Label>
-                              {isFieldEditable() ? (
-                                <Input
-                                  id="residential-police"
-                                  value={addressData.residential.policeStation}
-                                  onChange={(e) => handleAddressChange("residential", "policeStation", e.target.value)}
-                                  placeholder="Enter police station name"
-                                  className="border-gray-300"
-                                  disabled={!isFieldEditable()}
-                                />
-                              ) : (
-                                <div className={getReadOnlyDivStyle()}>
-                                  {addressData.residential.policeStation || "Not provided"}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* 8. Post Office */}
-                            <div className="space-y-2">
-                              <Label htmlFor="residential-post" className="text-sm font-medium text-gray-700">
-                                2.8 Post Office
-                              </Label>
-                              {isFieldEditable() ? (
-                                <Input
-                                  id="residential-post"
-                                  value={addressData.residential.postOffice}
-                                  onChange={(e) => handleAddressChange("residential", "postOffice", e.target.value)}
-                                  placeholder="Enter post office name"
-                                  className="border-gray-300"
-                                  disabled={!isFieldEditable()}
-                                />
-                              ) : (
-                                <div className={getReadOnlyDivStyle()}>
-                                  {addressData.residential.postOffice || "Not provided"}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Mailing Address */}
-                        <div className="space-y-4 xl:pl-8">
-                          <h3 className="text-sm sm:text-base font-medium text-gray-900">Mailing Address</h3>
-                          <div className="space-y-3">
-                            {/* 1. Address Line */}
-                            <div className="space-y-2">
-                              <Label htmlFor="mailing-address" className="text-sm font-medium text-gray-700">
-                                2.9 Address Line
-                              </Label>
-                              <Textarea
-                                id="mailing-address"
-                                value={addressData.mailing.addressLine}
-                                onChange={(e) => handleAddressChange("mailing", "addressLine", e.target.value)}
-                                placeholder="Enter address line"
-                                className="border-gray-300 min-h-[80px]"
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 2. Country */}
-                            <div className="space-y-2">
-                              <Label htmlFor="mailing-country" className="text-sm font-medium text-gray-700">
-                                2.10 Country
-                              </Label>
-                              <Input
-                                id="mailing-country"
-                                value={addressData.mailing.country}
-                                className={getReadOnlyFieldStyle()}
-                                readOnly
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 3. State */}
-                            <div className="space-y-2">
-                              <Label htmlFor="mailing-state" className="text-sm font-medium text-gray-700">
-                                2.11 State
-                              </Label>
-                              <Input
-                                id="mailing-state"
-                                value={addressData.mailing.state}
-                                className={getReadOnlyFieldStyle()}
-                                readOnly
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 4. District */}
-                            <div className="space-y-2">
-                              <Label htmlFor="mailing-district" className="text-sm font-medium text-gray-700">
-                                2.12 District
-                              </Label>
-                              <Combobox
-                                dataArr={mailingDistricts.map((d) => ({ value: String(d.id), label: d.name }))}
-                                value={(() => {
-                                  const id = mailingDistricts.find(
-                                    (d) =>
-                                      d.name.trim().toLowerCase() ===
-                                      (addressData.mailing.district || "").trim().toLowerCase(),
-                                  )?.id;
-                                  return id ? String(id) : "";
-                                })()}
-                                onChange={(val) => {
-                                  const name = mailingDistricts.find((d) => String(d.id) === val)?.name || "";
-                                  handleAddressChange("mailing", "district", name);
-                                }}
-                                placeholder={addressData.mailing.district || "Select district"}
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 5. City */}
-                            <div className="space-y-2">
-                              <Label htmlFor="mailing-city" className="text-sm font-medium text-gray-700">
-                                2.13 City
-                              </Label>
-                              <Combobox
-                                dataArr={cities.map((c) => ({ value: String(c.id), label: c.name }))}
-                                value={(() => {
-                                  const id = cities.find(
-                                    (c) =>
-                                      c.name.trim().toLowerCase() ===
-                                      (addressData.mailing.city || "").trim().toLowerCase(),
-                                  )?.id;
-                                  return id ? String(id) : "";
-                                })()}
-                                onChange={(val) => {
-                                  const name = cities.find((c) => String(c.id) === val)?.name || "";
-                                  handleAddressChange("mailing", "city", name);
-                                }}
-                                placeholder={addressData.mailing.city || "Select city"}
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 6. Pin Code */}
-                            <div className="space-y-2">
-                              <Label htmlFor="mailing-pin" className="text-sm font-medium text-gray-700">
-                                2.14 Pin Code
-                              </Label>
-                              <Input
-                                id="mailing-pin"
-                                value={addressData.mailing.pinCode}
-                                onChange={(e) => handleAddressChange("mailing", "pinCode", e.target.value)}
-                                placeholder="Enter pin code"
-                                className="border-gray-300"
-                                disabled={!isFieldEditable()}
-                              />
-                            </div>
-
-                            {/* 7. Police Station */}
-                            <div className="space-y-2">
-                              <Label htmlFor="mailing-police" className="text-sm font-medium text-gray-700">
-                                2.15 Police Station
-                              </Label>
-                              {isFieldEditable() ? (
-                                <Input
-                                  id="mailing-police"
-                                  value={addressData.mailing.policeStation}
-                                  onChange={(e) => handleAddressChange("mailing", "policeStation", e.target.value)}
-                                  placeholder="Enter police station name"
-                                  className="border-gray-300"
-                                  disabled={!isFieldEditable()}
-                                />
-                              ) : (
-                                <div className={getReadOnlyDivStyle()}>
-                                  {addressData.mailing.policeStation || "Not provided"}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* 8. Post Office */}
-                            <div className="space-y-2">
-                              <Label htmlFor="mailing-post" className="text-sm font-medium text-gray-700">
-                                2.16 Post Office
-                              </Label>
-                              {isFieldEditable() ? (
-                                <Input
-                                  id="mailing-post"
-                                  value={addressData.mailing.postOffice}
-                                  onChange={(e) => handleAddressChange("mailing", "postOffice", e.target.value)}
-                                  placeholder="Enter post office name"
-                                  className="border-gray-300"
-                                  disabled={!isFieldEditable()}
-                                />
-                              ) : (
-                                <div className={getReadOnlyDivStyle()}>
-                                  {addressData.mailing.postOffice || "Not provided"}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Declaration and Error Messages */}
-                      <div className="mt-6 space-y-3">
-                        {/* Declaration - Always show, but disable when completed */}
-                        <div className="flex items-start space-x-3">
-                          <Checkbox
-                            id="addressDeclaration"
-                            checked={addressDeclared || correctionRequest?.addressInfoDeclaration}
-                            onCheckedChange={() => handleAddressDeclarationChange(true)}
-                            disabled={false}
-                            className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
-                          />
-                          <Label
-                            htmlFor="addressDeclaration"
-                            className={`text-sm text-gray-700 leading-relaxed ${
-                              isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
-                            }`}
-                            onClick={() => handleAddressDeclarationChange(true)}
-                          >
-                            I declare that the addresses provided are correct (all fields mandatory).
-                            {correctionRequest?.addressInfoDeclaration && (
-                              <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
-                            )}
-                          </Label>
-                        </div>
-
-                        {/* Error Messages */}
-                        {addressErrors.length > 0 && (
-                          <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                            <div className="text-sm text-red-800">
-                              <p className="font-medium mb-1">Please complete all address fields. Missing:</p>
-                              <p className="text-red-600">{addressErrors.join(", ")}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  {/* Subjects Overview Tab */}
-                  <TabsContent value="subjects" className="space-y-6">
-                    <div>
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-semibold text-gray-900">3.1 Subjects Overview (Semesters 1-4)</h2>
-                        {shouldShowCorrectionFlags() && (
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-600">Request correction</span>
-                            <Switch
-                              checked={correctionFlags.subjects}
-                              onCheckedChange={() => handleCorrectionToggle("subjects")}
-                              disabled={!isFieldEditable()}
-                              className="data-[state=checked]:bg-blue-600"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Subjects Table */}
-                      {subjectsLoading ? (
-                        <div className="flex justify-center items-center py-8">
-                          <div className="text-gray-500">Loading subjects...</div>
-                        </div>
-                      ) : (
-                        <div className="overflow-x-auto no-scrollbar">
-                          <table className="min-w-[800px] w-full border-collapse border border-gray-300">
-                            <thead>
-                              <tr className="bg-gray-50">
-                                <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700 min-w-[120px]">
-                                  Category
-                                </th>
-                                <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                  Sem 1
-                                </th>
-                                <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                  Sem 2
-                                </th>
-                                <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                  Sem 3
-                                </th>
-                                <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                  Sem 4
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {Object.entries(subjectsData).map(([category, semesters]) => (
-                                <tr key={category} className="hover:bg-gray-50">
-                                  <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
-                                    {category}
-                                  </td>
-                                  {Object.entries(semesters).map(([sem, value]) => {
-                                    const mandatorySubjectsList =
-                                      (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
-                                        sem as keyof typeof semesters
-                                      ] as string[]) || [];
-                                    const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
+                        {/* Uploaded Documents Table */}
+                        {uploadedDocuments.length > 0 && (
+                          <div className="mb-6">
+                            <h3 className="text-md font-medium text-gray-800 mb-3">Uploaded Documents</h3>
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full border border-gray-300">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                      Document Type
+                                    </th>
+                                    <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                      Uploaded
+                                    </th>
+                                    <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                      Size
+                                    </th>
+                                    <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                      Status
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {uploadedDocuments.map((doc, index) => {
+                                    // Use document name from the document object if available, otherwise fallback to ID mapping
+                                    const documentType =
+                                      doc.document?.name ||
+                                      (() => {
+                                        const documentTypeMap: Record<number, string> = {
+                                          1: "Class XII Marksheet",
+                                          2: "Aadhaar Card",
+                                          3: "APAAR ID Card",
+                                          4: "Father's Photo ID",
+                                          5: "Mother's Photo ID",
+                                          10: "EWS Certificate",
+                                        };
+                                        return documentTypeMap[doc.documentId] || `Document ${doc.documentId}`;
+                                      })();
+                                    const fileSizeMB = doc.fileSize
+                                      ? (doc.fileSize / 1024 / 1024).toFixed(2)
+                                      : "Unknown";
 
                                     return (
-                                      <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
-                                        <div className="text-sm text-gray-900">
-                                          {(() => {
-                                            // Combine all subjects (mandatory + optional) into one array
-                                            let allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
-
-                                            // Add mandatory subjects
-                                            mandatorySubjectsList.forEach((subject) => {
-                                              allSubjects.push({ name: subject, isMandatory: true });
-                                            });
-
-                                            // Add optional subjects (filter out duplicates)
-                                            const filteredSubjects = studentSubjectsList.filter(
-                                              (subject) => !mandatorySubjectsList.includes(subject),
-                                            );
-                                            filteredSubjects.forEach((subject) => {
-                                              allSubjects.push({ name: subject, isMandatory: false });
-                                            });
-
-                                            // For Minor category, if sem4 is empty and sem3 has subjects, duplicate sem3 subjects to sem4
-                                            if (category === "Minor" && sem === "sem4" && allSubjects.length === 0) {
-                                              const sem3Mandatory =
-                                                (mandatorySubjects[category as keyof typeof mandatorySubjects]
-                                                  ?.sem3 as string[]) || [];
-                                              const sem3Student = Array.isArray(semesters.sem3)
-                                                ? semesters.sem3
-                                                : semesters.sem3
-                                                  ? [semesters.sem3]
-                                                  : [];
-
-                                              // Add sem3 mandatory subjects
-                                              sem3Mandatory.forEach((subject) => {
-                                                allSubjects.push({ name: subject, isMandatory: true });
-                                              });
-
-                                              // Add sem3 student subjects (filter out duplicates)
-                                              const filteredSem3Subjects = sem3Student.filter(
-                                                (subject) => !sem3Mandatory.includes(subject),
-                                              );
-                                              filteredSem3Subjects.forEach((subject) => {
-                                                allSubjects.push({ name: subject, isMandatory: false });
-                                              });
-                                            }
-
-                                            // If no subjects, display Not Applicable
-                                            if (allSubjects.length === 0) {
-                                              return <span className="text-gray-500 italic">Not Applicable</span>;
-                                            }
-
-                                            // Render all subjects as ordered list
-                                            return (
-                                              <div className="text-sm text-gray-900">
-                                                {allSubjects.map((subject, index) => (
-                                                  <span key={`subject-${index}`}>
-                                                    {subject.name}
-                                                    {index < allSubjects.length - 1 && ", "}
-                                                  </span>
-                                                ))}
-                                              </div>
-                                            );
-                                          })()}
-                                        </div>
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-
-                      {/* Declaration - Always show, but disable when completed */}
-                      <div className="mt-6">
-                        <div className="flex items-start space-x-3">
-                          <Checkbox
-                            id="subjectsDeclaration"
-                            checked={subjectsDeclared || correctionRequest?.subjectsDeclaration}
-                            onCheckedChange={() => handleSubjectsDeclarationChange(true)}
-                            disabled={false}
-                            className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
-                          />
-                          <Label
-                            htmlFor="subjectsDeclaration"
-                            className={`text-sm text-gray-700 leading-relaxed ${
-                              isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
-                            }`}
-                            onClick={() => handleSubjectsDeclarationChange(true)}
-                          >
-                            {correctionFlags.subjects
-                              ? "I confirm the subjects listed above for Semesters 1-4. Note: Corrections will be reviewed by staff."
-                              : "I confirm the subjects listed above for Semesters 1-4."}
-                            {correctionRequest?.subjectsDeclaration && (
-                              <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
-                            )}
-                          </Label>
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  {/* Documents Tab */}
-                  <TabsContent value="documents" className="space-y-6">
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Uploads</h2>
-
-                      {/* Uploaded Documents Table */}
-                      {uploadedDocuments.length > 0 && (
-                        <div className="mb-6">
-                          <h3 className="text-md font-medium text-gray-800 mb-3">Uploaded Documents</h3>
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full border border-gray-300">
-                              <thead className="bg-gray-50">
-                                <tr>
-                                  <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                    Document Type
-                                  </th>
-                                  <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                    Uploaded
-                                  </th>
-                                  <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                    Size
-                                  </th>
-                                  <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                    Status
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {uploadedDocuments.map((doc, index) => {
-                                  // Use document name from the document object if available, otherwise fallback to ID mapping
-                                  const documentType =
-                                    doc.document?.name ||
-                                    (() => {
-                                      const documentTypeMap: Record<number, string> = {
-                                        1: "Class XII Marksheet",
-                                        2: "Aadhaar Card",
-                                        3: "APAAR ID Card",
-                                        4: "Father's Photo ID",
-                                        5: "Mother's Photo ID",
-                                        10: "EWS Certificate",
-                                      };
-                                      return documentTypeMap[doc.documentId] || `Document ${doc.documentId}`;
-                                    })();
-                                  const fileSizeMB = doc.fileSize ? (doc.fileSize / 1024 / 1024).toFixed(2) : "Unknown";
-
-                                  return (
-                                    <tr key={index} className="hover:bg-gray-50">
-                                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                        {documentType}
-                                      </td>
-                                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                        <div className="flex items-center space-x-2">
-                                          <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                            {doc.fileType?.startsWith("image/") ? (
-                                              <img
-                                                src={docPreviewUrls[doc.id] || toAbsoluteUrl(doc.documentUrl)}
-                                                alt="Preview"
-                                                className="w-full h-full object-cover"
-                                                onError={async () => {
+                                      <tr key={index} className="hover:bg-gray-50">
+                                        <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                          {documentType}
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                          <div className="flex items-center space-x-2">
+                                            <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                              {doc.fileType?.startsWith("image/") ? (
+                                                <img
+                                                  src={docPreviewUrls[doc.id] || toAbsoluteUrl(doc.documentUrl)}
+                                                  alt="Preview"
+                                                  className="w-full h-full object-cover"
+                                                  onError={async () => {
+                                                    try {
+                                                      const url = await getCuRegistrationDocumentSignedUrl(doc.id);
+                                                      if (url) {
+                                                        setDocPreviewUrls((prev) => ({ ...prev, [doc.id]: url }));
+                                                      }
+                                                    } catch {}
+                                                  }}
+                                                />
+                                              ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs">
+                                                  PDF
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div>
+                                              <p className="text-xs text-gray-600 truncate max-w-[200px]">
+                                                {doc.fileName}
+                                              </p>
+                                              <button
+                                                className="text-xs text-blue-600 hover:underline"
+                                                onClick={async () => {
                                                   try {
                                                     const url = await getCuRegistrationDocumentSignedUrl(doc.id);
-                                                    if (url) {
-                                                      setDocPreviewUrls((prev) => ({ ...prev, [doc.id]: url }));
-                                                    }
+                                                    window.open(url, "_blank");
                                                   } catch {}
                                                 }}
-                                              />
-                                            ) : (
-                                              <div className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs">
-                                                PDF
-                                              </div>
-                                            )}
+                                              >
+                                                Open
+                                              </button>
+                                            </div>
                                           </div>
-                                          <div>
-                                            <p className="text-xs text-gray-600 truncate max-w-[200px]">
-                                              {doc.fileName}
-                                            </p>
-                                            <button
-                                              className="text-xs text-blue-600 hover:underline"
-                                              onClick={async () => {
-                                                try {
-                                                  const url = await getCuRegistrationDocumentSignedUrl(doc.id);
-                                                  window.open(url, "_blank");
-                                                } catch {}
-                                              }}
-                                            >
-                                              Open
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </td>
-                                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                        {fileSizeMB} MB
-                                      </td>
-                                      <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                        <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                                          Uploaded
-                                        </Badge>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                          {fileSizeMB} MB
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                          <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                            Uploaded
+                                          </Badge>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Show upload sections only if form is editable */}
-                      {isFieldEditable() && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                          {/* Class XII Original Board Marksheet */}
-                          <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
-                            <div className="flex items-center justify-between mb-3">
-                              <Label className="text-sm font-medium text-gray-700">
-                                4.1 Class XII Original Board Marksheet
-                              </Label>
-                              <Badge variant="outline" className="text-xs text-red-600 border-red-600">
-                                Required
-                              </Badge>
-                            </div>
-                            <div className="relative">
-                              <Input
-                                value={documents.classXIIMarksheet?.name || "No file chosen"}
-                                readOnly
-                                className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => document.getElementById("classXIIMarksheet")?.click()}
-                                className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300 bg-white"
-                              >
-                                Upload
-                              </Button>
-                              <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
-                              <input
-                                id="classXIIMarksheet"
-                                type="file"
-                                accept=".jpg,.jpeg,.png"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0] || null;
-                                  console.info(`[CU-REG FRONTEND] Class XII Marksheet file selected:`, {
-                                    name: f?.name,
-                                    size: f?.size,
-                                    sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                    type: f?.type,
-                                  });
-                                  setDocuments((prev) => ({ ...prev, classXIIMarksheet: f }));
-                                }}
-                              />
-                            </div>
-                            {documents.classXIIMarksheet && (
-                              <div className="mt-3">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                    {documents.classXIIMarksheet.type.startsWith("image/") ? (
-                                      <img
-                                        src={getFilePreviewUrl(documents.classXIIMarksheet)}
-                                        alt="Preview"
-                                        className="w-full h-full object-cover cursor-pointer"
-                                        onClick={() => handleFilePreview(documents.classXIIMarksheet!)}
-                                      />
-                                    ) : (
-                                      <div
-                                        className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                        onClick={() => handleFilePreview(documents.classXIIMarksheet!)}
-                                      >
-                                        PDF
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-xs text-gray-600 truncate">{documents.classXIIMarksheet.name}</p>
-                                    <p className="text-xs text-gray-500">
-                                      {(documents.classXIIMarksheet.size / 1024 / 1024).toFixed(2)} MB
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Aadhaar Card */}
-                          <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
-                            <div className="flex items-center justify-between mb-3">
-                              <Label className="text-sm font-medium text-gray-700">4.2 Aadhaar Card (if Indian)</Label>
-                              <Badge variant="outline" className="text-xs text-red-600 border-red-600">
-                                Required
-                              </Badge>
-                            </div>
-                            <div className="relative">
-                              <Input
-                                value={documents.aadhaarCard?.name || "No file chosen"}
-                                readOnly
-                                className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => document.getElementById("aadhaarCard")?.click()}
-                                className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300 bg-white"
-                              >
-                                Upload
-                              </Button>
-                              <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
-                              <input
-                                id="aadhaarCard"
-                                type="file"
-                                accept=".jpg,.jpeg,.png"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0] || null;
-                                  console.info(`[CU-REG FRONTEND] Aadhaar Card file selected:`, {
-                                    name: f?.name,
-                                    size: f?.size,
-                                    sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                    type: f?.type,
-                                  });
-                                  setDocuments((prev) => ({ ...prev, aadhaarCard: f }));
-                                }}
-                              />
-                            </div>
-                            {documents.aadhaarCard && (
-                              <div className="mt-3">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                    {documents.aadhaarCard.type.startsWith("image/") ? (
-                                      <img
-                                        src={getFilePreviewUrl(documents.aadhaarCard)}
-                                        alt="Preview"
-                                        className="w-full h-full object-cover cursor-pointer"
-                                        onClick={() => handleFilePreview(documents.aadhaarCard!)}
-                                      />
-                                    ) : (
-                                      <div
-                                        className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                        onClick={() => handleFilePreview(documents.aadhaarCard!)}
-                                      >
-                                        PDF
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-xs text-gray-600 truncate">{documents.aadhaarCard.name}</p>
-                                    <p className="text-xs text-gray-500">
-                                      {(documents.aadhaarCard.size / 1024 / 1024).toFixed(2)} MB
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* APAAR ID Card */}
-                          <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
-                            <div className="flex items-center justify-between mb-3">
-                              <Label className="text-sm font-medium text-gray-700">4.3 APAAR (ABC) ID Card</Label>
-                              <Badge variant="outline" className="text-xs text-red-600 border-red-600">
-                                Required
-                              </Badge>
-                            </div>
-                            <div className="relative">
-                              <Input
-                                value={documents.apaarIdCard?.name || "No file chosen"}
-                                readOnly
-                                className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => document.getElementById("apaarIdCard")?.click()}
-                                className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300 bg-white"
-                              >
-                                Upload
-                              </Button>
-                              <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
-                              <input
-                                id="apaarIdCard"
-                                type="file"
-                                accept=".jpg,.jpeg,.png"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0] || null;
-                                  console.info(`[CU-REG FRONTEND] APAAR ID Card file selected:`, {
-                                    name: f?.name,
-                                    size: f?.size,
-                                    sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                    type: f?.type,
-                                  });
-                                  setDocuments((prev) => ({ ...prev, apaarIdCard: f }));
-                                }}
-                              />
-                            </div>
-                            {documents.apaarIdCard && (
-                              <div className="mt-3">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                    {documents.apaarIdCard.type.startsWith("image/") ? (
-                                      <img
-                                        src={getFilePreviewUrl(documents.apaarIdCard)}
-                                        alt="Preview"
-                                        className="w-full h-full object-cover cursor-pointer"
-                                        onClick={() => handleFilePreview(documents.apaarIdCard!)}
-                                      />
-                                    ) : (
-                                      <div
-                                        className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                        onClick={() => handleFilePreview(documents.apaarIdCard!)}
-                                      >
-                                        PDF
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-xs text-gray-600 truncate">{documents.apaarIdCard.name}</p>
-                                    <p className="text-xs text-gray-500">
-                                      {(documents.apaarIdCard.size / 1024 / 1024).toFixed(2)} MB
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Father's Government-issued Photo ID */}
-                          <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
-                            <div className="flex items-center justify-between mb-3">
-                              <Label className="text-sm font-medium text-gray-700">
-                                4.4 Father's Government-issued Photo ID
-                              </Label>
-                              <Badge variant="outline" className="text-xs text-red-600 border-red-600">
-                                Required
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-gray-600 mb-2">Passport / Voter ID / Driving Licence (photo)</p>
-                            <div className="relative">
-                              <Input
-                                value={documents.fatherPhotoId?.name || "No file chosen"}
-                                readOnly
-                                className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
-                              />
-                              <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => document.getElementById("fatherPhotoId")?.click()}
-                                className="absolute right-2 top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
-                              >
-                                Upload
-                              </Button>
-                              <input
-                                id="fatherPhotoId"
-                                type="file"
-                                accept=".jpg,.jpeg,.png"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0] || null;
-                                  console.info(`[CU-REG FRONTEND] Father Photo ID file selected:`, {
-                                    name: f?.name,
-                                    size: f?.size,
-                                    sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                    type: f?.type,
-                                  });
-                                  setDocuments((prev) => ({ ...prev, fatherPhotoId: f }));
-                                }}
-                              />
-                            </div>
-                            {documents.fatherPhotoId && (
-                              <div className="mt-3">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                    {documents.fatherPhotoId.type.startsWith("image/") ? (
-                                      <img
-                                        src={getFilePreviewUrl(documents.fatherPhotoId)}
-                                        alt="Preview"
-                                        className="w-full h-full object-cover cursor-pointer"
-                                        onClick={() => handleFilePreview(documents.fatherPhotoId!)}
-                                      />
-                                    ) : (
-                                      <div
-                                        className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                        onClick={() => handleFilePreview(documents.fatherPhotoId!)}
-                                      >
-                                        PDF
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-xs text-gray-600 truncate">{documents.fatherPhotoId.name}</p>
-                                    <p className="text-xs text-gray-500">
-                                      {(documents.fatherPhotoId.size / 1024 / 1024).toFixed(2)} MB
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Mother's Government-issued Photo ID */}
-                          <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
-                            <div className="flex items-center justify-between mb-3">
-                              <Label className="text-sm font-medium text-gray-700">
-                                4.5 Mother's Government-issued Photo ID
-                              </Label>
-                              <Badge variant="outline" className="text-xs text-red-600 border-red-600">
-                                Required
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-gray-600 mb-2">Passport / Voter ID / Driving Licence (photo)</p>
-                            <div className="relative">
-                              <Input
-                                value={documents.motherPhotoId?.name || "No file chosen"}
-                                readOnly
-                                className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
-                              />
-                              <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => document.getElementById("motherPhotoId")?.click()}
-                                className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
-                              >
-                                Upload
-                              </Button>
-                              <input
-                                id="motherPhotoId"
-                                type="file"
-                                accept=".jpg,.jpeg,.png"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0] || null;
-                                  console.info(`[CU-REG FRONTEND] Mother Photo ID file selected:`, {
-                                    name: f?.name,
-                                    size: f?.size,
-                                    sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                    type: f?.type,
-                                  });
-                                  setDocuments((prev) => ({ ...prev, motherPhotoId: f }));
-                                }}
-                              />
-                            </div>
-                            {documents.motherPhotoId && (
-                              <div className="mt-3">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                    {documents.motherPhotoId.type.startsWith("image/") ? (
-                                      <img
-                                        src={getFilePreviewUrl(documents.motherPhotoId)}
-                                        alt="Preview"
-                                        className="w-full h-full object-cover cursor-pointer"
-                                        onClick={() => handleFilePreview(documents.motherPhotoId!)}
-                                      />
-                                    ) : (
-                                      <div
-                                        className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                        onClick={() => handleFilePreview(documents.motherPhotoId!)}
-                                      >
-                                        PDF
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-xs text-gray-600 truncate">{documents.motherPhotoId.name}</p>
-                                    <p className="text-xs text-gray-500">
-                                      {(documents.motherPhotoId.size / 1024 / 1024).toFixed(2)} MB
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* EWS Certificate - Only show if EWS is Yes */}
-                          {personalInfo.ews === "Yes" && (
+                        {/* Show upload sections only if form is editable */}
+                        {isFieldEditable() && (
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            {/* Class XII Original Board Marksheet */}
                             <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                               <div className="flex items-center justify-between mb-3">
-                                <Label className="text-sm font-medium text-gray-700">4.6 EWS Certificate</Label>
+                                <Label className="text-sm font-medium text-gray-700">
+                                  4.1 Class XII Original Board Marksheet
+                                </Label>
                                 <Badge variant="outline" className="text-xs text-red-600 border-red-600">
                                   Required
                                 </Badge>
                               </div>
                               <div className="relative">
                                 <Input
-                                  value={documents.ewsCertificate?.name || "No file chosen"}
+                                  value={documents.classXIIMarksheet?.name || "No file chosen"}
+                                  readOnly
+                                  className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => document.getElementById("classXIIMarksheet")?.click()}
+                                  className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300 bg-white"
+                                >
+                                  Upload
+                                </Button>
+                                <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                <input
+                                  id="classXIIMarksheet"
+                                  type="file"
+                                  accept=".jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0] || null;
+                                    console.info(`[CU-REG FRONTEND] Class XII Marksheet file selected:`, {
+                                      name: f?.name,
+                                      size: f?.size,
+                                      sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                      type: f?.type,
+                                    });
+                                    setDocuments((prev) => ({ ...prev, classXIIMarksheet: f }));
+                                  }}
+                                />
+                              </div>
+                              {documents.classXIIMarksheet && (
+                                <div className="mt-3">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                      {documents.classXIIMarksheet.type.startsWith("image/") ? (
+                                        <img
+                                          src={getFilePreviewUrl(documents.classXIIMarksheet)}
+                                          alt="Preview"
+                                          className="w-full h-full object-cover cursor-pointer"
+                                          onClick={() => handleFilePreview(documents.classXIIMarksheet!)}
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
+                                          onClick={() => handleFilePreview(documents.classXIIMarksheet!)}
+                                        >
+                                          PDF
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-xs text-gray-600 truncate">
+                                        {documents.classXIIMarksheet.name}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {(documents.classXIIMarksheet.size / 1024 / 1024).toFixed(2)} MB
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Aadhaar Card */}
+                            <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
+                              <div className="flex items-center justify-between mb-3">
+                                <Label className="text-sm font-medium text-gray-700">
+                                  4.2 Aadhaar Card (if Indian)
+                                </Label>
+                                <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                  Required
+                                </Badge>
+                              </div>
+                              <div className="relative">
+                                <Input
+                                  value={documents.aadhaarCard?.name || "No file chosen"}
+                                  readOnly
+                                  className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => document.getElementById("aadhaarCard")?.click()}
+                                  className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300 bg-white"
+                                >
+                                  Upload
+                                </Button>
+                                <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                <input
+                                  id="aadhaarCard"
+                                  type="file"
+                                  accept=".jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0] || null;
+                                    console.info(`[CU-REG FRONTEND] Aadhaar Card file selected:`, {
+                                      name: f?.name,
+                                      size: f?.size,
+                                      sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                      type: f?.type,
+                                    });
+                                    setDocuments((prev) => ({ ...prev, aadhaarCard: f }));
+                                  }}
+                                />
+                              </div>
+                              {documents.aadhaarCard && (
+                                <div className="mt-3">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                      {documents.aadhaarCard.type.startsWith("image/") ? (
+                                        <img
+                                          src={getFilePreviewUrl(documents.aadhaarCard)}
+                                          alt="Preview"
+                                          className="w-full h-full object-cover cursor-pointer"
+                                          onClick={() => handleFilePreview(documents.aadhaarCard!)}
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
+                                          onClick={() => handleFilePreview(documents.aadhaarCard!)}
+                                        >
+                                          PDF
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-xs text-gray-600 truncate">{documents.aadhaarCard.name}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {(documents.aadhaarCard.size / 1024 / 1024).toFixed(2)} MB
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* APAAR ID Card */}
+                            <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
+                              <div className="flex items-center justify-between mb-3">
+                                <Label className="text-sm font-medium text-gray-700">4.3 APAAR (ABC) ID Card</Label>
+                                <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                  Required
+                                </Badge>
+                              </div>
+                              <div className="relative">
+                                <Input
+                                  value={documents.apaarIdCard?.name || "No file chosen"}
+                                  readOnly
+                                  className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => document.getElementById("apaarIdCard")?.click()}
+                                  className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300 bg-white"
+                                >
+                                  Upload
+                                </Button>
+                                <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                <input
+                                  id="apaarIdCard"
+                                  type="file"
+                                  accept=".jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0] || null;
+                                    console.info(`[CU-REG FRONTEND] APAAR ID Card file selected:`, {
+                                      name: f?.name,
+                                      size: f?.size,
+                                      sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                      type: f?.type,
+                                    });
+                                    setDocuments((prev) => ({ ...prev, apaarIdCard: f }));
+                                  }}
+                                />
+                              </div>
+                              {documents.apaarIdCard && (
+                                <div className="mt-3">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                      {documents.apaarIdCard.type.startsWith("image/") ? (
+                                        <img
+                                          src={getFilePreviewUrl(documents.apaarIdCard)}
+                                          alt="Preview"
+                                          className="w-full h-full object-cover cursor-pointer"
+                                          onClick={() => handleFilePreview(documents.apaarIdCard!)}
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
+                                          onClick={() => handleFilePreview(documents.apaarIdCard!)}
+                                        >
+                                          PDF
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-xs text-gray-600 truncate">{documents.apaarIdCard.name}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {(documents.apaarIdCard.size / 1024 / 1024).toFixed(2)} MB
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Father's Government-issued Photo ID */}
+                            <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
+                              <div className="flex items-center justify-between mb-3">
+                                <Label className="text-sm font-medium text-gray-700">
+                                  4.4 Father's Government-issued Photo ID
+                                </Label>
+                                <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                  Required
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-gray-600 mb-2">
+                                Passport / Voter ID / Driving Licence (photo)
+                              </p>
+                              <div className="relative">
+                                <Input
+                                  value={documents.fatherPhotoId?.name || "No file chosen"}
                                   readOnly
                                   className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                 />
@@ -2996,252 +2869,436 @@ export default function CURegistrationPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => document.getElementById("ewsCertificate")?.click()}
-                                  className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
+                                  onClick={() => document.getElementById("fatherPhotoId")?.click()}
+                                  className="absolute right-2 top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
                                 >
                                   Upload
                                 </Button>
                                 <input
-                                  id="ewsCertificate"
+                                  id="fatherPhotoId"
                                   type="file"
                                   accept=".jpg,.jpeg,.png"
                                   className="hidden"
                                   onChange={(e) => {
                                     const f = e.target.files?.[0] || null;
-                                    console.info(`[CU-REG FRONTEND] EWS Certificate file selected:`, {
+                                    console.info(`[CU-REG FRONTEND] Father Photo ID file selected:`, {
                                       name: f?.name,
                                       size: f?.size,
                                       sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
                                       type: f?.type,
                                     });
-                                    setDocuments((prev) => ({ ...prev, ewsCertificate: f }));
+                                    setDocuments((prev) => ({ ...prev, fatherPhotoId: f }));
                                   }}
                                 />
                               </div>
-                              {documents.ewsCertificate && (
+                              {documents.fatherPhotoId && (
                                 <div className="mt-3">
                                   <div className="flex items-center space-x-2">
                                     <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                      {documents.ewsCertificate.type.startsWith("image/") ? (
+                                      {documents.fatherPhotoId.type.startsWith("image/") ? (
                                         <img
-                                          src={getFilePreviewUrl(documents.ewsCertificate)}
+                                          src={getFilePreviewUrl(documents.fatherPhotoId)}
                                           alt="Preview"
                                           className="w-full h-full object-cover cursor-pointer"
-                                          onClick={() => handleFilePreview(documents.ewsCertificate!)}
+                                          onClick={() => handleFilePreview(documents.fatherPhotoId!)}
                                         />
                                       ) : (
                                         <div
                                           className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                          onClick={() => handleFilePreview(documents.ewsCertificate!)}
+                                          onClick={() => handleFilePreview(documents.fatherPhotoId!)}
                                         >
                                           PDF
                                         </div>
                                       )}
                                     </div>
                                     <div className="flex-1">
-                                      <p className="text-xs text-gray-600 truncate">{documents.ewsCertificate.name}</p>
+                                      <p className="text-xs text-gray-600 truncate">{documents.fatherPhotoId.name}</p>
                                       <p className="text-xs text-gray-500">
-                                        {(documents.ewsCertificate.size / 1024 / 1024).toFixed(2)} MB
+                                        {(documents.fatherPhotoId.size / 1024 / 1024).toFixed(2)} MB
                                       </p>
                                     </div>
                                   </div>
                                 </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                      )}
 
-                      {/* Confirmation Checkbox - Always show, but disable when completed */}
-                      <div className="mt-6">
-                        <div className="flex items-start space-x-3">
-                          <Checkbox
-                            id="documentsConfirmation"
-                            checked={documentsConfirmed || correctionRequest?.documentsDeclaration}
-                            onCheckedChange={handleDocumentsDeclarationChange}
-                            disabled={false}
-                            className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
-                          />
-                          <Label
-                            htmlFor="documentsConfirmation"
-                            className={`text-sm text-gray-700 leading-relaxed ${
-                              isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
-                            }`}
-                          >
-                            I confirm that the uploaded documents correspond to the data provided.
-                            {correctionRequest?.documentsDeclaration && (
-                              <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                            {/* Mother's Government-issued Photo ID */}
+                            <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
+                              <div className="flex items-center justify-between mb-3">
+                                <Label className="text-sm font-medium text-gray-700">
+                                  4.5 Mother's Government-issued Photo ID
+                                </Label>
+                                <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                  Required
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-gray-600 mb-2">
+                                Passport / Voter ID / Driving Licence (photo)
+                              </p>
+                              <div className="relative">
+                                <Input
+                                  value={documents.motherPhotoId?.name || "No file chosen"}
+                                  readOnly
+                                  className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => document.getElementById("motherPhotoId")?.click()}
+                                  className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
+                                >
+                                  Upload
+                                </Button>
+                                <input
+                                  id="motherPhotoId"
+                                  type="file"
+                                  accept=".jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0] || null;
+                                    console.info(`[CU-REG FRONTEND] Mother Photo ID file selected:`, {
+                                      name: f?.name,
+                                      size: f?.size,
+                                      sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                      type: f?.type,
+                                    });
+                                    setDocuments((prev) => ({ ...prev, motherPhotoId: f }));
+                                  }}
+                                />
+                              </div>
+                              {documents.motherPhotoId && (
+                                <div className="mt-3">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                      {documents.motherPhotoId.type.startsWith("image/") ? (
+                                        <img
+                                          src={getFilePreviewUrl(documents.motherPhotoId)}
+                                          alt="Preview"
+                                          className="w-full h-full object-cover cursor-pointer"
+                                          onClick={() => handleFilePreview(documents.motherPhotoId!)}
+                                        />
+                                      ) : (
+                                        <div
+                                          className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
+                                          onClick={() => handleFilePreview(documents.motherPhotoId!)}
+                                        >
+                                          PDF
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-xs text-gray-600 truncate">{documents.motherPhotoId.name}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {(documents.motherPhotoId.size / 1024 / 1024).toFixed(2)} MB
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* EWS Certificate - Only show if EWS is Yes */}
+                            {personalInfo.ews === "Yes" && (
+                              <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
+                                <div className="flex items-center justify-between mb-3">
+                                  <Label className="text-sm font-medium text-gray-700">4.6 EWS Certificate</Label>
+                                  <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                    Required
+                                  </Badge>
+                                </div>
+                                <div className="relative">
+                                  <Input
+                                    value={documents.ewsCertificate?.name || "No file chosen"}
+                                    readOnly
+                                    className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
+                                  />
+                                  <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => document.getElementById("ewsCertificate")?.click()}
+                                    className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
+                                  >
+                                    Upload
+                                  </Button>
+                                  <input
+                                    id="ewsCertificate"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0] || null;
+                                      console.info(`[CU-REG FRONTEND] EWS Certificate file selected:`, {
+                                        name: f?.name,
+                                        size: f?.size,
+                                        sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                        type: f?.type,
+                                      });
+                                      setDocuments((prev) => ({ ...prev, ewsCertificate: f }));
+                                    }}
+                                  />
+                                </div>
+                                {documents.ewsCertificate && (
+                                  <div className="mt-3">
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                        {documents.ewsCertificate.type.startsWith("image/") ? (
+                                          <img
+                                            src={getFilePreviewUrl(documents.ewsCertificate)}
+                                            alt="Preview"
+                                            className="w-full h-full object-cover cursor-pointer"
+                                            onClick={() => handleFilePreview(documents.ewsCertificate!)}
+                                          />
+                                        ) : (
+                                          <div
+                                            className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
+                                            onClick={() => handleFilePreview(documents.ewsCertificate!)}
+                                          >
+                                            PDF
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-xs text-gray-600 truncate">
+                                          {documents.ewsCertificate.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {(documents.ewsCertificate.size / 1024 / 1024).toFixed(2)} MB
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             )}
-                          </Label>
+                          </div>
+                        )}
+
+                        {/* Confirmation Checkbox - Always show, but disable when completed */}
+                        <div className="mt-6">
+                          <div className="flex items-start space-x-3">
+                            <Checkbox
+                              id="documentsConfirmation"
+                              checked={documentsConfirmed || correctionRequest?.documentsDeclaration}
+                              onCheckedChange={handleDocumentsDeclarationChange}
+                              disabled={false}
+                              className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                            />
+                            <Label
+                              htmlFor="documentsConfirmation"
+                              className={`text-sm text-gray-700 leading-relaxed ${
+                                isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
+                              }`}
+                            >
+                              I confirm that the uploaded documents correspond to the data provided.
+                              {correctionRequest?.documentsDeclaration && (
+                                <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                              )}
+                            </Label>
+                          </div>
+                        </div>
+
+                        {/* Error Messages - Only show if form is editable */}
+                        {isFieldEditable() && getMissingDocuments().length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-sm text-red-600">
+                              Missing required documents:{" "}
+                              {getMissingDocuments()
+                                .map((doc) => {
+                                  const names: { [key: string]: string } = {
+                                    classXIIMarksheet: "Class XII marksheet",
+                                    aadhaarCard: "Aadhaar Card",
+                                    apaarIdCard: "APAAR ID Card",
+                                    fatherPhotoId: "Father's government photo ID",
+                                    motherPhotoId: "Mother's government photo ID",
+                                    ewsCertificate: "EWS Certificate",
+                                  };
+                                  return names[doc] || doc;
+                                })
+                                .join(", ")}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Review & Confirm Button */}
+                        {isFieldEditable() && (
+                          <div className="mt-6">
+                            <Button
+                              onClick={handleReviewConfirm}
+                              disabled={!canReviewConfirm()}
+                              className={`w-full py-2 text-sm font-medium rounded-md border ${
+                                canReviewConfirm()
+                                  ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                                  : "bg-blue-200 text-white border-blue-200 cursor-not-allowed"
+                              }`}
+                            >
+                              Review & Confirm
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Bottom Instruction - Only show if form is editable */}
+                        {isFieldEditable() && (
+                          <div className="mt-3">
+                            <p className="text-sm text-red-600">
+                              To Review & Confirm you must: declare Personal, Address and Subjects tabs and upload all
+                              required documents.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          {/* File Preview Dialog */}
+          <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+              <DialogHeader>
+                <DialogTitle>File Preview</DialogTitle>
+              </DialogHeader>
+              <div className="mt-4">
+                {previewFile && (
+                  <div className="w-full">
+                    {previewFile.type === "image" ? (
+                      <img
+                        src={getFilePreviewUrl(previewFile.file)}
+                        alt="File preview"
+                        className="w-full h-auto max-h-[70vh] object-contain"
+                      />
+                    ) : (
+                      <div className="w-full h-[70vh] border border-gray-300 rounded-md flex items-center justify-center bg-gray-50">
+                        <div className="text-center">
+                          <div className="text-6xl text-red-600 mb-4">📄</div>
+                          <p className="text-lg font-medium text-gray-700 mb-2">{previewFile.file.name}</p>
+                          <p className="text-sm text-gray-500">{(previewFile.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <p className="text-sm text-gray-500 mt-2">
+                            PDF files cannot be previewed in the browser. Please download to view.
+                          </p>
                         </div>
                       </div>
-
-                      {/* Error Messages - Only show if form is editable */}
-                      {isFieldEditable() && getMissingDocuments().length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-sm text-red-600">
-                            Missing required documents:{" "}
-                            {getMissingDocuments()
-                              .map((doc) => {
-                                const names: { [key: string]: string } = {
-                                  classXIIMarksheet: "Class XII marksheet",
-                                  aadhaarCard: "Aadhaar Card",
-                                  apaarIdCard: "APAAR ID Card",
-                                  fatherPhotoId: "Father's government photo ID",
-                                  motherPhotoId: "Mother's government photo ID",
-                                  ewsCertificate: "EWS Certificate",
-                                };
-                                return names[doc] || doc;
-                              })
-                              .join(", ")}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Review & Confirm Button */}
-                      {isFieldEditable() && (
-                        <div className="mt-6">
-                          <Button
-                            onClick={handleReviewConfirm}
-                            disabled={!canReviewConfirm()}
-                            className={`w-full py-2 text-sm font-medium rounded-md border ${
-                              canReviewConfirm()
-                                ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
-                                : "bg-blue-200 text-white border-blue-200 cursor-not-allowed"
-                            }`}
-                          >
-                            Review & Confirm
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Bottom Instruction - Only show if form is editable */}
-                      {isFieldEditable() && (
-                        <div className="mt-3">
-                          <p className="text-sm text-red-600">
-                            To Review & Confirm you must: declare Personal, Address and Subjects tabs and upload all
-                            required documents.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                </div>
-              </Tabs>
-            ) : null}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* File Preview Dialog */}
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>File Preview</DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
-            {previewFile && (
-              <div className="w-full">
-                {previewFile.type === "image" ? (
-                  <img
-                    src={getFilePreviewUrl(previewFile.file)}
-                    alt="File preview"
-                    className="w-full h-auto max-h-[70vh] object-contain"
-                  />
-                ) : (
-                  <div className="w-full h-[70vh] border border-gray-300 rounded-md flex items-center justify-center bg-gray-50">
-                    <div className="text-center">
-                      <div className="text-6xl text-red-600 mb-4">📄</div>
-                      <p className="text-lg font-medium text-gray-700 mb-2">{previewFile.file.name}</p>
-                      <p className="text-sm text-gray-500">{(previewFile.file.size / 1024 / 1024).toFixed(2)} MB</p>
-                      <p className="text-sm text-gray-500 mt-2">
-                        PDF files cannot be previewed in the browser. Please download to view.
-                      </p>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+
+      {/* Subject Selection Required Message - Show when not completed */}
+      {!isSubjectSelectionCompleted && !isCheckingSubjectSelection && (
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8 text-center">
+            <div className="mb-6">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Subject Selection Required</h2>
+              <p className="text-gray-700 text-lg">
+                Subject Selection process is not completed by you. Click on okay to select your subject first.
+              </p>
+            </div>
+            <Button
+              onClick={handleSubjectSelectionRedirect}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-medium"
+            >
+              Okay
+            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Review & Confirm - Inline Panel */}
       {showReviewConfirm && (
         <div className="max-w-6xl mx-auto mt-6 mb-12">
           <Card>
             <CardHeader>
-              <CardTitle>Review & Confirm</CardTitle>
+              <CardTitle className="text-xl">Review & Confirm</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900">Flagged fields</h3>
-                  <ul className="list-disc pl-5 text-sm text-gray-700">
-                    {correctionFlags.gender && <li>Gender</li>}
-                    {correctionFlags.nationality && <li>Nationality</li>}
-                    {correctionFlags.aadhaarNumber && <li>Aadhaar Number</li>}
-                    {correctionFlags.apaarId && <li>APAAR (ABC) ID</li>}
-                    {correctionFlags.subjects && <li>Subjects</li>}
-                    {!Object.values(correctionFlags).some(Boolean) && <li>None</li>}
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">Documents</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border border-gray-200 text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="border-b border-gray-200 px-3 py-2 text-left">Doc type</th>
-                          <th className="border-b border-gray-200 px-3 py-2 text-left">Uploaded</th>
-                          <th className="border-b border-gray-200 px-3 py-2 text-left">Size</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[
-                          { key: "classXIIMarksheet", label: "Class XII Marksheet" },
-                          { key: "aadhaarCard", label: "Aadhaar Card" },
-                          { key: "apaarIdCard", label: "APAAR (ABC) ID Card" },
-                          { key: "fatherPhotoId", label: "Father's Photo ID" },
-                          { key: "motherPhotoId", label: "Mother's Photo ID" },
-                          ...(personalInfo.ews === "Yes" ? [{ key: "ewsCertificate", label: "EWS Certificate" }] : []),
-                        ].map((d: any) => {
-                          const file: File | null = (documents as any)[d.key] || null;
-                          const isImage = file && file.type.startsWith("image/");
-                          const size = file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "-";
-                          return (
-                            <tr key={d.key} className="align-middle">
-                              <td className="border-t border-gray-200 px-3 py-2">{d.label}</td>
-                              <td className="border-t border-gray-200 px-3 py-2">
-                                {file ? (
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded overflow-hidden">
-                                      {isImage ? (
-                                        <img
-                                          src={URL.createObjectURL(file)}
-                                          alt="preview"
-                                          className="w-8 h-8 object-cover"
-                                        />
-                                      ) : (
-                                        <span className="text-lg">📄</span>
-                                      )}
-                                    </div>
-                                    <span className="truncate max-w-[260px]" title={file.name}>
-                                      {file.name}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-500">Missing</span>
-                                )}
+                  <h3 className="text-base font-medium text-gray-900 mb-3">
+                    Correction request registered for the following fields:
+                  </h3>
+                  {Object.values(correctionFlags).some(Boolean) ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border border-gray-200 text-base">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">
+                              Field
+                            </th>
+                            <th className="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">
+                              Current Value
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {correctionFlags.gender && (
+                            <tr>
+                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">Gender</td>
+                              <td className="border border-gray-200 px-4 py-3 text-gray-600">
+                                {personalInfo.gender || "Not provided"}
                               </td>
-                              <td className="border-t border-gray-200 px-3 py-2">{file ? size : "-"}</td>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                          )}
+                          {correctionFlags.nationality && (
+                            <tr>
+                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
+                                Nationality
+                              </td>
+                              <td className="border border-gray-200 px-4 py-3 text-gray-600">
+                                {personalInfo.nationality || "Not provided"}
+                              </td>
+                            </tr>
+                          )}
+                          {correctionFlags.aadhaarNumber && (
+                            <tr>
+                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
+                                Aadhaar Number
+                              </td>
+                              <td className="border border-gray-200 px-4 py-3 text-gray-600">
+                                {formatAadhaarNumber(personalInfo.aadhaarNumber) || "Not provided"}
+                              </td>
+                            </tr>
+                          )}
+                          {correctionFlags.apaarId && (
+                            <tr>
+                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
+                                APAAR (ABC) ID
+                              </td>
+                              <td className="border border-gray-200 px-4 py-3 text-gray-600">
+                                {formatApaarId(personalInfo.apaarId) || "Not provided"}
+                              </td>
+                            </tr>
+                          )}
+                          {correctionFlags.subjects && (
+                            <tr>
+                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
+                                Subjects to be studied
+                              </td>
+                              <td className="border border-gray-200 px-4 py-3 text-gray-600">Subjects to be changed</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">No correction requests</p>
+                  )}
                 </div>
 
                 <div className="flex items-start space-x-3">
@@ -3251,8 +3308,9 @@ export default function CURegistrationPage() {
                     onCheckedChange={(c: boolean) => setFinalDeclaration(c)}
                     className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                   />
-                  <Label htmlFor="finalDeclare" className="text-sm text-gray-700">
-                    I confirm the above information and uploaded documents are correct.
+                  <Label htmlFor="finalDeclare" className="text-base text-gray-700">
+                    I confirm that all the information provided has been reviewed by me, and any further changes will be
+                    at the college's discretion.
                   </Label>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">

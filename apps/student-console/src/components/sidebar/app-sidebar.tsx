@@ -29,15 +29,31 @@ import {
 import Image from "next/image";
 
 import { useStudent } from "@/providers/student-provider";
+import { fetchStudentSubjectSelections } from "@/services/subject-selection";
 // import { useAuth } from "@/hooks/use-auth";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   //   const { user } = useAuth();
-  const { accessControl } = useStudent();
+  const { accessControl, student } = useStudent();
+  //   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState<boolean>(false);
   console.log("pathname:", pathname);
 
-  React.useEffect(() => {}, [accessControl]);
+  //   React.useEffect(() => {
+  //     (async () => {
+  //       try {
+  //         if (!student?.id) return;
+  //         const data = await fetchStudentSubjectSelections(Number(student.id)).catch(() => null as any);
+  //         const completed = !!(
+  //           data?.hasFormSubmissions ||
+  //           (Array.isArray(data?.actualStudentSelections) && data.actualStudentSelections.length > 0)
+  //         );
+  //         setIsSubjectSelectionCompleted(completed);
+  //       } catch {
+  //         setIsSubjectSelectionCompleted(false);
+  //       }
+  //     })();
+  //   }, [student?.id]);
 
   // Define navigation items
   const navMainItems = [
@@ -59,7 +75,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: BookOpen,
       isActive: pathname === "/dashboard/subject-selection",
     },
-    (process.env.NEXT_PUBLIC_APP_ENV === "staging" || process.env.NEXT_PUBLIC_APP_ENV === "development") && {
+    {
       title: "Admission & Registration Data",
       url: "/dashboard/admission-registration",
       icon: FileText,

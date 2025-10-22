@@ -605,6 +605,19 @@ export async function updateCuRegistrationCorrectionRequest(
         if (payload.personalInfo.nationality) {
           personalUpdates.nationality = payload.personalInfo.nationality;
         }
+        if (payload.personalInfo.aadhaarNumber) {
+          // Format Aadhaar number to 4-4-4 format before saving to database
+          const digits = payload.personalInfo.aadhaarNumber.replace(/\D/g, "");
+          const formattedAadhaarNumber =
+            digits.length === 12
+              ? digits.replace(/^(\d{4})(\d{4})(\d{4})$/, "$1-$2-$3")
+              : payload.personalInfo.aadhaarNumber;
+          personalUpdates.aadhaarCardNumber = formattedAadhaarNumber;
+          console.info("[CU-REG CORRECTION][UPDATE] Updated Aadhaar number", {
+            original: payload.personalInfo.aadhaarNumber,
+            formatted: formattedAadhaarNumber,
+          });
+        }
 
         if (Object.keys(personalUpdates).length > 0) {
           console.info(
@@ -623,15 +636,19 @@ export async function updateCuRegistrationCorrectionRequest(
 
         // Student APAAR/ABC update
         if (payload.personalInfo.apaarId) {
-          // Strip formatting (remove dashes) before saving to database
-          const cleanApaarId = payload.personalInfo.apaarId.replace(/-/g, "");
+          // Format APAAR ID to 3-3-3-3 format before saving to database
+          const digits = payload.personalInfo.apaarId.replace(/\D/g, "");
+          const formattedApaarId =
+            digits.length === 12
+              ? digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{3})$/, "$1-$2-$3-$4")
+              : payload.personalInfo.apaarId;
           await tx
             .update(studentModel)
-            .set({ apaarId: cleanApaarId })
+            .set({ apaarId: formattedApaarId })
             .where(eq(studentModel.id, student.id));
           console.info("[CU-REG CORRECTION][UPDATE] Updated APAAR ID", {
             original: payload.personalInfo.apaarId,
-            cleaned: cleanApaarId,
+            formatted: formattedApaarId,
           });
         }
 

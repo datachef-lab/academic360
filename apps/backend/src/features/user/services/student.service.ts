@@ -1624,15 +1624,16 @@ export async function updateStudentApaarIds(
         continue;
       }
 
-      // Update APAAR ID
+      // Update APAAR ID - clean formatting (remove dashes and non-digits)
+      const cleanApaarId = apaarId.trim().replace(/\D/g, "");
       await db
         .update(studentModel)
-        .set({ apaarId: apaarId.trim() })
+        .set({ apaarId: cleanApaarId })
         .where(eq(studentModel.id, student.id));
 
       updated++;
       console.info(
-        `[UPDATE APAAR IDS] Updated APAAR ID for student ${collegeUid}: ${apaarId}`,
+        `[UPDATE APAAR IDS] Updated APAAR ID for student ${collegeUid}: ${apaarId} -> ${cleanApaarId}`,
       );
     } catch (error: any) {
       console.error(

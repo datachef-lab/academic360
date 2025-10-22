@@ -126,6 +126,9 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
         addressInfoDeclaration: true,
         subjectsDeclaration: true,
         documentsDeclaration: true,
+
+        // Pass the payload to update personal info and addresses
+        payload: parsedPayload,
       },
     );
 

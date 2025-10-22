@@ -1872,19 +1872,18 @@ export async function processStudent(
       {
         const updateData: Record<string, string> = {};
         if (oldStudent.apprid) {
-          updateData.apaarId = String(oldStudent.apprid);
+          // Clean APAAR ID (remove any formatting like dashes)
+          // const cleanApaarId = String(oldStudent.apprid).replace(/\D/g, "");
+          updateData.apaarId = oldStudent.apprid;
         } else if (oldStudent.abcid) {
-          updateData.apaarId = String(oldStudent.abcid);
+          // Clean ABC ID (remove any formatting like dashes)
+          // const cleanApaarId = String(oldStudent.abcid).replace(/\D/g, "");
+          updateData.apaarId = oldStudent.abcid;
         }
         if (Object.keys(updateData).length > 0) {
           await db
             .update(studentModel)
-            .set({
-              ...updateData,
-              apaarId: oldStudent.apprid
-                ? String(oldStudent.apprid)
-                : undefined,
-            })
+            .set(updateData)
             .where(eq(studentModel.id, student.id!));
         }
       }
