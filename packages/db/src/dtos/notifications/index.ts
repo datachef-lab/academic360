@@ -34,8 +34,8 @@ export interface NotificationDto {
     message: string;
     notificationMasterId: number;
     applicationFormId?: number;
-    notificationEvent?: NotificationEventDto;
-    content?: NotificationContentT[];
+    notificationEvent?: Partial<NotificationEventDto>;
+    content?: Partial<NotificationContentT>[];
     otherUsersEmails?: string[];
     otherUsersWhatsAppNumbers?: string[];
     emailAttachments?: Array<{

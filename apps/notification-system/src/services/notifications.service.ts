@@ -96,7 +96,7 @@ export class NotificationsService {
     ) {
       // Check if there are any notification fields defined
       const hasFields =
-        dto.notificationEvent.notificationMaster?.meta?.length > 0;
+        (dto.notificationEvent.notificationMaster?.meta?.length ?? 0) > 0;
       if (!hasFields) {
         // Store bodyValues in message field for worker to access
         message = JSON.stringify({
