@@ -202,7 +202,7 @@ export class NotificationsService {
           const byId = new Map(
             fields.map((f) => [f.id as number, String(f.name)]),
           );
-          const source = (dto.notificationEvent.templateData || {}) as Record<
+          const source = (dto.notificationEvent?.templateData || {}) as Record<
             string,
             unknown
           >;
@@ -251,8 +251,8 @@ export class NotificationsService {
           "[notif-sys] (whatsapp) notificationEvent.id:",
           dto.notificationEvent?.id,
         );
-        let meta = dto.notificationEvent.notificationMaster?.meta || [];
-        const bodyValues = (dto.notificationEvent.bodyValues || []).slice();
+        let meta = dto.notificationEvent?.notificationMaster?.meta || [];
+        const bodyValues = (dto.notificationEvent?.bodyValues || []).slice();
         const rows: ContentInsert[] = [];
         // If meta not provided in DTO, fetch from DB using masterId
         if ((!meta || meta.length === 0) && insertValues.notificationMasterId) {
@@ -279,7 +279,8 @@ export class NotificationsService {
           const value = bodyValues.length > 0 ? String(bodyValues.shift()) : "";
           rows.push({
             notificationId: notifRow!.id,
-            notificationEventId: dto.notificationEvent.id,
+            notificationEventId: (dto.notificationEvent?.id ??
+              null) as unknown as number,
             whatsappFieldId: m.notificationMasterFieldId as unknown as number,
             emailTemplate: null,
             content: value,
