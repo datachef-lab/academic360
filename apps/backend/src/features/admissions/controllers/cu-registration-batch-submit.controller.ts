@@ -129,7 +129,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
 
         // Pass the payload to update personal info and addresses
         payload: parsedPayload,
-      },
+      } as any,
     );
 
     console.info(
