@@ -147,13 +147,21 @@ jobs:
             # Backend
             echo "  📡 Backend configuration..."
             put PORT "$(choose '${{ secrets.PROD_PORT }}' '${{ secrets.PORT }}')"
-            # Notification-system (use common secrets only)
+            # Notification-system
+            echo "  📬 Notification system configuration..."
             put NOTIFICATION_SYSTEM_PORT "${{ secrets.NOTIFICATION_SYSTEM_PORT }}"
             put ZEPTO_URL "${{ secrets.ZEPTO_URL }}"
             put ZEPTO_FROM "${{ secrets.ZEPTO_FROM }}"
             put ZEPTO_TOKEN "${{ secrets.ZEPTO_TOKEN }}"
             put INTERAKT_API_KEY "${{ secrets.INTERAKT_API_KEY }}"
             put INTERAKT_BASE_URL "${{ secrets.INTERAKT_BASE_URL }}"
+            echo "  ☁️  Notification system AWS S3 configuration..."
+            put AWS_ACCESS_KEY_ID "${{ secrets.PROD_AWS_ACCESS_KEY_ID }}"
+            put AWS_SECRET_ACCESS_KEY "${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}"
+            put AWS_REGION "$(choose '${{ secrets.PROD_AWS_REGION }}' '${{ secrets.AWS_REGION }}')"
+            put AWS_S3_BUCKET "${{ secrets.PROD_AWS_S3_BUCKET }}"
+            put AWS_ROOT_FOLDER "${{ secrets.PROD_AWS_ROOT_FOLDER }}"
+            # Backend & shared
             put DATABASE_URL "${{ secrets.PROD_DATABASE_URL }}"
             put ACCESS_TOKEN_SECRET "$(choose '${{ secrets.PROD_ACCESS_TOKEN_SECRET }}' '${{ secrets.ACCESS_TOKEN_SECRET }}')"
             put ACCESS_TOKEN_EXPIRY "$(choose '${{ secrets.PROD_ACCESS_TOKEN_EXPIRY }}' '${{ secrets.ACCESS_TOKEN_EXPIRY }}')"
@@ -215,25 +223,27 @@ jobs:
             put BACKEND_PORT "$(choose '${{ secrets.PROD_BACKEND_PORT }}' '${{ secrets.BACKEND_PORT }}')"
             put MAIN_CONSOLE_PORT "$(choose '${{ secrets.PROD_MAIN_CONSOLE_PORT }}' '${{ secrets.MAIN_CONSOLE_PORT }}')"
             put STUDENT_CONSOLE_PORT "$(choose '${{ secrets.PROD_STUDENT_CONSOLE_PORT }}' '${{ secrets.STUDENT_CONSOLE_PORT }}')"
-            echo "  ☁️  AWS S3 configuration..."
-            put AWS_ACCESS_KEY_ID "${{ secrets.PROD_AWS_ACCESS_KEY_ID }}"
-            put AWS_SECRET_ACCESS_KEY "${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}"
-            put AWS_REGION "$(choose '${{ secrets.PROD_AWS_REGION }}' '${{ secrets.AWS_REGION }}')"
-            put AWS_S3_BUCKET "${{ secrets.PROD_AWS_S3_BUCKET }}"
-            put AWS_ROOT_FOLDER "${{ secrets.PROD_AWS_ROOT_FOLDER }}"
           else
             echo "🧪 Processing STAGING environment variables..."
             NODE_ENV_VAL=staging
             # Backend
             echo "  📡 Backend configuration..."
             put PORT "$(choose '${{ secrets.STAGING_PORT }}' '${{ secrets.PORT }}')"
-            # Notification-system (use common secrets only)
+            # Notification-system
+            echo "  📬 Notification system configuration..."
             put NOTIFICATION_SYSTEM_PORT "${{ secrets.NOTIFICATION_SYSTEM_PORT }}"
             put ZEPTO_URL "${{ secrets.ZEPTO_URL }}"
             put ZEPTO_FROM "${{ secrets.ZEPTO_FROM }}"
             put ZEPTO_TOKEN "${{ secrets.ZEPTO_TOKEN }}"
             put INTERAKT_API_KEY "${{ secrets.INTERAKT_API_KEY }}"
             put INTERAKT_BASE_URL "${{ secrets.INTERAKT_BASE_URL }}"
+            echo "  ☁️  Notification system AWS S3 configuration..."
+            put AWS_ACCESS_KEY_ID "${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}"
+            put AWS_SECRET_ACCESS_KEY "${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}"
+            put AWS_REGION "$(choose '${{ secrets.STAGING_AWS_REGION }}' '${{ secrets.AWS_REGION }}')"
+            put AWS_S3_BUCKET "${{ secrets.STAGING_AWS_S3_BUCKET }}"
+            put AWS_ROOT_FOLDER "${{ secrets.STAGING_AWS_ROOT_FOLDER }}"
+            # Backend & shared
             put DATABASE_URL "${{ secrets.STAGING_DATABASE_URL }}"
             put ACCESS_TOKEN_SECRET "$(choose '${{ secrets.STAGING_ACCESS_TOKEN_SECRET }}' '${{ secrets.ACCESS_TOKEN_SECRET }}')"
             put ACCESS_TOKEN_EXPIRY "$(choose '${{ secrets.STAGING_ACCESS_TOKEN_EXPIRY }}' '${{ secrets.ACCESS_TOKEN_EXPIRY }}')"
@@ -295,12 +305,6 @@ jobs:
             put BACKEND_PORT "$(choose '${{ secrets.STAGING_BACKEND_PORT }}' '${{ secrets.BACKEND_PORT }}')"
             put MAIN_CONSOLE_PORT "$(choose '${{ secrets.STAGING_MAIN_CONSOLE_PORT }}' '${{ secrets.MAIN_CONSOLE_PORT }}')"
             put STUDENT_CONSOLE_PORT "$(choose '${{ secrets.STAGING_STUDENT_CONSOLE_PORT }}' '${{ secrets.STUDENT_CONSOLE_PORT }}')"
-            echo "  ☁️  AWS S3 configuration..."
-            put AWS_ACCESS_KEY_ID "${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}"
-            put AWS_SECRET_ACCESS_KEY "${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}"
-            put AWS_REGION "$(choose '${{ secrets.STAGING_AWS_REGION }}' '${{ secrets.AWS_REGION }}')"
-            put AWS_S3_BUCKET "${{ secrets.STAGING_AWS_S3_BUCKET }}"
-            put AWS_ROOT_FOLDER "${{ secrets.STAGING_AWS_ROOT_FOLDER }}"
           fi
           put NODE_ENV "$NODE_ENV_VAL"
 
@@ -351,6 +355,8 @@ jobs:
             "NODE_ENV" "PORT" "DATABASE_URL" "CORS_ORIGIN" "BACKEND_URL"
             "ACCESS_TOKEN_SECRET" "ACCESS_TOKEN_EXPIRY" "REFRESH_TOKEN_SECRET" "REFRESH_TOKEN_EXPIRY"
             "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET"
+            # Notification system
+            "NOTIFICATION_SYSTEM_PORT"
             # Email
             "SMTP_HOST" "SMTP_PORT" "SMTP_USER" "SMTP_PASS"
             # File paths
@@ -366,10 +372,12 @@ jobs:
             # Student DB/runtime
             "DB_HOST" "DB_PORT" "DB_USER" "DB_PASSWORD" "DB_NAME"
             "COURSE_MATERIAL_PATH" "DOCS_PATH" "ACADEMIC_360_URL"
+            # RabbitMQ
+            "RABBITMQ_URL" "RABBITMQ_PREFETCH" "RABBITMQ_RETRY_MAX" "RABBITMQ_RETRY_DELAY_MS"
             # Docker exposed ports
             "BACKEND_PORT" "MAIN_CONSOLE_PORT" "STUDENT_CONSOLE_PORT"
             # AWS S3
-            "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "AWS_S3_BUCKET"
+            "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "AWS_S3_BUCKET" "AWS_ROOT_FOLDER"
           )
 
           audit_missing=()
