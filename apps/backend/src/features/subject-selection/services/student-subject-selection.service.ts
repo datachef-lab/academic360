@@ -1172,7 +1172,10 @@ export async function getStudentSubjectSelectionsPaginated(options: {
     .select()
     .from(studentSubjectSelectionModel)
     .where(whereExpr)
-    .orderBy(desc(studentSubjectSelectionModel.createdAt))
+    .orderBy(
+      desc(studentSubjectSelectionModel.version),
+      desc(studentSubjectSelectionModel.createdAt),
+    )
     .limit(pageSize)
     .offset(offset);
 
@@ -2164,7 +2167,10 @@ export async function getCurrentActiveSelections(
     .select()
     .from(studentSubjectSelectionModel)
     .where(whereExpr)
-    .orderBy(desc(studentSubjectSelectionModel.createdAt));
+    .orderBy(
+      desc(studentSubjectSelectionModel.version),
+      desc(studentSubjectSelectionModel.createdAt),
+    );
 
   return Promise.all(
     rows.map((r) => modelToDto(r as StudentSubjectSelectionT)),

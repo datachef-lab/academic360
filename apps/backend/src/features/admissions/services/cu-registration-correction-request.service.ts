@@ -760,6 +760,82 @@ export async function updateCuRegistrationCorrectionRequest(
 
   if (!updatedRequest) return null;
 
+  // Only regenerate PDF when all declarations are completed AND data was actually updated
+  const allDeclarationsCompleted =
+    updatedRequest.personalInfoDeclaration &&
+    updatedRequest.addressInfoDeclaration &&
+    updatedRequest.subjectsDeclaration &&
+    updatedRequest.documentsDeclaration;
+
+  // Check if any data fields were updated (not just status changes)
+  const dataFieldsUpdated =
+    updateData.personalInfoDeclaration !== undefined ||
+    updateData.addressInfoDeclaration !== undefined ||
+    updateData.subjectsDeclaration !== undefined ||
+    updateData.documentsDeclaration !== undefined ||
+    (updateData as any).payload !== undefined ||
+    (updateData as any).flags !== undefined;
+
+  if (allDeclarationsCompleted && dataFieldsUpdated) {
+    try {
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] All declarations completed and data updated, regenerating PDF with latest data",
+      );
+
+      // Import the PDF integration service
+      const { CuRegistrationPdfIntegrationService } = await import(
+        "@/services/cu-registration-pdf-integration.service.js"
+      );
+
+      // Regenerate PDF with latest data
+      const pdfResult =
+        await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
+          existing.studentId,
+          id,
+          existing.cuRegistrationApplicationNumber || "TEMP-APP-NUM", // Provide fallback for null application number
+          student.uid,
+        );
+
+      if (pdfResult.success) {
+        console.info(
+          "[CU-REG CORRECTION][UPDATE] PDF regenerated successfully",
+          {
+            pdfPath: pdfResult.pdfPath,
+            s3Url: pdfResult.s3Url,
+            applicationNumber: existing.cuRegistrationApplicationNumber,
+          },
+        );
+      } else {
+        console.error("[CU-REG CORRECTION][UPDATE] PDF regeneration failed", {
+          error: pdfResult.error,
+          applicationNumber: existing.cuRegistrationApplicationNumber,
+        });
+      }
+    } catch (error) {
+      console.error(
+        "[CU-REG CORRECTION][UPDATE] Error regenerating PDF:",
+        error,
+      );
+      // Don't fail the update if PDF regeneration fails
+    }
+  } else {
+    if (!allDeclarationsCompleted) {
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] Not all declarations completed, skipping PDF regeneration",
+        {
+          personalInfoDeclaration: updatedRequest.personalInfoDeclaration,
+          addressInfoDeclaration: updatedRequest.addressInfoDeclaration,
+          subjectsDeclaration: updatedRequest.subjectsDeclaration,
+          documentsDeclaration: updatedRequest.documentsDeclaration,
+        },
+      );
+    } else if (!dataFieldsUpdated) {
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] Only status changed, no data updates, skipping PDF regeneration",
+      );
+    }
+  }
+
   console.info(
     "[CU-REG CORRECTION][UPDATE] Completed",
     JSON.stringify({ id: updatedRequest.id }),

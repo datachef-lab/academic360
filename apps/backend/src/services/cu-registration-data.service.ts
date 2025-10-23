@@ -753,6 +753,10 @@ export class CuRegistrationDataService {
           eq(studentSubjectSelectionModel.studentId, studentId),
           eq(studentSubjectSelectionModel.isActive, true),
         ),
+      )
+      .orderBy(
+        desc(studentSubjectSelectionModel.version),
+        desc(studentSubjectSelectionModel.createdAt),
       );
 
     console.info("[CU-REG DATA] Database query result:", {

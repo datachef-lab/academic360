@@ -13,6 +13,8 @@ import {
   validateCuRegistrationApplicationNumberController,
   getCuRegistrationApplicationNumberStatsController,
   exportCuRegistrationCorrectionRequestsController,
+  updatePersonalInfoByAdmin,
+  updateAddressInfoByAdmin,
 } from "../controllers/cu-registration-correction-request.controller.js";
 import {
   submitCuRegistrationCorrectionRequestWithDocuments,
@@ -69,6 +71,12 @@ router.get("/status/:status", getCuRegistrationCorrectionRequestsByStatus);
 
 // Update CU registration correction request
 router.put("/:id", updateCuRegistrationCorrectionRequestById);
+
+// Admin/Staff Personal Info Update
+router.post("/:id/personal-info", updatePersonalInfoByAdmin);
+
+// Admin/Staff Address Info Update
+router.post("/:id/address-info", updateAddressInfoByAdmin);
 
 // Approve CU registration correction request
 router.patch("/:id/approve", approveCuRegistrationCorrectionRequestById);

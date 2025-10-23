@@ -139,7 +139,12 @@ export async function uploadToS3(
     const root = (process.env.AWS_ROOT_FOLDER || "")
       .trim()
       .replace(/^\/+|\/+$/g, "");
-    const finalFolder = root ? `${root}/${folder}` : folder;
+
+    // Check if the folder already contains the root folder prefix to avoid double prefixing
+    let finalFolder = folder;
+    if (root && !folder.startsWith(`${root}/`)) {
+      finalFolder = `${root}/${folder}`;
+    }
 
     const key = `${finalFolder}/${fileName}`.replace(/\/{2,}/g, "/");
 
@@ -238,7 +243,12 @@ export async function getSignedUrlForFile(
     const root = (process.env.AWS_ROOT_FOLDER || "")
       .trim()
       .replace(/^\/+|\/+$/g, "");
-    const finalKey = root ? `${root}/${key}` : key;
+
+    // Check if the key already contains the root folder prefix to avoid double prefixing
+    let finalKey = key;
+    if (root && !key.startsWith(`${root}/`)) {
+      finalKey = `${root}/${key}`;
+    }
 
     console.info(`[S3 SERVICE] Generating signed URL:`, {
       originalKey: key,

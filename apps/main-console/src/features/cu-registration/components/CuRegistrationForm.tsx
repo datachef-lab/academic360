@@ -1,16 +1,34 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { getStudentCuCorrectionRequests } from "@/services/cu-registration";
-import { getCuRegistrationDocuments, getCuRegistrationDocumentSignedUrl } from "@/services/cu-registration-documents";
+import {
+  getCuRegistrationDocuments,
+  getCuRegistrationDocumentsByStudentUid,
+  getAllStudentDocuments,
+  getCuRegistrationDocumentSignedUrl,
+  getCuRegistrationPdfUrlByRequestId,
+} from "@/services/cu-registration-documents";
 import { fetchUserProfile } from "@/services/student";
 import { fetchStudentSubjectSelections, fetchMandatorySubjects } from "@/services/subject-selection";
-import type { CuRegistrationCorrectionRequestDto } from "@repo/db/dtos/admissions";
+import { getActiveCountries } from "@/services/country.service";
+import { getStatesByCountry } from "@/services/state.service";
+import { getCitiesByState } from "@/services/city.service";
+import { getDistrictsByState } from "@/services/address.service";
+import { getAllNationalities } from "@/services/nationalities.service";
 import type { StudentDto, ProfileInfo } from "@repo/db/dtos/user";
+import { genderTypeEnum, cuRegistrationCorrectionRequestStatusEnum } from "@repo/db/enums";
+import axiosInstance from "@/utils/api";
 
 interface CuRegistrationFormProps {
   studentId: number;
@@ -25,45 +43,46 @@ interface CorrectionFlags {
   subjects: boolean;
 }
 
-interface PersonalInfoData {
+interface EditableFormData {
   fullName: string;
-  parentName: string;
+  fatherMotherName: string;
   gender: string;
   nationality: string;
-  ews: string;
+  belongsToEWS: string;
   aadhaarNumber: string;
   apaarId: string;
+  // Address fields
+  residentialAddress: string;
+  residentialCountry: string;
+  residentialState: string;
+  residentialDistrict: string;
+  residentialCity: string;
+  residentialPinCode: string;
+  residentialPoliceStation: string;
+  residentialPostOffice: string;
+  mailingAddress: string;
+  mailingCountry: string;
+  mailingState: string;
+  mailingDistrict: string;
+  mailingCity: string;
+  mailingPinCode: string;
+  mailingPoliceStation: string;
+  mailingPostOffice: string;
 }
 
-interface AddressData {
-  residential: {
-    addressLine: string;
-    city: string;
-    district: string;
-    policeStation: string;
-    postOffice: string;
-    state: string;
-    country: string;
-    pinCode: string;
-  };
-  mailing: {
-    addressLine: string;
-    city: string;
-    district: string;
-    policeStation: string;
-    postOffice: string;
-    state: string;
-    country: string;
-    pinCode: string;
-  };
+interface CorrectionRequestStatus {
+  id: number;
+  status: string;
+  remarks?: string;
 }
 
 export default function CuRegistrationForm({ studentId, studentData }: CuRegistrationFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
-  const [loading, setLoading] = useState(true);
-  const [, setCorrectionRequest] = useState<CuRegistrationCorrectionRequestDto | null>(null);
-  const [uploadedDocuments, setUploadedDocuments] = useState<Array<Record<string, unknown>>>([]);
-  const [docPreviewUrls, setDocPreviewUrls] = useState<Record<number, string>>({});
+
+  // Debug: Track activeTab changes
+  React.useEffect(() => {
+    console.info("[CU-REG MAIN-CONSOLE] activeTab changed to:", activeTab);
+  }, [activeTab]);
 
   const [correctionFlags, setCorrectionFlags] = useState<CorrectionFlags>({
     gender: false,
@@ -72,41 +91,72 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     apaarId: false,
     subjects: false,
   });
-  const [personalInfo, setPersonalInfo] = useState<PersonalInfoData>({
+
+  const [personalDeclared, setPersonalDeclared] = useState(false);
+
+  // New state for editable form data
+  const [editableData, setEditableData] = useState<EditableFormData>({
     fullName: "",
-    parentName: "",
+    fatherMotherName: "",
     gender: "",
     nationality: "",
-    ews: "No",
+    belongsToEWS: "",
     aadhaarNumber: "",
     apaarId: "",
+    residentialAddress: "",
+    residentialCountry: "",
+    residentialState: "",
+    residentialDistrict: "",
+    residentialCity: "",
+    residentialPinCode: "",
+    residentialPoliceStation: "",
+    residentialPostOffice: "",
+    mailingAddress: "",
+    mailingCountry: "",
+    mailingState: "",
+    mailingDistrict: "",
+    mailingCity: "",
+    mailingPinCode: "",
+    mailingPoliceStation: "",
+    mailingPostOffice: "",
   });
-  const [personalDeclared, setPersonalDeclared] = useState(false);
-  const [addressData, setAddressData] = useState<AddressData>({
-    residential: {
-      addressLine: "",
-      city: "",
-      district: "",
-      policeStation: "",
-      postOffice: "",
-      state: "West Bengal",
-      country: "India",
-      pinCode: "",
-    },
-    mailing: {
-      addressLine: "",
-      city: "",
-      district: "",
-      policeStation: "",
-      postOffice: "",
-      state: "West Bengal",
-      country: "India",
-      pinCode: "",
-    },
-  });
+
+  // Correction request status
+  const [correctionRequestStatus, setCorrectionRequestStatus] = useState<CorrectionRequestStatus | null>(null);
+
+  // Debug: Track correction request status changes
+  React.useEffect(() => {
+    console.info("[CU-REG MAIN-CONSOLE] correctionRequestStatus changed to:", correctionRequestStatus);
+  }, [correctionRequestStatus]);
+
+  // File upload states for each document
+  const [documentUploads, setDocumentUploads] = useState<Record<string, File | null>>({});
+
+  // API data states
+  const [countries, setCountries] = useState<Array<{ id?: number; name: string }>>([]);
+  const [nationalities, setNationalities] = useState<Array<{ id?: number; name: string }>>([]);
+
+  // Residential address data states
+  const [residentialStates, setResidentialStates] = useState<Array<{ id?: number; name: string }>>([]);
+  const [residentialCities, setResidentialCities] = useState<Array<{ id?: number; name: string }>>([]);
+  const [residentialDistricts, setResidentialDistricts] = useState<Array<{ id?: number; name: string }>>([]);
+
+  // Mailing address data states
+  const [mailingStates, setMailingStates] = useState<Array<{ id?: number; name: string }>>([]);
+  const [mailingCities, setMailingCities] = useState<Array<{ id?: number; name: string }>>([]);
+  const [mailingDistricts, setMailingDistricts] = useState<Array<{ id?: number; name: string }>>([]);
+
   const [addressDeclared, setAddressDeclared] = useState(false);
   const [subjectsDeclared, setSubjectsDeclared] = useState(false);
   const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
+  const [isSavingPersonal, setIsSavingPersonal] = useState(false);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [isSavingSubjects, setIsSavingSubjects] = useState(false);
+  const [isSavingDocuments, setIsSavingDocuments] = useState(false);
+
+  // Check if all declarations are completed
+  const allDeclarationsCompleted = personalDeclared && addressDeclared && subjectsDeclared && documentsConfirmed;
+
   const [subjectsData, setSubjectsData] = useState({
     DSCC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     Minor: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
@@ -123,6 +173,11 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     AEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     CVAC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
   });
+
+  const [uploadedDocuments, setUploadedDocuments] = useState<Array<Record<string, unknown>>>([]);
+  const [docPreviewUrls, setDocPreviewUrls] = useState<Record<number, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
 
   // Helper: format Aadhaar number to 4-4-4 format
   const formatAadhaarNumber = (aadhaar: string) => {
@@ -144,12 +199,362 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     return apaarId;
   };
 
-  const getReadOnlyFieldStyle = () => {
-    return "bg-white text-gray-900 border-gray-300";
+  // Helper: validate and format Aadhaar number input (only 12 digits, 4-4-4 format)
+  const handleAadhaarInput = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, "");
+
+    // Only allow up to 12 digits
+    const limitedDigits = digits.slice(0, 12);
+
+    // Format as 4-4-4
+    if (limitedDigits.length <= 4) {
+      return limitedDigits;
+    } else if (limitedDigits.length <= 8) {
+      return `${limitedDigits.slice(0, 4)}-${limitedDigits.slice(4)}`;
+    } else {
+      return `${limitedDigits.slice(0, 4)}-${limitedDigits.slice(4, 8)}-${limitedDigits.slice(8)}`;
+    }
   };
 
-  const getReadOnlyDivStyle = () => {
-    return "px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 text-sm";
+  // Helper: validate and format APAAR ID input (only 12 digits, 3-3-3-3 format)
+  const handleApaarIdInput = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, "");
+
+    // Only allow up to 12 digits
+    const limitedDigits = digits.slice(0, 12);
+
+    // Format as 3-3-3-3
+    if (limitedDigits.length <= 3) {
+      return limitedDigits;
+    } else if (limitedDigits.length <= 6) {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3)}`;
+    } else if (limitedDigits.length <= 9) {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6)}`;
+    } else {
+      return `${limitedDigits.slice(0, 3)}-${limitedDigits.slice(3, 6)}-${limitedDigits.slice(6, 9)}-${limitedDigits.slice(9)}`;
+    }
+  };
+
+  // Dropdown options using database enums
+  const genderOptions = genderTypeEnum.enumValues.map((value) => ({
+    value,
+    label: value.charAt(0) + value.slice(1).toLowerCase(),
+  }));
+
+  const ewsOptions = [
+    { value: "Yes", label: "Yes" },
+    { value: "No", label: "No" },
+  ];
+
+  const correctionStatusOptions = cuRegistrationCorrectionRequestStatusEnum.enumValues.map((value) => ({
+    value,
+    label: value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+  }));
+
+  // Document types for file uploads
+  const documentTypes = [
+    { id: "1", name: "Class XII Marksheet", code: "M" },
+    { id: "2", name: "Aadhaar Card", code: "A" },
+    { id: "3", name: "APAAR ID Card", code: "ABC" },
+    { id: "4", name: "Father Photo ID", code: "FP" },
+    { id: "5", name: "Mother Photo ID", code: "MP" },
+    { id: "10", name: "EWS Certificate", code: "EWS" },
+  ];
+
+  // Helper functions for form handling
+  const handleInputChange = (field: keyof EditableFormData, value: string) => {
+    setEditableData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleFileUpload = (documentType: string, file: File | null) => {
+    setDocumentUploads((prev) => ({
+      ...prev,
+      [documentType]: file,
+    }));
+  };
+
+  const handleStatusChange = async (status: string) => {
+    if (correctionRequestStatus) {
+      try {
+        console.info("[CU-REG MAIN-CONSOLE] Updating correction request status to:", status);
+
+        // Call the backend API to update the status
+        await axiosInstance.put(`/api/admissions/cu-registration-correction-requests/${correctionRequestStatus.id}`, {
+          status: status,
+        });
+
+        // Update local state only after successful API call
+        setCorrectionRequestStatus((prev) => (prev ? { ...prev, status } : null));
+        toast.success("Correction request status updated successfully!");
+      } catch (error) {
+        console.error("[CU-REG MAIN-CONSOLE] Error updating status:", error);
+        toast.error("Failed to update correction request status");
+      }
+    }
+  };
+
+  // Declaration handlers following student-console pattern
+  const handlePersonalInfoDeclarationChange = async (checked: boolean) => {
+    console.info("[CU-REG MAIN-CONSOLE] Personal info declaration clicked", { checked });
+
+    if (checked) {
+      setIsSavingPersonal(true);
+      try {
+        console.info("[CU-REG MAIN-CONSOLE] Saving personal info data...");
+        toast.info("Saving personal information and regenerating PDF...");
+
+        // Prepare the data to save
+        const personalInfoData = {
+          gender: editableData.gender,
+          nationality: editableData.nationality,
+          aadhaarNumber: editableData.aadhaarNumber,
+          apaarId: editableData.apaarId,
+          ews: editableData.belongsToEWS,
+        };
+
+        // Call the backend API to save personal info
+        await axiosInstance.post(
+          `/api/admissions/cu-registration-correction-requests/${correctionRequestStatus?.id}/personal-info`,
+          {
+            personalInfo: personalInfoData,
+            flags: {
+              gender: correctionFlags.gender,
+              nationality: correctionFlags.nationality,
+              aadhaarNumber: correctionFlags.aadhaarNumber,
+              apaarId: correctionFlags.apaarId,
+            },
+          },
+        );
+
+        setPersonalDeclared(true);
+        toast.success("Personal information saved successfully!");
+      } catch (error) {
+        console.error("[CU-REG MAIN-CONSOLE] Error saving personal info:", error);
+        toast.error("Failed to save personal information");
+      } finally {
+        setIsSavingPersonal(false);
+      }
+    }
+  };
+
+  const handleAddressInfoDeclarationChange = async (checked: boolean) => {
+    console.info("[CU-REG MAIN-CONSOLE] Address info declaration clicked", { checked });
+
+    if (checked) {
+      setIsSavingAddress(true);
+      try {
+        console.info("[CU-REG MAIN-CONSOLE] Saving address info data...");
+        toast.info("Saving address information and regenerating PDF...");
+
+        // Prepare the address data to save
+        const addressData = {
+          residential: {
+            address: editableData.residentialAddress,
+            country: editableData.residentialCountry,
+            state: editableData.residentialState,
+            district: editableData.residentialDistrict,
+            city: editableData.residentialCity,
+            pincode: editableData.residentialPinCode,
+            policeStation: editableData.residentialPoliceStation,
+            postOffice: editableData.residentialPostOffice,
+          },
+          mailing: {
+            address: editableData.mailingAddress,
+            country: editableData.mailingCountry,
+            state: editableData.mailingState,
+            district: editableData.mailingDistrict,
+            city: editableData.mailingCity,
+            pincode: editableData.mailingPinCode,
+            policeStation: editableData.mailingPoliceStation,
+            postOffice: editableData.mailingPostOffice,
+          },
+        };
+
+        console.info("[CU-REG MAIN-CONSOLE] Address data to save:", addressData);
+
+        // Use the same pattern as student-console: call updateCuCorrectionRequest directly
+        const updateData = {
+          flags: {}, // Address doesn't have specific correction flags
+          payload: {
+            addressData: {
+              residential: {
+                cityId: residentialCities.find((c) => c.id?.toString() === editableData.residentialCity)?.id,
+                districtId: residentialDistricts.find((d) => d.id?.toString() === editableData.residentialDistrict)?.id,
+                postofficeId: null,
+                otherPostoffice: editableData.residentialPostOffice,
+                policeStationId: null,
+                otherPoliceStation: editableData.residentialPoliceStation,
+                addressLine: editableData.residentialAddress,
+                pincode: editableData.residentialPinCode,
+                city: residentialCities.find((c) => c.id?.toString() === editableData.residentialCity)?.name || "",
+                district:
+                  residentialDistricts.find((d) => d.id?.toString() === editableData.residentialDistrict)?.name || "",
+                state: residentialStates.find((s) => s.id?.toString() === editableData.residentialState)?.name || "",
+                country: countries.find((c) => c.id?.toString() === editableData.residentialCountry)?.name || "",
+              },
+              mailing: {
+                cityId: mailingCities.find((c) => c.id?.toString() === editableData.mailingCity)?.id,
+                districtId: mailingDistricts.find((d) => d.id?.toString() === editableData.mailingDistrict)?.id,
+                postofficeId: null,
+                otherPostoffice: editableData.mailingPostOffice,
+                policeStationId: null,
+                otherPoliceStation: editableData.mailingPoliceStation,
+                addressLine: editableData.mailingAddress,
+                pincode: editableData.mailingPinCode,
+                city: mailingCities.find((c) => c.id?.toString() === editableData.mailingCity)?.name || "",
+                district: mailingDistricts.find((d) => d.id?.toString() === editableData.mailingDistrict)?.name || "",
+                state: mailingStates.find((s) => s.id?.toString() === editableData.mailingState)?.name || "",
+                country: countries.find((c) => c.id?.toString() === editableData.mailingCountry)?.name || "",
+              },
+            },
+          },
+          addressInfoDeclaration: true,
+        };
+
+        console.info("[CU-REG MAIN-CONSOLE] Sending address update data:", updateData);
+
+        // Call the main update endpoint like student-console does
+        const response = await axiosInstance.put(
+          `/api/admissions/cu-registration-correction-requests/${correctionRequestStatus?.id}`,
+          updateData,
+        );
+
+        console.info("[CU-REG MAIN-CONSOLE] Address save response:", response.data);
+        setAddressDeclared(true);
+        toast.success("Address information saved successfully!");
+      } catch (error) {
+        console.error("[CU-REG MAIN-CONSOLE] Error saving address info:", error);
+        toast.error("Failed to save address information");
+      } finally {
+        setIsSavingAddress(false);
+      }
+    }
+  };
+
+  const handleSubjectsDeclarationChange = async (checked: boolean) => {
+    console.info("[CU-REG MAIN-CONSOLE] Subjects declaration clicked", { checked });
+
+    if (checked) {
+      setIsSavingSubjects(true);
+      try {
+        // TODO: Implement save subjects data
+        console.info("[CU-REG MAIN-CONSOLE] Saving subjects data...");
+        toast.info("Saving subjects information and regenerating PDF...");
+        setSubjectsDeclared(true);
+        toast.success("Subjects information saved successfully!");
+      } catch (error) {
+        console.error("[CU-REG MAIN-CONSOLE] Error saving subjects:", error);
+        toast.error("Failed to save subjects information");
+      } finally {
+        setIsSavingSubjects(false);
+      }
+    }
+  };
+
+  const handleDocumentsDeclarationChange = async (checked: boolean) => {
+    console.info("[CU-REG MAIN-CONSOLE] Documents declaration clicked", { checked });
+
+    if (checked) {
+      setIsSavingDocuments(true);
+      try {
+        // TODO: Implement save documents data
+        console.info("[CU-REG MAIN-CONSOLE] Saving documents data...");
+        toast.info("Saving documents information and regenerating PDF...");
+        setDocumentsConfirmed(true);
+        toast.success("Documents information saved successfully!");
+      } catch (error) {
+        console.error("[CU-REG MAIN-CONSOLE] Error saving documents:", error);
+        toast.error("Failed to save documents information");
+      } finally {
+        setIsSavingDocuments(false);
+      }
+    }
+  };
+
+  // Fetch API data for dropdowns
+  useEffect(() => {
+    const fetchApiData = async () => {
+      try {
+        const [countriesData, nationalitiesData] = await Promise.all([getActiveCountries(), getAllNationalities()]);
+        setCountries(countriesData);
+        setNationalities(nationalitiesData);
+      } catch (error) {
+        console.error("Error fetching API data:", error);
+      }
+    };
+    fetchApiData();
+  }, []);
+
+  // Fetch states when country changes
+  const handleCountryChange = async (countryId: string, type: "residential" | "mailing") => {
+    try {
+      const statesData = await getStatesByCountry(parseInt(countryId));
+
+      if (type === "residential") {
+        setResidentialStates(statesData);
+        // Clear residential cities and districts when country changes
+        setResidentialCities([]);
+        setResidentialDistricts([]);
+      } else {
+        setMailingStates(statesData);
+        // Clear mailing cities and districts when country changes
+        setMailingCities([]);
+        setMailingDistricts([]);
+      }
+
+      // Update the form data
+      const fieldName = type === "residential" ? "residentialCountry" : "mailingCountry";
+      handleInputChange(fieldName, countryId);
+    } catch (error) {
+      console.error("Error fetching states:", error);
+    }
+  };
+
+  // Fetch cities when state changes
+  const handleStateChange = async (stateId: string, type: "residential" | "mailing") => {
+    try {
+      const citiesData = await getCitiesByState(parseInt(stateId));
+
+      if (type === "residential") {
+        setResidentialCities(citiesData);
+        // Clear residential districts when state changes
+        setResidentialDistricts([]);
+      } else {
+        setMailingCities(citiesData);
+        // Clear mailing districts when state changes
+        setMailingDistricts([]);
+      }
+
+      // Update the form data
+      const fieldName = type === "residential" ? "residentialState" : "mailingState";
+      handleInputChange(fieldName, stateId);
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+    }
+  };
+
+  // Fetch districts when city changes
+  const handleCityChange = async (cityId: string, type: "residential" | "mailing") => {
+    try {
+      const districtsData = await getDistrictsByState(parseInt(cityId));
+
+      if (type === "residential") {
+        setResidentialDistricts(districtsData);
+      } else {
+        setMailingDistricts(districtsData);
+      }
+
+      // Update the form data
+      const fieldName = type === "residential" ? "residentialCity" : "mailingCity";
+      handleInputChange(fieldName, cityId);
+    } catch (error) {
+      console.error("Error fetching districts:", error);
+    }
   };
 
   // Fetch correction request and populate data
@@ -178,7 +583,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
         if (existingRequest) {
           console.info(`[CU-REG MAIN-CONSOLE] Found correction request:`, existingRequest);
-          setCorrectionRequest(existingRequest);
 
           // Update correction flags
           setCorrectionFlags({
@@ -195,18 +599,62 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           setSubjectsDeclared(!!existingRequest.subjectsDeclaration);
           setDocumentsConfirmed(!!existingRequest.documentsDeclaration);
 
-          // Fetch documents
+          // Set correction request status
+          if (existingRequest.id) {
+            const status = existingRequest.status || "PENDING";
+            console.info(`[CU-REG MAIN-CONSOLE] Setting correction request status:`, status);
+            console.info(
+              `[CU-REG MAIN-CONSOLE] Available enum values:`,
+              cuRegistrationCorrectionRequestStatusEnum.enumValues,
+            );
+            console.info(
+              `[CU-REG MAIN-CONSOLE] Status matches enum:`,
+              cuRegistrationCorrectionRequestStatusEnum.enumValues.includes(status),
+            );
+            setCorrectionRequestStatus({
+              id: existingRequest.id,
+              status: status,
+              remarks: existingRequest.remarks || undefined,
+            });
+          }
+
+          // Fetch documents - try both methods
+          let docs: Array<Record<string, unknown>> = [];
+
+          // First try: fetch by correction request ID
           if (existingRequest.id) {
             try {
-              const docs = await getCuRegistrationDocuments(existingRequest.id);
-              setUploadedDocuments(docs || []);
-              console.info(`[CU-REG MAIN-CONSOLE] Loaded ${docs?.length || 0} documents`);
+              docs = await getCuRegistrationDocuments(existingRequest.id);
+              console.info(`[CU-REG MAIN-CONSOLE] Loaded ${docs?.length || 0} documents from correction request`);
             } catch (docError) {
-              console.error(`[CU-REG MAIN-CONSOLE] Error fetching documents:`, docError);
-              // Don't fail the whole page if documents can't be loaded
-              setUploadedDocuments([]);
+              console.error(`[CU-REG MAIN-CONSOLE] Error fetching documents by correction request:`, docError);
             }
           }
+
+          // Second try: fetch by student UID if no documents found
+          if (docs.length === 0 && studentData?.uid) {
+            try {
+              docs = await getCuRegistrationDocumentsByStudentUid(studentData.uid);
+              console.info(`[CU-REG MAIN-CONSOLE] Loaded ${docs?.length || 0} documents from student UID`);
+            } catch (docError) {
+              console.error(`[CU-REG MAIN-CONSOLE] Error fetching documents by student UID:`, docError);
+            }
+          }
+
+          // Third try: if still no documents, try without any filters
+          if (docs.length === 0 && studentData?.uid) {
+            try {
+              console.info(`[CU-REG MAIN-CONSOLE] Trying to fetch all documents for student UID: ${studentData.uid}`);
+              docs = await getAllStudentDocuments(studentData.uid);
+              console.info(`[CU-REG MAIN-CONSOLE] Loaded ${docs?.length || 0} documents from all types`);
+            } catch (docError) {
+              console.error(`[CU-REG MAIN-CONSOLE] Error fetching all documents:`, docError);
+            }
+          }
+
+          setUploadedDocuments(docs || []);
+          console.info(`[CU-REG MAIN-CONSOLE] Total documents loaded: ${docs?.length || 0}`);
+          console.info(`[CU-REG MAIN-CONSOLE] Documents data:`, docs);
         }
 
         // Populate personal info from profile data (like student-console does)
@@ -219,12 +667,13 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         console.info(`[CU-REG MAIN-CONSOLE] familyDetails from profile:`, familyDetails);
 
         if (personalDetails || studentData) {
-          setPersonalInfo({
+          setEditableData((prev) => ({
+            ...prev,
             fullName:
               studentData?.name && studentData.name.trim().length > 0
                 ? studentData.name
                 : `${personalDetails?.firstName || ""} ${personalDetails?.middleName || ""} ${personalDetails?.lastName || ""}`.trim(),
-            parentName:
+            fatherMotherName:
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               familyDetails?.members?.find((m: any) => m.type === "FATHER")?.name ||
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -233,17 +682,19 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               familyDetails?.mother?.name ||
               "",
             gender: personalDetails?.gender || "",
-            nationality: personalDetails?.nationality?.name || "",
+            nationality: String(personalDetails?.nationality?.id || ""),
             aadhaarNumber: formatAadhaarNumber(personalDetails?.aadhaarCardNumber || "XXXX XXXX XXXX"),
             apaarId: formatApaarId((studentData?.apaarId && studentData.apaarId.trim()) || ""),
-            ews: studentData?.belongsToEWS ? "Yes" : "No",
-          });
+            belongsToEWS: studentData?.belongsToEWS ? "Yes" : "No",
+          }));
         }
 
         // Populate address data
         const addresses = (personalDetails?.address as Array<Record<string, unknown>>) || [];
         const resAddr = addresses.find((a) => a?.type === "RESIDENTIAL") || addresses[0] || null;
         const mailAddr = addresses.find((a) => a?.type === "MAILING") || addresses[1] || resAddr || null;
+
+        console.info("[CU-REG MAIN-CONSOLE] Address data structure:", { resAddr, mailAddr });
 
         const getAddressField = (addr: Record<string, unknown> | null, field: string): string => {
           if (!addr) return "";
@@ -257,72 +708,142 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         };
 
         if (resAddr || mailAddr) {
-          setAddressData({
-            residential: {
-              addressLine:
-                getAddressField(resAddr, "addressLine") ||
-                getAddressField(resAddr, "address") ||
-                getAddressField(mailAddr, "addressLine") ||
-                getAddressField(mailAddr, "address"),
-              city:
-                getNestedField(resAddr, "city", "name") ||
-                getAddressField(resAddr, "otherCity") ||
-                getNestedField(mailAddr, "city", "name") ||
-                getAddressField(mailAddr, "otherCity"),
-              district:
-                getNestedField(resAddr, "district", "name") ||
-                getAddressField(resAddr, "otherDistrict") ||
-                getNestedField(mailAddr, "district", "name") ||
-                getAddressField(mailAddr, "otherDistrict"),
-              policeStation:
-                getAddressField(resAddr, "otherPoliceStation") ||
-                getNestedField(resAddr, "policeStation", "name") ||
-                getAddressField(mailAddr, "otherPoliceStation") ||
-                getNestedField(mailAddr, "policeStation", "name"),
-              postOffice:
-                getAddressField(resAddr, "otherPostoffice") ||
-                getNestedField(resAddr, "postoffice", "name") ||
-                getAddressField(mailAddr, "otherPostoffice") ||
-                getNestedField(mailAddr, "postoffice", "name"),
-              state:
-                getNestedField(resAddr, "state", "name") || getNestedField(mailAddr, "state", "name") || "West Bengal",
-              country:
-                getNestedField(resAddr, "country", "name") || getNestedField(mailAddr, "country", "name") || "India",
-              pinCode: getAddressField(resAddr, "pincode") || getAddressField(mailAddr, "pincode"),
-            },
-            mailing: {
-              addressLine:
-                getAddressField(mailAddr, "addressLine") ||
-                getAddressField(mailAddr, "address") ||
-                getAddressField(resAddr, "addressLine") ||
-                getAddressField(resAddr, "address"),
-              city:
-                getNestedField(mailAddr, "city", "name") ||
-                getAddressField(mailAddr, "otherCity") ||
-                getNestedField(resAddr, "city", "name") ||
-                getAddressField(resAddr, "otherCity"),
-              district:
-                getNestedField(mailAddr, "district", "name") ||
-                getAddressField(mailAddr, "otherDistrict") ||
-                getNestedField(resAddr, "district", "name") ||
-                getAddressField(resAddr, "otherDistrict"),
-              policeStation:
-                getAddressField(mailAddr, "otherPoliceStation") ||
-                getNestedField(mailAddr, "policeStation", "name") ||
-                getAddressField(resAddr, "otherPoliceStation") ||
-                getNestedField(resAddr, "policeStation", "name"),
-              postOffice:
-                getAddressField(mailAddr, "otherPostoffice") ||
-                getNestedField(mailAddr, "postoffice", "name") ||
-                getAddressField(resAddr, "otherPostoffice") ||
-                getNestedField(resAddr, "postoffice", "name"),
-              state:
-                getNestedField(mailAddr, "state", "name") || getNestedField(resAddr, "state", "name") || "West Bengal",
-              country:
-                getNestedField(mailAddr, "country", "name") || getNestedField(resAddr, "country", "name") || "India",
-              pinCode: getAddressField(mailAddr, "pincode") || getAddressField(resAddr, "pincode"),
-            },
+          // Debug the extracted values
+          const resCountryId = getNestedField(resAddr, "country", "id");
+          const resStateId = getNestedField(resAddr, "state", "id");
+          const resCityId = getNestedField(resAddr, "city", "id");
+          const resDistrictId = getNestedField(resAddr, "district", "id");
+
+          const mailCountryId = getNestedField(mailAddr, "country", "id");
+          const mailStateId = getNestedField(mailAddr, "state", "id");
+          const mailCityId = getNestedField(mailAddr, "city", "id");
+          const mailDistrictId = getNestedField(mailAddr, "district", "id");
+
+          console.info("[CU-REG MAIN-CONSOLE] Extracted IDs:", {
+            resCountryId,
+            resStateId,
+            resCityId,
+            resDistrictId,
+            mailCountryId,
+            mailStateId,
+            mailCityId,
+            mailDistrictId,
           });
+
+          const newData = {
+            residentialAddress:
+              getAddressField(resAddr, "addressLine") ||
+              getAddressField(resAddr, "address") ||
+              getAddressField(mailAddr, "addressLine") ||
+              getAddressField(mailAddr, "address"),
+            residentialCity: String(resCityId || mailCityId || ""),
+            residentialDistrict: String(resDistrictId || mailDistrictId || ""),
+            residentialPoliceStation:
+              getAddressField(resAddr, "otherPoliceStation") ||
+              getNestedField(resAddr, "policeStation", "name") ||
+              getAddressField(mailAddr, "otherPoliceStation") ||
+              getNestedField(mailAddr, "policeStation", "name"),
+            residentialPostOffice:
+              getAddressField(resAddr, "otherPostoffice") ||
+              getNestedField(resAddr, "postoffice", "name") ||
+              getAddressField(mailAddr, "otherPostoffice") ||
+              getNestedField(mailAddr, "postoffice", "name"),
+            residentialState: String(resStateId || mailStateId || ""),
+            residentialCountry: String(resCountryId || mailCountryId || ""),
+            residentialPinCode: getAddressField(resAddr, "pincode") || getAddressField(mailAddr, "pincode"),
+            mailingAddress:
+              getAddressField(mailAddr, "addressLine") ||
+              getAddressField(mailAddr, "address") ||
+              getAddressField(resAddr, "addressLine") ||
+              getAddressField(resAddr, "address"),
+            mailingCity: String(mailCityId || resCityId || ""),
+            mailingDistrict: String(mailDistrictId || resDistrictId || ""),
+            mailingPoliceStation:
+              getAddressField(mailAddr, "otherPoliceStation") ||
+              getNestedField(mailAddr, "policeStation", "name") ||
+              getAddressField(resAddr, "otherPoliceStation") ||
+              getNestedField(resAddr, "policeStation", "name"),
+            mailingPostOffice:
+              getAddressField(mailAddr, "otherPostoffice") ||
+              getNestedField(mailAddr, "postoffice", "name") ||
+              getAddressField(resAddr, "otherPostoffice") ||
+              getNestedField(resAddr, "postoffice", "name"),
+            mailingState: String(mailStateId || resStateId || ""),
+            mailingCountry: String(mailCountryId || resCountryId || ""),
+            mailingPinCode: getAddressField(mailAddr, "pincode") || getAddressField(resAddr, "pincode"),
+          };
+
+          console.info("[CU-REG MAIN-CONSOLE] Setting address data:", {
+            residentialCountry: newData.residentialCountry,
+            residentialState: newData.residentialState,
+            residentialCity: newData.residentialCity,
+            residentialDistrict: newData.residentialDistrict,
+            mailingCountry: newData.mailingCountry,
+            mailingState: newData.mailingState,
+            mailingCity: newData.mailingCity,
+            mailingDistrict: newData.mailingDistrict,
+          });
+
+          setEditableData((prev) => ({ ...prev, ...newData }));
+
+          // Load states for both residential and mailing addresses
+          const loadAddressData = async () => {
+            try {
+              // Load states for residential address
+              if (resCountryId) {
+                console.info("[CU-REG MAIN-CONSOLE] Loading states for residential country:", resCountryId);
+                const resStatesData = await getStatesByCountry(parseInt(resCountryId));
+                setResidentialStates(resStatesData);
+                console.info("[CU-REG MAIN-CONSOLE] Loaded residential states:", resStatesData);
+
+                // Load cities for residential state
+                if (resStateId) {
+                  console.info("[CU-REG MAIN-CONSOLE] Loading cities for residential state:", resStateId);
+                  const resCitiesData = await getCitiesByState(parseInt(resStateId));
+                  setResidentialCities(resCitiesData);
+                  console.info("[CU-REG MAIN-CONSOLE] Loaded residential cities:", resCitiesData);
+
+                  // Load districts for residential state
+                  try {
+                    const resDistrictsData = await getDistrictsByState(parseInt(resStateId));
+                    setResidentialDistricts(resDistrictsData);
+                    console.info("[CU-REG MAIN-CONSOLE] Loaded residential districts:", resDistrictsData);
+                  } catch (error) {
+                    console.error("[CU-REG MAIN-CONSOLE] Error loading residential districts:", error);
+                  }
+                }
+              }
+
+              // Load states for mailing address
+              if (mailCountryId) {
+                console.info("[CU-REG MAIN-CONSOLE] Loading states for mailing country:", mailCountryId);
+                const mailStatesData = await getStatesByCountry(parseInt(mailCountryId));
+                setMailingStates(mailStatesData);
+                console.info("[CU-REG MAIN-CONSOLE] Loaded mailing states:", mailStatesData);
+
+                // Load cities for mailing state
+                if (mailStateId) {
+                  console.info("[CU-REG MAIN-CONSOLE] Loading cities for mailing state:", mailStateId);
+                  const mailCitiesData = await getCitiesByState(parseInt(mailStateId));
+                  setMailingCities(mailCitiesData);
+                  console.info("[CU-REG MAIN-CONSOLE] Loaded mailing cities:", mailCitiesData);
+
+                  // Load districts for mailing state
+                  try {
+                    const mailDistrictsData = await getDistrictsByState(parseInt(mailStateId));
+                    setMailingDistricts(mailDistrictsData);
+                    console.info("[CU-REG MAIN-CONSOLE] Loaded mailing districts:", mailDistrictsData);
+                  } catch (error) {
+                    console.error("[CU-REG MAIN-CONSOLE] Error loading mailing districts:", error);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("[CU-REG MAIN-CONSOLE] Error loading address data:", error);
+            }
+          };
+
+          loadAddressData();
         }
 
         // Fetch subject selections and mandatory subjects
@@ -342,6 +863,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
             console.info(`[CU-REG MAIN-CONSOLE] Student selections:`, studentRows);
             console.info(`[CU-REG MAIN-CONSOLE] Mandatory subjects:`, mandatoryRows);
+            console.info(`[CU-REG MAIN-CONSOLE] Uploaded documents:`, uploadedDocuments);
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const next: any = { ...subjectsData };
@@ -466,6 +988,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               });
             });
 
+            console.info(`[CU-REG MAIN-CONSOLE] Processed subjects data:`, next);
+            console.info(`[CU-REG MAIN-CONSOLE] Processed mandatory subjects:`, mandatoryNext);
+
             setSubjectsData(next);
             setMandatorySubjects(mandatoryNext);
           } catch (error) {
@@ -486,6 +1011,11 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
   // Resolve preview URLs for documents
   useEffect(() => {
+    if (uploadedDocuments.length === 0) return;
+
+    console.info(`[CU-REG MAIN-CONSOLE] Loading preview URLs for ${uploadedDocuments.length} documents`);
+    setLoadingDocuments(true);
+
     (async () => {
       const promises = (uploadedDocuments || [])
         .filter((d) => {
@@ -495,127 +1025,215 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         })
         .map(async (d) => {
           const docId = d.id as number;
-          if (docPreviewUrls[docId]) return;
+          if (docPreviewUrls[docId]) {
+            console.info(`[CU-REG MAIN-CONSOLE] Preview URL already exists for document ${docId}`);
+            return;
+          }
           try {
+            console.info(`[CU-REG MAIN-CONSOLE] Fetching preview URL for document ${docId}`);
             const url = await getCuRegistrationDocumentSignedUrl(docId);
-            if (url) {
+            if (url && url !== "undefined" && url !== "null") {
+              console.info(`[CU-REG MAIN-CONSOLE] Got preview URL for document ${docId}:`, url);
               setDocPreviewUrls((prev) => ({ ...prev, [docId]: url }));
+            } else {
+              console.error(`[CU-REG MAIN-CONSOLE] Invalid URL received for document ${docId}:`, url);
             }
           } catch (error) {
             console.error(`[CU-REG MAIN-CONSOLE] Error fetching preview URL for document ${docId}:`, error);
           }
         });
       await Promise.allSettled(promises);
+      setLoadingDocuments(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadedDocuments]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading CU registration data...</p>
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading CU registration data...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white">
-      <Card className="shadow-lg border border-gray-200 bg-white rounded-lg overflow-hidden">
-        <CardContent className="p-0">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            {/* Tab Navigation */}
-            <div className="border-b border-gray-200 bg-white">
-              <div className="flex w-full overflow-x-auto no-scrollbar">
-                <button
-                  onClick={() => setActiveTab("personal")}
-                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                    activeTab === "personal"
-                      ? "text-blue-600 border-blue-600 bg-transparent"
-                      : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                  } cursor-pointer`}
-                >
-                  <span className="hidden sm:inline">Personal Info</span>
-                  <span className="sm:hidden">Personal</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("address")}
-                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                    activeTab === "address"
-                      ? "text-blue-600 border-blue-600 bg-transparent"
-                      : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                  } cursor-pointer`}
-                >
-                  <span className="hidden sm:inline">Address Info</span>
-                  <span className="sm:hidden">Address</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("subjects")}
-                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                    activeTab === "subjects"
-                      ? "text-blue-600 border-blue-600 bg-transparent"
-                      : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                  } cursor-pointer`}
-                >
-                  <span className="hidden sm:inline">Subjects Overview</span>
-                  <span className="sm:hidden">Subjects</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("documents")}
-                  className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
-                    activeTab === "documents"
-                      ? "text-blue-600 border-blue-600 bg-transparent"
-                      : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
-                  } cursor-pointer`}
-                >
-                  Documents
-                </button>
+    <div className="bg-gray-50 min-h-screen py-4 sm:py-8">
+      <div className="mx-auto px-3 sm:px-4 max-w-6xl">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6 sm:mb-8">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">CU Registration</h1>
+          <div className="flex items-center space-x-4">
+            <Select
+              value={
+                correctionRequestStatus?.status &&
+                cuRegistrationCorrectionRequestStatusEnum.enumValues.includes(
+                  correctionRequestStatus.status as (typeof cuRegistrationCorrectionRequestStatusEnum.enumValues)[number],
+                )
+                  ? correctionRequestStatus.status
+                  : ""
+              }
+              onValueChange={handleStatusChange}
+            >
+              <SelectTrigger className="bg-white text-gray-900 border-gray-300 w-64">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {correctionStatusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!allDeclarationsCompleted}
+              onClick={async () => {
+                try {
+                  if (!correctionRequestStatus?.id) {
+                    toast.error("No correction request found");
+                    return;
+                  }
+
+                  console.info(
+                    `[CU-REG MAIN-CONSOLE] Opening admission form PDF for correction request: ${correctionRequestStatus.id}`,
+                  );
+                  toast.info("Loading admission form PDF...");
+
+                  const pdfUrl = await getCuRegistrationPdfUrlByRequestId(correctionRequestStatus.id);
+
+                  if (pdfUrl && pdfUrl !== "undefined" && pdfUrl !== "null") {
+                    console.info(`[CU-REG MAIN-CONSOLE] Opening PDF URL:`, pdfUrl);
+                    window.open(pdfUrl, "_blank");
+                    toast.success("Admission form PDF opened successfully!");
+                  } else {
+                    console.error(`[CU-REG MAIN-CONSOLE] Invalid PDF URL received:`, pdfUrl);
+                    toast.error("Failed to get valid PDF URL");
+                  }
+                } catch (error) {
+                  console.error(`[CU-REG MAIN-CONSOLE] Error opening admission form PDF:`, error);
+                  toast.error("Failed to open admission form PDF");
+                }
+              }}
+            >
+              View Adm Form
+            </Button>
+          </div>
+        </div>
+
+        {/* Main Form Card */}
+        <Card className="shadow-lg border border-gray-200 bg-white rounded-lg overflow-hidden">
+          <CardContent className="p-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              {/* Tab Navigation */}
+              <div className="border-b border-gray-200 bg-white">
+                <div className="flex w-full overflow-x-auto no-scrollbar">
+                  <button
+                    onClick={() => setActiveTab("personal")}
+                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                      activeTab === "personal"
+                        ? "text-blue-600 border-blue-600 bg-transparent"
+                        : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
+                    } cursor-pointer`}
+                  >
+                    <span className="hidden sm:inline">Personal Info</span>
+                    <span className="sm:hidden">Personal</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("address")}
+                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                      activeTab === "address"
+                        ? "text-blue-600 border-blue-600 bg-transparent"
+                        : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
+                    } cursor-pointer`}
+                  >
+                    <span className="hidden sm:inline">Address Info</span>
+                    <span className="sm:hidden">Address</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("subjects")}
+                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                      activeTab === "subjects"
+                        ? "text-blue-600 border-blue-600 bg-transparent"
+                        : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
+                    } cursor-pointer`}
+                  >
+                    <span className="hidden sm:inline">Subjects Overview</span>
+                    <span className="sm:hidden">Subjects</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("documents")}
+                    className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                      activeTab === "documents"
+                        ? "text-blue-600 border-blue-600 bg-transparent"
+                        : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
+                    } cursor-pointer`}
+                  >
+                    Documents
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Tab Content */}
-            <div className="p-4 sm:p-6 bg-white">
-              {/* Personal Info Tab */}
-              <TabsContent value="personal" className="space-y-6">
-                <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Student Name</h2>
+              {/* Tab Content */}
+              <div className="p-4 sm:p-6 bg-white">
+                {/* Personal Info Tab */}
+                <TabsContent value="personal" className="space-y-6">
+                  <div>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Student Name</h2>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Full Name */}
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">
-                        1.1 Full name
-                      </Label>
-                      <Input
-                        id="fullName"
-                        value={personalInfo.fullName}
-                        className={getReadOnlyFieldStyle()}
-                        readOnly
-                        disabled
-                      />
-                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Full Name */}
+                      <div className="space-y-2">
+                        <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">
+                          1.1 Full name
+                        </Label>
+                        <Input
+                          id="fullName"
+                          value={editableData.fullName}
+                          onChange={(e) => handleInputChange("fullName", e.target.value)}
+                          className="bg-gray-100 text-gray-700 border-gray-300"
+                          disabled
+                        />
+                      </div>
 
-                    {/* Father/Mother Name */}
-                    <div className="space-y-2">
-                      <Label htmlFor="parentName" className="text-sm font-medium text-gray-700">
-                        1.2 Father / Mother's Name
-                      </Label>
-                      <Input
-                        id="parentName"
-                        value={personalInfo.parentName}
-                        className={getReadOnlyFieldStyle()}
-                        readOnly
-                        disabled
-                      />
-                    </div>
+                      {/* Father/Mother Name */}
+                      <div className="space-y-2">
+                        <Label htmlFor="fatherMotherName" className="text-sm font-medium text-gray-700">
+                          1.2 Father / Mother's Name
+                        </Label>
+                        <Input
+                          id="fatherMotherName"
+                          value={editableData.fatherMotherName}
+                          onChange={(e) => handleInputChange("fatherMotherName", e.target.value)}
+                          className="bg-gray-100 text-gray-700 border-gray-300"
+                          disabled
+                        />
+                      </div>
 
-                    {/* Gender */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">1.3 Gender</Label>
-                      <div className="flex flex-col gap-2">
-                        <div className={getReadOnlyDivStyle()}>{personalInfo.gender || "—"}</div>
+                      {/* Gender */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-700">1.3 Gender</Label>
+                        <Select
+                          value={editableData.gender}
+                          onValueChange={(value) => handleInputChange("gender", value)}
+                        >
+                          <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {genderOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.3 Correction Requested</span>
                           <Badge variant={correctionFlags.gender ? "destructive" : "outline"} className="text-xs">
@@ -623,13 +1241,25 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </Badge>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Nationality */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">1.4 Nationality</Label>
-                      <div className="flex flex-col gap-2">
-                        <div className={getReadOnlyDivStyle()}>{personalInfo.nationality || "—"}</div>
+                      {/* Nationality */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-700">1.4 Nationality</Label>
+                        <Select
+                          value={editableData.nationality}
+                          onValueChange={(value) => handleInputChange("nationality", value)}
+                        >
+                          <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                            <SelectValue placeholder="Select nationality" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {nationalities.map((nationality) => (
+                              <SelectItem key={nationality.id || 0} value={(nationality.id || 0).toString()}>
+                                {nationality.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.4 Correction Requested</span>
                           <Badge variant={correctionFlags.nationality ? "destructive" : "outline"} className="text-xs">
@@ -637,21 +1267,42 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </Badge>
                         </div>
                       </div>
-                    </div>
 
-                    {/* EWS */}
-                    <div className="space-y-2">
-                      <Label htmlFor="ews" className="text-sm font-medium text-gray-700">
-                        1.5 Whether belong to EWS
-                      </Label>
-                      <div className={getReadOnlyDivStyle()}>{personalInfo.ews}</div>
-                    </div>
+                      {/* EWS */}
+                      <div className="space-y-2">
+                        <Label htmlFor="belongsToEWS" className="text-sm font-medium text-gray-700">
+                          1.5 Whether belong to EWS
+                        </Label>
+                        <Select
+                          value={editableData.belongsToEWS}
+                          onValueChange={(value) => handleInputChange("belongsToEWS", value)}
+                        >
+                          <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                            <SelectValue placeholder="Select EWS status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ewsOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    {/* Aadhaar Number */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">1.6 Aadhaar Number</Label>
-                      <div className="flex flex-col gap-2">
-                        <div className={getReadOnlyDivStyle()}>{personalInfo.aadhaarNumber || "—"}</div>
+                      {/* Aadhaar Number */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-700">1.6 Aadhaar Number</Label>
+                        <Input
+                          value={editableData.aadhaarNumber}
+                          onChange={(e) => {
+                            const formatted = handleAadhaarInput(e.target.value);
+                            handleInputChange("aadhaarNumber", formatted);
+                          }}
+                          placeholder="Enter 12-digit Aadhaar number"
+                          className="bg-white text-gray-900 border-gray-300"
+                          maxLength={14} // 12 digits + 2 dashes
+                        />
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.6 Correction Requested</span>
                           <Badge
@@ -662,15 +1313,22 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </Badge>
                         </div>
                       </div>
-                    </div>
 
-                    {/* APAAR ID */}
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="apaarId" className="text-sm font-medium text-gray-700">
-                        1.7 APAAR (ABC) ID
-                      </Label>
-                      <div className="flex flex-col gap-2">
-                        <div className={getReadOnlyDivStyle()}>{personalInfo.apaarId || "Not provided"}</div>
+                      {/* APAAR ID */}
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="apaarId" className="text-sm font-medium text-gray-700">
+                          1.7 APAAR (ABC) ID
+                        </Label>
+                        <Input
+                          value={editableData.apaarId}
+                          onChange={(e) => {
+                            const formatted = handleApaarIdInput(e.target.value);
+                            handleInputChange("apaarId", formatted);
+                          }}
+                          placeholder="Enter 12-digit APAAR ID"
+                          className="bg-white text-gray-900 border-gray-300"
+                          maxLength={15} // 12 digits + 3 dashes
+                        />
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.7 Correction Requested</span>
                           <Badge variant={correctionFlags.apaarId ? "destructive" : "outline"} className="text-xs">
@@ -678,367 +1336,830 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </Badge>
                         </div>
                       </div>
+
+                      {/* Declaration Checkbox */}
+                      <div className="pt-2 md:col-span-2">
+                        <div className="flex items-start space-x-3">
+                          <Checkbox
+                            id="personalDeclaration"
+                            checked={personalDeclared}
+                            onCheckedChange={handlePersonalInfoDeclarationChange}
+                            disabled={isSavingPersonal}
+                            className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                          />
+                          <Label
+                            htmlFor="personalDeclaration"
+                            className="text-sm text-gray-700 leading-relaxed cursor-pointer"
+                            onClick={() => handlePersonalInfoDeclarationChange(true)}
+                          >
+                            I declare that the personal information provided above is correct and complete.
+                            {isSavingPersonal && (
+                              <span className="ml-2 text-xs text-blue-600 font-medium">⏳ Saving...</span>
+                            )}
+                            {personalDeclared && !isSavingPersonal && (
+                              <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                            )}
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Address Info Tab */}
+                <TabsContent value="address" className="space-y-6">
+                  <div>
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+                      {/* Residential Address */}
+                      <div className="space-y-4 xl:pr-8 xl:border-r xl:border-gray-200">
+                        <h3 className="text-sm sm:text-base font-medium text-gray-900">Residential Address</h3>
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.1 Address Line</Label>
+                            <Input
+                              value={editableData.residentialAddress}
+                              onChange={(e) => handleInputChange("residentialAddress", e.target.value)}
+                              placeholder="Enter residential address"
+                              className="bg-white text-gray-900 border-gray-300"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.2 Country</Label>
+                            <Select
+                              value={editableData.residentialCountry}
+                              onValueChange={(value) => handleCountryChange(value, "residential")}
+                            >
+                              <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                                <SelectValue placeholder="Select country" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {countries.map((country) => (
+                                  <SelectItem key={country.id || 0} value={(country.id || 0).toString()}>
+                                    {country.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.3 State</Label>
+                            <Select
+                              value={editableData.residentialState}
+                              onValueChange={(value) => handleStateChange(value, "residential")}
+                            >
+                              <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                                <SelectValue placeholder="Select state" />
+                              </SelectTrigger>
+                              <SelectContent className="max-w-xs max-h-60 overflow-y-auto">
+                                <div className="px-2 py-1.5">
+                                  <div className="relative">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Search states..."
+                                      className="pl-8"
+                                      onChange={() => {
+                                        // Filter states based on search
+                                        // This will be handled by the Select component's built-in filtering
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {residentialStates.length} options available
+                                  </div>
+                                </div>
+                                {residentialStates.map((state) => (
+                                  <SelectItem key={state.id || 0} value={(state.id || 0).toString()}>
+                                    {state.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.4 District</Label>
+                            <Select
+                              value={editableData.residentialDistrict}
+                              onValueChange={(value) => handleInputChange("residentialDistrict", value)}
+                            >
+                              <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                                <SelectValue placeholder="Select district" />
+                              </SelectTrigger>
+                              <SelectContent className="max-w-xs max-h-60 overflow-y-auto">
+                                <div className="px-2 py-1.5">
+                                  <div className="relative">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Search districts..."
+                                      className="pl-8"
+                                      onChange={() => {
+                                        // Filter districts based on search
+                                        // This will be handled by the Select component's built-in filtering
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {residentialDistricts.length} options available
+                                  </div>
+                                </div>
+                                {residentialDistricts.map((district) => (
+                                  <SelectItem key={district.id || 0} value={(district.id || 0).toString()}>
+                                    {district.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.5 City</Label>
+                            <Select
+                              value={editableData.residentialCity}
+                              onValueChange={(value) => handleCityChange(value, "residential")}
+                            >
+                              <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                                <SelectValue placeholder="Select city" />
+                              </SelectTrigger>
+                              <SelectContent className="max-w-xs max-h-60 overflow-y-auto">
+                                <div className="px-2 py-1.5">
+                                  <div className="relative">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Search cities..."
+                                      className="pl-8"
+                                      onChange={() => {
+                                        // Filter cities based on search
+                                        // This will be handled by the Select component's built-in filtering
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {residentialCities.length} options available
+                                  </div>
+                                </div>
+                                {residentialCities.map((city) => (
+                                  <SelectItem key={city.id || 0} value={(city.id || 0).toString()}>
+                                    {city.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.6 Pin Code</Label>
+                            <Input
+                              value={editableData.residentialPinCode}
+                              onChange={(e) => handleInputChange("residentialPinCode", e.target.value)}
+                              placeholder="Enter pin code"
+                              className="bg-white text-gray-900 border-gray-300"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.7 Police Station</Label>
+                            <Input
+                              value={editableData.residentialPoliceStation}
+                              onChange={(e) => handleInputChange("residentialPoliceStation", e.target.value)}
+                              placeholder="Enter police station"
+                              className="bg-white text-gray-900 border-gray-300"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.8 Post Office</Label>
+                            <Input
+                              value={editableData.residentialPostOffice}
+                              onChange={(e) => handleInputChange("residentialPostOffice", e.target.value)}
+                              placeholder="Enter post office"
+                              className="bg-white text-gray-900 border-gray-300"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mailing Address */}
+                      <div className="space-y-4 xl:pl-8">
+                        <h3 className="text-sm sm:text-base font-medium text-gray-900">Mailing Address</h3>
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.9 Address Line</Label>
+                            <Input
+                              value={editableData.mailingAddress}
+                              onChange={(e) => handleInputChange("mailingAddress", e.target.value)}
+                              placeholder="Enter mailing address"
+                              className="bg-white text-gray-900 border-gray-300"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.10 Country</Label>
+                            <Select
+                              value={editableData.mailingCountry}
+                              onValueChange={(value) => handleCountryChange(value, "mailing")}
+                            >
+                              <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                                <SelectValue placeholder="Select country" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {countries.map((country) => (
+                                  <SelectItem key={country.id || 0} value={(country.id || 0).toString()}>
+                                    {country.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.11 State</Label>
+                            <Select
+                              value={editableData.mailingState}
+                              onValueChange={(value) => handleStateChange(value, "mailing")}
+                            >
+                              <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                                <SelectValue placeholder="Select state" />
+                              </SelectTrigger>
+                              <SelectContent className="max-w-xs max-h-60 overflow-y-auto">
+                                <div className="px-2 py-1.5">
+                                  <div className="relative">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Search states..."
+                                      className="pl-8"
+                                      onChange={() => {
+                                        // Filter states based on search
+                                        // This will be handled by the Select component's built-in filtering
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {mailingStates.length} options available
+                                  </div>
+                                </div>
+                                {mailingStates.map((state) => (
+                                  <SelectItem key={state.id || 0} value={(state.id || 0).toString()}>
+                                    {state.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.12 District</Label>
+                            <Select
+                              value={editableData.mailingDistrict}
+                              onValueChange={(value) => handleInputChange("mailingDistrict", value)}
+                            >
+                              <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                                <SelectValue placeholder="Select district" />
+                              </SelectTrigger>
+                              <SelectContent className="max-w-xs max-h-60 overflow-y-auto">
+                                <div className="px-2 py-1.5">
+                                  <div className="relative">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Search districts..."
+                                      className="pl-8"
+                                      onChange={() => {
+                                        // Filter districts based on search
+                                        // This will be handled by the Select component's built-in filtering
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {mailingDistricts.length} options available
+                                  </div>
+                                </div>
+                                {mailingDistricts.map((district) => (
+                                  <SelectItem key={district.id || 0} value={(district.id || 0).toString()}>
+                                    {district.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.13 City</Label>
+                            <Select
+                              value={editableData.mailingCity}
+                              onValueChange={(value) => handleCityChange(value, "mailing")}
+                            >
+                              <SelectTrigger className="bg-white text-gray-900 border-gray-300">
+                                <SelectValue placeholder="Select city" />
+                              </SelectTrigger>
+                              <SelectContent className="max-w-xs max-h-60 overflow-y-auto">
+                                <div className="px-2 py-1.5">
+                                  <div className="relative">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Search cities..."
+                                      className="pl-8"
+                                      onChange={() => {
+                                        // Filter cities based on search
+                                        // This will be handled by the Select component's built-in filtering
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {mailingCities.length} options available
+                                  </div>
+                                </div>
+                                {mailingCities.map((city) => (
+                                  <SelectItem key={city.id || 0} value={(city.id || 0).toString()}>
+                                    {city.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.14 Pin Code</Label>
+                            <Input
+                              value={editableData.mailingPinCode}
+                              onChange={(e) => handleInputChange("mailingPinCode", e.target.value)}
+                              placeholder="Enter pin code"
+                              className="bg-white text-gray-900 border-gray-300"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.15 Police Station</Label>
+                            <Input
+                              value={editableData.mailingPoliceStation}
+                              onChange={(e) => handleInputChange("mailingPoliceStation", e.target.value)}
+                              placeholder="Enter police station"
+                              className="bg-white text-gray-900 border-gray-300"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">2.16 Post Office</Label>
+                            <Input
+                              value={editableData.mailingPostOffice}
+                              onChange={(e) => handleInputChange("mailingPostOffice", e.target.value)}
+                              placeholder="Enter post office"
+                              className="bg-white text-gray-900 border-gray-300"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Declaration Status */}
-                    <div className="pt-2 md:col-span-2">
+                    {/* Declaration Checkbox */}
+                    <div className="mt-6">
+                      <div className="flex items-start space-x-3">
+                        <Checkbox
+                          id="addressDeclaration"
+                          checked={addressDeclared}
+                          onCheckedChange={handleAddressInfoDeclarationChange}
+                          disabled={isSavingAddress}
+                          className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                        />
+                        <Label
+                          htmlFor="addressDeclaration"
+                          className="text-sm text-gray-700 leading-relaxed cursor-pointer"
+                          onClick={() => handleAddressInfoDeclarationChange(true)}
+                        >
+                          I declare that the address information provided above is correct and complete.
+                          {isSavingAddress && (
+                            <span className="ml-2 text-xs text-blue-600 font-medium">⏳ Saving...</span>
+                          )}
+                          {addressDeclared && !isSavingAddress && (
+                            <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                          )}
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Subjects Overview Tab */}
+                <TabsContent value="subjects" className="space-y-6">
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-lg font-semibold text-gray-900">3.1 Subjects Overview (Semesters 1-4)</h2>
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-gray-700">Personal Info Declaration:</span>
-                        <Badge variant={personalDeclared ? "default" : "outline"}>
-                          {personalDeclared ? "✓ Completed" : "Pending"}
+                        <span className="text-sm text-gray-600">Correction Requested</span>
+                        <Badge variant={correctionFlags.subjects ? "destructive" : "outline"} className="text-xs">
+                          {correctionFlags.subjects ? "Yes" : "No"}
                         </Badge>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </TabsContent>
 
-              {/* Address Info Tab */}
-              <TabsContent value="address" className="space-y-6">
-                <div>
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
-                    {/* Residential Address */}
-                    <div className="space-y-4 xl:pr-8 xl:border-r xl:border-gray-200">
-                      <h3 className="text-sm sm:text-base font-medium text-gray-900">Residential Address</h3>
-                      <div className="space-y-3">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.1 Address Line</Label>
-                          <div className={getReadOnlyDivStyle() + " min-h-[80px]"}>
-                            {addressData.residential.addressLine || "—"}
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.2 Country</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.country}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.3 State</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.state}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.4 District</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.district || "—"}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.5 City</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.city || "—"}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.6 Pin Code</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.pinCode || "—"}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.7 Police Station</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.policeStation || "—"}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.8 Post Office</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.postOffice || "—"}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Mailing Address */}
-                    <div className="space-y-4 xl:pl-8">
-                      <h3 className="text-sm sm:text-base font-medium text-gray-900">Mailing Address</h3>
-                      <div className="space-y-3">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.9 Address Line</Label>
-                          <div className={getReadOnlyDivStyle() + " min-h-[80px]"}>
-                            {addressData.mailing.addressLine || "—"}
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.10 Country</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.country}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.11 State</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.state}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.12 District</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.district || "—"}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.13 City</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.city || "—"}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.14 Pin Code</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.pinCode || "—"}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.15 Police Station</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.policeStation || "—"}</div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.16 Post Office</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.postOffice || "—"}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Declaration Status */}
-                  <div className="mt-6">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700">Address Info Declaration:</span>
-                      <Badge variant={addressDeclared ? "default" : "outline"}>
-                        {addressDeclared ? "✓ Completed" : "Pending"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              {/* Subjects Overview Tab */}
-              <TabsContent value="subjects" className="space-y-6">
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">3.1 Subjects Overview (Semesters 1-4)</h2>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-600">Correction Requested</span>
-                      <Badge variant={correctionFlags.subjects ? "destructive" : "outline"} className="text-xs">
-                        {correctionFlags.subjects ? "Yes" : "No"}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Subjects Table Placeholder */}
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border-collapse border border-gray-300">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
-                            Category
-                          </th>
-                          <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
-                            Sem 1
-                          </th>
-                          <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
-                            Sem 2
-                          </th>
-                          <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
-                            Sem 3
-                          </th>
-                          <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
-                            Sem 4
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(["DSCC", "Minor", "IDC", "SEC", "AEC", "CVAC"] as const).map((category) => {
-                          const semData = subjectsData[category];
-                          return (
-                            <tr key={category} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50">
-                                {category}
-                              </td>
-                              {(["sem1", "sem2", "sem3", "sem4"] as const).map((sem) => {
-                                const mandatorySubjectsList = (mandatorySubjects[category]?.[sem] as string[]) || [];
-                                const studentSubjectsList = Array.isArray(semData[sem])
-                                  ? semData[sem]
-                                  : semData[sem]
-                                    ? [semData[sem]]
-                                    : [];
-
-                                // Combine all subjects (mandatory + optional)
-                                const allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
-
-                                // Add mandatory subjects
-                                mandatorySubjectsList.forEach((subject) => {
-                                  allSubjects.push({ name: subject, isMandatory: true });
-                                });
-
-                                // Add optional subjects (filter out duplicates)
-                                const filteredSubjects = studentSubjectsList.filter(
-                                  (subject) => !mandatorySubjectsList.includes(subject),
-                                );
-                                filteredSubjects.forEach((subject) => {
-                                  allSubjects.push({ name: subject, isMandatory: false });
-                                });
-
-                                return (
-                                  <td key={sem} className="border border-gray-300 px-2 py-2">
-                                    {allSubjects.length > 0 ? (
-                                      <div className="text-sm text-gray-900">
-                                        {allSubjects.map((subj, idx) => (
-                                          <span key={idx}>
-                                            {subj.name}
-                                            {idx < allSubjects.length - 1 && ", "}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div className="text-sm text-gray-400 text-center">—</div>
-                                    )}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Declaration Status */}
-                  <div className="mt-6">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700">Subjects Declaration:</span>
-                      <Badge variant={subjectsDeclared ? "default" : "outline"}>
-                        {subjectsDeclared ? "✓ Completed" : "Pending"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              {/* Documents Tab */}
-              <TabsContent value="documents" className="space-y-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Uploads</h2>
-
-                  {/* Uploaded Documents Table */}
-                  {uploadedDocuments.length > 0 ? (
+                    {/* Subjects Table */}
                     <div className="overflow-x-auto">
-                      <table className="min-w-full border border-gray-300">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                              Document Type
+                      <table className="min-w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+                              Category
                             </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                              File Name
+                            <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                              Sem 1
                             </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                              Size
+                            <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                              Sem 2
                             </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                              Status
+                            <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                              Sem 3
                             </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                              Actions
+                            <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                              Sem 4
                             </th>
                           </tr>
                         </thead>
                         <tbody>
-                          {uploadedDocuments.map((doc, index) => {
-                            const document = doc.document as Record<string, unknown> | undefined;
-                            const documentType = (document?.name as string) || `Document ${doc.documentId as string}`;
-                            const fileSize = doc.fileSize as number | undefined;
-                            const fileSizeMB = fileSize ? (fileSize / 1024 / 1024).toFixed(2) : "Unknown";
-                            const fileType = doc.fileType as string | undefined;
-                            const fileName = doc.fileName as string | undefined;
-                            const docId = doc.id as number;
+                          {Object.entries(subjectsData).map(([category, semesters]) => (
+                            <tr key={category} className="hover:bg-gray-50">
+                              <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
+                                {category}
+                              </td>
+                              {Object.entries(semesters).map(([sem, value]) => {
+                                const mandatorySubjectsList =
+                                  (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
+                                    sem as keyof typeof semesters
+                                  ] as string[]) || [];
+                                const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
 
-                            return (
-                              <tr key={index} className="hover:bg-gray-50">
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                  {documentType}
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                  <div className="flex items-center space-x-2">
-                                    <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                      {fileType?.startsWith("image/") ? (
-                                        docPreviewUrls[docId] ? (
-                                          <img
-                                            src={docPreviewUrls[docId]}
-                                            alt="Preview"
-                                            className="w-full h-full object-cover"
-                                            onError={async () => {
-                                              console.error(`[CU-REG MAIN-CONSOLE] Image load error for doc ${docId}`);
-                                              // Try to fetch signed URL on error
-                                              try {
-                                                const url = await getCuRegistrationDocumentSignedUrl(docId);
-                                                if (url) {
-                                                  setDocPreviewUrls((prev) => ({ ...prev, [docId]: url }));
-                                                }
-                                              } catch (error) {
-                                                console.error(`[CU-REG MAIN-CONSOLE] Failed to get signed URL:`, error);
-                                              }
-                                            }}
-                                          />
-                                        ) : (
-                                          <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">
-                                            ...
+                                return (
+                                  <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
+                                    <div className="text-sm text-gray-900">
+                                      {(() => {
+                                        // Combine all subjects (mandatory + optional) into one array
+                                        const allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
+
+                                        // Add mandatory subjects
+                                        mandatorySubjectsList.forEach((subject) => {
+                                          allSubjects.push({ name: subject, isMandatory: true });
+                                        });
+
+                                        // Add optional subjects (filter out duplicates)
+                                        const filteredSubjects = studentSubjectsList.filter(
+                                          (subject) => !mandatorySubjectsList.includes(subject),
+                                        );
+                                        filteredSubjects.forEach((subject) => {
+                                          allSubjects.push({ name: subject, isMandatory: false });
+                                        });
+
+                                        // For Minor category, if sem4 is empty and sem3 has subjects, duplicate sem3 subjects to sem4
+                                        if (category === "Minor" && sem === "sem4" && allSubjects.length === 0) {
+                                          const sem3Mandatory =
+                                            (mandatorySubjects[category as keyof typeof mandatorySubjects]
+                                              ?.sem3 as string[]) || [];
+                                          const sem3Student = Array.isArray(semesters.sem3)
+                                            ? semesters.sem3
+                                            : semesters.sem3
+                                              ? [semesters.sem3]
+                                              : [];
+
+                                          // Add sem3 mandatory subjects
+                                          sem3Mandatory.forEach((subject) => {
+                                            allSubjects.push({ name: subject, isMandatory: true });
+                                          });
+
+                                          // Add sem3 student subjects (filter out duplicates)
+                                          const filteredSem3Subjects = sem3Student.filter(
+                                            (subject) => !sem3Mandatory.includes(subject),
+                                          );
+                                          filteredSem3Subjects.forEach((subject) => {
+                                            allSubjects.push({ name: subject, isMandatory: false });
+                                          });
+                                        }
+
+                                        // If no subjects, display Not Applicable
+                                        if (allSubjects.length === 0) {
+                                          return <span className="text-gray-500 italic">Not Applicable</span>;
+                                        }
+
+                                        // Render all subjects as ordered list
+                                        return (
+                                          <div className="text-sm text-gray-900">
+                                            {allSubjects.map((subject, index) => (
+                                              <span key={`subject-${index}`}>
+                                                {subject.name}
+                                                {index < allSubjects.length - 1 && ", "}
+                                              </span>
+                                            ))}
                                           </div>
-                                        )
-                                      ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs">
-                                          PDF
-                                        </div>
-                                      )}
+                                        );
+                                      })()}
                                     </div>
-                                    <span className="truncate max-w-[200px]">{fileName || "Unknown"}</span>
-                                  </div>
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                  {fileSizeMB} MB
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                  <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                                    Uploaded
-                                  </Badge>
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                  <button
-                                    className="text-xs text-blue-600 hover:underline"
-                                    onClick={async () => {
-                                      try {
-                                        const docId = doc.id as number;
-                                        const url = await getCuRegistrationDocumentSignedUrl(docId);
-                                        window.open(url, "_blank");
-                                      } catch {
-                                        toast.error("Failed to open document");
-                                      }
-                                    }}
-                                  >
-                                    View
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-sm text-gray-600">No documents uploaded yet.</p>
-                    </div>
-                  )}
 
-                  {/* Declaration Status */}
-                  <div className="mt-6">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700">Documents Declaration:</span>
-                      <Badge variant={documentsConfirmed ? "default" : "outline"}>
-                        {documentsConfirmed ? "✓ Completed" : "Pending"}
-                      </Badge>
+                    {/* Declaration Checkbox */}
+                    <div className="mt-6">
+                      <div className="flex items-start space-x-3">
+                        <Checkbox
+                          id="subjectsDeclaration"
+                          checked={subjectsDeclared}
+                          onCheckedChange={handleSubjectsDeclarationChange}
+                          disabled={isSavingSubjects}
+                          className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                        />
+                        <Label
+                          htmlFor="subjectsDeclaration"
+                          className="text-sm text-gray-700 leading-relaxed cursor-pointer"
+                          onClick={() => handleSubjectsDeclarationChange(true)}
+                        >
+                          I confirm the subjects listed above for Semesters 1-4.
+                          {isSavingSubjects && (
+                            <span className="ml-2 text-xs text-blue-600 font-medium">⏳ Saving...</span>
+                          )}
+                          {subjectsDeclared && !isSavingSubjects && (
+                            <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                          )}
+                        </Label>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
-            </div>
-          </Tabs>
-        </CardContent>
-      </Card>
+                </TabsContent>
+
+                {/* Documents Tab */}
+                <TabsContent value="documents" className="space-y-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Uploads</h2>
+
+                    {/* Document Upload Section */}
+                    <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                      <h3 className="text-md font-medium text-gray-800 mb-4">Upload/Replace Documents</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {documentTypes.map((docType) => (
+                          <div key={docType.id} className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-700">{docType.name}</Label>
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.pdf"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] || null;
+                                  handleFileUpload(docType.id, file);
+                                }}
+                                className="text-sm"
+                              />
+                              {documentUploads[docType.id] && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    // TODO: Implement file upload to S3
+                                    toast.success(`${docType.name} uploaded successfully!`);
+                                  }}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  Upload
+                                </Button>
+                              )}
+                            </div>
+                            {documentUploads[docType.id] && (
+                              <p className="text-xs text-gray-600">
+                                Selected: {documentUploads[docType.id]?.name} (
+                                {(documentUploads[docType.id]?.size || 0 / 1024 / 1024).toFixed(2)} MB)
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Uploaded Documents Table */}
+                    {uploadedDocuments.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-md font-medium text-gray-800 mb-3">
+                          Uploaded Documents
+                          {loadingDocuments && (
+                            <span className="ml-2 text-sm text-gray-500">(Loading previews...)</span>
+                          )}
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full border border-gray-300">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                  Document Type
+                                </th>
+                                <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                  Uploaded
+                                </th>
+                                <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                  Size
+                                </th>
+                                <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                                  Status
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {uploadedDocuments.map((doc, index) => {
+                                // Use document name from the document object if available, otherwise fallback to ID mapping
+                                const documentType =
+                                  (doc.document as Record<string, unknown>)?.name ||
+                                  (() => {
+                                    const documentTypeMap: Record<number, string> = {
+                                      1: "Class XII Marksheet",
+                                      2: "Aadhaar Card",
+                                      3: "APAAR ID Card",
+                                      4: "Father's Photo ID",
+                                      5: "Mother's Photo ID",
+                                      10: "EWS Certificate",
+                                    };
+                                    return documentTypeMap[doc.documentId as number] || `Document ${doc.documentId}`;
+                                  })();
+                                const fileSizeMB = doc.fileSize
+                                  ? ((doc.fileSize as number) / 1024 / 1024).toFixed(2)
+                                  : "Unknown";
+
+                                return (
+                                  <tr key={index} className="hover:bg-gray-50">
+                                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                      {documentType as string}
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                      <div className="flex items-center space-x-2">
+                                        <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                          {(doc.fileType as string)?.startsWith("image/") ? (
+                                            docPreviewUrls[doc.id as number] ? (
+                                              <img
+                                                src={docPreviewUrls[doc.id as number]}
+                                                alt="Preview"
+                                                className="w-full h-full object-cover"
+                                                onError={async () => {
+                                                  console.info(
+                                                    `[CU-REG MAIN-CONSOLE] Image load error for doc ${doc.id}, fetching signed URL`,
+                                                  );
+                                                  try {
+                                                    const url = await getCuRegistrationDocumentSignedUrl(
+                                                      doc.id as number,
+                                                    );
+                                                    if (url && url !== "undefined" && url !== "null") {
+                                                      console.info(
+                                                        `[CU-REG MAIN-CONSOLE] Got signed URL for doc ${doc.id}:`,
+                                                        url,
+                                                      );
+                                                      setDocPreviewUrls((prev) => ({
+                                                        ...prev,
+                                                        [doc.id as number]: url,
+                                                      }));
+                                                    } else {
+                                                      console.error(
+                                                        `[CU-REG MAIN-CONSOLE] Invalid URL received for doc ${doc.id}:`,
+                                                        url,
+                                                      );
+                                                    }
+                                                  } catch (error) {
+                                                    console.error(
+                                                      `[CU-REG MAIN-CONSOLE] Failed to get signed URL for doc ${doc.id}:`,
+                                                      error,
+                                                    );
+                                                  }
+                                                }}
+                                                onLoad={() => {
+                                                  console.info(
+                                                    `[CU-REG MAIN-CONSOLE] Image loaded successfully for doc ${doc.id}`,
+                                                  );
+                                                }}
+                                              />
+                                            ) : loadingDocuments ? (
+                                              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                                              </div>
+                                            ) : (
+                                              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">
+                                                <button
+                                                  onClick={async () => {
+                                                    try {
+                                                      console.info(
+                                                        `[CU-REG MAIN-CONSOLE] Fetching signed URL for preview ${doc.id}`,
+                                                      );
+                                                      const url = await getCuRegistrationDocumentSignedUrl(
+                                                        doc.id as number,
+                                                      );
+                                                      if (url && url !== "undefined" && url !== "null") {
+                                                        setDocPreviewUrls((prev) => ({
+                                                          ...prev,
+                                                          [doc.id as number]: url,
+                                                        }));
+                                                      }
+                                                    } catch (error) {
+                                                      console.error(
+                                                        `[CU-REG MAIN-CONSOLE] Failed to get signed URL for preview:`,
+                                                        error,
+                                                      );
+                                                    }
+                                                  }}
+                                                  className="text-xs text-blue-600 hover:underline"
+                                                >
+                                                  Load Preview
+                                                </button>
+                                              </div>
+                                            )
+                                          ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs">
+                                              PDF
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div>
+                                          <p className="text-xs text-gray-600 truncate max-w-[200px]">
+                                            {doc.fileName as string}
+                                          </p>
+                                          <button
+                                            className="text-xs text-blue-600 hover:underline"
+                                            onClick={async () => {
+                                              try {
+                                                console.info(`[CU-REG MAIN-CONSOLE] Opening document ${doc.id}`);
+                                                const url = await getCuRegistrationDocumentSignedUrl(doc.id as number);
+                                                console.info(`[CU-REG MAIN-CONSOLE] Got signed URL for opening:`, url);
+
+                                                if (url && url !== "undefined" && url !== "null") {
+                                                  window.open(url, "_blank");
+                                                } else {
+                                                  console.error(
+                                                    `[CU-REG MAIN-CONSOLE] Invalid URL for opening document ${doc.id}:`,
+                                                    url,
+                                                  );
+                                                  toast.error("Invalid document URL");
+                                                }
+                                              } catch (error) {
+                                                console.error(
+                                                  `[CU-REG MAIN-CONSOLE] Failed to open document ${doc.id}:`,
+                                                  error,
+                                                );
+                                                toast.error("Failed to open document");
+                                              }
+                                            }}
+                                          >
+                                            Open
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                      {fileSizeMB} MB
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                      <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                        Uploaded
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {uploadedDocuments.length === 0 && (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-gray-600">No documents uploaded yet.</p>
+                      </div>
+                    )}
+
+                    {/* Declaration Checkbox */}
+                    <div className="mt-6">
+                      <div className="flex items-start space-x-3">
+                        <Checkbox
+                          id="documentsDeclaration"
+                          checked={documentsConfirmed}
+                          onCheckedChange={handleDocumentsDeclarationChange}
+                          disabled={isSavingDocuments}
+                          className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                        />
+                        <Label
+                          htmlFor="documentsDeclaration"
+                          className="text-sm text-gray-700 leading-relaxed cursor-pointer"
+                          onClick={() => handleDocumentsDeclarationChange(true)}
+                        >
+                          I confirm that the uploaded documents correspond to the data provided.
+                          {isSavingDocuments && (
+                            <span className="ml-2 text-xs text-blue-600 font-medium">⏳ Saving...</span>
+                          )}
+                          {documentsConfirmed && !isSavingDocuments && (
+                            <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                          )}
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

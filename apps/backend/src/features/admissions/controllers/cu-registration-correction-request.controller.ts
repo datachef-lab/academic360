@@ -602,3 +602,152 @@ export const exportCuRegistrationCorrectionRequestsController = async (
     handleError(error, res, next);
   }
 };
+
+// Admin/Staff Personal Info Update Endpoint
+export const updatePersonalInfoByAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { personalInfo, flags } = req.body;
+
+    console.info("[CU-REG ADMIN] Personal info update - incoming", {
+      correctionRequestId: id,
+      personalInfo,
+      flags,
+    });
+
+    if (!id) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Correction request ID is required"));
+      return;
+    }
+
+    // Get the correction request
+    const correctionRequest = await findCuRegistrationCorrectionRequestById(
+      parseInt(id),
+    );
+    if (!correctionRequest) {
+      res.status(404).json(new ApiError(404, "Correction request not found"));
+      return;
+    }
+
+    if (!correctionRequest.student?.id) {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "Student not found for this correction request"),
+        );
+      return;
+    }
+
+    // Update the correction request with admin changes
+    const updatedRequest = await updateCuRegistrationCorrectionRequest(
+      parseInt(id),
+      {
+        personalInfoDeclaration: true,
+        genderCorrectionRequest: flags?.gender || false,
+        nationalityCorrectionRequest: flags?.nationality || false,
+        aadhaarCardNumberCorrectionRequest: flags?.aadhaarNumber || false,
+        apaarIdCorrectionRequest: flags?.apaarId || false,
+        // Pass the payload to update personal info and student data
+        payload: { personalInfo },
+      } as any,
+    );
+
+    console.info("[CU-REG ADMIN] Personal info update - request updated", {
+      id,
+      status: updatedRequest?.status,
+      personalInfoDeclaration: (updatedRequest as any)?.personalInfoDeclaration,
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { correctionRequest: updatedRequest },
+          "Personal information updated successfully by admin!",
+        ),
+      );
+  } catch (error) {
+    console.error("[CU-REG ADMIN] Personal info update error:", error);
+    handleError(error, res, next);
+  }
+};
+
+// Admin/Staff Address Info Update Endpoint
+export const updateAddressInfoByAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { addressData } = req.body;
+
+    console.info("[CU-REG ADMIN] Address info update - incoming", {
+      correctionRequestId: id,
+      addressData,
+    });
+
+    if (!id) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Correction request ID is required"));
+      return;
+    }
+
+    // Get the correction request
+    const correctionRequest = await findCuRegistrationCorrectionRequestById(
+      parseInt(id),
+    );
+    if (!correctionRequest) {
+      res.status(404).json(new ApiError(404, "Correction request not found"));
+      return;
+    }
+
+    if (!correctionRequest.student?.id) {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "Student not found for this correction request"),
+        );
+      return;
+    }
+
+    // Update the correction request with admin changes
+    const updatedRequest = await updateCuRegistrationCorrectionRequest(
+      parseInt(id),
+      {
+        addressInfoDeclaration: true,
+        // Pass the payload to update address data
+        payload: { addressData },
+      } as any,
+    );
+
+    console.info("[CU-REG ADMIN] Address info update - request updated", {
+      id,
+      status: updatedRequest?.status,
+      addressInfoDeclaration: (updatedRequest as any)?.addressInfoDeclaration,
+    });
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { correctionRequest: updatedRequest },
+          "Address information updated successfully by admin!",
+        ),
+      );
+  } catch (error) {
+    console.error("[CU-REG ADMIN] Address info update error:", error);
+    handleError(error, res, next);
+  }
+};
