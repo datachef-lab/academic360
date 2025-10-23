@@ -41,7 +41,8 @@ export interface CuRegDocumentPathConfig {
 const DOCUMENT_SUBFOLDER_MAP: Record<string, string> = {
   P: "Photo",
   S: "Signature",
-  A: "Age", // Age proof (Aadhaar as age proof)
+  A: "Aadhaar", // Legacy mapping for "A" code
+  AD: "Aadhaar", // Aadhaar card with AD prefix
   M: "Marksheet",
   C: "AdmissionForm",
   R: "AdmissionReceipt",
@@ -57,7 +58,7 @@ const DOCUMENT_SUBFOLDER_MAP: Record<string, string> = {
  */
 export const DOCUMENT_NAME_TO_CODE_MAP: Record<string, string> = {
   "Class XII Marksheet": "M",
-  "Aadhaar Card": "A",
+  "Aadhaar Card": "AD",
   "APAAR ID Card": "ABC",
   "Father Photo ID": "FP",
   "Mother Photo ID": "MP",
@@ -111,6 +112,15 @@ async function fetchStudentYearAndRegulation(studentId: number): Promise<{
     const year = yearMatch
       ? parseInt(yearMatch[1], 10)
       : new Date().getFullYear();
+
+    console.info(
+      `[CU-REG DOC PATH] Fetched dynamic data for student ${studentId}:`,
+      {
+        academicYear: promotionData.academicYear,
+        regulationShortName: promotionData.regulationShortName,
+        extractedYear: year,
+      },
+    );
 
     return {
       year,

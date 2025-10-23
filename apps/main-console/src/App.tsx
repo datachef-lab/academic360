@@ -77,12 +77,11 @@ import BoardPage from "./features/academic-year-setup/pages/board-page";
 import BoardSubjectNamePage from "./features/academic-year-setup/pages/board-subject-name-page";
 import BoardSubjectPage from "./features/academic-year-setup/pages/board-subject-page";
 import ProtectedRouteWrapper from "./components/globals/ProtectedRouteWrapper";
-import CURegistrationMasterLayout from "./features/cu-registration/layouts/CURegistrationMasterLayout";
-import CuRegistrationHomePage from "./features/cu-registration/pages/CuRegistrationHomePage";
 import CuRegStudentPage from "./features/cu-registration/pages/CuRegStudentPage";
 import BoardSubjectUnivSubjectMappingPaper from "./features/academic-year-setup/pages/board-subject-univ-subject-mapping-paper";
 import * as examManagementModule from "@/features/exam-management";
 import RealTimeTrackerPage from "./features/realtime-tracker/pages";
+import ReportsPage from "./features/reports/page";
 
 // import * as resourceModule from "@/pages/resources";
 
@@ -205,46 +204,12 @@ const router = createBrowserRouter(
         },
         {
           path: "cu-registration",
-          element: <CURegistrationMasterLayout />,
-          children: [
-            { path: "", element: <CuRegistrationHomePage /> },
-            { path: ":uid", element: <CuRegStudentPage /> },
-          ],
+          element: <CuRegStudentPage />,
         },
-        // {
-        //   path: "academic-year-setup/:year",
-        //   element: <Outlet />,
-        //   children: [
-        //     { path: "", element: <SelectedAcademicYearPage /> },
-        //     {
-        //       path: "course-design",
-        //       element: <courseSubjectModule.CoursesSubjectsMaster />,
-        //       children: [
-        //         { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
-        //         { path: "", element: <courseSubjectModule.ProgramCoursesPage /> },
-        //         { path: "streams", element: <courseSubjectModule.StreamsPage /> },
-        //         { path: "courses", element: <courseSubjectModule.CoursesPage /> },
-        //         { path: "course-types", element: <courseSubjectModule.CourseTypesPage /> },
-        //         { path: "course-levels", element: <courseSubjectModule.CourseLevelsPage /> },
-        //         { path: "affiliations", element: <courseSubjectModule.AffiliationsPage /> },
-        //         { path: "regulation-types", element: <courseSubjectModule.RegulationTypesPage /> },
-        //         { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
-        //         { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },
-        //         { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
-        //         { path: "classes", element: <courseSubjectModule.ClassesPage /> },
-        //         { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
-        //         { path: "academic-years", element: <AcademicYearPage /> },
-        //       ],
-        //     },
-        //     {
-        //         path: "subject-configurations",
-        //         element: <Outlet />,
-        //         children: [
-        //           { path: "", element: <SubjectConfigurationsPage /> },
-        //         ],
-        //       },
-        //   ],
-        // },
+        {
+          path: "reports",
+          element: <ReportsPage />,
+        },
         { path: "resources", element: <SettingsPage /> },
         // {
         //   path: "resources",
@@ -485,14 +450,6 @@ const router = createBrowserRouter(
 
         { path: "profile", element: <UserProfilePage /> },
         { path: "bulk-upload", element: <BulkUploadPage /> },
-        {
-          path: "cu-registration",
-          element: <CURegistrationMasterLayout />,
-          children: [
-            { path: "", element: <CuRegistrationHomePage /> },
-            { path: ":uid", element: <CuRegStudentPage /> },
-          ],
-        },
       ],
     },
     { path: "*", element: <NotFoundPage /> },

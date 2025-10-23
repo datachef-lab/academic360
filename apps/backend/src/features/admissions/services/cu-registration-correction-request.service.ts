@@ -547,23 +547,16 @@ export async function updateCuRegistrationCorrectionRequest(
       }
     }
 
-    // Determine status based on declaration completion and correction flags if status is not explicitly provided
-    if (typeof (updateData as any).status === "undefined") {
-      if (allDeclarationsCompleted && isFinalSubmission) {
-        if (hasCorrectionFlags) {
-          setData.status = "REQUEST_CORRECTION";
-        } else {
-          // Set to ONLINE_REGISTRATION_DONE instead of APPROVED
-          // APPROVED status will be set later after physical registration
-          setData.status = "ONLINE_REGISTRATION_DONE";
-        }
-      } else {
-        // Any declaration is still false OR final submission not done
-        setData.status = "PENDING";
-      }
-
+    // FIXED: Don't automatically set status - let user set it manually
+    // Only set status if explicitly provided in the update data
+    if (typeof (updateData as any).status !== "undefined") {
+      setData.status = (updateData as any).status;
       console.info(
-        `[CU-REG CORRECTION][UPDATE] Auto-setting status to: ${setData.status} (allDeclarationsCompleted: ${allDeclarationsCompleted}, isFinalSubmission: ${isFinalSubmission}, hasCorrectionFlags: ${hasCorrectionFlags})`,
+        `[CU-REG CORRECTION][UPDATE] Status explicitly set to: ${setData.status}`,
+      );
+    } else {
+      console.info(
+        `[CU-REG CORRECTION][UPDATE] No status provided - keeping existing status (user must set manually)`,
       );
     }
 

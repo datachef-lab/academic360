@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
-import { getStudentCuCorrectionRequests } from "@/services/cu-registration";
+import { getStudentCuCorrectionRequests, getCuCorrectionRequestById } from "@/services/cu-registration";
 import {
   getCuRegistrationDocuments,
   getCuRegistrationDocumentsByStudentUid,
   getAllStudentDocuments,
   getCuRegistrationDocumentSignedUrl,
   getCuRegistrationPdfUrlByRequestId,
+  uploadCuRegistrationDocument,
 } from "@/services/cu-registration-documents";
 import { fetchUserProfile } from "@/services/student";
 import { fetchStudentSubjectSelections, fetchMandatorySubjects } from "@/services/subject-selection";
@@ -74,6 +75,7 @@ interface CorrectionRequestStatus {
   id: number;
   status: string;
   remarks?: string;
+  applicationNumber?: string;
 }
 
 export default function CuRegistrationForm({ studentId, studentData }: CuRegistrationFormProps) {
@@ -129,8 +131,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     console.info("[CU-REG MAIN-CONSOLE] correctionRequestStatus changed to:", correctionRequestStatus);
   }, [correctionRequestStatus]);
 
-  // File upload states for each document
-  const [documentUploads, setDocumentUploads] = useState<Record<string, File | null>>({});
+  // File upload states for each document (like student console - store files, upload on declaration)
+  const [documents, setDocuments] = useState<Record<string, File | null>>({});
 
   // API data states
   const [countries, setCountries] = useState<Array<{ id?: number; name: string }>>([]);
@@ -177,7 +179,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   const [uploadedDocuments, setUploadedDocuments] = useState<Array<Record<string, unknown>>>([]);
   const [docPreviewUrls, setDocPreviewUrls] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
-  const [loadingDocuments, setLoadingDocuments] = useState(false);
 
   // Helper: format Aadhaar number to 4-4-4 format
   const formatAadhaarNumber = (aadhaar: string) => {
@@ -253,28 +254,25 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     label: value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
   }));
 
-  // Document types for file uploads
-  const documentTypes = [
-    { id: "1", name: "Class XII Marksheet", code: "M" },
-    { id: "2", name: "Aadhaar Card", code: "A" },
-    { id: "3", name: "APAAR ID Card", code: "ABC" },
-    { id: "4", name: "Father Photo ID", code: "FP" },
-    { id: "5", name: "Mother Photo ID", code: "MP" },
-    { id: "10", name: "EWS Certificate", code: "EWS" },
-  ];
+  // Document types for file uploads - fetched from API
+  const [documentTypes, setDocumentTypes] = useState<Array<{ id: string; name: string; code: string }>>([]);
+
+  // File size limits based on PDF document (Annexure 9)
+  const getFileSizeLimit = (documentName: string): { maxSizeKB: number; maxSizeMB: number } => {
+    const name = documentName.toLowerCase();
+
+    if (name.includes("photo") || name.includes("signature")) {
+      return { maxSizeKB: 100, maxSizeMB: 0.1 }; // 100KB
+    } else {
+      return { maxSizeKB: 250, maxSizeMB: 0.25 }; // 250KB for all other documents
+    }
+  };
 
   // Helper functions for form handling
   const handleInputChange = (field: keyof EditableFormData, value: string) => {
     setEditableData((prev) => ({
       ...prev,
       [field]: value,
-    }));
-  };
-
-  const handleFileUpload = (documentType: string, file: File | null) => {
-    setDocumentUploads((prev) => ({
-      ...prev,
-      [documentType]: file,
     }));
   };
 
@@ -333,6 +331,25 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
         setPersonalDeclared(true);
         toast.success("Personal information saved successfully!");
+
+        // Refresh correction request status to get updated status from backend
+        if (correctionRequestStatus?.id) {
+          try {
+            const updatedRequest = await getCuCorrectionRequestById(correctionRequestStatus.id);
+            setCorrectionRequestStatus({
+              id: updatedRequest.id || correctionRequestStatus.id,
+              status: updatedRequest.status || "PENDING",
+              remarks: updatedRequest.remarks || undefined,
+              applicationNumber: updatedRequest.cuRegistrationApplicationNumber || undefined,
+            });
+            console.info(
+              "[CU-REG MAIN-CONSOLE] Refreshed correction request status after personal info update:",
+              updatedRequest.status,
+            );
+          } catch (error) {
+            console.error("[CU-REG MAIN-CONSOLE] Error refreshing correction request status:", error);
+          }
+        }
       } catch (error) {
         console.error("[CU-REG MAIN-CONSOLE] Error saving personal info:", error);
         toast.error("Failed to save personal information");
@@ -427,6 +444,25 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         console.info("[CU-REG MAIN-CONSOLE] Address save response:", response.data);
         setAddressDeclared(true);
         toast.success("Address information saved successfully!");
+
+        // Refresh correction request status to get updated status from backend
+        if (correctionRequestStatus?.id) {
+          try {
+            const updatedRequest = await getCuCorrectionRequestById(correctionRequestStatus.id);
+            setCorrectionRequestStatus({
+              id: updatedRequest.id || correctionRequestStatus.id,
+              status: updatedRequest.status || "PENDING",
+              remarks: updatedRequest.remarks || undefined,
+              applicationNumber: updatedRequest.cuRegistrationApplicationNumber || undefined,
+            });
+            console.info(
+              "[CU-REG MAIN-CONSOLE] Refreshed correction request status after address info update:",
+              updatedRequest.status,
+            );
+          } catch (error) {
+            console.error("[CU-REG MAIN-CONSOLE] Error refreshing correction request status:", error);
+          }
+        }
       } catch (error) {
         console.error("[CU-REG MAIN-CONSOLE] Error saving address info:", error);
         toast.error("Failed to save address information");
@@ -447,6 +483,25 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         toast.info("Saving subjects information and regenerating PDF...");
         setSubjectsDeclared(true);
         toast.success("Subjects information saved successfully!");
+
+        // Refresh correction request status to get updated status from backend
+        if (correctionRequestStatus?.id) {
+          try {
+            const updatedRequest = await getCuCorrectionRequestById(correctionRequestStatus.id);
+            setCorrectionRequestStatus({
+              id: updatedRequest.id || correctionRequestStatus.id,
+              status: updatedRequest.status || "PENDING",
+              remarks: updatedRequest.remarks || undefined,
+              applicationNumber: updatedRequest.cuRegistrationApplicationNumber || undefined,
+            });
+            console.info(
+              "[CU-REG MAIN-CONSOLE] Refreshed correction request status after subjects update:",
+              updatedRequest.status,
+            );
+          } catch (error) {
+            console.error("[CU-REG MAIN-CONSOLE] Error refreshing correction request status:", error);
+          }
+        }
       } catch (error) {
         console.error("[CU-REG MAIN-CONSOLE] Error saving subjects:", error);
         toast.error("Failed to save subjects information");
@@ -458,23 +513,211 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
   const handleDocumentsDeclarationChange = async (checked: boolean) => {
     console.info("[CU-REG MAIN-CONSOLE] Documents declaration clicked", { checked });
+    console.info("[CU-REG MAIN-CONSOLE] Current documents state:", documents);
+    console.info("[CU-REG MAIN-CONSOLE] Current correctionRequestStatus:", correctionRequestStatus);
 
     if (checked) {
       setIsSavingDocuments(true);
       try {
-        // TODO: Implement save documents data
-        console.info("[CU-REG MAIN-CONSOLE] Saving documents data...");
-        toast.info("Saving documents information and regenerating PDF...");
+        console.info("[CU-REG MAIN-CONSOLE] Saving documents declaration and uploading files...");
+        toast.info("Saving documents declaration and uploading files...");
+
+        // Check if we have a valid correction request ID
+        if (!correctionRequestStatus?.id) {
+          console.error("[CU-REG MAIN-CONSOLE] Missing Correction Request ID:", {
+            correctionRequestStatus: correctionRequestStatus,
+            correctionRequestId: correctionRequestStatus?.id,
+          });
+          throw new Error("Correction request ID not found. Please ensure the correction request is properly loaded.");
+        }
+
+        console.info(`[CU-REG MAIN-CONSOLE] Using correction request ID: ${correctionRequestStatus.id}`);
+
+        // Get student data for upload
+        const studentUid = studentData?.uid || "";
+
+        if (!studentUid) {
+          console.error("[CU-REG MAIN-CONSOLE] Missing Student UID for upload");
+          throw new Error("Student UID not found. Cannot upload files.");
+        }
+
+        // Upload all selected files (like student console)
+        console.info(`[CU-REG MAIN-CONSOLE] Documents state:`, documents);
+
+        // Check if any files are selected for upload
+        const filesToUpload = Object.entries(documents).filter(([, file]) => file);
+        console.info(`[CU-REG MAIN-CONSOLE] Files to upload: ${filesToUpload.length}`);
+
+        let uploadSuccessCount = 0;
+        let uploadErrorCount = 0;
+
+        // Warn user if no files are selected but they're trying to declare documents
+        if (filesToUpload.length === 0) {
+          console.info(`[CU-REG MAIN-CONSOLE] No files selected for upload - proceeding with declaration only`);
+        }
+
+        if (filesToUpload.length > 0) {
+          console.info(`[CU-REG MAIN-CONSOLE] Starting upload process for ${filesToUpload.length} files`);
+          const uploadPromises = filesToUpload.map(async ([documentKey, file]) => {
+            if (file) {
+              // Extract document ID from key (format: "document-{id}")
+              const documentId = parseInt(documentKey.replace("document-", ""));
+              console.info(`[CU-REG MAIN-CONSOLE] Uploading file for document ID ${documentId}:`, {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+              });
+              try {
+                console.info(`[CU-REG MAIN-CONSOLE] Calling uploadCuRegistrationDocument API...`);
+                await uploadCuRegistrationDocument({
+                  file,
+                  cuRegistrationCorrectionRequestId: correctionRequestStatus.id,
+                  documentId,
+                });
+                console.info(`[CU-REG MAIN-CONSOLE] File uploaded successfully for document ID ${documentId}`);
+                uploadSuccessCount++;
+              } catch (error) {
+                console.error(`[CU-REG MAIN-CONSOLE] Error uploading file for document ID ${documentId}:`, error);
+                uploadErrorCount++;
+                throw error;
+              }
+            }
+          });
+
+          console.info(`[CU-REG MAIN-CONSOLE] Waiting for all uploads to complete...`);
+          await Promise.all(uploadPromises);
+          console.info(
+            `[CU-REG MAIN-CONSOLE] All uploads completed. Success: ${uploadSuccessCount}, Errors: ${uploadErrorCount}`,
+          );
+        } else {
+          console.info(`[CU-REG MAIN-CONSOLE] No files selected for upload`);
+        }
+
+        // Update correction request with documents declaration
+        const updateData = {
+          documentsDeclaration: true,
+        };
+
+        console.info("[CU-REG MAIN-CONSOLE] Updating correction request with documents declaration:", updateData);
+
+        await axiosInstance.put(
+          `/api/admissions/cu-registration-correction-requests/${correctionRequestStatus?.id}`,
+          updateData,
+        );
+
+        // Refresh the uploaded documents list
+        try {
+          const documents = await getCuRegistrationDocuments(correctionRequestStatus.id);
+          setUploadedDocuments(documents);
+          console.info("[CU-REG MAIN-CONSOLE] Refreshed uploaded documents:", documents);
+
+          // Force refresh of image previews by clearing any cached URLs
+          setDocPreviewUrls({});
+        } catch (error) {
+          console.error("[CU-REG MAIN-CONSOLE] Error refreshing documents:", error);
+        }
+
+        // Reset file inputs AFTER upload is complete
+        setDocuments({});
+
         setDocumentsConfirmed(true);
-        toast.success("Documents information saved successfully!");
+
+        // Show appropriate success message based on upload results
+        if (filesToUpload.length === 0) {
+          toast.success("Documents declaration saved successfully! (No files to upload)");
+        } else if (uploadSuccessCount > 0 && uploadErrorCount === 0) {
+          toast.success(`Documents declaration saved and ${uploadSuccessCount} file(s) uploaded successfully!`);
+        } else if (uploadSuccessCount > 0 && uploadErrorCount > 0) {
+          toast.warning(
+            `Documents declaration saved. ${uploadSuccessCount} file(s) uploaded, ${uploadErrorCount} failed.`,
+          );
+        } else {
+          toast.error("Documents declaration saved but file uploads failed!");
+        }
+
+        // Refresh correction request status to get updated status from backend
+        if (correctionRequestStatus?.id) {
+          try {
+            const updatedRequest = await getCuCorrectionRequestById(correctionRequestStatus.id);
+            setCorrectionRequestStatus({
+              id: updatedRequest.id || correctionRequestStatus.id,
+              status: updatedRequest.status || "PENDING",
+              remarks: updatedRequest.remarks || undefined,
+              applicationNumber: updatedRequest.cuRegistrationApplicationNumber || undefined,
+            });
+            console.info(
+              "[CU-REG MAIN-CONSOLE] Refreshed correction request status after documents update:",
+              updatedRequest.status,
+            );
+          } catch (error) {
+            console.error("[CU-REG MAIN-CONSOLE] Error refreshing correction request status:", error);
+          }
+        }
       } catch (error) {
-        console.error("[CU-REG MAIN-CONSOLE] Error saving documents:", error);
-        toast.error("Failed to save documents information");
+        console.error("[CU-REG MAIN-CONSOLE] Error saving documents declaration:", error);
+        toast.error("Failed to save documents declaration and upload files");
       } finally {
         setIsSavingDocuments(false);
       }
     }
   };
+
+  // Fetch document types from API
+  useEffect(() => {
+    const fetchDocumentTypes = async () => {
+      try {
+        console.info("[CU-REG MAIN-CONSOLE] Fetching document types from API...");
+        const response = await axiosInstance.get("/api/documents");
+        const documents = response.data.payload || [];
+
+        // Transform the API response to match our expected format
+        const transformedDocuments = documents.map((doc: { id: number; name: string }) => {
+          // Generate appropriate code based on document name
+          let code = "";
+          const name = doc.name.toLowerCase();
+
+          if (name.includes("marksheet")) {
+            code = "M";
+          } else if (name.includes("aadhaar")) {
+            code = "AD";
+          } else if (name.includes("apaar")) {
+            code = "ABC";
+          } else if (name.includes("father") && name.includes("photo")) {
+            code = "FP";
+          } else if (name.includes("mother") && name.includes("photo")) {
+            code = "MP";
+          } else if (name.includes("ews")) {
+            code = "EWS";
+          } else {
+            // Fallback to first letter
+            code = doc.name.charAt(0).toUpperCase();
+          }
+
+          return {
+            id: doc.id.toString(),
+            name: doc.name,
+            code: code,
+          };
+        });
+
+        console.info("[CU-REG MAIN-CONSOLE] Fetched document types:", transformedDocuments);
+        setDocumentTypes(transformedDocuments);
+      } catch (error) {
+        console.error("[CU-REG MAIN-CONSOLE] Error fetching document types:", error);
+        // Fallback to hardcoded types if API fails
+        setDocumentTypes([
+          { id: "1", name: "Class XII Marksheet", code: "M" },
+          { id: "2", name: "Aadhaar Card", code: "A" },
+          { id: "3", name: "APAAR ID Card", code: "ABC" },
+          { id: "4", name: "Father Photo ID", code: "FP" },
+          { id: "5", name: "Mother Photo ID", code: "MP" },
+          { id: "6", name: "EWS Certificate", code: "EWS" },
+        ]);
+      }
+    };
+
+    fetchDocumentTypes();
+  }, []);
 
   // Fetch API data for dropdowns
   useEffect(() => {
@@ -599,22 +842,18 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           setSubjectsDeclared(!!existingRequest.subjectsDeclaration);
           setDocumentsConfirmed(!!existingRequest.documentsDeclaration);
 
-          // Set correction request status
+          // Set correction request status - load existing status from database
           if (existingRequest.id) {
-            const status = existingRequest.status || "PENDING";
-            console.info(`[CU-REG MAIN-CONSOLE] Setting correction request status:`, status);
-            console.info(
-              `[CU-REG MAIN-CONSOLE] Available enum values:`,
-              cuRegistrationCorrectionRequestStatusEnum.enumValues,
-            );
-            console.info(
-              `[CU-REG MAIN-CONSOLE] Status matches enum:`,
-              cuRegistrationCorrectionRequestStatusEnum.enumValues.includes(status),
-            );
+            const existingStatus = existingRequest.status || "";
+            console.info(`[CU-REG MAIN-CONSOLE] Found correction request ID:`, existingRequest.id);
+            console.info(`[CU-REG MAIN-CONSOLE] Loading existing status:`, existingStatus);
             setCorrectionRequestStatus({
               id: existingRequest.id,
-              status: status,
+              status: existingStatus, // Load existing status from database
               remarks: existingRequest.remarks || undefined,
+              applicationNumber: (existingRequest as unknown as Record<string, unknown>).applicationNumber as
+                | string
+                | undefined,
             });
           }
 
@@ -1014,7 +1253,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     if (uploadedDocuments.length === 0) return;
 
     console.info(`[CU-REG MAIN-CONSOLE] Loading preview URLs for ${uploadedDocuments.length} documents`);
-    setLoadingDocuments(true);
 
     (async () => {
       const promises = (uploadedDocuments || [])
@@ -1033,8 +1271,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             console.info(`[CU-REG MAIN-CONSOLE] Fetching preview URL for document ${docId}`);
             const url = await getCuRegistrationDocumentSignedUrl(docId);
             if (url && url !== "undefined" && url !== "null") {
-              console.info(`[CU-REG MAIN-CONSOLE] Got preview URL for document ${docId}:`, url);
-              setDocPreviewUrls((prev) => ({ ...prev, [docId]: url }));
+              // Add cache-busting parameter to force browser refresh
+              const cacheBustedUrl = url + (url.includes("?") ? "&" : "?") + `t=${Date.now()}`;
+              console.info(`[CU-REG MAIN-CONSOLE] Got preview URL for document ${docId}:`, cacheBustedUrl);
+              setDocPreviewUrls((prev) => ({ ...prev, [docId]: cacheBustedUrl }));
             } else {
               console.error(`[CU-REG MAIN-CONSOLE] Invalid URL received for document ${docId}:`, url);
             }
@@ -1043,7 +1283,6 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           }
         });
       await Promise.allSettled(promises);
-      setLoadingDocuments(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadedDocuments]);
@@ -1892,241 +2131,227 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Uploads</h2>
 
-                    {/* Document Upload Section */}
-                    <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                      <h3 className="text-md font-medium text-gray-800 mb-4">Upload/Replace Documents</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {documentTypes.map((docType) => (
-                          <div key={docType.id} className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">{docType.name}</Label>
-                            <div className="flex items-center space-x-2">
-                              <Input
-                                type="file"
-                                accept=".jpg,.jpeg,.png,.pdf"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0] || null;
-                                  handleFileUpload(docType.id, file);
-                                }}
-                                className="text-sm"
-                              />
-                              {documentUploads[docType.id] && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    // TODO: Implement file upload to S3
-                                    toast.success(`${docType.name} uploaded successfully!`);
-                                  }}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  Upload
-                                </Button>
-                              )}
-                            </div>
-                            {documentUploads[docType.id] && (
-                              <p className="text-xs text-gray-600">
-                                Selected: {documentUploads[docType.id]?.name} (
-                                {(documentUploads[docType.id]?.size || 0 / 1024 / 1024).toFixed(2)} MB)
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    {/* Documents Table with Upload Column */}
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border border-gray-300">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                              Document Type
+                            </th>
+                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                              Current Document
+                            </th>
+                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                              Size
+                            </th>
+                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
+                              Upload
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {documentTypes.map((docType) => {
+                            // Find existing document for this type
 
-                    {/* Uploaded Documents Table */}
-                    {uploadedDocuments.length > 0 && (
-                      <div className="mb-6">
-                        <h3 className="text-md font-medium text-gray-800 mb-3">
-                          Uploaded Documents
-                          {loadingDocuments && (
-                            <span className="ml-2 text-sm text-gray-500">(Loading previews...)</span>
-                          )}
-                        </h3>
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full border border-gray-300">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                  Document Type
-                                </th>
-                                <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                  Uploaded
-                                </th>
-                                <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                  Size
-                                </th>
-                                <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium text-gray-700">
-                                  Status
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {uploadedDocuments.map((doc, index) => {
-                                // Use document name from the document object if available, otherwise fallback to ID mapping
-                                const documentType =
-                                  (doc.document as Record<string, unknown>)?.name ||
-                                  (() => {
-                                    const documentTypeMap: Record<number, string> = {
-                                      1: "Class XII Marksheet",
-                                      2: "Aadhaar Card",
-                                      3: "APAAR ID Card",
-                                      4: "Father's Photo ID",
-                                      5: "Mother's Photo ID",
-                                      10: "EWS Certificate",
-                                    };
-                                    return documentTypeMap[doc.documentId as number] || `Document ${doc.documentId}`;
-                                  })();
-                                const fileSizeMB = doc.fileSize
-                                  ? ((doc.fileSize as number) / 1024 / 1024).toFixed(2)
-                                  : "Unknown";
+                            const existingDoc = uploadedDocuments.find((doc) => {
+                              // Use ONLY document ID matching - most reliable method
+                              const docId = doc.documentId;
+                              const nestedDocId = (doc.document as Record<string, unknown>)?.id;
+                              const docTypeId = docType.id;
+                              const docTypeIdNum = parseInt(docType.id);
 
-                                return (
-                                  <tr key={index} className="hover:bg-gray-50">
-                                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                      {documentType as string}
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                      <div className="flex items-center space-x-2">
-                                        <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                          {(doc.fileType as string)?.startsWith("image/") ? (
-                                            docPreviewUrls[doc.id as number] ? (
-                                              <img
-                                                src={docPreviewUrls[doc.id as number]}
-                                                alt="Preview"
-                                                className="w-full h-full object-cover"
-                                                onError={async () => {
-                                                  console.info(
-                                                    `[CU-REG MAIN-CONSOLE] Image load error for doc ${doc.id}, fetching signed URL`,
+                              // Removed excessive logging for performance
+
+                              // Primary matching: Check document ID (most reliable)
+                              const idMatch =
+                                docId === docTypeId ||
+                                docId === docTypeIdNum ||
+                                nestedDocId === docTypeId ||
+                                nestedDocId === docTypeIdNum;
+
+                              // Removed excessive logging for performance
+
+                              return idMatch;
+                            });
+
+                            console.info(`[CU-REG MAIN-CONSOLE] Found existing doc for ${docType.name}:`, existingDoc);
+
+                            const fileSizeKB = existingDoc?.fileSize
+                              ? ((existingDoc.fileSize as number) / 1024).toFixed(1)
+                              : "N/A";
+
+                            return (
+                              <tr key={docType.id} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                  {docType.name}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                  {existingDoc ? (
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                        {(existingDoc.fileType as string)?.startsWith("image/") ? (
+                                          docPreviewUrls[existingDoc.id as number] ? (
+                                            <img
+                                              src={docPreviewUrls[existingDoc.id as number]}
+                                              alt="Preview"
+                                              className="w-full h-full object-cover"
+                                              onError={async () => {
+                                                try {
+                                                  const url = await getCuRegistrationDocumentSignedUrl(
+                                                    existingDoc.id as number,
                                                   );
+                                                  if (url && url !== "undefined" && url !== "null") {
+                                                    setDocPreviewUrls((prev) => ({
+                                                      ...prev,
+                                                      [existingDoc.id as number]: url,
+                                                    }));
+                                                  }
+                                                } catch (error) {
+                                                  console.error("Failed to get signed URL:", error);
+                                                }
+                                              }}
+                                            />
+                                          ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">
+                                              <button
+                                                onClick={async () => {
                                                   try {
                                                     const url = await getCuRegistrationDocumentSignedUrl(
-                                                      doc.id as number,
+                                                      existingDoc.id as number,
                                                     );
                                                     if (url && url !== "undefined" && url !== "null") {
-                                                      console.info(
-                                                        `[CU-REG MAIN-CONSOLE] Got signed URL for doc ${doc.id}:`,
-                                                        url,
-                                                      );
                                                       setDocPreviewUrls((prev) => ({
                                                         ...prev,
-                                                        [doc.id as number]: url,
+                                                        [existingDoc.id as number]: url,
                                                       }));
-                                                    } else {
-                                                      console.error(
-                                                        `[CU-REG MAIN-CONSOLE] Invalid URL received for doc ${doc.id}:`,
-                                                        url,
-                                                      );
                                                     }
                                                   } catch (error) {
-                                                    console.error(
-                                                      `[CU-REG MAIN-CONSOLE] Failed to get signed URL for doc ${doc.id}:`,
-                                                      error,
-                                                    );
+                                                    console.error("Failed to get signed URL:", error);
                                                   }
                                                 }}
-                                                onLoad={() => {
-                                                  console.info(
-                                                    `[CU-REG MAIN-CONSOLE] Image loaded successfully for doc ${doc.id}`,
-                                                  );
-                                                }}
-                                              />
-                                            ) : loadingDocuments ? (
-                                              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">
-                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-                                              </div>
-                                            ) : (
-                                              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 text-xs">
-                                                <button
-                                                  onClick={async () => {
-                                                    try {
-                                                      console.info(
-                                                        `[CU-REG MAIN-CONSOLE] Fetching signed URL for preview ${doc.id}`,
-                                                      );
-                                                      const url = await getCuRegistrationDocumentSignedUrl(
-                                                        doc.id as number,
-                                                      );
-                                                      if (url && url !== "undefined" && url !== "null") {
-                                                        setDocPreviewUrls((prev) => ({
-                                                          ...prev,
-                                                          [doc.id as number]: url,
-                                                        }));
-                                                      }
-                                                    } catch (error) {
-                                                      console.error(
-                                                        `[CU-REG MAIN-CONSOLE] Failed to get signed URL for preview:`,
-                                                        error,
-                                                      );
-                                                    }
-                                                  }}
-                                                  className="text-xs text-blue-600 hover:underline"
-                                                >
-                                                  Load Preview
-                                                </button>
-                                              </div>
-                                            )
-                                          ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs">
-                                              PDF
+                                                className="text-xs text-blue-600 hover:underline"
+                                              >
+                                                Load
+                                              </button>
                                             </div>
-                                          )}
-                                        </div>
-                                        <div>
-                                          <p className="text-xs text-gray-600 truncate max-w-[200px]">
-                                            {doc.fileName as string}
-                                          </p>
-                                          <button
-                                            className="text-xs text-blue-600 hover:underline"
-                                            onClick={async () => {
-                                              try {
-                                                console.info(`[CU-REG MAIN-CONSOLE] Opening document ${doc.id}`);
-                                                const url = await getCuRegistrationDocumentSignedUrl(doc.id as number);
-                                                console.info(`[CU-REG MAIN-CONSOLE] Got signed URL for opening:`, url);
-
-                                                if (url && url !== "undefined" && url !== "null") {
-                                                  window.open(url, "_blank");
-                                                } else {
-                                                  console.error(
-                                                    `[CU-REG MAIN-CONSOLE] Invalid URL for opening document ${doc.id}:`,
-                                                    url,
-                                                  );
-                                                  toast.error("Invalid document URL");
-                                                }
-                                              } catch (error) {
-                                                console.error(
-                                                  `[CU-REG MAIN-CONSOLE] Failed to open document ${doc.id}:`,
-                                                  error,
-                                                );
-                                                toast.error("Failed to open document");
-                                              }
-                                            }}
-                                          >
-                                            Open
-                                          </button>
-                                        </div>
+                                          )
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs">
+                                            PDF
+                                          </div>
+                                        )}
                                       </div>
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                      {fileSizeMB} MB
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                      <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                                        Uploaded
-                                      </Badge>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-
-                    {uploadedDocuments.length === 0 && (
-                      <div className="text-center py-8">
-                        <p className="text-sm text-gray-600">No documents uploaded yet.</p>
-                      </div>
-                    )}
+                                      <div>
+                                        <p className="text-xs text-gray-600 truncate max-w-[200px]">
+                                          {existingDoc.fileName as string}
+                                        </p>
+                                        <button
+                                          className="text-xs text-blue-600 hover:underline"
+                                          onClick={async () => {
+                                            try {
+                                              const url = await getCuRegistrationDocumentSignedUrl(
+                                                existingDoc.id as number,
+                                              );
+                                              if (url && url !== "undefined" && url !== "null") {
+                                                window.open(url, "_blank");
+                                              } else {
+                                                toast.error("Invalid document URL");
+                                              }
+                                            } catch (error) {
+                                              console.error("Failed to open document:", error);
+                                              toast.error("Failed to open document");
+                                            }
+                                          }}
+                                        >
+                                          Open
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-500 italic">No document uploaded</span>
+                                  )}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                  {fileSizeKB} kB
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                  <div className="flex items-center space-x-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const inputId = `document-${docType.id}`;
+                                        console.info(
+                                          `[CU-REG MAIN-CONSOLE] Button clicked for document ${docType.name}, looking for input: ${inputId}`,
+                                        );
+                                        const input = document.getElementById(inputId) as HTMLInputElement;
+                                        if (input) {
+                                          console.info(`[CU-REG MAIN-CONSOLE] Input found, triggering click`);
+                                          input.click();
+                                        } else {
+                                          console.error(`[CU-REG MAIN-CONSOLE] Input not found: ${inputId}`);
+                                        }
+                                      }}
+                                    >
+                                      {documents[`document-${docType.id}`] ? "Change File" : "Select File"}
+                                    </Button>
+                                    <p className="text-xs text-gray-500">
+                                      Max {getFileSizeLimit(docType.name).maxSizeKB}KB
+                                    </p>
+                                    <input
+                                      id={`document-${docType.id}`}
+                                      type="file"
+                                      accept=".jpg,.jpeg,.png,.gif"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        console.info(
+                                          `[CU-REG MAIN-CONSOLE] File input onChange triggered for document ${docType.name}`,
+                                        );
+                                        const file = e.target.files?.[0] || null;
+                                        console.info(
+                                          `[CU-REG MAIN-CONSOLE] File selected for document ${docType.name}:`,
+                                          {
+                                            name: file?.name,
+                                            size: file?.size,
+                                            sizeKB: file ? (file.size / 1024).toFixed(1) : "N/A",
+                                            type: file?.type,
+                                          },
+                                        );
+                                        setDocuments((prev) => {
+                                          const newState = { ...prev, [`document-${docType.id}`]: file };
+                                          console.info(`[CU-REG MAIN-CONSOLE] Updated documents state:`, newState);
+                                          return newState;
+                                        });
+                                        // Files will be uploaded when documents declaration is clicked
+                                      }}
+                                    />
+                                  </div>
+                                  {documents[`document-${docType.id}`] && (
+                                    <div className="mt-1">
+                                      <p className="text-xs text-gray-600 truncate max-w-full">
+                                        Selected: {documents[`document-${docType.id}`]?.name}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {((documents[`document-${docType.id}`]?.size || 0) / 1024).toFixed(1)} kB
+                                      </p>
+                                    </div>
+                                  )}
+                                  {/* Debug: Show documents state for this document type */}
+                                  {process.env.NODE_ENV === "development" && (
+                                    <div className="mt-1 text-xs text-gray-400">
+                                      Debug: documents[{`document-${docType.id}`}] ={" "}
+                                      {documents[`document-${docType.id}`] ? "File selected" : "No file"}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
 
                     {/* Declaration Checkbox */}
                     <div className="mt-6">
@@ -2134,7 +2359,16 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                         <Checkbox
                           id="documentsDeclaration"
                           checked={documentsConfirmed}
-                          onCheckedChange={handleDocumentsDeclarationChange}
+                          onCheckedChange={(checked) => {
+                            console.info(`[CU-REG MAIN-CONSOLE] Documents declaration checkbox clicked:`, {
+                              checked,
+                              documentsConfirmed,
+                              isSavingDocuments,
+                              documentUploadsCount: Object.keys(documents).length,
+                              documentUploads: documents,
+                            });
+                            handleDocumentsDeclarationChange(checked as boolean);
+                          }}
                           disabled={isSavingDocuments}
                           className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                         />

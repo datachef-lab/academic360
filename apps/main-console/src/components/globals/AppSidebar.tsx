@@ -70,6 +70,7 @@ const data = {
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: FileText },
     { title: "Exam Management", url: "/dashboard/exam-management", icon: GraduationCap },
     { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: ClipboardList },
+    { title: "Reports", url: "/dashboard/reports", icon: FileText },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
     // { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },

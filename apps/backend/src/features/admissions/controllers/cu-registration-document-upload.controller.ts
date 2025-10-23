@@ -27,12 +27,38 @@ import {
   listStudentFiles,
   deleteAllStudentFiles as deleteAllStudentFilesFromS3,
   getStudentFolderStats,
+  createUploadConfig,
 } from "@/services/s3.service.js";
+import {
+  getCuRegDocumentPathDynamic,
+  getDocumentCodeFromName,
+} from "../services/cu-registration-document-path.service.js";
 import {
   uploadToFileSystem,
   deleteFromFileSystem,
 } from "@/services/filesystem-storage.service.js";
 import multer from "multer";
+import { db } from "@/db/index.js";
+import { eq } from "drizzle-orm";
+import { documentModel } from "@repo/db/index.js";
+
+// Helper function to get document name by ID from database
+async function getDocumentNameById(documentId: string): Promise<string> {
+  try {
+    const document = await db
+      .select()
+      .from(documentModel)
+      .where(eq(documentModel.id, parseInt(documentId)))
+      .limit(1);
+    return document[0]?.name || `Document ${documentId}`;
+  } catch (error) {
+    console.error(
+      `[CU-REG DOC UPLOAD] Error fetching document name for ID ${documentId}:`,
+      error,
+    );
+    return `Document ${documentId}`;
+  }
+}
 
 // Configure multer for memory storage (for S3 uploads)
 const upload = multer({
@@ -144,53 +170,90 @@ export const createNewCuRegistrationDocumentUpload = async (
       return;
     }
 
-    // Create student-specific upload configuration
-    const uploadConfig = createStudentUploadConfig(
+    // Get document name for path generation
+    const documentName = await getDocumentNameById(documentId);
+
+    // Generate CU registration specific path
+    const cuRegNumber =
+      correctionRequest.cuRegistrationApplicationNumber || "0000001";
+    const studentId = correctionRequest.student.id;
+
+    if (!studentId) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Student ID not found in correction request"));
+      return;
+    }
+
+    const pathConfig = await getCuRegDocumentPathDynamic(
+      studentId,
       studentUid,
-      "cu-registration-documents",
-      {
-        maxFileSizeMB: 10,
-        allowedMimeTypes: FileTypeConfigs.DOCUMENTS,
-        makePublic: false,
-        metadata: {
-          correctionRequestId: cuRegistrationCorrectionRequestId,
-          documentId: documentId,
-          remarks: remarks || "",
-        },
-      },
+      cuRegNumber,
+      getDocumentCodeFromName(documentName),
     );
+
+    console.info(`[CU-REG DOC UPLOAD] Generated CU registration path config:`, {
+      folder: pathConfig.folder,
+      filename: pathConfig.filename,
+      fullPath: pathConfig.fullPath,
+      documentCode: pathConfig.documentCode,
+      cuRegNumber: pathConfig.cuRegNumber,
+      year: pathConfig.year,
+      course: pathConfig.course,
+      studentUid: pathConfig.studentUid,
+    });
+
+    // Create upload configuration using CU registration path
+    const uploadConfig = createUploadConfig(pathConfig.folder, {
+      customFileName: pathConfig.filename,
+      maxFileSizeMB: 10,
+      allowedMimeTypes: FileTypeConfigs.DOCUMENTS,
+      makePublic: false,
+      metadata: {
+        correctionRequestId: cuRegistrationCorrectionRequestId,
+        documentId: documentId,
+        remarks: remarks || "",
+        studentUid,
+        cuRegNumber: pathConfig.cuRegNumber,
+        documentCode: pathConfig.documentCode,
+      },
+    });
 
     // Try to upload to S3 first, fallback to file system if S3 is not configured
     let uploadResult;
     try {
       console.info("[CU-REG DOC UPLOAD] Attempting S3 upload...");
       uploadResult = await uploadToS3(file, uploadConfig);
-      console.info("[CU-REG DOC UPLOAD] S3 upload successful");
+      console.info("[CU-REG DOC UPLOAD] S3 upload successful:", {
+        key: uploadResult.key,
+        url: uploadResult.url,
+        bucket: uploadResult.bucket,
+      });
     } catch (s3Error: any) {
       if (s3Error.message?.includes("S3 service is not configured")) {
         console.info(
           "[CU-REG DOC UPLOAD] S3 not configured, falling back to file system storage",
         );
-        // Get document type name for file system storage
-        const documentTypeMap: Record<string, string> = {
-          "1": "class-xii-marksheet",
-          "2": "aadhaar-card",
-          "3": "apaar-id-card",
-          "4": "father-photo-id",
-          "5": "mother-photo-id",
-          "10": "ews-certificate",
-        };
-        const documentType =
-          documentTypeMap[documentId] || `document-${documentId}`;
+        // Use the same CU registration path structure for file system storage
         uploadResult = await uploadToFileSystem(
           file,
-          correctionRequest.cuRegistrationApplicationNumber || "unknown",
-          documentType,
+          pathConfig.cuRegNumber, // Use application number for file system storage
+          pathConfig.documentCode, // Use document code as document type
         );
-        console.info("[CU-REG DOC UPLOAD] File system upload successful");
+        console.info("[CU-REG DOC UPLOAD] File system upload successful:", {
+          key: uploadResult.key,
+          url: uploadResult.url,
+          fileName: uploadResult.fileName,
+        });
       } else {
+        console.error("[CU-REG DOC UPLOAD] S3 upload failed:", s3Error);
         throw s3Error;
       }
+    }
+
+    // Validate upload result
+    if (!uploadResult || !uploadResult.key || !uploadResult.url) {
+      throw new Error("File upload failed - no upload result received");
     }
 
     const documentData = {
@@ -200,7 +263,7 @@ export const createNewCuRegistrationDocumentUpload = async (
       documentId: parseInt(documentId),
       documentUrl: uploadResult.url,
       path: uploadResult.key, // Store S3 key or file system path
-      fileName: file.originalname,
+      fileName: pathConfig.filename, // Use the properly formatted filename
       fileType: file.mimetype,
       fileSize: file.size,
       remarks: remarks || null,
@@ -238,20 +301,83 @@ export const createNewCuRegistrationDocumentUpload = async (
       return;
     }
 
-    const newDocument = await createCuRegistrationDocumentUpload(
-      parseResult.data,
+    // Check if a document already exists for this correction request and document ID
+    const existingDocuments =
+      await findCuRegistrationDocumentUploadsByRequestId(
+        parseInt(cuRegistrationCorrectionRequestId),
+      );
+
+    const existingDocument = existingDocuments.find(
+      (doc) => doc.document.id === parseInt(documentId),
     );
+
+    let resultDocument;
+    let responseMessage;
+
+    if (existingDocument) {
+      // Update existing document with new file
+      console.info(
+        `[CU-REG DOC UPLOAD] Updating existing document ID: ${existingDocument.id}`,
+      );
+
+      if (!existingDocument.id) {
+        throw new Error("Existing document ID not found");
+      }
+
+      // Update the database record first
+      try {
+        resultDocument = await updateCuRegistrationDocumentUpload(
+          existingDocument.id,
+          parseResult.data,
+        );
+        console.info(
+          `[CU-REG DOC UPLOAD] Database record updated successfully for document ID: ${existingDocument.id}`,
+        );
+
+        // FIXED: Don't delete old file - let S3 handle replacement automatically
+        // AWS S3 will automatically replace files with the same key
+        console.info(
+          `[CU-REG DOC UPLOAD] File replacement handled by S3 automatically - no manual deletion needed`,
+        );
+      } catch (dbError) {
+        console.error(
+          `[CU-REG DOC UPLOAD] Database update failed for document ID: ${existingDocument.id}`,
+          dbError,
+        );
+        // Clean up the newly uploaded file since database update failed
+        try {
+          if (uploadResult.url.startsWith("/uploads/")) {
+            await deleteFromFileSystem(uploadResult.key);
+          } else {
+            await deleteFromS3(uploadResult.key);
+          }
+          console.info(
+            `[CU-REG DOC UPLOAD] Cleaned up newly uploaded file due to database error: ${uploadResult.key}`,
+          );
+        } catch (cleanupError) {
+          console.error(
+            "Failed to cleanup uploaded file after database error:",
+            cleanupError,
+          );
+        }
+        throw dbError;
+      }
+
+      responseMessage = "Document updated successfully!";
+    } else {
+      // Create new document
+      console.info(
+        `[CU-REG DOC UPLOAD] Creating new document for correction request: ${cuRegistrationCorrectionRequestId}, document ID: ${documentId}`,
+      );
+      resultDocument = await createCuRegistrationDocumentUpload(
+        parseResult.data,
+      );
+      responseMessage = "Document uploaded successfully!";
+    }
 
     res
       .status(201)
-      .json(
-        new ApiResponse(
-          201,
-          "SUCCESS",
-          newDocument,
-          "Document uploaded successfully to S3!",
-        ),
-      );
+      .json(new ApiResponse(201, "SUCCESS", resultDocument, responseMessage));
   } catch (error) {
     handleError(error, res, next);
   }

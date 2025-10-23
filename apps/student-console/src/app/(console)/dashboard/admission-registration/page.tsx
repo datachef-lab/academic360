@@ -2503,7 +2503,7 @@ export default function CURegistrationPage() {
                               onClick={() => handleSubjectsDeclarationChange(true)}
                             >
                               {correctionFlags.subjects && shouldShowSubjectsCorrectionFlag()
-                                ? "I confirm the subjects listed above for Semesters 1-4. Note: Corrections will be reviewed by staff."
+                                ? "You have requested corrections on this section. You must inform of the same at the time of submitting your Admission & Registration Datasheet and documents physically at the College."
                                 : "I confirm the subjects listed above for Semesters 1-4."}
                               {correctionRequest?.subjectsDeclaration && (
                                 <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>

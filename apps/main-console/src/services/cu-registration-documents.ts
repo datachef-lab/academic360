@@ -126,6 +126,47 @@ export async function getCuRegistrationDocumentSignedUrl(documentId: number): Pr
 }
 
 /**
+ * Upload a document for CU registration (EXACT COPY of student console API)
+ */
+export async function uploadCuRegistrationDocument(args: {
+  file: File;
+  cuRegistrationCorrectionRequestId: number;
+  documentId: number;
+  remarks?: string;
+}) {
+  console.info(`[CU-REG MAIN-CONSOLE] Starting upload:`, {
+    fileName: args.file.name,
+    fileSize: args.file.size,
+    fileSizeMB: (args.file.size / 1024 / 1024).toFixed(2),
+    fileType: args.file.type,
+    cuRegistrationCorrectionRequestId: args.cuRegistrationCorrectionRequestId,
+    documentId: args.documentId,
+  });
+
+  const form = new FormData();
+  form.append("file", args.file);
+  form.append("cuRegistrationCorrectionRequestId", String(args.cuRegistrationCorrectionRequestId));
+  form.append("documentId", String(args.documentId));
+  if (args.remarks) form.append("remarks", args.remarks);
+
+  try {
+    const res = await axiosInstance.post<{
+      httpStatusCode: number;
+      payload: Record<string, unknown>;
+      httpStatus: string;
+      message: string;
+    }>(BASE, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    console.info(`[CU-REG MAIN-CONSOLE] Upload successful:`, res.data);
+    return res.data.payload;
+  } catch (error: any) {
+    console.error(`[CU-REG MAIN-CONSOLE] Upload failed:`, error.response?.data || error.message);
+    throw error;
+  }
+}
+
+/**
  * Get CU Registration PDF URL by correction request ID
  */
 export async function getCuRegistrationPdfUrlByRequestId(correctionRequestId: number) {

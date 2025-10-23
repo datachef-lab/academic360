@@ -89,14 +89,12 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       return;
     }
 
-    // Determine status based on flags
-    const hasCorrectionFlags =
-      parsedFlags && Object.values(parsedFlags).some(Boolean);
-    // Status will be ONLINE_REGISTRATION_DONE (not APPROVED)
-    // APPROVED will be set later after physical registration
-    const newStatus = hasCorrectionFlags
-      ? "REQUEST_CORRECTION"
-      : "ONLINE_REGISTRATION_DONE";
+    // FIXED: Don't automatically determine status - let user set it manually
+    // Only use status if explicitly provided in the request
+    const newStatus = req.body.status || correctionRequest.status;
+    console.info(
+      `[CU-REG BATCH SUBMIT] Using status: ${newStatus} (from request: ${req.body.status || "not provided"})`,
+    );
 
     // Generate application number FIRST before uploading documents
     console.info(
