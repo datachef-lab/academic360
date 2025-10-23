@@ -22,162 +22,229 @@ import { addressService, type AddressDto } from "@/services/address.service";
 
 // Options are fetched via services
 
-const BoardForm = ({
-  initialData,
-  onSubmit,
-  onCancel,
-  isLoading,
-  degreeOptions,
-  addressOptions,
-}: {
-  initialData: BoardDto | null;
-  onSubmit: (data: {
-    name: string;
-    code?: string | null;
-    passingMarks?: number | null;
-    sequence?: number | null;
-    degreeId?: number | null;
-    addressId?: number | null;
-    isActive: boolean;
-  }) => void;
-  onCancel: () => void;
-  isLoading: boolean;
-  degreeOptions: DegreeDto[];
-  addressOptions: AddressDto[];
-}) => {
-  const [formData, setFormData] = React.useState({
-    name: initialData?.name || "",
-    code: initialData?.code || "",
-    passingMarks: initialData?.passingMarks ?? "",
-    sequence: initialData?.sequence ?? "",
-    degreeId: initialData?.degree?.id || 0,
-    addressId: initialData?.address?.id || 0,
-    isActive: initialData?.isActive ?? true,
-  });
+const BoardTableRow = React.memo(
+  ({
+    board,
+    index,
+    onEdit,
+    currentPage,
+    pageSize,
+  }: {
+    board: BoardDto;
+    index: number;
+    onEdit: (board: BoardDto) => void;
+    currentPage: number;
+    pageSize: number;
+  }) => (
+    <TableRow className="group">
+      <TableCell className="text-center" style={{ width: "8%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+        {(currentPage - 1) * pageSize + index + 1}.
+      </TableCell>
+      <TableCell
+        style={{
+          width: "25%",
+          padding: "8px 4px",
+          borderRight: "1px solid #e5e7eb",
+          wordWrap: "break-word",
+          wordBreak: "break-word",
+          whiteSpace: "normal",
+        }}
+      >
+        {board.name ? <div className="text-sm leading-tight">{board.name}</div> : "-"}
+      </TableCell>
+      <TableCell style={{ width: "12%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+        {board.code ?? "-"}
+      </TableCell>
+      <TableCell className="text-center" style={{ width: "12%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+        {board.passingMarks ?? "-"}
+      </TableCell>
+      <TableCell style={{ width: "18%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+        {board.degree?.name ? (
+          <Badge variant="outline" className="text-xs">
+            {board.degree.name}
+          </Badge>
+        ) : (
+          "-"
+        )}
+      </TableCell>
+      <TableCell style={{ width: "10%", borderRight: "1px solid #e5e7eb" }}>
+        {board.isActive ? (
+          <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">Active</Badge>
+        ) : (
+          <Badge variant="secondary" className="text-xs">
+            Inactive
+          </Badge>
+        )}
+      </TableCell>
+      <TableCell style={{ width: "15%", padding: "8px 4px" }}>
+        <div className="flex space-x-2 justify-center">
+          <Button variant="outline" size="sm" onClick={() => onEdit(board)} className="h-5 w-5 p-0">
+            <Edit className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  ),
+);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit({
-      name: formData.name,
-      code: formData.code || null,
-      passingMarks: formData.passingMarks === "" ? null : Number(formData.passingMarks),
-      sequence: formData.sequence === "" ? null : Number(formData.sequence),
-      degreeId: formData.degreeId === 0 ? null : formData.degreeId,
-      addressId: formData.addressId === 0 ? null : formData.addressId,
-      isActive: formData.isActive,
+const BoardForm = React.memo(
+  ({
+    initialData,
+    onSubmit,
+    onCancel,
+    isLoading,
+    degreeOptions,
+    addressOptions,
+  }: {
+    initialData: BoardDto | null;
+    onSubmit: (data: {
+      name: string;
+      code?: string | null;
+      passingMarks?: number | null;
+      sequence?: number | null;
+      degreeId?: number | null;
+      addressId?: number | null;
+      isActive: boolean;
+    }) => void;
+    onCancel: () => void;
+    isLoading: boolean;
+    degreeOptions: DegreeDto[];
+    addressOptions: AddressDto[];
+  }) => {
+    const [formData, setFormData] = React.useState({
+      name: initialData?.name || "",
+      code: initialData?.code || "",
+      passingMarks: initialData?.passingMarks ?? "",
+      sequence: initialData?.sequence ?? "",
+      degreeId: initialData?.degree?.id || 0,
+      addressId: initialData?.address?.id || 0,
+      isActive: initialData?.isActive ?? true,
     });
-  };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Board Name *</Label>
-          <Input
-            id="name"
-            type="text"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Enter board name"
-            required
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      onSubmit({
+        name: formData.name,
+        code: formData.code || null,
+        passingMarks: formData.passingMarks === "" ? null : Number(formData.passingMarks),
+        sequence: formData.sequence === "" ? null : Number(formData.sequence),
+        degreeId: formData.degreeId === 0 ? null : formData.degreeId,
+        addressId: formData.addressId === 0 ? null : formData.addressId,
+        isActive: formData.isActive,
+      });
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Board Name *</Label>
+            <Input
+              id="name"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Enter board name"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="code">Board Code</Label>
+            <Input
+              id="code"
+              type="text"
+              value={formData.code}
+              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              placeholder="Enter board code"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="passingMarks">Passing Marks</Label>
+            <Input
+              id="passingMarks"
+              type="number"
+              value={formData.passingMarks}
+              onChange={(e) => setFormData({ ...formData, passingMarks: e.target.value })}
+              placeholder="Enter passing marks"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="sequence">Sequence</Label>
+            <Input
+              id="sequence"
+              type="number"
+              value={formData.sequence}
+              onChange={(e) => setFormData({ ...formData, sequence: e.target.value })}
+              placeholder="Enter sequence"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="degreeId">Degree</Label>
+            <Select
+              value={formData.degreeId.toString()}
+              onValueChange={(v) => setFormData({ ...formData, degreeId: parseInt(v) })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Degree" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">No Degree</SelectItem>
+                {degreeOptions.map((d) => (
+                  <SelectItem key={d.id} value={d.id.toString()}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="addressId">Address</Label>
+            <Select
+              value={formData.addressId.toString()}
+              onValueChange={(v) => setFormData({ ...formData, addressId: parseInt(v) })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Address" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">No Address</SelectItem>
+                {addressOptions.map((a) => (
+                  <SelectItem key={a.id} value={a.id.toString()}>
+                    {a.addressLine ?? `Address #${a.id}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="isActive"
+            checked={formData.isActive}
+            onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
           />
+          <Label htmlFor="isActive">Active</Label>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="code">Board Code</Label>
-          <Input
-            id="code"
-            type="text"
-            value={formData.code}
-            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-            placeholder="Enter board code"
-          />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="passingMarks">Passing Marks</Label>
-          <Input
-            id="passingMarks"
-            type="number"
-            value={formData.passingMarks}
-            onChange={(e) => setFormData({ ...formData, passingMarks: e.target.value })}
-            placeholder="Enter passing marks"
-          />
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Saving..." : initialData ? "Update" : "Create"}
+          </Button>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="sequence">Sequence</Label>
-          <Input
-            id="sequence"
-            type="number"
-            value={formData.sequence}
-            onChange={(e) => setFormData({ ...formData, sequence: e.target.value })}
-            placeholder="Enter sequence"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="degreeId">Degree</Label>
-          <Select
-            value={formData.degreeId.toString()}
-            onValueChange={(v) => setFormData({ ...formData, degreeId: parseInt(v) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Degree" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">No Degree</SelectItem>
-              {degreeOptions.map((d) => (
-                <SelectItem key={d.id} value={d.id.toString()}>
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="addressId">Address</Label>
-          <Select
-            value={formData.addressId.toString()}
-            onValueChange={(v) => setFormData({ ...formData, addressId: parseInt(v) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Address" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">No Address</SelectItem>
-              {addressOptions.map((a) => (
-                <SelectItem key={a.id} value={a.id.toString()}>
-                  {a.addressLine ?? `Address #${a.id}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="isActive"
-          checked={formData.isActive}
-          onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-        />
-        <Label htmlFor="isActive">Active</Label>
-      </div>
-
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Saving..." : initialData ? "Update" : "Create"}
-        </Button>
-      </div>
-    </form>
-  );
-};
+      </form>
+    );
+  },
+);
 
 export default function BoardPage() {
   const [boards, setBoards] = React.useState<BoardDto[]>([]);
@@ -196,26 +263,11 @@ export default function BoardPage() {
   const [totalItems, setTotalItems] = React.useState(0);
   const [selectedDegreeId, setSelectedDegreeId] = React.useState<number | undefined>(undefined);
 
-  const loadBoards = React.useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await boardService.getAllBoards(currentPage, pageSize, searchText, selectedDegreeId);
-      console.log("data", result);
-      setBoards(result.data);
-      setTotalItems(result.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load boards");
-      toast.error("Failed to load boards");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, pageSize, searchText, selectedDegreeId]);
+  // Memoize boards to prevent unnecessary re-renders
+  const memoizedBoards = React.useMemo(() => boards, [boards]);
 
-  // Load boards on component mount
+  // Load dropdowns on component mount only
   React.useEffect(() => {
-    loadBoards();
-    // Load dropdowns
     (async () => {
       try {
         const [degrees, addresses] = await Promise.all([degreeService.getAll(), addressService.getAll()]);
@@ -233,56 +285,110 @@ export default function BoardPage() {
         console.warn("Failed loading degree/address options", e);
       }
     })();
-  }, [loadBoards]);
+  }, []); // Empty dependency array - only run once on mount
 
-  // Reload when filters change (except search which has its own debounced effect)
+  // Load boards when dependencies change
   React.useEffect(() => {
-    loadBoards();
-  }, [loadBoards]);
+    let isMounted = true;
+    const abortController = new AbortController();
 
-  const handleEdit = (board: BoardDto) => {
+    const loadBoards = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Add a small delay to prevent rapid successive calls
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        if (!isMounted) return;
+
+        const result = await boardService.getAllBoards(currentPage, pageSize, searchText, selectedDegreeId);
+
+        if (!isMounted) return; // Prevent state updates if component unmounted
+
+        setBoards(result.data);
+        setTotalItems(result.total);
+      } catch (err: unknown) {
+        if (!isMounted) return;
+
+        // Handle timeout errors more gracefully
+        if (err && typeof err === "object" && "code" in err && err.code === "ECONNABORTED") {
+          setError("Request timed out. Please check your connection and try again.");
+          toast.error("Request timed out. Please try again.");
+        } else if (
+          err &&
+          typeof err === "object" &&
+          "message" in err &&
+          typeof err.message === "string" &&
+          err.message.includes("timeout")
+        ) {
+          setError("Request timed out. Please check your connection and try again.");
+          toast.error("Request timed out. Please try again.");
+        } else {
+          setError(err instanceof Error ? err.message : "Failed to load boards");
+          toast.error("Failed to load boards");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadBoards();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [currentPage, pageSize, searchText, selectedDegreeId]);
+
+  const handleEdit = React.useCallback((board: BoardDto) => {
     setSelectedBoard(board);
     setIsFormOpen(true);
-  };
+  }, []);
 
-  const handleSubmit = async (data: {
-    name: string;
-    code?: string | null;
-    passingMarks?: number | null;
-    sequence?: number | null;
-    degreeId?: number | null;
-    isActive: boolean;
-  }) => {
-    setIsSubmitting(true);
-    try {
-      if (selectedBoard?.id) {
-        // Update existing board
-        const updatedBoard = await boardService.updateBoard(selectedBoard.id, data);
-        setBoards((prev) => prev.map((b) => (b.id === selectedBoard.id ? updatedBoard : b)));
-        toast.success("Board updated successfully");
-      } else {
-        // Create new board
-        const newBoard = await boardService.createBoard(data);
-        setBoards((prev) => [...prev, newBoard]);
-        toast.success("Board created successfully");
+  const handleSubmit = React.useCallback(
+    async (data: {
+      name: string;
+      code?: string | null;
+      passingMarks?: number | null;
+      sequence?: number | null;
+      degreeId?: number | null;
+      isActive: boolean;
+    }) => {
+      setIsSubmitting(true);
+      try {
+        if (selectedBoard?.id) {
+          // Update existing board
+          const updatedBoard = await boardService.updateBoard(selectedBoard.id, data);
+          setBoards((prev) => prev.map((b) => (b.id === selectedBoard.id ? updatedBoard : b)));
+          toast.success("Board updated successfully");
+        } else {
+          // Create new board
+          const newBoard = await boardService.createBoard(data);
+          setBoards((prev) => [...prev, newBoard]);
+          toast.success("Board created successfully");
+        }
+        setIsFormOpen(false);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to save board");
+      } finally {
+        setIsSubmitting(false);
       }
-      setIsFormOpen(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save board");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    },
+    [selectedBoard?.id],
+  );
 
-  const handleCancel = () => {
+  const handleCancel = React.useCallback(() => {
     setIsFormOpen(false);
     setSelectedBoard(null);
-  };
+  }, []);
 
-  const handleAddNew = () => {
+  const handleAddNew = React.useCallback(() => {
     setSelectedBoard(null);
     setIsFormOpen(true);
-  };
+  }, []);
 
   // Delete disabled per requirements
 
@@ -306,14 +412,13 @@ export default function BoardPage() {
     }
   };
 
-  // Search with debounce
+  // Search with debounce - more aggressive debouncing
   React.useEffect(() => {
     const timeoutId = setTimeout(() => {
       setCurrentPage(1); // Reset to first page when searching
-      loadBoards();
-    }, 500);
+    }, 800); // Increased debounce time
     return () => clearTimeout(timeoutId);
-  }, [searchText, loadBoards]);
+  }, [searchText]);
 
   return (
     <div className="p-4">
@@ -380,20 +485,21 @@ export default function BoardPage() {
               </Select>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              Showing {boards.length} of {totalItems} results
+              Showing {memoizedBoards.length} of {totalItems} results
             </div>
           </div>
           <div className="relative" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[1250px]" style={{ tableLayout: "fixed" }}>
+            <div className="overflow-y-auto h-full">
+              <Table className="border rounded-md w-full" style={{ tableLayout: "fixed" }}>
                 <TableHeader
                   className="sticky top-0 z-10"
                   style={{ background: "#f3f4f6", borderRight: "1px solid #e5e7eb" }}
                 >
                   <TableRow>
                     <TableHead
+                      className="text-center"
                       style={{
-                        width: 60,
+                        width: "8%",
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
@@ -403,14 +509,13 @@ export default function BoardPage() {
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
-                      ID
+                      Sr. No.
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 200,
+                        width: "25%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
                         padding: "12px 8px",
@@ -421,7 +526,7 @@ export default function BoardPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 120,
+                        width: "12%",
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
@@ -434,8 +539,9 @@ export default function BoardPage() {
                       Code
                     </TableHead>
                     <TableHead
+                      className="text-center"
                       style={{
-                        width: 120,
+                        width: "12%",
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
@@ -449,7 +555,7 @@ export default function BoardPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 200,
+                        width: "18%",
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
@@ -463,7 +569,7 @@ export default function BoardPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 100,
+                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
@@ -477,7 +583,7 @@ export default function BoardPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 130,
+                        width: "15%",
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
@@ -485,6 +591,7 @@ export default function BoardPage() {
                         fontWeight: "600",
                         padding: "12px 8px",
                       }}
+                      className="text-center"
                     >
                       Actions
                     </TableHead>
@@ -493,55 +600,45 @@ export default function BoardPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">
+                      <TableCell colSpan={7} className="text-center">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-red-500">
-                        {error}
+                      <TableCell colSpan={7} className="text-center text-red-500">
+                        <div className="flex flex-col items-center gap-2">
+                          <span>{error}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setError(null);
+                              setCurrentPage(1);
+                            }}
+                            className="mt-2"
+                          >
+                            Retry
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ) : boards.length === 0 ? (
+                  ) : memoizedBoards.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">
+                      <TableCell colSpan={7} className="text-center">
                         No boards found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    boards.map((b, index) => (
-                      <TableRow key={b.id} className="group">
-                        <TableCell style={{ width: 60, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {index + 1}
-                        </TableCell>
-                        <TableCell style={{ width: 200, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {b.name ? <Badge variant="secondary">{b.name}</Badge> : "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 120, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {b.code ?? "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 120, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {b.passingMarks ?? "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 200, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {b.degree?.name ? <Badge variant="outline">{b.degree.name}</Badge> : "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 100, borderRight: "1px solid #e5e7eb" }}>
-                          {b.isActive ? (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
-                          ) : (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell style={{ width: 130, padding: "8px 4px" }}>
-                          <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(b)} className="h-5 w-5 p-0">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                    memoizedBoards.map((b, index) => (
+                      <BoardTableRow
+                        key={b.id}
+                        board={b}
+                        index={index}
+                        onEdit={handleEdit}
+                        currentPage={currentPage}
+                        pageSize={pageSize}
+                      />
                     ))
                   )}
                 </TableBody>

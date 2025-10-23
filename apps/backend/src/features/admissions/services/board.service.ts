@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { boardModel } from "@repo/db/schemas/models/resources";
 import { Board, BoardT } from "@repo/db/schemas/models/resources/board.model";
-import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
+import { and, countDistinct, eq, ilike, ne, sql } from "drizzle-orm";
 import { degreeModel } from "@repo/db/schemas/models/resources";
 // import { addressModel } from "@repo/db/schemas/models/user";
 import XLSX from "xlsx";
@@ -50,17 +50,10 @@ export async function getAllBoards(
   }
 
   if (degreeId) {
-    whereConditions.push(eq(degreeModel.id, degreeId));
+    whereConditions.push(eq(boardModel.degreeId, degreeId));
   }
 
-  // Get total count
-  const [{ total }] = await db
-    .select({ total: countDistinct(boardModel.id) })
-    .from(boardModel)
-    .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
-    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
-
-  // Get paginated results
+  // Optimized single query with window function for count
   const results = await db
     .select({
       id: boardModel.id,
@@ -78,12 +71,17 @@ export async function getAllBoards(
         sequence: degreeModel.sequence,
         isActive: degreeModel.isActive,
       },
+      // Use window function to get total count in single query
+      total: sql<number>`count(*) over()`.as("total"),
     })
     .from(boardModel)
     .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
     .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
     .limit(pageSize)
-    .offset(offset);
+    .offset(offset)
+    .orderBy(boardModel.sequence, boardModel.name);
+
+  const total = results.length > 0 ? results[0].total : 0;
 
   const data = results.map((result) => ({
     id: result.id!,

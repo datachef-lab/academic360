@@ -15,6 +15,8 @@ import { z } from "zod";
 import { AddressDto } from "@repo/db/index.js";
 import { districtModel } from "@repo/db/schemas/models/resources/district.model.js";
 import { districtT } from "@repo/db/schemas/models/resources/district.model.js";
+import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model.js";
+import { policeStationModel } from "@repo/db/schemas/models/user/police-station.model.js";
 
 // Validate input using Zod schema for creation
 function validateAddressInput(data: Omit<Address, "id">) {
@@ -63,10 +65,49 @@ export async function findAddressById(id: number): Promise<AddressDto | null> {
   return foundAddress ? await addressResponseFormat(foundAddress) : null;
 }
 
+// Cache for addresses to prevent repeated expensive queries
+const addressesCache = new Map<
+  string,
+  { data: AddressDto[]; timestamp: number }
+>();
+const ADDRESS_CACHE_DURATION = 60000; // 1 minute cache
+
 export async function getAllAddresses(): Promise<AddressDto[]> {
-  const addresses = await db.select().from(addressModel);
-  const formatted = await Promise.all(addresses.map(addressResponseFormat));
-  return formatted.filter((a): a is AddressDto => !!a);
+  const cacheKey = "all_addresses";
+  const cached = addressesCache.get(cacheKey);
+
+  // Return cached data if it's still valid
+  if (cached && Date.now() - cached.timestamp < ADDRESS_CACHE_DURATION) {
+    return cached.data;
+  }
+
+  try {
+    // Simplified query - just get addresses without complex joins
+    const addresses = await db
+      .select()
+      .from(addressModel)
+      .orderBy(addressModel.createdAt)
+      .limit(100); // Limit to prevent huge datasets
+
+    // Use the existing addressResponseFormat function for consistency
+    const formatted = await Promise.all(
+      addresses.map((addr) => addressResponseFormat(addr)),
+    );
+
+    const validAddresses = formatted.filter((a): a is AddressDto => !!a);
+
+    // Cache the result
+    addressesCache.set(cacheKey, {
+      data: validAddresses,
+      timestamp: Date.now(),
+    });
+
+    return validAddresses;
+  } catch (error) {
+    console.error("Error fetching addresses:", error);
+    // Return empty array instead of throwing to prevent UI crashes
+    return [];
+  }
 }
 
 export async function saveAddress(

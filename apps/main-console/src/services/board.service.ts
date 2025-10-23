@@ -50,14 +50,28 @@ export interface PaginatedResponse<T> {
   pageSize: number;
 }
 
+// Simple in-memory cache for boards
+const boardsCache = new Map<string, { data: PaginatedResponse<BoardDto>; timestamp: number }>();
+const CACHE_DURATION = 30000; // 30 seconds cache
+
 export const boardService = {
   async getAllBoards(
     page: number = 1,
     pageSize: number = 10,
     search?: string,
     degreeId?: number,
+    retryCount: number = 0,
   ): Promise<PaginatedResponse<BoardDto>> {
     try {
+      // Create cache key
+      const cacheKey = `${page}-${pageSize}-${search || ""}-${degreeId || ""}`;
+      const cached = boardsCache.get(cacheKey);
+
+      // Return cached data if it's still valid
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+      }
+
       const params: Record<string, string> = {
         page: page.toString(),
         pageSize: pageSize.toString(),
@@ -71,11 +85,35 @@ export const boardService = {
         params.degreeId = degreeId.toString();
       }
 
-      const response = await axiosInstance.get(API_BASE_URL, { params });
-      return response.data.payload || { data: [], total: 0, page: 1, pageSize: 10 };
-    } catch (error) {
+      const response = await axiosInstance.get(API_BASE_URL, {
+        params,
+        // Add cache control headers
+        headers: {
+          "Cache-Control": "max-age=30",
+        },
+        // Add retry configuration
+        timeout: 30000, // 30 second timeout for this specific request
+      });
+
+      const result = response.data.payload || { data: [], total: 0, page: 1, pageSize: 10 };
+
+      // Cache the result
+      boardsCache.set(cacheKey, { data: result, timestamp: Date.now() });
+
+      return result;
+    } catch (error: any) {
       console.error("Error fetching boards:", error);
-      throw error;
+
+      // Retry logic for timeout errors
+      if (error.code === "ECONNABORTED" && retryCount < 2) {
+        console.log(`Retrying boards request (attempt ${retryCount + 1})`);
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+        return this.getAllBoards(page, pageSize, search, degreeId, retryCount + 1);
+      }
+
+      // If all retries failed, return empty data instead of throwing
+      console.warn("All retry attempts failed, returning empty data");
+      return { data: [], total: 0, page: 1, pageSize: 10 };
     }
   },
 
@@ -106,6 +144,8 @@ export const boardService = {
   }): Promise<BoardDto> {
     try {
       const response = await axiosInstance.post(API_BASE_URL, data);
+      // Clear cache after creation
+      boardsCache.clear();
       return response.data.payload!;
     } catch (error) {
       console.error("Error creating board:", error);
@@ -127,6 +167,8 @@ export const boardService = {
   ): Promise<BoardDto> {
     try {
       const response = await axiosInstance.put(`${API_BASE_URL}/${id}`, data);
+      // Clear cache after update
+      boardsCache.clear();
       return response.data.payload!;
     } catch (error) {
       console.error("Error updating board:", error);
@@ -137,9 +179,16 @@ export const boardService = {
   async deleteBoard(id: number): Promise<void> {
     try {
       await axiosInstance.delete(`${API_BASE_URL}/${id}`);
+      // Clear cache after deletion
+      boardsCache.clear();
     } catch (error) {
       console.error("Error deleting board:", error);
       throw error;
     }
+  },
+
+  // Clear cache method
+  clearCache(): void {
+    boardsCache.clear();
   },
 };

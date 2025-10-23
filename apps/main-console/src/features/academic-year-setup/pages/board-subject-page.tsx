@@ -225,35 +225,7 @@ export default function BoardSubjectPage() {
   const [isDownloading, setIsDownloading] = React.useState(false);
   const [downloadProgress, setDownloadProgress] = React.useState(0);
 
-  // Load data on component mount
-  React.useEffect(() => {
-    loadBoardSubjects();
-    loadDropdownOptions();
-  }, []);
-
-  const loadBoardSubjects = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await boardSubjectService.getAll(currentPage, pageSize, searchText, selectedDegreeId);
-
-      // Filter by board on the frontend if board is selected
-      let filteredData = result.data;
-      if (selectedBoardId) {
-        filteredData = result.data.filter((bs) => bs.boardId === selectedBoardId);
-      }
-
-      setBoardSubjects(filteredData);
-      setTotalItems(selectedBoardId ? filteredData.length : result.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load board subjects");
-      toast.error("Failed to load board subjects");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadDropdownOptions = async () => {
+  const loadDropdownOptions = React.useCallback(async () => {
     try {
       const [boardsResult, subjectNames, degrees] = await Promise.all([
         boardService.getAllBoards(1, 10000), // Get all boards for dropdown
@@ -273,12 +245,50 @@ export default function BoardSubjectPage() {
     } catch (e) {
       console.warn("Failed loading dropdown options", e);
     }
-  };
+  }, []);
 
-  // Reload when filters change (except search which has its own debounced effect)
+  // Load dropdowns on component mount only
   React.useEffect(() => {
+    loadDropdownOptions();
+  }, [loadDropdownOptions]);
+
+  // Load board subjects when dependencies change
+  React.useEffect(() => {
+    let isMounted = true;
+
+    const loadBoardSubjects = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const result = await boardSubjectService.getAll(currentPage, pageSize, searchText, selectedDegreeId);
+
+        if (!isMounted) return; // Prevent state updates if component unmounted
+
+        // Filter by board on the frontend if board is selected
+        let filteredData = result.data;
+        if (selectedBoardId) {
+          filteredData = result.data.filter((bs) => bs.boardId === selectedBoardId);
+        }
+
+        setBoardSubjects(filteredData);
+        setTotalItems(selectedBoardId ? filteredData.length : result.total);
+      } catch (err) {
+        if (!isMounted) return;
+        setError(err instanceof Error ? err.message : "Failed to load board subjects");
+        toast.error("Failed to load board subjects");
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     loadBoardSubjects();
-  }, [currentPage, pageSize, selectedDegreeId, selectedBoardId]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentPage, pageSize, searchText, selectedDegreeId, selectedBoardId]);
 
   const handleEdit = (boardSubject: BoardSubjectDto) => {
     setSelectedBoardSubject(boardSubject);
@@ -419,7 +429,6 @@ export default function BoardSubjectPage() {
   React.useEffect(() => {
     const timeoutId = setTimeout(() => {
       setCurrentPage(1); // Reset to first page when searching
-      loadBoardSubjects();
     }, 500);
     return () => clearTimeout(timeoutId);
   }, [searchText]);

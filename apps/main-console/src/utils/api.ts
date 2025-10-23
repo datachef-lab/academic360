@@ -1,9 +1,13 @@
 // axiosSetup.js
 import axios, { AxiosHeaders, AxiosResponse } from "axios";
 
-// Define an Axios instance with a base URL
+// Define an Axios instance with a base URL and performance optimizations
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_APP_BACKEND_URL,
+  timeout: 30000, // 30 second timeout - increased for slower backends
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 // In-memory access token (no localStorage). Used before AuthProvider finishes bootstrapping
