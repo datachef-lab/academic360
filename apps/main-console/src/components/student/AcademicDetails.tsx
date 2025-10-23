@@ -19,6 +19,7 @@ import { stateService } from "@/services/state.service";
 import { cityService } from "@/services/city.service";
 import axiosInstance from "@/utils/api";
 import { toast } from "@/hooks/useToast";
+import { calculateBestOfFourWithFullMarks } from "@/utils/bestOfFourUtils";
 
 type AcademicDetailsProps = {
   studentAcademicDetails?: AdmissionAcademicInfoDto | null;
@@ -304,6 +305,19 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
     })();
   }, [stateId, cityId]);
 
+  // Auto-calculate Best of Four when subjects or board subjects change
+  useEffect(() => {
+    if (form?.subjects && boardSubjects.length > 0) {
+      const calculatedBestOfFour = calculateBestOfFourWithFullMarks(form.subjects, boardSubjects);
+      if (calculatedBestOfFour !== null && calculatedBestOfFour !== form.bestOfFour) {
+        setForm((prev) => {
+          if (!prev) return prev;
+          return { ...prev, bestOfFour: calculatedBestOfFour } as AdmissionAcademicInfoDto;
+        });
+      }
+    }
+  }, [form?.subjects, boardSubjects, form?.bestOfFour]);
+
   // Handlers
   const handleSelectChange = (key: string, id: number, displayName: string = "") => {
     setForm((prev) => {
@@ -383,7 +397,16 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
         (current as unknown as { resultStatus?: string }).resultStatus = pass ? "PASS" : "FAIL";
       }
       nextSubjects[targetIndex] = current as unknown as StudentAcademicSubjectsDto;
-      return { ...prev, subjects: nextSubjects } as AdmissionAcademicInfoDto;
+
+      // Auto-calculate Best of Four when subject marks change
+      const updatedForm = { ...prev, subjects: nextSubjects } as AdmissionAcademicInfoDto;
+      const calculatedBestOfFour = calculateBestOfFourWithFullMarks(nextSubjects, boardSubjects);
+
+      if (calculatedBestOfFour !== null) {
+        (updatedForm as unknown as { bestOfFour?: number }).bestOfFour = calculatedBestOfFour;
+      }
+
+      return updatedForm;
     });
   };
 

@@ -1624,16 +1624,21 @@ export async function updateStudentApaarIds(
         continue;
       }
 
-      // Update APAAR ID - clean formatting (remove dashes and non-digits)
+      // Update APAAR ID - format as 3-3-3-3 (12 digits with dashes)
       const cleanApaarId = apaarId.trim().replace(/\D/g, "");
+      const formattedApaarId =
+        cleanApaarId.length === 12
+          ? `${cleanApaarId.slice(0, 3)}-${cleanApaarId.slice(3, 6)}-${cleanApaarId.slice(6, 9)}-${cleanApaarId.slice(9, 12)}`
+          : cleanApaarId; // Keep original if not 12 digits
+
       await db
         .update(studentModel)
-        .set({ apaarId: cleanApaarId })
+        .set({ apaarId: formattedApaarId })
         .where(eq(studentModel.id, student.id));
 
       updated++;
       console.info(
-        `[UPDATE APAAR IDS] Updated APAAR ID for student ${collegeUid}: ${apaarId} -> ${cleanApaarId}`,
+        `[UPDATE APAAR IDS] Updated APAAR ID for student ${collegeUid}: ${apaarId} -> ${formattedApaarId}`,
       );
     } catch (error: any) {
       console.error(
