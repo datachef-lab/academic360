@@ -13,6 +13,7 @@ export interface CreateCuCorrectionPayload {
     remarks?: string;
   }>;
   // Declaration flags
+  introductoryDeclaration?: boolean;
   personalInfoDeclaration?: boolean;
   addressInfoDeclaration?: boolean;
   subjectsDeclaration?: boolean;

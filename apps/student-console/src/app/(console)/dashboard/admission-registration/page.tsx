@@ -89,7 +89,8 @@ export default function CURegistrationPage() {
   const { profileInfo, loading: profileLoading, refetch: refetchProfile } = useProfile();
   const { student } = useStudent();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("personal");
+  const [activeTab, setActiveTab] = useState("introductory");
+  const [instructionsConfirmed, setInstructionsConfirmed] = useState(false);
   const hasAutoNavigatedRef = React.useRef(false);
 
   // Debug: Track activeTab changes
@@ -286,6 +287,17 @@ export default function CURegistrationPage() {
   // Helper: clean APAAR ID (remove formatting for backend)
   const cleanApaarId = (apaarId: string) => {
     return apaarId.replace(/\D/g, "");
+  };
+
+  // File size limits based on document type (matching main-console)
+  const getFileSizeLimit = (documentName: string): { maxSizeKB: number; maxSizeMB: number } => {
+    const name = documentName.toLowerCase();
+
+    if (name.includes("photo") || name.includes("signature")) {
+      return { maxSizeKB: 100, maxSizeMB: 0.1 }; // 100KB
+    } else {
+      return { maxSizeKB: 250, maxSizeMB: 0.25 }; // 250KB for all other documents
+    }
   };
 
   // Helper: format APAAR ID input as user types
@@ -678,6 +690,15 @@ export default function CURegistrationPage() {
     })();
   }, [correctionRequestId]);
 
+  // Force introductory tab if instructions are not confirmed (but allow manual navigation to introductory tab)
+  React.useEffect(() => {
+    const instructionsConfirmedState = instructionsConfirmed || correctionRequest?.introductoryDeclaration;
+    if (!instructionsConfirmedState && activeTab !== "introductory") {
+      console.info("[CU-REG FRONTEND] Forcing back to introductory tab - instructions not confirmed");
+      setActiveTab("introductory");
+    }
+  }, [instructionsConfirmed, correctionRequest?.introductoryDeclaration]);
+
   // Fetch PDF URL when correction request is available and has application number
   useEffect(() => {
     if (!correctionRequestId || !correctionRequest?.cuRegistrationApplicationNumber) {
@@ -745,6 +766,7 @@ export default function CURegistrationPage() {
           setAddressDeclared(!!existing.addressInfoDeclaration);
           setSubjectsDeclared(!!existing.subjectsDeclaration);
           setDocumentsConfirmed(!!existing.documentsDeclaration);
+          setInstructionsConfirmed(!!existing.introductoryDeclaration);
 
           // Update correction flags from the existing request
           setCorrectionFlags({
@@ -754,6 +776,32 @@ export default function CURegistrationPage() {
             apaarId: existing.apaarIdCorrectionRequest ?? false,
             subjects: existing.subjectsCorrectionRequest ?? false,
           });
+
+          // Debug: Log the introductory declaration status
+          console.info("[CU-REG FRONTEND] Correction request loaded:", {
+            id: existing.id,
+            introductoryDeclaration: existing.introductoryDeclaration,
+            currentActiveTab: activeTab,
+            allDeclarationFields: {
+              introductoryDeclaration: existing.introductoryDeclaration,
+              personalInfoDeclaration: existing.personalInfoDeclaration,
+              addressInfoDeclaration: existing.addressInfoDeclaration,
+              subjectsDeclaration: existing.subjectsDeclaration,
+              documentsDeclaration: existing.documentsDeclaration,
+            },
+          });
+
+          // Auto-navigate to personal tab if instructions are already confirmed
+          if (existing.introductoryDeclaration === true) {
+            console.info("[CU-REG FRONTEND] Instructions already confirmed, auto-navigating to personal tab");
+            setTimeout(() => {
+              setActiveTab("personal");
+            }, 100); // Small delay to ensure state is updated
+          } else {
+            // If instructions are not confirmed, ensure we're on the introductory tab
+            console.info("[CU-REG FRONTEND] Instructions not confirmed, staying on introductory tab");
+            setActiveTab("introductory");
+          }
 
           // Set uploaded documents from the existing request
           if (existing.documents) {
@@ -786,30 +834,67 @@ export default function CURegistrationPage() {
   // Also resync local checkbox states whenever the loaded correctionRequest changes
   useEffect(() => {
     if (!correctionRequest) return;
+    console.info("[CU-REG FRONTEND] Syncing checkbox states from correctionRequest:", {
+      introductoryDeclaration: correctionRequest.introductoryDeclaration,
+      personalInfoDeclaration: correctionRequest.personalInfoDeclaration,
+      addressInfoDeclaration: correctionRequest.addressInfoDeclaration,
+      subjectsDeclaration: correctionRequest.subjectsDeclaration,
+      documentsDeclaration: correctionRequest.documentsDeclaration,
+    });
+    setInstructionsConfirmed(!!correctionRequest.introductoryDeclaration);
     setPersonalDeclared(!!correctionRequest.personalInfoDeclaration);
     setAddressDeclared(!!correctionRequest.addressInfoDeclaration);
     setSubjectsDeclared(!!correctionRequest.subjectsDeclaration);
     setDocumentsConfirmed(!!correctionRequest.documentsDeclaration);
   }, [correctionRequest]);
 
+  // Immediate auto-navigation when correction request is loaded
+  useEffect(() => {
+    if (!correctionRequest) return;
+
+    console.info("[CU-REG FRONTEND] Immediate auto-navigation check:", {
+      introductoryDeclaration: correctionRequest.introductoryDeclaration,
+      currentActiveTab: activeTab,
+    });
+
+    if (correctionRequest.introductoryDeclaration === true && activeTab === "introductory") {
+      console.info("[CU-REG FRONTEND] Immediate navigation to personal tab");
+      setActiveTab("personal");
+    }
+  }, [correctionRequest]);
+
   // Auto-switch to next tab on load/refresh based on completed declarations
   useEffect(() => {
-    if (!correctionRequest || hasAutoNavigatedRef.current) return;
+    if (!correctionRequest) return;
     if (correctionRequest?.onlineRegistrationDone) return; // don't navigate after final submit
 
+    const i = !!correctionRequest.introductoryDeclaration;
     const p = !!correctionRequest.personalInfoDeclaration;
     const a = !!correctionRequest.addressInfoDeclaration;
     const s = !!correctionRequest.subjectsDeclaration;
     const d = !!correctionRequest.documentsDeclaration;
 
-    let nextTab = "personal";
-    if (p && !a) nextTab = "address";
-    else if (p && a && !s) nextTab = "subjects";
-    else if (p && a && s && !d) nextTab = "documents";
+    console.info("[CU-REG FRONTEND] Auto-navigation check:", {
+      introductoryDeclaration: i,
+      personalInfoDeclaration: p,
+      addressInfoDeclaration: a,
+      subjectsDeclaration: s,
+      documentsDeclaration: d,
+      currentActiveTab: activeTab,
+    });
 
-    if (nextTab !== activeTab) setActiveTab(nextTab);
-    hasAutoNavigatedRef.current = true;
-  }, [correctionRequest, activeTab]);
+    let nextTab = "introductory";
+    if (i && !p) nextTab = "personal";
+    else if (i && p && !a) nextTab = "address";
+    else if (i && p && a && !s) nextTab = "subjects";
+    else if (i && p && a && s && !d) nextTab = "documents";
+
+    console.info("[CU-REG FRONTEND] Auto-navigation decision:", { nextTab, currentTab: activeTab });
+    if (nextTab !== activeTab) {
+      console.info("[CU-REG FRONTEND] Auto-navigating to:", nextTab);
+      setActiveTab(nextTab);
+    }
+  }, [correctionRequest]);
 
   // Auto-hide status alert after 2 seconds
   useEffect(() => {
@@ -1078,6 +1163,77 @@ export default function CURegistrationPage() {
 
     setAddressErrors(errors);
     return errors.length === 0;
+  };
+
+  const handleIntroductoryDeclarationChange = async (checked: boolean) => {
+    console.info("[CU-REG FRONTEND] Introductory declaration checkbox clicked", { checked, correctionRequestId });
+
+    // Prevent toggling if already declared
+    if (correctionRequest?.introductoryDeclaration && !checked) {
+      console.info("[CU-REG FRONTEND] Introductory declaration already completed, cannot toggle back to false");
+      return;
+    }
+
+    // Always save data and flags if checked OR if already declared (for updates)
+    if (correctionRequestId && (checked || correctionRequest?.introductoryDeclaration)) {
+      try {
+        // If already declared, always set to true for updates
+        setInstructionsConfirmed(correctionRequest?.introductoryDeclaration ? true : checked);
+
+        // Update the correction request with introductory declaration
+        console.info("[CU-REG FRONTEND] Saving introductory declaration", {
+          correctionRequestId,
+          introductoryDeclaration: checked,
+          currentCorrectionRequest: correctionRequest,
+        });
+
+        const response = await updateCuCorrectionRequest(correctionRequestId, {
+          introductoryDeclaration: checked,
+        });
+
+        console.info("[CU-REG FRONTEND] Update response:", response);
+
+        if (response) {
+          console.info("[CU-REG FRONTEND] Introductory declaration saved successfully");
+          console.info("[CU-REG FRONTEND] Response introductoryDeclaration:", response.introductoryDeclaration);
+          toast.success("Instructions confirmation saved successfully!");
+
+          // Refresh the correction request to get updated data
+          try {
+            const updatedRequest = await getCuCorrectionRequestById(correctionRequestId);
+            setCorrectionRequest(updatedRequest);
+            console.info("[CU-REG FRONTEND] Refreshed correction request after introductory declaration");
+          } catch (error) {
+            console.error("[CU-REG FRONTEND] Error refreshing correction request:", error);
+          }
+
+          // Auto-navigate to personal tab after successful declaration
+          if (checked) {
+            console.info("[CU-REG FRONTEND] Auto-navigating to personal tab after declaration confirmation");
+            setTimeout(() => {
+              setActiveTab("personal");
+            }, 1000); // Small delay to show the success message
+          }
+        } else {
+          console.error("[CU-REG FRONTEND] Failed to save introductory declaration");
+          toast.error("Failed to save instructions confirmation. Please try again.");
+        }
+      } catch (error) {
+        console.error("[CU-REG FRONTEND] Error saving introductory declaration:", error);
+        toast.error("Error saving instructions confirmation. Please try again.");
+      }
+    } else {
+      // Just update local state if no correction request ID
+      setInstructionsConfirmed(checked);
+
+      // Auto-navigate to personal tab after local confirmation
+      if (checked) {
+        console.info("[CU-REG FRONTEND] Auto-navigating to personal tab after local confirmation");
+        setTimeout(() => {
+          setActiveTab("personal");
+        }, 500); // Small delay for local state update
+      }
+    }
   };
 
   const handleAddressDeclarationChange = async (checked: boolean) => {
@@ -1429,6 +1585,13 @@ export default function CURegistrationPage() {
   const handleTabChange = async (newTab: string) => {
     console.info("[CU-REG FRONTEND] handleTabChange called with:", newTab);
     console.info("[CU-REG FRONTEND] Current activeTab:", activeTab);
+
+    // Check if navigation is allowed
+    if (!canNavigateToTab(newTab)) {
+      console.warn("[CU-REG FRONTEND] Navigation to", newTab, "not allowed");
+      return;
+    }
+
     // Removed saveCurrentTabData() call to prevent navigation conflicts
     console.info("[CU-REG FRONTEND] Setting activeTab to:", newTab);
     setActiveTab(newTab);
@@ -1592,16 +1755,21 @@ export default function CURegistrationPage() {
       return true;
     }
 
+    // Check if instructions are confirmed (either locally or from correction request)
+    const instructionsConfirmedState = instructionsConfirmed || correctionRequest?.introductoryDeclaration;
+
     // Original logic for editable form
     switch (tabName) {
+      case "introductory":
+        return true; // Always allow access to introductory tab
       case "personal":
-        return true;
+        return instructionsConfirmedState; // Require instructions confirmation
       case "address":
-        return isPersonalTabValid();
+        return instructionsConfirmedState && isPersonalTabValid();
       case "subjects":
-        return isPersonalTabValid() && isAddressTabValid();
+        return instructionsConfirmedState && isPersonalTabValid() && isAddressTabValid();
       case "documents":
-        return isPersonalTabValid() && isAddressTabValid() && isSubjectsTabValid();
+        return instructionsConfirmedState && isPersonalTabValid() && isAddressTabValid() && isSubjectsTabValid();
       default:
         return false;
     }
@@ -1832,6 +2000,18 @@ export default function CURegistrationPage() {
                   <div className="border-b border-gray-200 bg-white">
                     <div className="flex w-full overflow-x-auto no-scrollbar">
                       <button
+                        onClick={() => handleTabChange("introductory")}
+                        disabled={!canNavigateToTab("introductory")}
+                        className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
+                          activeTab === "introductory"
+                            ? "text-blue-600 border-blue-600 bg-transparent"
+                            : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
+                        } ${!canNavigateToTab("introductory") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        <span className="hidden sm:inline">Instructions</span>
+                        <span className="sm:hidden">Intro</span>
+                      </button>
+                      <button
                         onClick={() => handleTabChange("personal")}
                         disabled={!canNavigateToTab("personal")}
                         className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
@@ -1883,8 +2063,209 @@ export default function CURegistrationPage() {
 
                   {/* Tab Content */}
                   <div className="p-4 sm:p-6 bg-white">
+                    {/* Introductory Tab */}
+                    <TabsContent value="introductory" className="space-y-6">
+                      <div className="max-w-4xl mx-auto">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                          <h2 className="text-xl font-semibold text-blue-900 mb-4">
+                            Important Instructions — Please Read Before Proceeding
+                          </h2>
+                          <p className="text-blue-800 mb-4">
+                            To ensure a smooth completion of your Admission & Registration Data Submission, carefully go
+                            through the following points before you begin.
+                          </p>
+                        </div>
+
+                        <div className="space-y-6">
+                          {/* Document Preparation */}
+                          <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                              <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full mr-3">
+                                1
+                              </span>
+                              Document Preparation
+                            </h3>
+                            <p className="text-gray-700 mb-4">
+                              Before proceeding, keep clear scanned copies of the following documents ready for upload:
+                            </p>
+                            <ul className="space-y-2 text-gray-700">
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Original Class XII Board Marksheet
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Original Class X Board Admit Card / Birth Certificate (issued by the Government)
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Original Aadhaar Card
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                First and Last Page of Passport (only for Foreign Nationals)
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                APAAR (ABC) ID Card (not applicable for Foreign Nationals)
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Father's Government-issued Photo ID Proof, as applicable
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Mother's Government-issued Photo ID Proof, as applicable
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                EWS Certificate, issued by the Government of West Bengal (only if applying under EWS
+                                category)
+                              </li>
+                            </ul>
+                          </div>
+
+                          {/* File Format & Size */}
+                          <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                              <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full mr-3">
+                                2
+                              </span>
+                              File Format & Size
+                            </h3>
+                            <ul className="space-y-2 text-gray-700">
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                All documents must be uploaded in <strong>.JPG or .JPEG format only</strong>.
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                The maximum allowed file size per document is <strong>250 KB</strong>.
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Ensure your scans are clearly readable and properly cropped before uploading.
+                              </li>
+                            </ul>
+                          </div>
+
+                          {/* Data Review & Submission */}
+                          <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                              <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full mr-3">
+                                3
+                              </span>
+                              Data Review & Submission
+                            </h3>
+                            <ul className="space-y-2 text-gray-700">
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Check every entry carefully in each section before final submission.
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Once submitted, no changes or edits will be permitted.
+                              </li>
+                            </ul>
+                          </div>
+
+                          {/* Technical & Process Guidelines */}
+                          <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                              <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full mr-3">
+                                4
+                              </span>
+                              Technical & Process Guidelines
+                            </h3>
+                            <ul className="space-y-2 text-gray-700">
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                For the best experience, use a desktop or laptop with the Microsoft OS and a stable
+                                internet connection.
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Avoid using mobile browsers to upload documents.
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Do not refresh or close the browser while uploading your documents.
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Your Mobile Number and Institutional Email ID must be active and accessible as all the
+                                communication will be sent there.
+                              </li>
+                            </ul>
+                          </div>
+
+                          {/* Confirmation Checkbox */}
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                            <div className="flex items-start space-x-3">
+                              <Checkbox
+                                id="instructions-confirmation"
+                                checked={instructionsConfirmed}
+                                onCheckedChange={handleIntroductoryDeclarationChange}
+                                disabled={false}
+                                className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                              />
+                              <div className="flex-1">
+                                <label
+                                  htmlFor="instructions-confirmation"
+                                  className="text-sm font-medium text-gray-900 cursor-pointer"
+                                >
+                                  I have read and understood the above instructions and confirm that I am ready to
+                                  proceed with my Admission & Registration Data Submission.
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Auto-navigation message */}
+                          {instructionsConfirmed && (
+                            <div className="flex justify-center pt-4">
+                              <div className="text-center">
+                                <div className="flex items-center justify-center space-x-2 text-green-600">
+                                  <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                  <span className="text-sm font-medium">Navigating to Personal Information...</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TabsContent>
+
                     {/* Personal Info Tab */}
                     <TabsContent value="personal" className="space-y-6">
+                      {/* Personal Information Notes */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <h3 className="text-lg font-semibold text-blue-900 mb-3">
+                          Personal Information - Important Notes
+                        </h3>
+                        <div className="space-y-2 text-sm text-blue-800">
+                          <p className="font-medium">Please ensure the following:</p>
+                          <ul className="list-disc list-inside space-y-1 ml-4">
+                            <li>
+                              Spelling of your and your father/mother's full name is exactly as printed on your Class
+                              XII Board Marksheet
+                            </li>
+                            <li>
+                              Recheck your Gender, Nationality, Aadhaar Number, and APAAR ID fields before proceeding
+                            </li>
+                            <li>You must enter your APAAR ID if it is blank to proceed to the next page</li>
+                            <li>
+                              In case of any discrepancy in Gender, Nationality, or Aadhaar Number, click on the slider
+                              beside the respective serial no. to register a correction
+                            </li>
+                            <li>
+                              If you have EWS (Economically Weaker Section) Certificate issued by the Government of West
+                              Bengal, select Yes from the dropdown in serial no.1.5
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+
                       <div>
                         <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Student Name</h2>
 
@@ -2072,6 +2453,16 @@ export default function CURegistrationPage() {
                                 )}
                               </Label>
                             </div>
+
+                            {/* Navigation hint */}
+                            {!personalDeclared && !correctionRequest?.personalInfoDeclaration && (
+                              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                <p className="text-sm text-blue-700">
+                                  <span className="font-medium">Note:</span> Please check the declaration above to
+                                  proceed to the next tab (Address Information).
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2079,6 +2470,28 @@ export default function CURegistrationPage() {
 
                     {/* Address Info Tab */}
                     <TabsContent value="address" className="space-y-6">
+                      {/* Address Details Notes */}
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                        <h3 className="text-lg font-semibold text-green-900 mb-3">Address Details - Important Notes</h3>
+                        <div className="space-y-2 text-sm text-green-800">
+                          <p className="font-medium">Please ensure the following:</p>
+                          <ul className="list-disc list-inside space-y-1 ml-4">
+                            <li>
+                              Fill in the Pincode, Post Office, Police Station, District, City and State in case any of
+                              these fields are displayed blank
+                            </li>
+                            <li>
+                              Refer to your Aadhaar Card to know the correct spelling of your District, Post Office &
+                              Police Station
+                            </li>
+                            <li>
+                              If both your Residential & Mailing addresses are the same, click on the "Same as
+                              Residential" checkbox
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+
                       <div>
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
                           {/* Residential Address */}
@@ -2341,6 +2754,16 @@ export default function CURegistrationPage() {
                             </Label>
                           </div>
 
+                          {/* Navigation hint */}
+                          {!addressDeclared && !correctionRequest?.addressInfoDeclaration && (
+                            <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                              <p className="text-sm text-green-700">
+                                <span className="font-medium">Note:</span> Please check the declaration above to proceed
+                                to the next tab (Subjects Overview).
+                              </p>
+                            </div>
+                          )}
+
                           {/* Error Messages */}
                           {addressErrors.length > 0 && (
                             <div className="bg-red-50 border border-red-200 rounded-md p-3">
@@ -2356,6 +2779,31 @@ export default function CURegistrationPage() {
 
                     {/* Subjects Overview Tab */}
                     <TabsContent value="subjects" className="space-y-6">
+                      {/* Academic Details Notes */}
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+                        <h3 className="text-lg font-semibold text-purple-900 mb-3">
+                          Academic Details - Important Notes
+                        </h3>
+                        <div className="space-y-2 text-sm text-purple-800">
+                          <p className="font-medium">Please note the following:</p>
+                          <ul className="list-disc list-inside space-y-1 ml-4">
+                            <li>
+                              The displayed subjects comprise of the mandatory subjects to be studied by you from
+                              Semesters I to IV and the subjects selected by you under Subject Selection Option
+                            </li>
+                            <li>
+                              In case you wish to change the order of the subjects chosen by you under Minor or IDC
+                              categories only, you can click on the slider on the top right side of the page to register
+                              a correction
+                            </li>
+                            <li>
+                              Please note that considering the request for changing the order of the subjects selected
+                              by you previously is solely at the college's discretion
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+
                       <div>
                         <div className="flex justify-between items-center mb-4">
                           <h2 className="text-lg font-semibold text-gray-900">3.1 Subjects Overview (Semesters 1-4)</h2>
@@ -2516,6 +2964,40 @@ export default function CURegistrationPage() {
 
                     {/* Documents Tab */}
                     <TabsContent value="documents" className="space-y-6">
+                      {/* Document Upload Notes */}
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                        <h3 className="text-lg font-semibold text-orange-900 mb-3">
+                          Document Upload - Important Notes
+                        </h3>
+                        <div className="space-y-2 text-sm text-orange-800">
+                          <p className="font-medium">Please ensure the following:</p>
+                          <ul className="list-disc list-inside space-y-1 ml-4">
+                            <li>
+                              Upload only the scanned originals — not photocopies/ screenshots/ internet versions of the
+                              documents will be accepted
+                            </li>
+                            <li>Each file should be in .JPG / .JPEG format, under 250 KB</li>
+                            <li>Ensure all text, seals, and photographs are clearly visible</li>
+                            <li>Do not rename files using special characters or spaces (e.g., use AadhaarCard.jpg)</li>
+                            <li>Upload Photo ID proof of both parents (as applicable), issued by the Government</li>
+                            <li>Upload the relevant certificates under the correct field name</li>
+                            <li>For EWS: certificate must be issued by the Govt. of West Bengal Only</li>
+                            <li>
+                              For Foreign Nationals: upload your Passport photo after merging the first & last pages of
+                              your Passport into a single page
+                            </li>
+                            <li>
+                              To preview your uploaded documents, click on the uploaded document to enlarge the same
+                            </li>
+                            <li>In case you want to change/ reupload the document, click on the Upload button again</li>
+                            <li>
+                              Once all the documents applicable for you are uploaded, click on the Review & Confirm
+                              button
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+
                       <div>
                         <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Uploads</h2>
 
@@ -2651,7 +3133,9 @@ export default function CURegistrationPage() {
                                 >
                                   Upload
                                 </Button>
-                                <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Max {getFileSizeLimit("Class XII Marksheet").maxSizeKB}KB • JPEG / PNG
+                                </p>
                                 <input
                                   id="classXIIMarksheet"
                                   type="file"
@@ -2726,7 +3210,9 @@ export default function CURegistrationPage() {
                                 >
                                   Upload
                                 </Button>
-                                <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Max {getFileSizeLimit("Aadhaar Card").maxSizeKB}KB • JPEG / PNG
+                                </p>
                                 <input
                                   id="aadhaarCard"
                                   type="file"
@@ -2797,7 +3283,9 @@ export default function CURegistrationPage() {
                                 >
                                   Upload
                                 </Button>
-                                <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Max {getFileSizeLimit("APAAR ID Card").maxSizeKB}KB • JPEG / PNG
+                                </p>
                                 <input
                                   id="apaarIdCard"
                                   type="file"
@@ -2865,7 +3353,9 @@ export default function CURegistrationPage() {
                                   readOnly
                                   className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Max {getFileSizeLimit("Father Photo ID").maxSizeKB}KB • JPEG / PNG
+                                </p>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -2941,7 +3431,9 @@ export default function CURegistrationPage() {
                                   readOnly
                                   className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Max {getFileSizeLimit("Mother Photo ID").maxSizeKB}KB • JPEG / PNG
+                                </p>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -3013,7 +3505,9 @@ export default function CURegistrationPage() {
                                     readOnly
                                     className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                   />
-                                  <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Max {getFileSizeLimit("EWS Certificate").maxSizeKB}KB • JPEG / PNG
+                                  </p>
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -3137,16 +3631,6 @@ export default function CURegistrationPage() {
                             </Button>
                           </div>
                         )}
-
-                        {/* Bottom Instruction - Only show if form is editable */}
-                        {isFieldEditable() && (
-                          <div className="mt-3">
-                            <p className="text-sm text-red-600">
-                              To Review & Confirm you must: declare Personal, Address and Subjects tabs and upload all
-                              required documents.
-                            </p>
-                          </div>
-                        )}
                       </div>
                     </TabsContent>
                   </div>
@@ -3228,76 +3712,100 @@ export default function CURegistrationPage() {
               <CardTitle className="text-xl">Review & Confirm</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Review & Confirm Notes */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-semibold text-red-900 mb-3">Review & Confirm - Important Notes</h3>
+                <div className="space-y-2 text-sm text-red-800">
+                  <p className="font-medium">Please note the following:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-4">
+                    <li>
+                      If corrections are needed, click on the Back button and toggle to make the necessary corrections
+                      before final submission
+                    </li>
+                    <li>Once you click Submit, no further edits will be allowed</li>
+                    <li>Upon successful submission, you will get your Admission & Registration Datasheet</li>
+                    <li>
+                      You are required to download the same & follow the instructions given on the 1st page of the
+                      Datasheet
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-base font-medium text-gray-900 mb-3">
-                    Correction request registered for the following fields:
-                  </h3>
                   {Object.values(correctionFlags).some(Boolean) ? (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border border-gray-200 text-base">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">
-                              Field
-                            </th>
-                            <th className="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">
-                              Current Value
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {correctionFlags.gender && (
+                    <>
+                      <h3 className="text-base font-medium text-gray-900 mb-3">
+                        Correction request registered for the following fields:
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full border border-gray-200 text-base">
+                          <thead className="bg-gray-50">
                             <tr>
-                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">Gender</td>
-                              <td className="border border-gray-200 px-4 py-3 text-gray-600">
-                                {personalInfo.gender || "Not provided"}
-                              </td>
+                              <th className="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">
+                                Field
+                              </th>
+                              <th className="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">
+                                Current Value
+                              </th>
                             </tr>
-                          )}
-                          {correctionFlags.nationality && (
-                            <tr>
-                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
-                                Nationality
-                              </td>
-                              <td className="border border-gray-200 px-4 py-3 text-gray-600">
-                                {personalInfo.nationality || "Not provided"}
-                              </td>
-                            </tr>
-                          )}
-                          {correctionFlags.aadhaarNumber && (
-                            <tr>
-                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
-                                Aadhaar Number
-                              </td>
-                              <td className="border border-gray-200 px-4 py-3 text-gray-600">
-                                {formatAadhaarNumber(personalInfo.aadhaarNumber) || "Not provided"}
-                              </td>
-                            </tr>
-                          )}
-                          {correctionFlags.apaarId && (
-                            <tr>
-                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
-                                APAAR (ABC) ID
-                              </td>
-                              <td className="border border-gray-200 px-4 py-3 text-gray-600">
-                                {formatApaarId(personalInfo.apaarId) || "Not provided"}
-                              </td>
-                            </tr>
-                          )}
-                          {correctionFlags.subjects && (
-                            <tr>
-                              <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
-                                Subjects to be studied
-                              </td>
-                              <td className="border border-gray-200 px-4 py-3 text-gray-600">Subjects to be changed</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody>
+                            {correctionFlags.gender && (
+                              <tr>
+                                <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">Gender</td>
+                                <td className="border border-gray-200 px-4 py-3 text-gray-600">
+                                  {personalInfo.gender || "Not provided"}
+                                </td>
+                              </tr>
+                            )}
+                            {correctionFlags.nationality && (
+                              <tr>
+                                <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
+                                  Nationality
+                                </td>
+                                <td className="border border-gray-200 px-4 py-3 text-gray-600">
+                                  {personalInfo.nationality || "Not provided"}
+                                </td>
+                              </tr>
+                            )}
+                            {correctionFlags.aadhaarNumber && (
+                              <tr>
+                                <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
+                                  Aadhaar Number
+                                </td>
+                                <td className="border border-gray-200 px-4 py-3 text-gray-600">
+                                  {formatAadhaarNumber(personalInfo.aadhaarNumber) || "Not provided"}
+                                </td>
+                              </tr>
+                            )}
+                            {correctionFlags.apaarId && (
+                              <tr>
+                                <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
+                                  APAAR (ABC) ID
+                                </td>
+                                <td className="border border-gray-200 px-4 py-3 text-gray-600">
+                                  {formatApaarId(personalInfo.apaarId) || "Not provided"}
+                                </td>
+                              </tr>
+                            )}
+                            {correctionFlags.subjects && (
+                              <tr>
+                                <td className="border border-gray-200 px-4 py-3 font-medium text-gray-700">
+                                  Subjects to be studied
+                                </td>
+                                <td className="border border-gray-200 px-4 py-3 text-gray-600">
+                                  Subjects to be changed
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
                   ) : (
-                    <p className="text-gray-500 italic text-sm">No correction requests</p>
+                    <p className="text-gray-500 italic text-base">No correction requests registered.</p>
                   )}
                 </div>
 
@@ -3316,7 +3824,8 @@ export default function CURegistrationPage() {
                 <div className="flex justify-end gap-2 pt-2">
                   <Button
                     variant="outline"
-                    className="border-blue-600 text-blue-700 hover:bg-blue-50"
+                    className={`border ${isSubmitting ? "border-gray-300 text-gray-400 bg-gray-100" : "border-blue-600 text-blue-700 hover:bg-blue-50"}`}
+                    disabled={isSubmitting}
                     onClick={() => setShowReviewConfirm(false)}
                   >
                     Back

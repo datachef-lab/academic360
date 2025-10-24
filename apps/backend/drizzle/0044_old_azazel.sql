@@ -1,0 +1,1 @@
+ALTER TABLE "cu_registration_correction_requests" ADD COLUMN "introductory_declaration" boolean DEFAULT false NOT NULL;

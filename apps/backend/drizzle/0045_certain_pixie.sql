@@ -1,0 +1,3 @@
+ALTER TABLE "cu_registration_correction_requests" ADD COLUMN "academic_year_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "cu_registration_correction_requests" ADD CONSTRAINT "cu_registration_correction_requests_academic_year_id_fk_academic_years_id_fk" FOREIGN KEY ("academic_year_id_fk") REFERENCES "public"."academic_years"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "cu_registration_correction_requests" ADD CONSTRAINT "academic_year_application_number_unique" UNIQUE("academic_year_id_fk","cu_registration_application_number");

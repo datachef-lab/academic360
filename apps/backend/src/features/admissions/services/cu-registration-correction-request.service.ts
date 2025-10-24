@@ -7,7 +7,12 @@ import {
   personalDetailsModel,
   addressModel,
 } from "@repo/db/schemas/models/user";
-import { documentModel } from "@repo/db/schemas/models/academics";
+import {
+  documentModel,
+  sessionModel,
+  academicYearModel,
+} from "@repo/db/schemas/models/academics";
+import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model";
 import { eq, and, desc, count, ilike, or, inArray } from "drizzle-orm";
 import { CuRegistrationCorrectionRequestInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { cuRegistrationDocumentUploadInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
@@ -97,6 +102,50 @@ const isStaffWithStagingNotification = async (
   }
 };
 
+/**
+ * Fetch academic year ID for a student from promotion table
+ * @param studentId - Student ID
+ * @returns Academic year ID or null if not found
+ */
+async function getAcademicYearIdByStudentId(
+  studentId: number,
+): Promise<number | null> {
+  try {
+    const [promotionData] = await db
+      .select({
+        academicYearId: academicYearModel.id,
+      })
+      .from(promotionModel)
+      .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+      .innerJoin(
+        academicYearModel,
+        eq(sessionModel.academicYearId, academicYearModel.id),
+      )
+      .where(eq(promotionModel.studentId, studentId))
+      .orderBy(desc(promotionModel.createdAt)) // Get the most recent promotion
+      .limit(1);
+
+    if (promotionData?.academicYearId) {
+      console.info(
+        `[CU-REG CORRECTION] Found academic year ID for student ${studentId}:`,
+        promotionData.academicYearId,
+      );
+      return promotionData.academicYearId;
+    }
+
+    console.warn(
+      `[CU-REG CORRECTION] No academic year found for student ${studentId}`,
+    );
+    return null;
+  } catch (error) {
+    console.error(
+      `[CU-REG CORRECTION] Error fetching academic year for student ${studentId}:`,
+      error,
+    );
+    return null;
+  }
+}
+
 // CREATE
 export async function createCuRegistrationCorrectionRequest(
   requestData: CuRegistrationCorrectionRequestInsertTypeT,
@@ -115,6 +164,21 @@ export async function createCuRegistrationCorrectionRequest(
   const requestDataWithoutNumber = {
     ...requestData,
   };
+
+  // Fetch academic year ID for the student
+  const academicYearId = await getAcademicYearIdByStudentId(
+    requestData.studentId,
+  );
+  if (academicYearId) {
+    requestDataWithoutNumber.academicYearId = academicYearId;
+    console.info(
+      `[CU-REG CORRECTION][CREATE] Set academic year ID: ${academicYearId} for student: ${requestData.studentId}`,
+    );
+  } else {
+    console.warn(
+      `[CU-REG CORRECTION][CREATE] No academic year ID found for student: ${requestData.studentId}`,
+    );
+  }
 
   const [newRequest] = await db
     .insert(cuRegistrationCorrectionRequestModel)
@@ -349,6 +413,16 @@ export async function updateCuRegistrationCorrectionRequest(
       ).onlineRegistrationDone;
 
     // Handle declaration fields (monotonic: once true, never set to false)
+    if (typeof (updateData as any).introductoryDeclaration !== "undefined") {
+      const newValue = Boolean(
+        existing.introductoryDeclaration ||
+          (updateData as any).introductoryDeclaration,
+      );
+      setData.introductoryDeclaration = newValue;
+      console.info(
+        `[CU-REG CORRECTION][UPDATE] Setting introductoryDeclaration: ${newValue} (existing: ${existing.introductoryDeclaration}, update: ${(updateData as any).introductoryDeclaration})`,
+      );
+    }
     if (typeof (updateData as any).personalInfoDeclaration !== "undefined")
       setData.personalInfoDeclaration = Boolean(
         existing.personalInfoDeclaration ||
@@ -393,12 +467,25 @@ export async function updateCuRegistrationCorrectionRequest(
       setData.subjectsCorrectionRequest = (
         updateData as any
       ).subjectsCorrectionRequest;
+    // Protect against updating application number if it already exists
     if (
       typeof (updateData as any).cuRegistrationApplicationNumber !== "undefined"
-    )
-      setData.cuRegistrationApplicationNumber = (
-        updateData as any
-      ).cuRegistrationApplicationNumber;
+    ) {
+      if (existing.cuRegistrationApplicationNumber) {
+        console.warn(
+          "[CU-REG CORRECTION][UPDATE] Attempted to update existing application number - ignoring",
+          {
+            existing: existing.cuRegistrationApplicationNumber,
+            attempted: (updateData as any).cuRegistrationApplicationNumber,
+          },
+        );
+        // Don't update the application number if it already exists
+      } else {
+        setData.cuRegistrationApplicationNumber = (
+          updateData as any
+        ).cuRegistrationApplicationNumber;
+      }
+    }
 
     // Map flags into explicit columns if provided
     if (typeof flags.gender !== "undefined") {
@@ -518,7 +605,7 @@ export async function updateCuRegistrationCorrectionRequest(
           await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
             existing.studentId,
             id,
-            applicationNumber,
+            applicationNumber, // Use the new application number directly
             studentRecord.uid,
           );
 
@@ -560,9 +647,39 @@ export async function updateCuRegistrationCorrectionRequest(
       );
     }
 
+    // Ensure academic year ID is set if not already present
+    if (!existing.academicYearId) {
+      const academicYearId = await getAcademicYearIdByStudentId(
+        existing.studentId,
+      );
+      if (academicYearId) {
+        setData.academicYearId = academicYearId;
+        console.info(
+          `[CU-REG CORRECTION][UPDATE] Set academic year ID: ${academicYearId} for student: ${existing.studentId}`,
+        );
+      } else {
+        console.warn(
+          `[CU-REG CORRECTION][UPDATE] No academic year ID found for student: ${existing.studentId}`,
+        );
+      }
+    }
+
     console.info(
       "[CU-REG CORRECTION][UPDATE] Final setData before DB update:",
       setData,
+    );
+    console.info(
+      "[CU-REG CORRECTION][UPDATE] Introductory declaration in setData:",
+      setData.introductoryDeclaration,
+    );
+    console.info(
+      "[CU-REG CORRECTION][UPDATE] All setData keys:",
+      Object.keys(setData),
+    );
+
+    console.info(
+      "[CU-REG CORRECTION][UPDATE] About to update database with setData:",
+      JSON.stringify(setData, null, 2),
     );
 
     const [req] = await tx
@@ -570,9 +687,15 @@ export async function updateCuRegistrationCorrectionRequest(
       .set(setData)
       .where(eq(cuRegistrationCorrectionRequestModel.id, id))
       .returning();
+
+    console.info(
+      "[CU-REG CORRECTION][UPDATE] Database update completed, returned record:",
+      JSON.stringify(req, null, 2),
+    );
     console.info("[CU-REG BACKEND] Correction request updated in DB", {
       id: req?.id,
       status: req?.status,
+      introductoryDeclaration: (req as any)?.introductoryDeclaration,
       personalInfoDeclaration: (req as any)?.personalInfoDeclaration,
       addressInfoDeclaration: (req as any)?.addressInfoDeclaration,
       subjectsDeclaration: (req as any)?.subjectsDeclaration,
@@ -785,7 +908,7 @@ export async function updateCuRegistrationCorrectionRequest(
         await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
           existing.studentId,
           id,
-          existing.cuRegistrationApplicationNumber || "TEMP-APP-NUM", // Provide fallback for null application number
+          updatedRequest.cuRegistrationApplicationNumber || "TEMP-APP-NUM", // Use the updated application number
           student.uid,
         );
 
@@ -795,13 +918,13 @@ export async function updateCuRegistrationCorrectionRequest(
           {
             pdfPath: pdfResult.pdfPath,
             s3Url: pdfResult.s3Url,
-            applicationNumber: existing.cuRegistrationApplicationNumber,
+            applicationNumber: updatedRequest.cuRegistrationApplicationNumber,
           },
         );
       } else {
         console.error("[CU-REG CORRECTION][UPDATE] PDF regeneration failed", {
           error: pdfResult.error,
-          applicationNumber: existing.cuRegistrationApplicationNumber,
+          applicationNumber: updatedRequest.cuRegistrationApplicationNumber,
         });
       }
     } catch (error) {
@@ -1262,6 +1385,7 @@ async function modelToDto(
     status: request.status,
     remarks: request.remarks,
     // Declarations
+    introductoryDeclaration: request.introductoryDeclaration,
     personalInfoDeclaration: request.personalInfoDeclaration,
     addressInfoDeclaration: request.addressInfoDeclaration,
     subjectsDeclaration: request.subjectsDeclaration,

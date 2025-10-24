@@ -89,12 +89,21 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       return;
     }
 
-    // FIXED: Don't automatically determine status - let user set it manually
-    // Only use status if explicitly provided in the request
-    const newStatus = req.body.status || correctionRequest.status;
-    console.info(
-      `[CU-REG BATCH SUBMIT] Using status: ${newStatus} (from request: ${req.body.status || "not provided"})`,
+    // Determine status based on correction flags
+    // If any correction is requested, status should be REQUEST_CORRECTION
+    // If no corrections are requested, status should be ONLINE_REGISTRATION
+    const hasAnyCorrectionFlags = Object.values(parsedFlags).some(
+      (flag) => flag === true,
     );
+    const newStatus = hasAnyCorrectionFlags
+      ? "REQUEST_CORRECTION"
+      : "ONLINE_REGISTRATION";
+
+    console.info(`[CU-REG BATCH SUBMIT] Status determination:`, {
+      hasAnyCorrectionFlags,
+      correctionFlags: parsedFlags,
+      determinedStatus: newStatus,
+    });
 
     // Generate application number FIRST before uploading documents
     console.info(
@@ -107,27 +116,41 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       `[CU-REG BATCH SUBMIT] Generated application number: ${applicationNumber}`,
     );
 
+    // Check if application number already exists before setting it
+    const updatePayload: any = {
+      genderCorrectionRequest: parsedFlags?.gender || false,
+      nationalityCorrectionRequest: parsedFlags?.nationality || false,
+      apaarIdCorrectionRequest: parsedFlags?.apaarId || false,
+      subjectsCorrectionRequest: parsedFlags?.subjects || false,
+      status: newStatus,
+      onlineRegistrationDone: true, // Mark online registration as completed
+
+      // Set all declaration flags to true for final submission
+      personalInfoDeclaration: true,
+      addressInfoDeclaration: true,
+      subjectsDeclaration: true,
+      documentsDeclaration: true,
+
+      // Pass the payload to update personal info and addresses
+      payload: parsedPayload,
+    };
+
+    // Only set application number if it doesn't already exist
+    if (!correctionRequest.cuRegistrationApplicationNumber) {
+      updatePayload.cuRegistrationApplicationNumber = applicationNumber;
+      console.info(
+        `[CU-REG BATCH SUBMIT] Setting application number: ${applicationNumber}`,
+      );
+    } else {
+      console.info(
+        `[CU-REG BATCH SUBMIT] Application number already exists: ${correctionRequest.cuRegistrationApplicationNumber} - not updating`,
+      );
+    }
+
     // Update the correction request with flags, payload, status, and application number
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       parseInt(correctionRequestId),
-      {
-        genderCorrectionRequest: parsedFlags?.gender || false,
-        nationalityCorrectionRequest: parsedFlags?.nationality || false,
-        apaarIdCorrectionRequest: parsedFlags?.apaarId || false,
-        subjectsCorrectionRequest: parsedFlags?.subjects || false,
-        status: newStatus,
-        onlineRegistrationDone: true, // Mark online registration as completed
-        cuRegistrationApplicationNumber: applicationNumber, // Set the application number
-
-        // Set all declaration flags to true for final submission
-        personalInfoDeclaration: true,
-        addressInfoDeclaration: true,
-        subjectsDeclaration: true,
-        documentsDeclaration: true,
-
-        // Pass the payload to update personal info and addresses
-        payload: parsedPayload,
-      } as any,
+      updatePayload,
     );
 
     console.info(
@@ -327,6 +350,11 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
 
     console.info(
       `[CU-REG BATCH SUBMIT] Batch submission completed. Uploaded ${uploadedDocuments.length} documents`,
+    );
+
+    // Check if there are any correction flags
+    const hasCorrectionFlags = Object.values(parsedFlags).some(
+      (flag) => flag === true,
     );
 
     // Generate PDF after all documents are uploaded (only if no correction flags)

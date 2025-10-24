@@ -2013,6 +2013,19 @@ export async function processStudent(
 }
 
 async function addStudentCuRegistrationRequest(student: Student) {
+  const [promotionData] = await db
+    .select({
+      academicYearId: academicYearModel.id,
+    })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+    .innerJoin(
+      academicYearModel,
+      eq(sessionModel.academicYearId, academicYearModel.id),
+    )
+    .where(eq(promotionModel.studentId, student.id!))
+    .limit(1);
+
   const [existingCuRegistrationRequest] = await db
     .select()
     .from(cuRegistrationCorrectionRequestModel)
@@ -2023,7 +2036,21 @@ async function addStudentCuRegistrationRequest(student: Student) {
       "cu registration request already exists for student:",
       student.id,
     );
-    return;
+
+    return (
+      await db
+        .update(cuRegistrationCorrectionRequestModel)
+        .set({
+          academicYearId: promotionData?.academicYearId,
+        })
+        .where(
+          eq(
+            cuRegistrationCorrectionRequestModel.id,
+            existingCuRegistrationRequest.id,
+          ),
+        )
+        .returning()
+    )[0];
   }
 
   const cuRegAppNo =
@@ -2033,6 +2060,8 @@ async function addStudentCuRegistrationRequest(student: Student) {
     .insert(cuRegistrationCorrectionRequestModel)
     .values({
       studentId: student.id!,
+      academicYearId: promotionData?.academicYearId,
+      introductoryDeclaration: false,
       cuRegistrationApplicationNumber: null,
       personalInfoDeclaration: false,
       addressInfoDeclaration: false,

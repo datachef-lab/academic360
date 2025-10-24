@@ -1,11 +1,14 @@
-import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, text, timestamp, varchar, unique } from "drizzle-orm/pg-core";
 import { studentModel, userModel } from "../user";
 import { cuRegistrationCorrectionRequestStatusEnum } from "@/schemas/enums";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
+import { academicYearModel } from "../academics";
 
 export const cuRegistrationCorrectionRequestModel = pgTable("cu_registration_correction_requests", {
     id: serial().primaryKey(),
+    academicYearId: integer("academic_year_id_fk")
+        .references(() => academicYearModel.id),
     cuRegistrationApplicationNumber: varchar("cu_registration_application_number", { length: 7 }).unique(), // Format: 017XXXX
     studentId: integer("student_id_fk")
         .references(() => studentModel.id)
@@ -19,7 +22,8 @@ export const cuRegistrationCorrectionRequestModel = pgTable("cu_registration_cor
     nationalityCorrectionRequest: boolean("nationality_correction_request").notNull().default(false),
     apaarIdCorrectionRequest: boolean("apaar_id_correction_request").notNull().default(false),
     aadhaarCardNumberCorrectionRequest: boolean("aadhaar_card_number_correction_request").notNull().default(false),
-    // Correction request flags for subjects
+    // Correction request flags for declaration
+    introductoryDeclaration: boolean("introductory_declaration").notNull().default(false),
     subjectsCorrectionRequest: boolean("subjects_correction_request_flag").notNull().default(false),
     personalInfoDeclaration: boolean("personal_info_declaration").notNull().default(false),
     addressInfoDeclaration: boolean("address_info_declaration").notNull().default(false),
@@ -33,7 +37,13 @@ export const cuRegistrationCorrectionRequestModel = pgTable("cu_registration_cor
     rejectedRemarks: text("rejected_remarks"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+    // Unique constraint: academic year + application number must be unique together
+    academicYearApplicationNumberUnique: unique("academic_year_application_number_unique").on(
+        table.academicYearId,
+        table.cuRegistrationApplicationNumber
+    ),
+}));
 
 export const cuRegistrationCorrectionRequestInsertSchema = createInsertSchema(cuRegistrationCorrectionRequestModel, {
     cuRegistrationApplicationNumber: z.string()

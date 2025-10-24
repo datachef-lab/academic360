@@ -280,6 +280,13 @@ export const updateCuRegistrationCorrectionRequestById = async (
     // Extract payload and flags separately as they're not part of the database schema
     const { payload, flags, ...dbFields } = req.body;
 
+    console.info("[CU-REG CONTROLLER] Update data with payload and flags:", {
+      id,
+      dbFields,
+      payload,
+      flags,
+    });
+
     // Validate request body (excluding payload and flags)
     const parseResult = cuRegistrationCorrectionRequestInsertSchema
       .partial()
