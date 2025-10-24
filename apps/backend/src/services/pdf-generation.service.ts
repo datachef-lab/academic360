@@ -3,6 +3,7 @@ import ejs from "ejs";
 import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
+import { QRCodeService } from "./qr-code.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,6 +76,9 @@ export interface CuRegistrationFormData {
   // Session information
   sessionName: string;
 
+  // QR Code for application number
+  qrCodeDataUrl?: string;
+
   // Debug fields
   photoUrlDebug?: string;
 }
@@ -119,6 +123,24 @@ export class PdfGenerationService {
         studentUid: formData.studentUid,
         outputPath,
       });
+
+      // Generate QR code for application number if not provided
+      if (!formData.qrCodeDataUrl && formData.cuFormNumber) {
+        try {
+          formData.qrCodeDataUrl =
+            await QRCodeService.generateApplicationQRCode(
+              formData.cuFormNumber,
+            );
+          console.info("[PDF GENERATION] QR code generated successfully", {
+            applicationNumber: formData.cuFormNumber,
+          });
+        } catch (error) {
+          console.warn(
+            "[PDF GENERATION] Failed to generate QR code, continuing without it:",
+            error,
+          );
+        }
+      }
 
       // Read the EJS template
       const templatePath = path.join(
@@ -198,6 +220,24 @@ export class PdfGenerationService {
           studentUid: formData.studentUid,
         },
       );
+
+      // Generate QR code for application number if not provided
+      if (!formData.qrCodeDataUrl && formData.cuFormNumber) {
+        try {
+          formData.qrCodeDataUrl =
+            await QRCodeService.generateApplicationQRCode(
+              formData.cuFormNumber,
+            );
+          console.info("[PDF GENERATION] QR code generated successfully", {
+            applicationNumber: formData.cuFormNumber,
+          });
+        } catch (error) {
+          console.warn(
+            "[PDF GENERATION] Failed to generate QR code, continuing without it:",
+            error,
+          );
+        }
+      }
 
       // Read the EJS template
       const templatePath = path.join(

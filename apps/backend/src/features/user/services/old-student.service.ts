@@ -2187,7 +2187,12 @@ export async function addCountry(oldCountry: OldCountry) {
   const [existingCountry] = await db
     .select()
     .from(countryModel)
-    .where(ilike(countryModel.name, oldCountry.countryName.trim()));
+    .where(
+      and(
+        ilike(countryModel.name, oldCountry.countryName.trim()),
+        eq(countryModel.legacyCountryId, oldCountry.id),
+      ),
+    );
   if (existingCountry) {
     return existingCountry;
   }
@@ -2202,11 +2207,21 @@ export async function addCountry(oldCountry: OldCountry) {
   return newCountry;
 }
 
-export async function addState(legacyStateId: number) {
+export async function addStateByCityMaintabOrLegacyStateId(
+  legacyCityMainTabId?: number,
+  legacyStateId?: number,
+) {
+  if (!legacyCityMainTabId && !legacyStateId) {
+    return null;
+  }
+
+  const whereConditionForOldCityMainTab = legacyCityMainTabId
+    ? `WHERE id = ${legacyCityMainTabId}`
+    : `WHERE stateId = ${legacyStateId}`;
   const [[oldCityMaintab]] = (await mysqlConnection.query(`
         SELECT * 
         FROM citymaintab
-        WHERE id = ${legacyStateId};
+        ${whereConditionForOldCityMainTab};
     `)) as [OldCityMaintab[], any];
 
   if (!oldCityMaintab) {
@@ -2242,6 +2257,7 @@ export async function addState(legacyStateId: number) {
       and(
         ilike(stateModel.name, oldState.stateName.trim()),
         eq(stateModel.countryId, country.id),
+        eq(stateModel.legacyStateId, oldState.id),
       ),
     );
   if (existingState) {
@@ -2252,7 +2268,7 @@ export async function addState(legacyStateId: number) {
     .insert(stateModel)
     .values({
       countryId: country.id,
-      legacyStateId,
+      legacyStateId: oldState.id,
       name: oldState.stateName.trim(),
     })
     .returning();
@@ -2493,7 +2509,9 @@ export async function addCity(oldCityId: number) {
     return null;
   }
 
-  const state = await addState(oldCitySubtab.parent_id);
+  const state = await addStateByCityMaintabOrLegacyStateId(
+    oldCitySubtab.parent_id,
+  );
 
   if (!state) {
     return null;
@@ -2507,6 +2525,7 @@ export async function addCity(oldCityId: number) {
       and(
         eq(cityModel.stateId, state.id),
         ilike(cityModel.name, normalizedCityName),
+        eq(cityModel.legacyCityId, oldCityId),
       ),
     );
   if (existingCity) {
@@ -2573,6 +2592,7 @@ export async function addDistrict(oldDistrictId: number) {
       and(
         ilike(districtModel.name, oldDistrict.name.trim()),
         eq(districtModel.cityId, city.id),
+        eq(districtModel.legacyDistrictId, oldDistrictId),
       ),
     );
   if (existingDistrict) {
@@ -3180,7 +3200,7 @@ async function upsertPersonalDetailsAddress(
     : (oldDetails.newcountryId ?? oldDetails.countryId ?? null);
   const mailingStateLegacy = isStaff(oldDetails)
     ? (oldDetails.mstateid ?? null)
-    : (oldDetails.newstateId ?? null);
+    : null;
   const mailingCityLegacy = isStaff(oldDetails)
     ? (oldDetails.mcityid ?? null)
     : (oldDetails.newcityId ?? null);
@@ -3262,7 +3282,10 @@ async function upsertPersonalDetailsAddress(
     mailingDistrictLegacy
   ) {
     const stateResolved = mailingStateLegacy
-      ? await addState(mailingStateLegacy)
+      ? await addStateByCityMaintabOrLegacyStateId(
+          undefined,
+          mailingStateLegacy,
+        )
       : null;
     const cityResolved = mailingCityLegacy
       ? await addCity(mailingCityLegacy)
@@ -3342,7 +3365,7 @@ async function upsertPersonalDetailsAddress(
     resiDistrictLegacy
   ) {
     const stateResolved = resiStateLegacy
-      ? await addState(resiStateLegacy)
+      ? await addStateByCityMaintabOrLegacyStateId(undefined, resiStateLegacy)
       : null;
     const cityResolved = resiCityLegacy ? await addCity(resiCityLegacy) : null;
     const districtResolved = resiDistrictLegacy
@@ -5130,7 +5153,12 @@ export async function upsertFamily2(
     stateId: isStaff(oldDetails)
       ? null
       : oldDetails.resiStateId
-        ? (await addState(oldDetails.resiStateId))?.id
+        ? (
+            await addStateByCityMaintabOrLegacyStateId(
+              undefined,
+              oldDetails.resiStateId,
+            )
+          )?.id
         : null,
     cityId: isStaff(oldDetails)
       ? null
@@ -5196,7 +5224,12 @@ export async function upsertFamily2(
     stateId: isStaff(oldDetails)
       ? null
       : oldDetails.resiStateId
-        ? (await addState(oldDetails.resiStateId))?.id
+        ? (
+            await addStateByCityMaintabOrLegacyStateId(
+              undefined,
+              oldDetails.resiStateId,
+            )
+          )?.id
         : null,
     cityId: isStaff(oldDetails)
       ? null
@@ -5261,7 +5294,12 @@ export async function upsertFamily2(
     stateId: isStaff(oldDetails)
       ? null
       : oldDetails.localguardianStateId
-        ? (await addState(oldDetails.localguardianStateId))?.id
+        ? (
+            await addStateByCityMaintabOrLegacyStateId(
+              undefined,
+              oldDetails.localguardianStateId,
+            )
+          )?.id
         : null,
     cityId: isStaff(oldDetails)
       ? null

@@ -159,13 +159,6 @@ import {
   OldStaff,
   OldStudent,
 } from "@repo/db/legacy-system-types/users";
-import {
-  addCity,
-  addCountry,
-  addDistrict,
-  addState,
-  loadOldBoards,
-} from "./old-student.service";
 import { OldCountry } from "@repo/db/legacy-system-types/resources";
 import { OldPromotionStatus } from "@repo/db/legacy-system-types/batches";
 import { bitToBool } from "./refactor-old-migration.service";
@@ -598,7 +591,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
             : oldStudent.communityid === 1
               ? "GUJARATI"
               : "NON-GUJARATI",
-        handicapped: !!oldStudent.handicapped,
+        handicapped: oldStudent.handicapped === "YES" ? true : false,
         // abcId: oldStudent.abcid
         //   ? String(oldStudent.abcid)
         //   : oldStudent.apprid
@@ -645,7 +638,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         legacyStudentId: oldStudent.id,
         uid: oldStudent.codeNumber.trim()?.toUpperCase(),
         oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
-
+        handicapped: oldStudent.handicapped === "YES" ? true : false,
         programCourseId: foundProgramCourse.id,
         community:
           oldStudent.communityid === 0 || oldStudent.communityid === null
@@ -653,7 +646,6 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
             : oldStudent.communityid === 1
               ? "GUJARATI"
               : "NON-GUJARATI",
-        handicapped: !!oldStudent.handicapped,
         apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
         rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
         registrationNumber: oldStudent.univregno
@@ -1166,6 +1158,7 @@ export async function upsertStudentPersonalDetails(
   oldDetails: OldStudent,
   user: User,
 ) {
+  console.log("in upsertStudentPersonalDetails()");
   // If personalDetailsId is provided, perform update and return
   let [existingPersonalDetails] = await db
     .select()
@@ -1340,13 +1333,21 @@ export async function upsertStudentPersonalDetails(
           : null,
 
         stateId: oldDetails.mstateid
-          ? (await oldAdmPersonalDetailsHelper.addState(oldDetails.mstateid))
-              ?.id
+          ? (
+              await oldAdmPersonalDetailsHelper.addStateByCityMaintabOrLegacyStateId(
+                undefined,
+                oldDetails.mstateid,
+              )
+            )?.id
           : null,
         otherState: oldDetails.mothstate,
         previousStateId: oldDetails.lsstateid
-          ? (await oldAdmPersonalDetailsHelper.addState(oldDetails.lsstateid))
-              ?.id
+          ? (
+              await oldAdmPersonalDetailsHelper.addStateByCityMaintabOrLegacyStateId(
+                undefined,
+                oldDetails.lsstateid,
+              )
+            )?.id
           : null,
 
         cityId: oldDetails.mcityid
@@ -1420,12 +1421,21 @@ export async function upsertStudentPersonalDetails(
           : null,
 
         stateId: rStateId
-          ? (await oldAdmPersonalDetailsHelper.addState(rStateId))?.id
+          ? (
+              await oldAdmPersonalDetailsHelper.addStateByCityMaintabOrLegacyStateId(
+                undefined,
+                rStateId,
+              )
+            )?.id
           : null,
         otherState: oldDetails.rothstate,
         previousStateId: oldDetails.lsstateid
-          ? (await oldAdmPersonalDetailsHelper.addState(oldDetails.lsstateid))
-              ?.id
+          ? (
+              await oldAdmPersonalDetailsHelper.addStateByCityMaintabOrLegacyStateId(
+                undefined,
+                oldDetails.lsstateid,
+              )
+            )?.id
           : null,
 
         cityId: rCityId
@@ -1608,11 +1618,21 @@ export async function upsertStudentPersonalDetails(
         : null,
 
       stateId: oldDetails.mstateid
-        ? (await oldAdmPersonalDetailsHelper.addState(oldDetails.mstateid))?.id
+        ? (
+            await oldAdmPersonalDetailsHelper.addStateByCityMaintabOrLegacyStateId(
+              undefined,
+              oldDetails.mstateid,
+            )
+          )?.id
         : null,
       otherState: oldDetails.mothstate,
       previousStateId: oldDetails.lsstateid
-        ? (await oldAdmPersonalDetailsHelper.addState(oldDetails.lsstateid))?.id
+        ? (
+            await oldAdmPersonalDetailsHelper.addStateByCityMaintabOrLegacyStateId(
+              undefined,
+              oldDetails.lsstateid,
+            )
+          )?.id
         : null,
 
       cityId: oldDetails.mcityid
@@ -1678,8 +1698,12 @@ export async function upsertStudentPersonalDetails(
         ? (await oldAdmPersonalDetailsHelper.addCountry(insRCountry)).id
         : null,
       stateId: rStateIdIns
-        ? (await oldAdmPersonalDetailsHelper.addState(rStateIdIns as number))
-            ?.id
+        ? (
+            await oldAdmPersonalDetailsHelper.addStateByCityMaintabOrLegacyStateId(
+              undefined,
+              rStateIdIns,
+            )
+          )?.id
         : null,
       cityId: rCityIdIns
         ? (await oldAdmPersonalDetailsHelper.addCity(rCityIdIns as number))?.id
@@ -1836,7 +1860,9 @@ export async function processStudent(
   // If modifydt is null, it means data hasn't been updated since creation - no need to update
   // If lastSyncTime is undefined (manual call), we don't update student data
 
-  if (shouldUpdateStudentData && user.isActive && !user.isSuspended) {
+  // TODO:Temporarily disabled condition for shouldUpdateStudentData
+  //   if (shouldUpdateStudentData && user.isActive && !user.isSuspended) {
+  if (user.isActive && !user.isSuspended) {
     // Step 1: Upsert the student first
     student = await upsertStudent(oldStudent, user);
 
@@ -1931,7 +1957,11 @@ export async function processStudent(
     .update(studentModel)
     .set({
       oldUid: oldStudent.oldcodeNumber?.trim()?.toUpperCase(),
-      apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+      apaarId: student.apaarId
+        ? student.apaarId
+        : oldStudent.apprid
+          ? String(oldStudent.apprid)
+          : undefined,
     })
     .where(eq(studentModel.id, student.id!))
     .returning();
@@ -2217,7 +2247,7 @@ async function loadStudentAcademicInfoAndSubjects(
         // Overwrite with old student academic details (these take priority)
         legacyStudentAcademicDetailsId: oldStudentAcademicDetails.id,
         studentId: student.id!,
-        applicationFormId: null, // Set to null for student reference
+        applicationFormId: student.applicationId!, // Set to null for student reference
         boardId: foundBoard.id!,
         boardResultStatus: (boardResultStatus?.name || "PASS") as
           | "PASS"
@@ -2229,8 +2259,8 @@ async function loadStudentAcademicInfoAndSubjects(
           ? parseInt(oldStudentAcademicDetails.rank)
           : undefined,
         yearOfPassing: oldStudentAcademicDetails.year!,
-        registrationNumber: oldStudentAcademicDetails.regno,
-        rollNumber: oldStudentAcademicDetails.rollno,
+        registrationNumber: null,
+        rollNumber: oldStudentAcademicDetails.regno,
         examNumber: oldStudentAcademicDetails.examno,
         previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
         otherBoard: oldStudentAcademicDetails.otherbrd,
@@ -2290,7 +2320,7 @@ async function loadStudentAcademicInfoAndSubjects(
         // Overwrite with old student academic details (these take priority)
         legacyStudentAcademicDetailsId: oldStudentAcademicDetails.id,
         studentId: student.id!,
-        applicationFormId: null, // Set to null for student reference
+        applicationFormId: student.applicationId!, // Set to null for student reference
         boardId: foundBoard.id!,
         boardResultStatus: (boardResultStatus?.name || "PASS") as
           | "PASS"
@@ -2302,8 +2332,8 @@ async function loadStudentAcademicInfoAndSubjects(
           ? parseInt(oldStudentAcademicDetails.rank)
           : undefined,
         yearOfPassing: oldStudentAcademicDetails.year!,
-        registrationNumber: oldStudentAcademicDetails.regno,
-        rollNumber: oldStudentAcademicDetails.examroll,
+        registrationNumber: null,
+        rollNumber: oldStudentAcademicDetails.regno,
         examNumber: oldStudentAcademicDetails.examno,
         previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
         otherBoard: oldStudentAcademicDetails.otherbrd,
