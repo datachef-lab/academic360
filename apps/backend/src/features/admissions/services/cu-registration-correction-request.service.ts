@@ -412,17 +412,11 @@ export async function updateCuRegistrationCorrectionRequest(
         updateData as any
       ).onlineRegistrationDone;
 
-    // Handle declaration fields (monotonic: once true, never set to false)
-    if (typeof (updateData as any).introductoryDeclaration !== "undefined") {
-      const newValue = Boolean(
-        existing.introductoryDeclaration ||
-          (updateData as any).introductoryDeclaration,
-      );
-      setData.introductoryDeclaration = newValue;
-      console.info(
-        `[CU-REG CORRECTION][UPDATE] Setting introductoryDeclaration: ${newValue} (existing: ${existing.introductoryDeclaration}, update: ${(updateData as any).introductoryDeclaration})`,
-      );
-    }
+    // Always set introductoryDeclaration to true on any update
+    setData.introductoryDeclaration = true;
+    console.info(
+      `[CU-REG CORRECTION][UPDATE] Always setting introductoryDeclaration to true (existing: ${existing.introductoryDeclaration})`,
+    );
     if (typeof (updateData as any).personalInfoDeclaration !== "undefined")
       setData.personalInfoDeclaration = Boolean(
         existing.personalInfoDeclaration ||
@@ -647,21 +641,19 @@ export async function updateCuRegistrationCorrectionRequest(
       );
     }
 
-    // Ensure academic year ID is set if not already present
-    if (!existing.academicYearId) {
-      const academicYearId = await getAcademicYearIdByStudentId(
-        existing.studentId,
+    // Always ensure academic year ID is set (fetch fresh if missing or update if provided)
+    const academicYearId = await getAcademicYearIdByStudentId(
+      existing.studentId,
+    );
+    if (academicYearId) {
+      setData.academicYearId = academicYearId;
+      console.info(
+        `[CU-REG CORRECTION][UPDATE] Set academic year ID: ${academicYearId} for student: ${existing.studentId}`,
       );
-      if (academicYearId) {
-        setData.academicYearId = academicYearId;
-        console.info(
-          `[CU-REG CORRECTION][UPDATE] Set academic year ID: ${academicYearId} for student: ${existing.studentId}`,
-        );
-      } else {
-        console.warn(
-          `[CU-REG CORRECTION][UPDATE] No academic year ID found for student: ${existing.studentId}`,
-        );
-      }
+    } else {
+      console.warn(
+        `[CU-REG CORRECTION][UPDATE] No academic year ID found for student: ${existing.studentId}`,
+      );
     }
 
     console.info(
