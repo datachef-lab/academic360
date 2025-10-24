@@ -39,6 +39,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   //   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState<boolean>(false);
   console.log("pathname:", pathname);
 
+  // Check if student's program course is MA or MCOM (hide admission registration for these)
+  const isBlockedProgram = React.useMemo(() => {
+    if (!student?.programCourse?.name) return false;
+
+    const rawName = student.programCourse.name;
+    const normalizedName = rawName
+      .normalize("NFKD")
+      .replace(/[^A-Za-z]/g, "")
+      .toUpperCase();
+
+    const blockedPrograms = ["MA", "MCOM"];
+    return blockedPrograms.some((program) => normalizedName.startsWith(program));
+  }, [student?.programCourse?.course?.name]);
+
   //   React.useEffect(() => {
   //     (async () => {
   //       try {
@@ -75,12 +89,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: BookOpen,
       isActive: pathname === "/dashboard/subject-selection",
     },
-    {
-      title: "Admission & Registration Data",
-      url: "/dashboard/admission-registration",
-      icon: FileText,
-      isActive: pathname === "/dashboard/admission-registration",
-    },
+    // Hide admission registration for MA and MCOM students
+    ...(isBlockedProgram
+      ? []
+      : [
+          {
+            title: "Admission & Registration Data",
+            url: "/dashboard/admission-registration",
+            icon: FileText,
+            isActive: pathname === "/dashboard/admission-registration",
+          },
+        ]),
     // accessControl?.access_exams && {
     //   title: "Exams",
     //   url: "/dashboard/exams",

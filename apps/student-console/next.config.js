@@ -79,7 +79,7 @@ const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ["localhost:3008", "czz2p47w-3008.inc1.devtunnels.ms", "*.inc1.devtunnels.ms"],
-      bodySizeLimit: "2mb",
+      bodySizeLimit: "50mb",
     },
   },
 

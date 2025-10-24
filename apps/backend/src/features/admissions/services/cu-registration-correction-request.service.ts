@@ -159,8 +159,7 @@ export async function createCuRegistrationCorrectionRequest(
     }),
   );
 
-  // Don't generate application number initially - it will be generated only on final submission
-  // when all declarations are completed
+  // Don't generate application number initially - it will be generated only when all declarations are completed
   const requestDataWithoutNumber = {
     ...requestData,
   };
@@ -531,10 +530,15 @@ export async function updateCuRegistrationCorrectionRequest(
     const subjectsDeclared = (updateData as any).subjectsDeclaration === true;
     const documentsDeclared = (updateData as any).documentsDeclaration === true;
 
+    // Check if subject selection is required for this student's program
+    const subjectSelectionRequired = await isSubjectSelectionRequired(
+      existing.studentId,
+    );
+
     const allDeclarationsCompleted =
       personalInfoDeclared &&
       addressInfoDeclared &&
-      subjectsDeclared &&
+      (subjectSelectionRequired ? subjectsDeclared : true) && // Skip subjects check if not required
       documentsDeclared;
 
     // Debug logging for PDF generation conditions
@@ -545,6 +549,7 @@ export async function updateCuRegistrationCorrectionRequest(
         addressInfoDeclared,
         subjectsDeclared,
         documentsDeclared,
+        subjectSelectionRequired,
         allDeclarationsCompleted,
         isFinalSubmission,
         hasApplicationNumber: !!existing.cuRegistrationApplicationNumber,
@@ -1259,6 +1264,62 @@ export async function updateStudentDataFromCorrectionRequest(
       success: false,
       errors: [`Database update failed: ${error.message}`],
     };
+  }
+}
+
+// Helper function to check if student's program course requires subject selection
+async function isSubjectSelectionRequired(studentId: number): Promise<boolean> {
+  try {
+    // Get student's program course information
+    const [studentData] = await db
+      .select({
+        programCourseName: programCourseModel.name,
+      })
+      .from(promotionModel)
+      .innerJoin(
+        programCourseModel,
+        eq(promotionModel.programCourseId, programCourseModel.id),
+      )
+      .where(eq(promotionModel.studentId, studentId))
+      .orderBy(desc(promotionModel.createdAt))
+      .limit(1);
+
+    if (!studentData?.programCourseName) {
+      console.warn(
+        `[CU-REG CORRECTION] No program course found for student ${studentId}, assuming subject selection required`,
+      );
+      return true; // Default to requiring subject selection if no program course found
+    }
+
+    // Normalize program course name (remove special characters, convert to uppercase)
+    const normalizedName = studentData.programCourseName
+      .normalize("NFKD")
+      .replace(/[^A-Za-z]/g, "")
+      .toUpperCase();
+
+    // Check if program course name starts with BBA, MA, or MCOM
+    const blockedPrograms = ["BBA", "MA", "MCOM"];
+    const isBlocked = blockedPrograms.some((program) =>
+      normalizedName.startsWith(program),
+    );
+
+    console.info(
+      `[CU-REG CORRECTION] Subject selection check for student ${studentId}:`,
+      {
+        programCourseName: studentData.programCourseName,
+        normalizedName,
+        isBlocked,
+        subjectSelectionRequired: !isBlocked,
+      },
+    );
+
+    return !isBlocked; // Subject selection is required if NOT blocked
+  } catch (error) {
+    console.error(
+      `[CU-REG CORRECTION] Error checking subject selection requirement for student ${studentId}:`,
+      error,
+    );
+    return true; // Default to requiring subject selection on error
   }
 }
 

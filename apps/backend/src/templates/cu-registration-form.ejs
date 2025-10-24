@@ -915,50 +915,55 @@
             <!-- Personal Information -->
               <h4 style="font-size: 12px">Personal Information</h4>
               <div class="form-section">
+                <!-- Name in single row -->
                 <div class="form-row">
                   <div class="form-field full-width">
                     <div class="field-label" style="width: 108px">Name</div>
                     <div class="field-input"><%= studentName %></div>
                   </div>
                 </div>
+                <!-- Father's/Mother's Name in single row -->
                 <div class="form-row">
                   <div class="form-field full-width">
                     <div class="field-label" style="width: 108px">Father's/Mother's Name</div>
                     <div class="field-input"><%= parentName %></div>
                   </div>
                 </div>
+                <!-- DOB, UID, Gender in single row (3 columns) -->
                 <div class="form-row">
-                  <div class="form-field">
-                    <div class="field-label">UID</div>
-                    <div class="field-input"><%= studentUid %></div>
-                  </div>
                   <div class="form-field">
                     <div class="field-label">Date of Birth</div>
                     <div class="field-input"><%= dateOfBirth %></div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">UID</div>
+                    <div class="field-input"><%= studentUid %></div>
                   </div>
                   <div class="form-field">
                     <div class="field-label">Gender</div>
                     <div class="field-input"><%= gender %></div>
                   </div>
                 </div>
+                <!-- Aadhar, Religion, Nationality in single row (3 columns) -->
                 <div class="form-row">
                   <div class="form-field">
-                    <div class="field-label">Nationality</div>
-                    <div class="field-input"><%= nationalityName %></div>
+                    <div class="field-label">Aadhar Card No.</div>
+                    <div class="field-input"><%= aadhaarCardNumber %></div>
                   </div>
                   <div class="form-field">
                     <div class="field-label">Religion</div>
                     <div class="field-input"><%= religionName %></div>
                   </div>
                   <div class="form-field">
-                    <div class="field-label">Aadhar Card No.</div>
-                    <div class="field-input"><%= aadhaarCardNumber %></div>
+                    <div class="field-label">Nationality</div>
+                    <div class="field-input"><%= nationalityName %></div>
                   </div>
                 </div>
+                <!-- Category, PWD, EWS in single row (3 columns) -->
                 <div class="form-row">
                   <div class="form-field">
-                    <div class="field-label">Annual Income</div>
-                    <div class="field-input"><%= annualIncome %></div>
+                    <div class="field-label">Category</div>
+                    <div class="field-input"><%= categoryName %></div>
                   </div>
                   <div class="form-field">
                     <div class="field-label">PWD</div>

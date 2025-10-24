@@ -34,7 +34,8 @@ import { sendAdmissionRegistrationNotification } from "../services/cu-registrati
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB per file
+    fileSize: 5 * 1024 * 1024, // 5MB per file (reduced from 10MB)
+    fieldSize: 10 * 1024 * 1024, // 10MB for form fields
   },
 });
 
@@ -73,6 +74,27 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
     console.info(`[CU-REG BATCH SUBMIT] Files received: ${files.length}`);
     console.info(`[CU-REG BATCH SUBMIT] Document Names: ${documentNames}`);
 
+    // Debug: Log file sizes
+    let totalSizeMB = 0;
+    files.forEach((file, index) => {
+      const sizeMB = file.size / (1024 * 1024);
+      totalSizeMB += sizeMB;
+      console.info(
+        `[CU-REG BATCH SUBMIT] File ${index + 1}: ${file.originalname} - ${sizeMB.toFixed(2)}MB`,
+      );
+    });
+
+    console.info(
+      `[CU-REG BATCH SUBMIT] Total payload size: ${totalSizeMB.toFixed(2)}MB`,
+    );
+
+    // Check if total size exceeds reasonable limit
+    if (totalSizeMB > 50) {
+      console.warn(
+        `[CU-REG BATCH SUBMIT] Large payload detected: ${totalSizeMB.toFixed(2)}MB`,
+      );
+    }
+
     if (!correctionRequestId) {
       res
         .status(400)
@@ -105,9 +127,9 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       determinedStatus: newStatus,
     });
 
-    // Generate application number FIRST before uploading documents
+    // Generate application number when all declarations are completed
     console.info(
-      `[CU-REG BATCH SUBMIT] Generating application number before document upload`,
+      `[CU-REG BATCH SUBMIT] Generating application number for final submission`,
     );
 
     const applicationNumber =
@@ -135,17 +157,11 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       payload: parsedPayload,
     };
 
-    // Only set application number if it doesn't already exist
-    if (!correctionRequest.cuRegistrationApplicationNumber) {
-      updatePayload.cuRegistrationApplicationNumber = applicationNumber;
-      console.info(
-        `[CU-REG BATCH SUBMIT] Setting application number: ${applicationNumber}`,
-      );
-    } else {
-      console.info(
-        `[CU-REG BATCH SUBMIT] Application number already exists: ${correctionRequest.cuRegistrationApplicationNumber} - not updating`,
-      );
-    }
+    // Set application number for final submission
+    updatePayload.cuRegistrationApplicationNumber = applicationNumber;
+    console.info(
+      `[CU-REG BATCH SUBMIT] Setting application number: ${applicationNumber}`,
+    );
 
     // Update the correction request with flags, payload, status, and application number
     const updatedRequest = await updateCuRegistrationCorrectionRequest(

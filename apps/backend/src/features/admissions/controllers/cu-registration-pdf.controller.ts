@@ -15,6 +15,7 @@ import {
 import { eq } from "drizzle-orm";
 import { getCuRegPdfPathDynamic } from "../services/cu-registration-document-path.service.js";
 import { getSignedUrlForFile } from "@/services/s3.service.js";
+import { CuRegistrationNumberService } from "@/services/cu-registration-number.service.js";
 
 /**
  * Get CU Registration PDF URL for a student and application number
@@ -145,6 +146,14 @@ export const getCuRegistrationPdfUrlByRequestId = async (
         studentId: cuRegistrationCorrectionRequestModel.studentId,
         cuRegistrationApplicationNumber:
           cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+        personalInfoDeclaration:
+          cuRegistrationCorrectionRequestModel.personalInfoDeclaration,
+        addressInfoDeclaration:
+          cuRegistrationCorrectionRequestModel.addressInfoDeclaration,
+        subjectsDeclaration:
+          cuRegistrationCorrectionRequestModel.subjectsDeclaration,
+        documentsDeclaration:
+          cuRegistrationCorrectionRequestModel.documentsDeclaration,
         studentUid: studentModel.uid,
       })
       .from(cuRegistrationCorrectionRequestModel)
@@ -165,10 +174,42 @@ export const getCuRegistrationPdfUrlByRequestId = async (
     }
 
     if (!correctionRequest.cuRegistrationApplicationNumber) {
-      throw new ApiError(
-        404,
-        "Application number not found for this correction request",
+      // Check if all declarations are completed
+      const allDeclarationsCompleted =
+        correctionRequest.personalInfoDeclaration &&
+        correctionRequest.addressInfoDeclaration &&
+        correctionRequest.subjectsDeclaration &&
+        correctionRequest.documentsDeclaration;
+
+      if (!allDeclarationsCompleted) {
+        throw new ApiError(
+          400,
+          "Cannot generate PDF: Please complete all required declarations first. Complete Personal Info, Address Info, Subjects, and Documents tabs.",
+        );
+      }
+
+      // If all declarations are completed but no application number, this shouldn't happen
+      // but we'll generate one as a fallback
+      const applicationNumber =
+        await CuRegistrationNumberService.generateNextApplicationNumber();
+
+      // Update the correction request with the application number
+      await db
+        .update(cuRegistrationCorrectionRequestModel)
+        .set({ cuRegistrationApplicationNumber: applicationNumber })
+        .where(
+          eq(
+            cuRegistrationCorrectionRequestModel.id,
+            parseInt(correctionRequestId),
+          ),
+        );
+
+      console.info(
+        `[CU-REG PDF] Generated application number for completed request: ${applicationNumber}`,
       );
+
+      // Use the generated application number for PDF generation
+      correctionRequest.cuRegistrationApplicationNumber = applicationNumber;
     }
 
     // Get dynamic year and regulation data

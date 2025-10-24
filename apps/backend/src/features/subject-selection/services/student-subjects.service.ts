@@ -1,5 +1,4 @@
 import { db } from "@/db";
-import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model";
 import { and, desc, eq, sql } from "drizzle-orm";
 import * as programCourseService from "@/features/course-design/services/program-course.service";
 import * as sessionService from "@/features/academics/services/session.service";
@@ -26,6 +25,8 @@ import {
   subjectModel,
   subjectTypeModel,
 } from "@repo/db/schemas/models/course-design";
+import { promotionModel } from "@repo/db/schemas/models/batches";
+import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import * as relatedSubjectService from "@/features/subject-selection/services/related-subject-main.service";
 import * as studentAcademicSubjectService from "@/features/admissions/services/student-academic-subject.service";
 import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model";
@@ -391,19 +392,19 @@ export async function findSubjectsSelections(studentId: number) {
           changeReason: studentSubjectSelectionModel.changeReason,
           createdAt: studentSubjectSelectionModel.createdAt,
           updatedAt: studentSubjectSelectionModel.updatedAt,
-          // Include related subject information
-          subject: {
-            id: subjectModel.id,
-            name: subjectModel.name,
-            code: subjectModel.code,
-          },
-          // Include related meta information
-          subjectSelectionMeta: {
-            id: subjectSelectionMetaModel.id,
-            label: subjectSelectionMetaModel.label,
-            subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
-            academicYearId: subjectSelectionMetaModel.academicYearId,
-          },
+          // Subject fields
+          subjectModelId: subjectModel.id,
+          subjectName: subjectModel.name,
+          subjectCode: subjectModel.code,
+          // Meta fields
+          metaId: subjectSelectionMetaModel.id,
+          metaLabel: subjectSelectionMetaModel.label,
+          metaSubjectTypeId: subjectSelectionMetaModel.subjectTypeId,
+          metaAcademicYearId: subjectSelectionMetaModel.academicYearId,
+          // Subject type fields
+          subjectTypeId: subjectTypeModel.id,
+          subjectTypeName: subjectTypeModel.name,
+          subjectTypeCode: subjectTypeModel.code,
         })
         .from(studentSubjectSelectionModel)
         .leftJoin(
@@ -417,6 +418,10 @@ export async function findSubjectsSelections(studentId: number) {
             subjectSelectionMetaModel.id,
           ),
         )
+        .leftJoin(
+          subjectTypeModel,
+          eq(subjectSelectionMetaModel.subjectTypeId, subjectTypeModel.id),
+        )
         .where(
           and(
             eq(studentSubjectSelectionModel.studentId, studentId),
@@ -426,6 +431,38 @@ export async function findSubjectsSelections(studentId: number) {
     ]);
 
     const hasFormSubmissions = actualStudentSelections.length > 0;
+
+    // Debug: Log the actual student selections to see what subjects are being fetched
+    console.log(
+      `[SUBJECT-SELECTION] Student ${studentId} - actualStudentSelections:`,
+      actualStudentSelections.map((selection) => ({
+        subjectName: selection.subjectName || "N/A",
+        subjectCode: selection.subjectCode || "N/A",
+        label: selection.metaLabel || "N/A",
+        subjectTypeName: selection.subjectTypeName || "N/A",
+        subjectTypeCode: selection.subjectTypeCode || "N/A",
+      })),
+    );
+
+    // Debug: Check if this is a BCOM student
+    const studentProgramCourse = await db
+      .select({
+        programCourseName: programCourseModel.name,
+      })
+      .from(promotionModel)
+      .innerJoin(
+        programCourseModel,
+        eq(promotionModel.programCourseId, programCourseModel.id),
+      )
+      .where(eq(promotionModel.studentId, studentId))
+      .orderBy(desc(promotionModel.createdAt))
+      .limit(1);
+
+    console.log(
+      `[SUBJECT-SELECTION] Student ${studentId} - programCourse:`,
+      studentProgramCourse[0]?.programCourseName,
+    );
+
     // console.log("studentSubjectsSelection:", studentSubjectsSelection);
     return {
       studentSubjectsSelection,

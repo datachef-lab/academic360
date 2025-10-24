@@ -504,6 +504,7 @@ export class CuRegistrationDataService {
 
   private static formatSubjectDetails(
     subjectSelections: any[],
+    isBcomProgram: boolean = false,
   ): Array<{ headers: string[]; subjects: string[] }> {
     console.info("[CU-REG DATA] formatSubjectDetails called with:", {
       count: subjectSelections?.length || 0,
@@ -606,7 +607,7 @@ export class CuRegistrationDataService {
       });
     }
 
-    // AEC/IDC subjects table - look for AEC and IDC subjects
+    // AEC/IDC subjects table - look for AEC and IDC subjects (or MDC for BCOM)
     const aec1 =
       subjectsByLabel["AEC 1"] ||
       subjectsByLabel["AEC1"] ||
@@ -623,21 +624,41 @@ export class CuRegistrationDataService {
       subjectsByLabel["AEC4"] ||
       subjectsByLabel["AEC (Semester V & VI)"] ||
       [];
-    const idc1 =
-      subjectsByLabel["IDC 1"] ||
-      subjectsByLabel["IDC1"] ||
-      subjectsByLabel["IDC 1 (Semester I)"] ||
-      [];
-    const idc2 =
-      subjectsByLabel["IDC 2"] ||
-      subjectsByLabel["IDC2"] ||
-      subjectsByLabel["IDC 2 (Semester II)"] ||
-      [];
-    const idc3 =
-      subjectsByLabel["IDC 3"] ||
-      subjectsByLabel["IDC3"] ||
-      subjectsByLabel["IDC 3 (Semester III)"] ||
-      [];
+
+    // For BCOM students, look for MDC subjects instead of IDC
+    const idc1 = isBcomProgram
+      ? subjectsByLabel["MDC 1"] ||
+        subjectsByLabel["MDC1"] ||
+        subjectsByLabel["MDC 1 (Semester I)"] ||
+        subjectsByLabel["Major Discipline Course 1"] ||
+        subjectsByLabel["Multi Disciplinary Course 1"] ||
+        []
+      : subjectsByLabel["IDC 1"] ||
+        subjectsByLabel["IDC1"] ||
+        subjectsByLabel["IDC 1 (Semester I)"] ||
+        [];
+    const idc2 = isBcomProgram
+      ? subjectsByLabel["MDC 2"] ||
+        subjectsByLabel["MDC2"] ||
+        subjectsByLabel["MDC 2 (Semester II)"] ||
+        subjectsByLabel["Major Discipline Course 2"] ||
+        subjectsByLabel["Multi Disciplinary Course 2"] ||
+        []
+      : subjectsByLabel["IDC 2"] ||
+        subjectsByLabel["IDC2"] ||
+        subjectsByLabel["IDC 2 (Semester II)"] ||
+        [];
+    const idc3 = isBcomProgram
+      ? subjectsByLabel["MDC 3"] ||
+        subjectsByLabel["MDC3"] ||
+        subjectsByLabel["MDC 3 (Semester III)"] ||
+        subjectsByLabel["Major Discipline Course 3"] ||
+        subjectsByLabel["Multi Disciplinary Course 3"] ||
+        []
+      : subjectsByLabel["IDC 3"] ||
+        subjectsByLabel["IDC3"] ||
+        subjectsByLabel["IDC 3 (Semester III)"] ||
+        [];
 
     console.info("[CU-REG DATA] AEC/IDC subjects found:", {
       aec1: aec1.length,
@@ -668,15 +689,16 @@ export class CuRegistrationDataService {
       idc2.length > 0 ||
       idc3.length > 0
     ) {
+      const subjectTypeLabel = isBcomProgram ? "MDC" : "IDC";
       const aecIdcTable = {
         headers: [
           "AEC For Sem I",
           "AEC For Sem II",
           "AEC For Sem III",
           "AEC For Sem IV",
-          "IDC For Sem I",
-          "IDC For Sem II",
-          "IDC For Sem III",
+          `${subjectTypeLabel} For Sem I`,
+          `${subjectTypeLabel} For Sem II`,
+          `${subjectTypeLabel} For Sem III`,
         ],
         subjects: [
           aec1[0]?.subjectCode || "",
@@ -980,7 +1002,29 @@ export class CuRegistrationDataService {
         return [];
       }
 
-      // Get subject types
+      // Get program course name to check if it's BCOM
+      const [programCourseInfo] = await db
+        .select({ name: programCourseModel.name })
+        .from(programCourseModel)
+        .where(eq(programCourseModel.id, programCourseId));
+
+      const isBcomProgram = programCourseInfo?.name
+        ?.normalize("NFKD")
+        .replace(/[^A-Za-z]/g, "")
+        .toUpperCase()
+        .startsWith("BCOM");
+
+      console.log(
+        "[CU-REG DATA] Program course name:",
+        programCourseInfo?.name,
+      );
+      console.log("[CU-REG DATA] Is BCOM program:", isBcomProgram);
+
+      // Get subject types - for BCOM, fetch MDC instead of IDC
+      const subjectTypeCodes = isBcomProgram
+        ? ["DSCC", "MN", "AEC", "MDC"]
+        : ["DSCC", "MN", "AEC", "IDC"];
+
       const subjectTypes = await db
         .select({
           id: subjectTypeModel.id,
@@ -988,12 +1032,14 @@ export class CuRegistrationDataService {
           name: subjectTypeModel.name,
         })
         .from(subjectTypeModel)
-        .where(inArray(subjectTypeModel.code, ["DSCC", "MN", "AEC", "IDC"]));
+        .where(inArray(subjectTypeModel.code, subjectTypeCodes));
 
       const dsccType = subjectTypes.find((st) => st.code === "DSCC");
       const mnType = subjectTypes.find((st) => st.code === "MN");
       const aecType = subjectTypes.find((st) => st.code === "AEC");
-      const idcType = subjectTypes.find((st) => st.code === "IDC");
+      const idcType = isBcomProgram
+        ? subjectTypes.find((st) => st.code === "MDC") // For BCOM, use MDC as IDC
+        : subjectTypes.find((st) => st.code === "IDC");
 
       if (!dsccType || !mnType || !aecType || !idcType) {
         console.warn("[CU-REG DATA] Required subject types not found");
@@ -1077,25 +1123,28 @@ export class CuRegistrationDataService {
         ],
       };
 
-      // Build AEC/IDC table (fetch IDC from papers if available)
+      // Build AEC/IDC table (fetch IDC from papers if available, or MDC for BCOM)
+      const subjectTypeKey = isBcomProgram ? "MDC" : "IDC";
+      const subjectTypeLabel = isBcomProgram ? "MDC" : "IDC";
+
       const aecIdcTable = {
         headers: [
           "AEC For Sem I",
           "AEC For Sem II",
           "AEC For Sem III",
           "AEC For Sem IV",
-          "IDC For Sem I",
-          "IDC For Sem II",
-          "IDC For Sem III",
+          `${subjectTypeLabel} For Sem I`,
+          `${subjectTypeLabel} For Sem II`,
+          `${subjectTypeLabel} For Sem III`,
         ],
         subjects: [
           subjectsByType["AEC"]?.["SEMESTER I"] || "",
           subjectsByType["AEC"]?.["SEMESTER II"] || "",
           subjectsByType["AEC"]?.["SEMESTER III"] || "",
           subjectsByType["AEC"]?.["SEMESTER III"] || "", // AEC4 = AEC3
-          subjectsByType["IDC"]?.["SEMESTER I"] || "", // IDC1 from papers
-          subjectsByType["IDC"]?.["SEMESTER II"] || "", // IDC2 from papers
-          subjectsByType["IDC"]?.["SEMESTER III"] || "", // IDC3 from papers
+          subjectsByType[subjectTypeKey]?.["SEMESTER I"] || "", // IDC1/MDC1 from papers
+          subjectsByType[subjectTypeKey]?.["SEMESTER II"] || "", // IDC2/MDC2 from papers
+          subjectsByType[subjectTypeKey]?.["SEMESTER III"] || "", // IDC3/MDC3 from papers
         ],
       };
 
@@ -1109,6 +1158,7 @@ export class CuRegistrationDataService {
         await this.getAdmissionSubjectSelections(studentId);
       const studentSubjects = this.formatSubjectDetails(
         subjectSelections || [],
+        isBcomProgram,
       );
       const papersSubjects = [coreMinorTable, aecIdcTable];
 
@@ -1141,6 +1191,7 @@ export class CuRegistrationDataService {
         await this.getAdmissionSubjectSelections(studentId);
       const studentSubjects = this.formatSubjectDetails(
         subjectSelections || [],
+        false, // Non-commerce streams don't use BCOM logic
       );
 
       // Get additional subjects from papers table for missing categories
@@ -1464,7 +1515,7 @@ export class CuRegistrationDataService {
     try {
       const subjectSelections =
         await this.getAdmissionSubjectSelections(studentId);
-      return this.formatSubjectDetails(subjectSelections || []);
+      return this.formatSubjectDetails(subjectSelections || [], false);
     } catch (error) {
       console.error("[CU-REG DATA] Error in fallback subject details:", error);
       return [];

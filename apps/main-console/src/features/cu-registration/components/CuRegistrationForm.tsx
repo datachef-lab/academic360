@@ -81,6 +81,13 @@ interface CorrectionRequestStatus {
 export default function CuRegistrationForm({ studentId, studentData }: CuRegistrationFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
 
+  // Check if student is in BCOM program (for MDC display logic)
+  const isBcomProgram = studentData?.programCourse?.course?.name
+    ?.normalize("NFKD")
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase()
+    .startsWith("BCOM");
+
   // Debug: Track activeTab changes
   React.useEffect(() => {
     console.info("[CU-REG MAIN-CONSOLE] activeTab changed to:", activeTab);
@@ -478,11 +485,36 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     if (checked) {
       setIsSavingSubjects(true);
       try {
-        // TODO: Implement save subjects data
-        console.info("[CU-REG MAIN-CONSOLE] Saving subjects data...");
-        toast.info("Saving subjects information and regenerating PDF...");
+        console.info("[CU-REG MAIN-CONSOLE] Saving subjects declaration...");
+        toast.info("Saving subjects declaration...");
+
+        // Check if we have a valid correction request ID
+        if (!correctionRequestStatus?.id) {
+          console.error("[CU-REG MAIN-CONSOLE] Missing Correction Request ID:", {
+            correctionRequestStatus: correctionRequestStatus,
+            correctionRequestId: correctionRequestStatus?.id,
+          });
+          throw new Error("Correction request ID not found. Please ensure the correction request is properly loaded.");
+        }
+
+        console.info(`[CU-REG MAIN-CONSOLE] Using correction request ID: ${correctionRequestStatus.id}`);
+
+        // Update correction request with subjects declaration
+        const updateData = {
+          subjectsDeclaration: true,
+          subjectsCorrectionRequest: correctionFlags.subjects,
+        };
+
+        console.info("[CU-REG MAIN-CONSOLE] Sending subjects declaration update:", updateData);
+
+        // Call the backend API to save subjects declaration
+        await axiosInstance.put(
+          `/api/admissions/cu-registration-correction-requests/${correctionRequestStatus.id}`,
+          updateData,
+        );
+
         setSubjectsDeclared(true);
-        toast.success("Subjects information saved successfully!");
+        toast.success("Subjects declaration saved successfully!");
 
         // Refresh correction request status to get updated status from backend
         if (correctionRequestStatus?.id) {
@@ -495,7 +527,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               applicationNumber: updatedRequest.cuRegistrationApplicationNumber || undefined,
             });
             console.info(
-              "[CU-REG MAIN-CONSOLE] Refreshed correction request status after subjects update:",
+              "[CU-REG MAIN-CONSOLE] Refreshed correction request status after subjects declaration:",
               updatedRequest.status,
             );
           } catch (error) {
@@ -503,8 +535,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           }
         }
       } catch (error) {
-        console.error("[CU-REG MAIN-CONSOLE] Error saving subjects:", error);
-        toast.error("Failed to save subjects information");
+        console.error("[CU-REG MAIN-CONSOLE] Error saving subjects declaration:", error);
+        toast.error("Failed to save subjects declaration");
       } finally {
         setIsSavingSubjects(false);
       }
@@ -1109,11 +1141,32 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const mandatoryNext: any = { ...mandatorySubjects };
 
+            // isBcomProgram is now defined at component level
+
             const getCategoryKey = (label: string): string | undefined => {
               if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label)) return "DSCC";
               if (/Minor/i.test(label)) return "Minor";
-              if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) return "IDC";
-              if (/Skill Enhancement Course/i.test(label) || /SEC/i.test(label)) return "SEC";
+
+              // For BCOM students, show MDC instead of IDC
+              if (isBcomProgram) {
+                if (
+                  /Major Discipline Course/i.test(label) ||
+                  /Multi Disciplinary Course/i.test(label) ||
+                  /MDC/i.test(label)
+                ) {
+                  return "IDC"; // Map MDC to IDC slot for BCOM
+                }
+                if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) {
+                  return undefined; // Hide IDC for BCOM
+                }
+              } else {
+                if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) {
+                  return "IDC";
+                }
+              }
+
+              // SEC subjects are not displayed
+              // if (/Skill Enhancement Course/i.test(label) || /SEC/i.test(label)) return "SEC";
               if (/Ability Enhancement Course/i.test(label) || /AEC/i.test(label)) return "AEC";
               if (/Common Value Added Course/i.test(label) || /CVAC/i.test(label)) return "CVAC";
               return undefined;
@@ -1287,6 +1340,30 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadedDocuments]);
 
+  // Check if student is in MA or MCOM program (should not show CU registration form)
+  const isMaOrMcomProgram = (() => {
+    if (!studentData?.programCourse?.name) return false;
+
+    const normalizedName = studentData.programCourse.name
+      .normalize("NFKD")
+      .replace(/[^A-Za-z]/g, "")
+      .toUpperCase();
+
+    // Check for MA (but not Mathematics - MA should be exactly "MA" or start with "MA" followed by non-letter)
+    const isMA =
+      normalizedName === "MA" ||
+      (normalizedName.startsWith("MA") && normalizedName.length > 2 && !normalizedName.startsWith("MATHEMATICS"));
+
+    // Check for MCOM
+    const isMCOM = normalizedName.startsWith("MCOM");
+
+    return isMA || isMCOM;
+  })();
+
+  console.log("[CU-REG MAIN-CONSOLE] Program course name:", studentData?.programCourse?.name);
+  console.log("[CU-REG MAIN-CONSOLE] Is MA or MCOM program:", isMaOrMcomProgram);
+  console.log("[CU-REG MAIN-CONSOLE] Is BCOM program:", isBcomProgram);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
@@ -1294,6 +1371,26 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading CU registration data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect MA and MCOM students
+  if (isMaOrMcomProgram) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-yellow-800 mb-2">CU Registration Not Available</h2>
+              <p className="text-yellow-700">
+                CU Registration form is not available for {studentData?.programCourse?.course?.name} students.
+                <br />
+                Redirecting to dashboard...
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -1355,9 +1452,20 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                     console.error(`[CU-REG MAIN-CONSOLE] Invalid PDF URL received:`, pdfUrl);
                     toast.error("Failed to get valid PDF URL");
                   }
-                } catch (error) {
+                } catch (error: unknown) {
                   console.error(`[CU-REG MAIN-CONSOLE] Error opening admission form PDF:`, error);
-                  toast.error("Failed to open admission form PDF");
+
+                  // Check if it's a 400 error (declarations not completed)
+                  if (error && typeof error === "object" && "response" in error && error.response) {
+                    const apiError = error as { response: { status?: number } };
+                    if (apiError.response.status === 400) {
+                      toast.error("Please complete all required declarations before viewing the PDF");
+                    } else {
+                      toast.error("Failed to open admission form PDF");
+                    }
+                  } else {
+                    toast.error("Failed to open admission form PDF");
+                  }
                 }
               }}
             >
@@ -2014,86 +2122,97 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.entries(subjectsData).map(([category, semesters]) => (
-                            <tr key={category} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
-                                {category}
-                              </td>
-                              {Object.entries(semesters).map(([sem, value]) => {
-                                const mandatorySubjectsList =
-                                  (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
-                                    sem as keyof typeof semesters
-                                  ] as string[]) || [];
-                                const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
+                          {Object.entries(subjectsData)
+                            .filter(([category]) => category !== "SEC") // Remove SEC subjects from display
+                            .map(([category, semesters]) => (
+                              <tr key={category} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
+                                  {/* Show MDC instead of IDC for BCOM students */}
+                                  {category === "IDC" && isBcomProgram ? "MDC" : category}
+                                </td>
+                                {Object.entries(semesters).map(([sem, value]) => {
+                                  const mandatorySubjectsList =
+                                    (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
+                                      sem as keyof typeof semesters
+                                    ] as string[]) || [];
+                                  const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
 
-                                return (
-                                  <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
-                                    <div className="text-sm text-gray-900">
-                                      {(() => {
-                                        // Combine all subjects (mandatory + optional) into one array
-                                        const allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
+                                  return (
+                                    <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
+                                      <div className="text-sm text-gray-900">
+                                        {(() => {
+                                          // Combine all subjects (mandatory + optional) into one array
+                                          const allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
 
-                                        // Add mandatory subjects
-                                        mandatorySubjectsList.forEach((subject) => {
-                                          allSubjects.push({ name: subject, isMandatory: true });
-                                        });
-
-                                        // Add optional subjects (filter out duplicates)
-                                        const filteredSubjects = studentSubjectsList.filter(
-                                          (subject) => !mandatorySubjectsList.includes(subject),
-                                        );
-                                        filteredSubjects.forEach((subject) => {
-                                          allSubjects.push({ name: subject, isMandatory: false });
-                                        });
-
-                                        // For Minor category, if sem4 is empty and sem3 has subjects, duplicate sem3 subjects to sem4
-                                        if (category === "Minor" && sem === "sem4" && allSubjects.length === 0) {
-                                          const sem3Mandatory =
-                                            (mandatorySubjects[category as keyof typeof mandatorySubjects]
-                                              ?.sem3 as string[]) || [];
-                                          const sem3Student = Array.isArray(semesters.sem3)
-                                            ? semesters.sem3
-                                            : semesters.sem3
-                                              ? [semesters.sem3]
-                                              : [];
-
-                                          // Add sem3 mandatory subjects
-                                          sem3Mandatory.forEach((subject) => {
+                                          // Add mandatory subjects
+                                          mandatorySubjectsList.forEach((subject) => {
                                             allSubjects.push({ name: subject, isMandatory: true });
                                           });
 
-                                          // Add sem3 student subjects (filter out duplicates)
-                                          const filteredSem3Subjects = sem3Student.filter(
-                                            (subject) => !sem3Mandatory.includes(subject),
+                                          // Add optional subjects (filter out duplicates)
+                                          const filteredSubjects = studentSubjectsList.filter(
+                                            (subject) => !mandatorySubjectsList.includes(subject),
                                           );
-                                          filteredSem3Subjects.forEach((subject) => {
+                                          filteredSubjects.forEach((subject) => {
                                             allSubjects.push({ name: subject, isMandatory: false });
                                           });
-                                        }
 
-                                        // If no subjects, display Not Applicable
-                                        if (allSubjects.length === 0) {
-                                          return <span className="text-gray-500 italic">Not Applicable</span>;
-                                        }
+                                          // For Minor category, if sem4 is empty and sem3 has subjects, duplicate sem3 subjects to sem4
+                                          if (category === "Minor" && sem === "sem4" && allSubjects.length === 0) {
+                                            const sem3Mandatory =
+                                              (mandatorySubjects[category as keyof typeof mandatorySubjects]
+                                                ?.sem3 as string[]) || [];
+                                            const sem3Student = Array.isArray(semesters.sem3)
+                                              ? semesters.sem3
+                                              : semesters.sem3
+                                                ? [semesters.sem3]
+                                                : [];
 
-                                        // Render all subjects as ordered list
-                                        return (
-                                          <div className="text-sm text-gray-900">
-                                            {allSubjects.map((subject, index) => (
-                                              <span key={`subject-${index}`}>
-                                                {subject.name}
-                                                {index < allSubjects.length - 1 && ", "}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        );
-                                      })()}
-                                    </div>
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ))}
+                                            // Add sem3 mandatory subjects
+                                            sem3Mandatory.forEach((subject) => {
+                                              allSubjects.push({ name: subject, isMandatory: true });
+                                            });
+
+                                            // Add sem3 student subjects (filter out duplicates)
+                                            const filteredSem3Subjects = sem3Student.filter(
+                                              (subject) => !sem3Mandatory.includes(subject),
+                                            );
+                                            filteredSem3Subjects.forEach((subject) => {
+                                              allSubjects.push({ name: subject, isMandatory: false });
+                                            });
+                                          }
+
+                                          // If no subjects, display Not Applicable or MDC-specific message
+                                          if (allSubjects.length === 0) {
+                                            // For BCOM students, show specific message for MDC
+                                            if (category === "IDC" && isBcomProgram) {
+                                              return (
+                                                <span className="text-gray-500 italic">
+                                                  MDC subjects not available for this program
+                                                </span>
+                                              );
+                                            }
+                                            return <span className="text-gray-500 italic">Not Applicable</span>;
+                                          }
+
+                                          // Render all subjects as ordered list
+                                          return (
+                                            <div className="text-sm text-gray-900">
+                                              {allSubjects.map((subject, index) => (
+                                                <span key={`subject-${index}`}>
+                                                  {subject.name}
+                                                  {index < allSubjects.length - 1 && ", "}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          );
+                                        })()}
+                                      </div>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                     </div>

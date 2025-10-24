@@ -93,6 +93,62 @@ export default function CURegistrationPage() {
   const [instructionsConfirmed, setInstructionsConfirmed] = useState(false);
   const hasAutoNavigatedRef = React.useRef(false);
 
+  // Check if student's program course is MA or MCOM (redirect if so)
+  const isBlockedProgram = React.useMemo(() => {
+    if (!student?.programCourse?.name) return false;
+
+    const rawName = student.programCourse.name;
+    const normalizedName = rawName
+      .normalize("NFKD")
+      .replace(/[^A-Za-z]/g, "")
+      .toUpperCase();
+
+    // Check for MA (but not Mathematics - MA should be exactly "MA" or start with "MA" followed by non-letter)
+    const isMA =
+      normalizedName === "MA" ||
+      (normalizedName.startsWith("MA") && normalizedName.length > 2 && !normalizedName.startsWith("MATHEMATICS"));
+
+    // Check for MCOM
+    const isMCOM = normalizedName.startsWith("MCOM");
+
+    return isMA || isMCOM;
+  }, [student?.programCourse?.name]);
+
+  // Check if student's program course is BCOM (for MDC subjects)
+  const isBcomProgram = React.useMemo(() => {
+    if (!student?.programCourse?.name) return false;
+
+    const rawName = student.programCourse.name;
+    const normalizedName = rawName
+      .normalize("NFKD")
+      .replace(/[^A-Za-z]/g, "")
+      .toUpperCase();
+
+    return normalizedName.startsWith("BCOM");
+  }, [student?.programCourse?.name]);
+
+  // Redirect MA and MCOM students back to dashboard
+  React.useEffect(() => {
+    if (isBlockedProgram) {
+      console.info("[CU-REG FRONTEND] Student is in MA/MCOM program, redirecting to dashboard");
+      router.push("/dashboard");
+    }
+  }, [isBlockedProgram, router]);
+
+  // Show loading while checking program
+  if (isBlockedProgram) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Redirecting...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Debug: Track activeTab changes
   React.useEffect(() => {
     console.info("[CU-REG FRONTEND] activeTab changed to:", activeTab);
@@ -527,13 +583,51 @@ export default function CURegistrationPage() {
           return Array.from(new Set(nums));
         };
         const getCategoryKey = (label: string): keyof typeof next | undefined => {
+          console.log(`🔍 getCategoryKey called with label: "${label}", isBcomProgram: ${isBcomProgram}`);
+
           // Map full subject type names to category keys
-          if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label)) return "DSCC" as any;
-          if (/Minor/i.test(label)) return "Minor" as any;
-          if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) return "IDC" as any;
-          if (/Skill Enhancement Course/i.test(label) || /SEC/i.test(label)) return "SEC" as any;
-          if (/Ability Enhancement Course/i.test(label) || /AEC/i.test(label)) return "AEC" as any;
-          if (/Common Value Added Course/i.test(label) || /CVAC/i.test(label)) return "CVAC" as any;
+          if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label)) {
+            console.log(`🔍 getCategoryKey: Matched DSCC`);
+            return "DSCC" as any;
+          }
+          if (/Minor/i.test(label)) {
+            console.log(`🔍 getCategoryKey: Matched Minor`);
+            return "Minor" as any;
+          }
+
+          // For BCOM students, show MDC instead of IDC
+          if (isBcomProgram) {
+            if (
+              /Major Discipline Course/i.test(label) ||
+              /Multi Disciplinary Course/i.test(label) ||
+              /MDC/i.test(label)
+            ) {
+              console.log(`🔍 getCategoryKey: BCOM - Matched MDC, mapping to IDC slot`);
+              return "IDC" as any; // Map MDC to IDC slot for BCOM
+            }
+            if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) {
+              console.log(`🔍 getCategoryKey: BCOM - Matched IDC, hiding`);
+              return undefined; // Hide IDC for BCOM
+            }
+          } else {
+            if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) {
+              console.log(`🔍 getCategoryKey: Non-BCOM - Matched IDC`);
+              return "IDC" as any;
+            }
+          }
+
+          // SEC subjects are not displayed
+          // if (/Skill Enhancement Course/i.test(label) || /SEC/i.test(label)) return "SEC" as any;
+          if (/Ability Enhancement Course/i.test(label) || /AEC/i.test(label)) {
+            console.log(`🔍 getCategoryKey: Matched AEC`);
+            return "AEC" as any;
+          }
+          if (/Common Value Added Course/i.test(label) || /CVAC/i.test(label)) {
+            console.log(`🔍 getCategoryKey: Matched CVAC`);
+            return "CVAC" as any;
+          }
+
+          console.log(`🔍 getCategoryKey: No match found for label: "${label}"`);
           return undefined;
         };
 
@@ -543,6 +637,8 @@ export default function CURegistrationPage() {
         console.log("🔍 studentRows.selectedMinorSubjects:", studentRows?.selectedMinorSubjects);
         console.log("🔍 studentRows.studentSubjectsSelection:", studentRows?.studentSubjectsSelection);
         console.log("🔍 studentRows.hasFormSubmissions:", studentRows?.hasFormSubmissions);
+        console.log("🔍 isBcomProgram:", isBcomProgram);
+        console.log("🔍 student program course:", student?.programCourse?.name);
 
         const actualSelections = studentRows?.actualStudentSelections || [];
         console.log("🔍 Processing actual student selections:", actualSelections);
@@ -552,7 +648,11 @@ export default function CURegistrationPage() {
           console.log(`🔍 Processing selection ${index}:`, r);
           const label = String(r?.subjectSelectionMeta?.label || "");
           const name = r?.subject?.name || r?.subject?.code || "";
-          console.log(`🔍 Selection ${index} - label: "${label}", name: "${name}"`);
+          const subjectTypeName = String(r?.subjectSelectionMeta?.subjectType?.name || "");
+          console.log(
+            `🔍 Selection ${index} - label: "${label}", name: "${name}", subjectTypeName: "${subjectTypeName}"`,
+          );
+          console.log(`🔍 Selection ${index} - isBcomProgram: ${isBcomProgram}`);
           if (!label || !name) {
             console.log(`🔍 Selection ${index} - skipping due to missing label or name`);
             return;
@@ -570,9 +670,22 @@ export default function CURegistrationPage() {
           if (semesters.length === 0 && /Minor\s*1/i.test(label)) semesters = [1, 2];
           if (semesters.length === 0 && /Minor\s*2/i.test(label)) semesters = [3, 4];
           if (semesters.length === 0 && /Minor\s*3/i.test(label)) semesters = [3];
-          if (semesters.length === 0 && /IDC\s*1/i.test(label)) semesters = [1];
-          if (semesters.length === 0 && /IDC\s*2/i.test(label)) semesters = [2];
-          if (semesters.length === 0 && /IDC\s*3/i.test(label)) semesters = [3];
+
+          // Handle IDC/MDC subjects based on program
+          if (isBcomProgram) {
+            // For BCOM students, handle MDC subjects
+            if (semesters.length === 0 && /MDC\s*1/i.test(label)) semesters = [1];
+            if (semesters.length === 0 && /MDC\s*2/i.test(label)) semesters = [2];
+            if (semesters.length === 0 && /MDC\s*3/i.test(label)) semesters = [3];
+            if (semesters.length === 0 && /Major Discipline Course/i.test(label)) semesters = [1, 2, 3]; // Default for MDC
+            if (semesters.length === 0 && /Multi Disciplinary Course/i.test(label)) semesters = [1, 2, 3]; // Default for MDC
+          } else {
+            // For non-BCOM students, handle IDC subjects
+            if (semesters.length === 0 && /IDC\s*1/i.test(label)) semesters = [1];
+            if (semesters.length === 0 && /IDC\s*2/i.test(label)) semesters = [2];
+            if (semesters.length === 0 && /IDC\s*3/i.test(label)) semesters = [3];
+          }
+
           if (semesters.length === 0 && /AEC/i.test(label)) semesters = [3, 4];
           if (semesters.length === 0 && /CVAC/i.test(label)) semesters = [2];
           if (semesters.length === 0) {
@@ -624,11 +737,26 @@ export default function CURegistrationPage() {
             if (/Minor\s*1/i.test(subjectTypeName)) semesters = [1, 2];
             else if (/Minor\s*2/i.test(subjectTypeName)) semesters = [3, 4];
             else if (/Minor\s*3/i.test(subjectTypeName)) semesters = [3];
-            else if (/IDC\s*1/i.test(subjectTypeName)) semesters = [1];
-            else if (/IDC\s*2/i.test(subjectTypeName)) semesters = [2];
-            else if (/IDC\s*3/i.test(subjectTypeName)) semesters = [3];
-            else if (/AEC/i.test(subjectTypeName)) semesters = [3, 4];
+
+            // Handle IDC/MDC subjects based on program
+            if (isBcomProgram) {
+              // For BCOM students, handle MDC subjects
+              if (/MDC\s*1/i.test(subjectTypeName)) semesters = [1];
+              else if (/MDC\s*2/i.test(subjectTypeName)) semesters = [2];
+              else if (/MDC\s*3/i.test(subjectTypeName)) semesters = [3];
+              else if (/Major Discipline Course/i.test(subjectTypeName))
+                semesters = [1, 2, 3]; // Default for MDC
+              else if (/Multi Disciplinary Course/i.test(subjectTypeName)) semesters = [1, 2, 3]; // Default for MDC
+            } else {
+              // For non-BCOM students, handle IDC subjects
+              if (/IDC\s*1/i.test(subjectTypeName)) semesters = [1];
+              else if (/IDC\s*2/i.test(subjectTypeName)) semesters = [2];
+              else if (/IDC\s*3/i.test(subjectTypeName)) semesters = [3];
+            }
+
+            if (/AEC/i.test(subjectTypeName)) semesters = [3, 4];
             else if (/CVAC/i.test(subjectTypeName)) semesters = [2];
+            // SEC subjects are not displayed
             else {
               // Default to all semesters if we can't determine
               semesters = [1, 2, 3, 4];
@@ -791,17 +919,7 @@ export default function CURegistrationPage() {
             },
           });
 
-          // Auto-navigate to personal tab if instructions are already confirmed
-          if (existing.introductoryDeclaration === true) {
-            console.info("[CU-REG FRONTEND] Instructions already confirmed, auto-navigating to personal tab");
-            setTimeout(() => {
-              setActiveTab("personal");
-            }, 100); // Small delay to ensure state is updated
-          } else {
-            // If instructions are not confirmed, ensure we're on the introductory tab
-            console.info("[CU-REG FRONTEND] Instructions not confirmed, staying on introductory tab");
-            setActiveTab("introductory");
-          }
+          // Removed conflicting auto-navigation logic - main auto-navigation will handle this
 
           // Set uploaded documents from the existing request
           if (existing.documents) {
@@ -848,20 +966,7 @@ export default function CURegistrationPage() {
     setDocumentsConfirmed(!!correctionRequest.documentsDeclaration);
   }, [correctionRequest]);
 
-  // Immediate auto-navigation when correction request is loaded
-  useEffect(() => {
-    if (!correctionRequest) return;
-
-    console.info("[CU-REG FRONTEND] Immediate auto-navigation check:", {
-      introductoryDeclaration: correctionRequest.introductoryDeclaration,
-      currentActiveTab: activeTab,
-    });
-
-    if (correctionRequest.introductoryDeclaration === true && activeTab === "introductory") {
-      console.info("[CU-REG FRONTEND] Immediate navigation to personal tab");
-      setActiveTab("personal");
-    }
-  }, [correctionRequest]);
+  // Removed immediate auto-navigation logic to prevent conflicts with main auto-navigation
 
   // Auto-switch to next tab on load/refresh based on completed declarations
   useEffect(() => {
@@ -883,18 +988,33 @@ export default function CURegistrationPage() {
       currentActiveTab: activeTab,
     });
 
-    let nextTab = "introductory";
-    if (i && !p) nextTab = "personal";
-    else if (i && p && !a) nextTab = "address";
-    else if (i && p && a && !s) nextTab = "subjects";
-    else if (i && p && a && s && !d) nextTab = "documents";
+    // Simple logic: find the first incomplete declaration and navigate to that tab
+    let nextTab = "introductory"; // Default to introductory
+
+    if (!i) {
+      nextTab = "introductory";
+    } else if (!p) {
+      nextTab = "personal";
+    } else if (!a) {
+      nextTab = "address";
+    } else if (!s) {
+      nextTab = "subjects";
+    } else if (!d) {
+      nextTab = "documents";
+    } else {
+      // All declarations are complete, stay on documents
+      nextTab = "documents";
+    }
 
     console.info("[CU-REG FRONTEND] Auto-navigation decision:", { nextTab, currentTab: activeTab });
+
+    // Auto-navigate to the appropriate tab based on completed declarations
+    // Only navigate if we're not already on the correct tab
     if (nextTab !== activeTab) {
       console.info("[CU-REG FRONTEND] Auto-navigating to:", nextTab);
       setActiveTab(nextTab);
     }
-  }, [correctionRequest]);
+  }, [correctionRequest]); // Removed activeTab dependency to prevent conflicts with manual navigation
 
   // Auto-hide status alert after 2 seconds
   useEffect(() => {
@@ -1088,7 +1208,11 @@ export default function CURegistrationPage() {
         console.info("[CU-REG FRONTEND] Debug - updateData.payload.personalInfo:", updateData.payload.personalInfo);
         console.info("[CU-REG FRONTEND] Debug - correctionFlags being sent:", correctionFlags);
         console.info("[CU-REG FRONTEND] Debug - flags object being sent:", updateData.flags);
-        await updateCuCorrectionRequest(correctionRequestId, updateData as any);
+        await submitPersonalInfoDeclaration({
+          correctionRequestId,
+          flags: updateData.flags,
+          personalInfo: updateData.payload.personalInfo,
+        });
         console.info("[CU-REG FRONTEND] Personal declaration and data submitted");
 
         // Refresh local correction request to reflect saved declarations/flags
@@ -1306,7 +1430,10 @@ export default function CURegistrationPage() {
           console.info("[CU-REG FRONTEND] Debug - Address flags being sent:", updateData.flags);
           console.info("[CU-REG FRONTEND] Debug - Address payload being sent:", updateData.payload);
 
-          await updateCuCorrectionRequest(correctionRequestId, updateData as any);
+          await submitAddressInfoDeclaration({
+            correctionRequestId,
+            addressData: updateData.payload.addressData,
+          });
           console.info("[CU-REG FRONTEND] Address declaration and data submitted");
 
           // Refresh local correction request to reflect saved declarations/flags
@@ -1406,17 +1533,15 @@ export default function CURegistrationPage() {
           subjectsFlag: correctionFlags.subjects,
         });
 
-        const updateData = {
+        const subjectsData = {
+          correctionRequestId,
           flags: { subjects: correctionFlags.subjects },
-          payload: {}, // Subjects don't have specific data to save
-          // Only set declaration flag if it's a new declaration
-          ...(checked && { subjectsDeclaration: true }),
         };
 
-        console.info("[CU-REG FRONTEND] Sending Subjects update data:", updateData);
-        console.info("[CU-REG FRONTEND] Debug - Subjects flags being sent:", updateData.flags);
+        console.info("[CU-REG FRONTEND] Sending Subjects declaration data:", subjectsData);
+        console.info("[CU-REG FRONTEND] Debug - Subjects flags being sent:", subjectsData.flags);
 
-        await updateCuCorrectionRequest(correctionRequestId, updateData as any);
+        await submitSubjectsDeclaration(subjectsData);
         console.info("[CU-REG FRONTEND] Subjects declaration and data submitted");
 
         // Refresh local correction request to reflect saved declarations/flags
@@ -1462,10 +1587,69 @@ export default function CURegistrationPage() {
   };
 
   const handleFileUpload = (documentType: keyof typeof documents, file: File | null) => {
+    if (file) {
+      // Get file size limits for this document type
+      const limits = getFileSizeLimit(documentType);
+      const fileSizeKB = file.size / 1024;
+      const fileSizeMB = file.size / (1024 * 1024);
+
+      console.info(`[CU-REG FRONTEND] File upload validation:`, {
+        documentType,
+        fileName: file.name,
+        fileSizeKB: fileSizeKB.toFixed(2),
+        fileSizeMB: fileSizeMB.toFixed(2),
+        maxSizeKB: limits.maxSizeKB,
+        maxSizeMB: limits.maxSizeMB,
+        isValid: fileSizeKB <= limits.maxSizeKB,
+      });
+
+      // Validate file size
+      if (fileSizeKB > limits.maxSizeKB) {
+        toast.error(
+          `File size (${fileSizeMB.toFixed(2)}MB) exceeds the maximum allowed size (${limits.maxSizeMB}MB) for ${documentType}`,
+        );
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`Invalid file type. Only JPEG and PNG files are allowed.`);
+        return;
+      }
+    }
+
     setDocuments((prev) => ({
       ...prev,
       [documentType]: file,
     }));
+  };
+
+  // Helper function to create file input onChange handler
+  const createFileInputHandler = (documentType: keyof typeof documents) => {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0] || null;
+      handleFileUpload(documentType, file);
+    };
+  };
+
+  // Helper function to format file size
+  const formatFileSize = (bytes: number): string => {
+    const sizeKB = bytes / 1024;
+    const sizeMB = bytes / (1024 * 1024);
+
+    if (sizeMB >= 1) {
+      return `${sizeMB.toFixed(2)} MB`;
+    } else {
+      return `${sizeKB.toFixed(2)} KB`;
+    }
+  };
+
+  // Helper function to check if file size is valid
+  const isFileSizeValid = (file: File, documentType: keyof typeof documents): boolean => {
+    const limits = getFileSizeLimit(documentType);
+    const fileSizeKB = file.size / 1024;
+    return fileSizeKB <= limits.maxSizeKB;
   };
 
   const handleFilePreview = (file: File) => {
@@ -1758,18 +1942,36 @@ export default function CURegistrationPage() {
     // Check if instructions are confirmed (either locally or from correction request)
     const instructionsConfirmedState = instructionsConfirmed || correctionRequest?.introductoryDeclaration;
 
-    // Original logic for editable form
+    // Check if personal info is declared
+    const personalDeclaredState = personalDeclared || correctionRequest?.personalInfoDeclaration;
+
+    // Check if address info is declared
+    const addressDeclaredState = addressDeclared || correctionRequest?.addressInfoDeclaration;
+
+    // Check if subjects are declared
+    const subjectsDeclaredState = subjectsDeclared || correctionRequest?.subjectsDeclaration;
+
+    // Allow navigation based on completed declarations
     switch (tabName) {
       case "introductory":
         return true; // Always allow access to introductory tab
       case "personal":
         return instructionsConfirmedState; // Require instructions confirmation
       case "address":
-        return instructionsConfirmedState && isPersonalTabValid();
+        return instructionsConfirmedState && (personalDeclaredState || isPersonalTabValid());
       case "subjects":
-        return instructionsConfirmedState && isPersonalTabValid() && isAddressTabValid();
+        return (
+          instructionsConfirmedState &&
+          (personalDeclaredState || isPersonalTabValid()) &&
+          (addressDeclaredState || isAddressTabValid())
+        );
       case "documents":
-        return instructionsConfirmedState && isPersonalTabValid() && isAddressTabValid() && isSubjectsTabValid();
+        return (
+          instructionsConfirmedState &&
+          (personalDeclaredState || isPersonalTabValid()) &&
+          (addressDeclaredState || isAddressTabValid()) &&
+          (subjectsDeclaredState || isSubjectsTabValid())
+        );
       default:
         return false;
     }
@@ -1822,11 +2024,11 @@ export default function CURegistrationPage() {
         >
           {/* Header */}
           {/* Dynamic heading - Hide for final submission statuses */}
-          {!(correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone) && (
+          {/* {!(correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone) && (
             <div className="text-center mb-6 sm:mb-8">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Admission & Registration Data</h1>
             </div>
-          )}
+          )} */}
 
           {/* Success Alert Message with Correction Flags - Show only when all declarations are completed and final submission is done */}
 
@@ -2221,8 +2423,8 @@ export default function CURegistrationPage() {
                             </div>
                           </div>
 
-                          {/* Auto-navigation message */}
-                          {instructionsConfirmed && (
+                          {/* Auto-navigation message - only show when actually navigating */}
+                          {/* {instructionsConfirmed && activeTab === "introductory" && (
                             <div className="flex justify-center pt-4">
                               <div className="text-center">
                                 <div className="flex items-center justify-center space-x-2 text-green-600">
@@ -2231,7 +2433,7 @@ export default function CURegistrationPage() {
                                 </div>
                               </div>
                             </div>
-                          )}
+                          )} */}
                         </div>
                       </div>
                     </TabsContent>
@@ -2792,7 +2994,8 @@ export default function CURegistrationPage() {
                               Semesters I to IV and the subjects selected by you under Subject Selection Option
                             </li>
                             <li>
-                              In case you wish to change the order of the subjects chosen by you under Minor or IDC
+                              In case you wish to change the order of the subjects chosen by you under Minor or{" "}
+                              {isBcomProgram ? "MDC" : "IDC"}
                               categories only, you can click on the slider on the top right side of the page to register
                               a correction
                             </li>
@@ -2848,86 +3051,101 @@ export default function CURegistrationPage() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {Object.entries(subjectsData).map(([category, semesters]) => (
-                                  <tr key={category} className="hover:bg-gray-50">
-                                    <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
-                                      {category}
-                                    </td>
-                                    {Object.entries(semesters).map(([sem, value]) => {
-                                      const mandatorySubjectsList =
-                                        (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
-                                          sem as keyof typeof semesters
-                                        ] as string[]) || [];
-                                      const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
+                                {Object.entries(subjectsData)
+                                  .filter(([category]) => category !== "SEC") // Remove SEC subjects from display
+                                  .map(([category, semesters]) => (
+                                    <tr key={category} className="hover:bg-gray-50">
+                                      <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
+                                        {/* Show MDC instead of IDC for BCOM students */}
+                                        {category === "IDC" && isBcomProgram ? "MDC" : category}
+                                      </td>
+                                      {Object.entries(semesters).map(([sem, value]) => {
+                                        const mandatorySubjectsList =
+                                          (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
+                                            sem as keyof typeof semesters
+                                          ] as string[]) || [];
+                                        const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
 
-                                      return (
-                                        <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
-                                          <div className="text-sm text-gray-900">
-                                            {(() => {
-                                              // Combine all subjects (mandatory + optional) into one array
-                                              let allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
+                                        return (
+                                          <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
+                                            <div className="text-sm text-gray-900">
+                                              {(() => {
+                                                // Combine all subjects (mandatory + optional) into one array
+                                                let allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
 
-                                              // Add mandatory subjects
-                                              mandatorySubjectsList.forEach((subject) => {
-                                                allSubjects.push({ name: subject, isMandatory: true });
-                                              });
-
-                                              // Add optional subjects (filter out duplicates)
-                                              const filteredSubjects = studentSubjectsList.filter(
-                                                (subject) => !mandatorySubjectsList.includes(subject),
-                                              );
-                                              filteredSubjects.forEach((subject) => {
-                                                allSubjects.push({ name: subject, isMandatory: false });
-                                              });
-
-                                              // For Minor category, if sem4 is empty and sem3 has subjects, duplicate sem3 subjects to sem4
-                                              if (category === "Minor" && sem === "sem4" && allSubjects.length === 0) {
-                                                const sem3Mandatory =
-                                                  (mandatorySubjects[category as keyof typeof mandatorySubjects]
-                                                    ?.sem3 as string[]) || [];
-                                                const sem3Student = Array.isArray(semesters.sem3)
-                                                  ? semesters.sem3
-                                                  : semesters.sem3
-                                                    ? [semesters.sem3]
-                                                    : [];
-
-                                                // Add sem3 mandatory subjects
-                                                sem3Mandatory.forEach((subject) => {
+                                                // Add mandatory subjects
+                                                mandatorySubjectsList.forEach((subject) => {
                                                   allSubjects.push({ name: subject, isMandatory: true });
                                                 });
 
-                                                // Add sem3 student subjects (filter out duplicates)
-                                                const filteredSem3Subjects = sem3Student.filter(
-                                                  (subject) => !sem3Mandatory.includes(subject),
+                                                // Add optional subjects (filter out duplicates)
+                                                const filteredSubjects = studentSubjectsList.filter(
+                                                  (subject) => !mandatorySubjectsList.includes(subject),
                                                 );
-                                                filteredSem3Subjects.forEach((subject) => {
+                                                filteredSubjects.forEach((subject) => {
                                                   allSubjects.push({ name: subject, isMandatory: false });
                                                 });
-                                              }
 
-                                              // If no subjects, display Not Applicable
-                                              if (allSubjects.length === 0) {
-                                                return <span className="text-gray-500 italic">Not Applicable</span>;
-                                              }
+                                                // For Minor category, if sem4 is empty and sem3 has subjects, duplicate sem3 subjects to sem4
+                                                if (
+                                                  category === "Minor" &&
+                                                  sem === "sem4" &&
+                                                  allSubjects.length === 0
+                                                ) {
+                                                  const sem3Mandatory =
+                                                    (mandatorySubjects[category as keyof typeof mandatorySubjects]
+                                                      ?.sem3 as string[]) || [];
+                                                  const sem3Student = Array.isArray(semesters.sem3)
+                                                    ? semesters.sem3
+                                                    : semesters.sem3
+                                                      ? [semesters.sem3]
+                                                      : [];
 
-                                              // Render all subjects as ordered list
-                                              return (
-                                                <div className="text-sm text-gray-900">
-                                                  {allSubjects.map((subject, index) => (
-                                                    <span key={`subject-${index}`}>
-                                                      {subject.name}
-                                                      {index < allSubjects.length - 1 && ", "}
-                                                    </span>
-                                                  ))}
-                                                </div>
-                                              );
-                                            })()}
-                                          </div>
-                                        </td>
-                                      );
-                                    })}
-                                  </tr>
-                                ))}
+                                                  // Add sem3 mandatory subjects
+                                                  sem3Mandatory.forEach((subject) => {
+                                                    allSubjects.push({ name: subject, isMandatory: true });
+                                                  });
+
+                                                  // Add sem3 student subjects (filter out duplicates)
+                                                  const filteredSem3Subjects = sem3Student.filter(
+                                                    (subject) => !sem3Mandatory.includes(subject),
+                                                  );
+                                                  filteredSem3Subjects.forEach((subject) => {
+                                                    allSubjects.push({ name: subject, isMandatory: false });
+                                                  });
+                                                }
+
+                                                // If no subjects, display appropriate message
+                                                if (allSubjects.length === 0) {
+                                                  // For BCOM students, show specific message for MDC
+                                                  if (category === "IDC" && isBcomProgram) {
+                                                    return (
+                                                      <span className="text-gray-500 italic">
+                                                        MDC subjects not available for this program
+                                                      </span>
+                                                    );
+                                                  }
+                                                  return <span className="text-gray-500 italic">Not Applicable</span>;
+                                                }
+
+                                                // Render all subjects as ordered list
+                                                return (
+                                                  <div className="text-sm text-gray-900">
+                                                    {allSubjects.map((subject, index) => (
+                                                      <span key={`subject-${index}`}>
+                                                        {subject.name}
+                                                        {index < allSubjects.length - 1 && ", "}
+                                                      </span>
+                                                    ))}
+                                                  </div>
+                                                );
+                                              })()}
+                                            </div>
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
                               </tbody>
                             </table>
                           </div>
@@ -3149,7 +3367,7 @@ export default function CURegistrationPage() {
                                       sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
                                       type: f?.type,
                                     });
-                                    setDocuments((prev) => ({ ...prev, classXIIMarksheet: f }));
+                                    handleFileUpload("classXIIMarksheet", f);
                                   }}
                                 />
                               </div>
@@ -3177,9 +3395,16 @@ export default function CURegistrationPage() {
                                       <p className="text-xs text-gray-600 truncate">
                                         {documents.classXIIMarksheet.name}
                                       </p>
-                                      <p className="text-xs text-gray-500">
-                                        {(documents.classXIIMarksheet.size / 1024 / 1024).toFixed(2)} MB
-                                      </p>
+                                      <div className="flex items-center space-x-2">
+                                        <p className="text-xs text-gray-500">
+                                          {formatFileSize(documents.classXIIMarksheet.size)}
+                                        </p>
+                                        {!isFileSizeValid(documents.classXIIMarksheet, "classXIIMarksheet") && (
+                                          <span className="text-xs text-red-500 font-medium">
+                                            (Exceeds {getFileSizeLimit("classXIIMarksheet").maxSizeKB}KB limit)
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
@@ -3226,7 +3451,7 @@ export default function CURegistrationPage() {
                                       sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
                                       type: f?.type,
                                     });
-                                    setDocuments((prev) => ({ ...prev, aadhaarCard: f }));
+                                    handleFileUpload("aadhaarCard", f);
                                   }}
                                 />
                               </div>
@@ -3299,7 +3524,7 @@ export default function CURegistrationPage() {
                                       sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
                                       type: f?.type,
                                     });
-                                    setDocuments((prev) => ({ ...prev, apaarIdCard: f }));
+                                    handleFileUpload("apaarIdCard", f);
                                   }}
                                 />
                               </div>
@@ -3371,13 +3596,7 @@ export default function CURegistrationPage() {
                                   className="hidden"
                                   onChange={(e) => {
                                     const f = e.target.files?.[0] || null;
-                                    console.info(`[CU-REG FRONTEND] Father Photo ID file selected:`, {
-                                      name: f?.name,
-                                      size: f?.size,
-                                      sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                      type: f?.type,
-                                    });
-                                    setDocuments((prev) => ({ ...prev, fatherPhotoId: f }));
+                                    handleFileUpload("fatherPhotoId", f);
                                   }}
                                 />
                               </div>
@@ -3455,7 +3674,7 @@ export default function CURegistrationPage() {
                                       sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
                                       type: f?.type,
                                     });
-                                    setDocuments((prev) => ({ ...prev, motherPhotoId: f }));
+                                    handleFileUpload("motherPhotoId", f);
                                   }}
                                 />
                               </div>
@@ -3529,7 +3748,7 @@ export default function CURegistrationPage() {
                                         sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
                                         type: f?.type,
                                       });
-                                      setDocuments((prev) => ({ ...prev, ewsCertificate: f }));
+                                      handleFileUpload("ewsCertificate", f);
                                     }}
                                   />
                                 </div>
