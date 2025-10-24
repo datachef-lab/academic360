@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar, unique } from "drizzle-orm/pg-core";
 
 import { stateModel } from "@/schemas/models/resources";
 
@@ -16,7 +16,9 @@ export const cityModel = pgTable("cities", {
     isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+    legacyIdStateIdNameUnique: unique().on(table.legacyCityId, table.stateId, table.name),
+}));
 
 export const cityRelations = relations(cityModel, ({ one }) => ({
     state: one(stateModel, {
