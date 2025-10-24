@@ -5,6 +5,10 @@ import {
   logout,
   postGoogleLogin,
   refresh,
+  requestPasswordReset,
+  resetPassword,
+  validateResetToken,
+  simplePasswordReset,
 } from "../controllers/auth.controller.js";
 import otpRouter from "./otp.routes.js";
 
@@ -39,6 +43,14 @@ router.get(
 router.get("/refresh", refresh);
 
 router.get("/logout", logout);
+
+// Password Reset Routes (no JWT required)
+router.post("/password-reset/request", requestPasswordReset);
+router.post("/password-reset/reset", resetPassword);
+router.get("/password-reset/validate/:token", validateResetToken);
+
+// Simple Password Reset (for testing - accepts email and new password directly)
+router.post("/simple-password-reset", simplePasswordReset);
 
 // OTP routes
 router.use("/otp", otpRouter);

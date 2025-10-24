@@ -8,7 +8,12 @@ import { handleError } from "@/utils/handleError.js";
 // import { findAllUsers, findUserByEmail, findUserById, saveUser, searchUser, toggleUser } from "../services/user.service.js";
 import { userTypeEnum } from "@repo/db/schemas/enums";
 import * as userService from "@/features/user/services/user.service.js";
-import { getUserStats } from "@/features/user/services/user.service.js";
+import {
+  getUserStats,
+  requestPasswordReset,
+  resetPassword,
+  validateResetToken,
+} from "@/features/user/services/user.service.js";
 import { generateExport } from "@/features/user/services/student.service.js";
 function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -261,6 +266,98 @@ export const getUserStatsHandler = async (
           "User statistics fetched successfully!",
         ),
       );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// Password Reset Controllers
+
+export const requestPasswordResetController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json(new ApiError(400, "Email is required"));
+      return;
+    }
+
+    const result = await requestPasswordReset(email);
+
+    if (result.success) {
+      res
+        .status(200)
+        .json(new ApiResponse(200, "SUCCESS", null, result.message));
+    } else {
+      res.status(400).json(new ApiError(400, result.message));
+    }
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const resetPasswordController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Token and new password are required"));
+      return;
+    }
+
+    const result = await resetPassword(token, newPassword);
+
+    if (result.success) {
+      res
+        .status(200)
+        .json(new ApiResponse(200, "SUCCESS", null, result.message));
+    } else {
+      res.status(400).json(new ApiError(400, result.message));
+    }
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const validateResetTokenController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      res.status(400).json(new ApiError(400, "Token is required"));
+      return;
+    }
+
+    const result = await validateResetToken(token);
+
+    if (result.success) {
+      res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            "SUCCESS",
+            { email: result.email },
+            result.message,
+          ),
+        );
+    } else {
+      res.status(400).json(new ApiError(400, result.message));
+    }
   } catch (error) {
     handleError(error, res, next);
   }

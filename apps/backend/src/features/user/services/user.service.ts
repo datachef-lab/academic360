@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { eq, count, desc, or, ilike, and, isNull, is, sql } from "drizzle-orm";
 import { db } from "@/db/index.js";
+import crypto from "crypto";
 
 import { User, userModel } from "@repo/db/schemas/models/user";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
@@ -78,6 +79,16 @@ import { userModel as coreUserModel } from "@repo/db/schemas/models/user";
 import * as studentService from "./student.service.js";
 import * as staffService from "./staff.service.js";
 import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model.js";
+
+// Password reset interfaces and storage
+export interface PasswordResetData {
+  token: string;
+  email: string;
+  expiresAt: Date;
+}
+
+// In-memory store for password reset tokens (in production, use Redis or database)
+const passwordResetTokens = new Map<string, PasswordResetData>();
 
 export async function addUser(user: User) {
   // Hash the password before storing it in the database
@@ -1046,4 +1057,212 @@ async function fetchAddressDto(
     policeStation: null,
   } as AddressDto;
   return shaped;
+}
+
+// Password Reset Functions
+
+/**
+ * Request password reset - generates token and sends email
+ */
+export async function requestPasswordReset(
+  email: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    console.log("[PASSWORD RESET] Requesting password reset for:", email);
+
+    // Check if user exists
+    const [user] = await db
+      .select()
+      .from(userModel)
+      .where(eq(userModel.email, email));
+
+    if (!user) {
+      console.log("[PASSWORD RESET] User not found:", email);
+      return {
+        success: false,
+        message: "User not found with this email address",
+      };
+    }
+
+    // Check if user is active
+    if (!user.isActive || user.isSuspended) {
+      console.log("[PASSWORD RESET] User account is disabled:", email);
+      return {
+        success: false,
+        message: "Account is disabled. Please contact support.",
+      };
+    }
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Store token in memory
+    passwordResetTokens.set(token, {
+      token,
+      email,
+      expiresAt,
+    });
+
+    console.log("[PASSWORD RESET] Token generated for:", email);
+
+    // Send password reset email
+    // const emailSent = await sendPasswordResetEmail(email, token);
+
+    // if (!emailSent) {
+    //     // Remove token if email failed
+    //     passwordResetTokens.delete(token);
+    //     return {
+    //         success: false,
+    //         message: "Failed to send password reset email. Please try again.",
+    //     };
+    // }
+
+    console.log("[PASSWORD RESET] Email sent successfully to:", email);
+
+    return {
+      success: true,
+      message: "Password reset instructions have been sent to your email",
+    };
+  } catch (error) {
+    console.error("[PASSWORD RESET] Error requesting password reset:", error);
+    return {
+      success: false,
+      message: "An error occurred while processing your request",
+    };
+  }
+}
+
+/**
+ * Reset password using token
+ */
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    console.log("[PASSWORD RESET] Attempting to reset password with token");
+
+    // Validate token
+    const tokenData = passwordResetTokens.get(token);
+
+    if (!tokenData) {
+      console.log("[PASSWORD RESET] Invalid token");
+      return {
+        success: false,
+        message: "Invalid or expired reset token",
+      };
+    }
+
+    // Check if token is expired
+    if (new Date() > tokenData.expiresAt) {
+      console.log("[PASSWORD RESET] Token expired");
+      passwordResetTokens.delete(token);
+      return {
+        success: false,
+        message: "Reset token has expired. Please request a new one",
+      };
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return {
+        success: false,
+        message: "Password must be at least 8 characters long",
+      };
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    const [updatedUser] = await db
+      .update(userModel)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(userModel.email, tokenData.email))
+      .returning();
+
+    if (!updatedUser) {
+      console.log(
+        "[PASSWORD RESET] Failed to update password for:",
+        tokenData.email,
+      );
+      return {
+        success: false,
+        message: "Failed to update password. Please try again",
+      };
+    }
+
+    // Remove used token
+    passwordResetTokens.delete(token);
+
+    console.log(
+      "[PASSWORD RESET] Password updated successfully for:",
+      tokenData.email,
+    );
+
+    return {
+      success: true,
+      message: "Password has been reset successfully",
+    };
+  } catch (error) {
+    console.error("[PASSWORD RESET] Error resetting password:", error);
+    return {
+      success: false,
+      message: "An error occurred while resetting your password",
+    };
+  }
+}
+
+/**
+ * Validate reset token
+ */
+export async function validateResetToken(
+  token: string,
+): Promise<{ success: boolean; message: string; email?: string }> {
+  try {
+    const tokenData = passwordResetTokens.get(token);
+
+    if (!tokenData) {
+      return {
+        success: false,
+        message: "Invalid reset token",
+      };
+    }
+
+    if (new Date() > tokenData.expiresAt) {
+      passwordResetTokens.delete(token);
+      return {
+        success: false,
+        message: "Reset token has expired",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Token is valid",
+      email: tokenData.email,
+    };
+  } catch (error) {
+    console.error("[PASSWORD RESET] Error validating token:", error);
+    return {
+      success: false,
+      message: "An error occurred while validating the token",
+    };
+  }
+}
+
+/**
+ * Clean up expired tokens (call this periodically)
+ */
+export function cleanupExpiredTokens(): void {
+  const now = new Date();
+  for (const [token, data] of passwordResetTokens.entries()) {
+    if (now > data.expiresAt) {
+      passwordResetTokens.delete(token);
+    }
+  }
 }

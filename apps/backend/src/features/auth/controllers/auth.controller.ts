@@ -14,6 +14,7 @@ import { addUser } from "@/features/user/services/user.service.js";
 import { userTypeEnum } from "@repo/db/schemas/enums";
 
 import * as userService from "@/features/user/services/user.service.js";
+import { randomBytes } from "crypto";
 
 export const createUser = async (
   req: Request,
@@ -335,6 +336,331 @@ export const logout = async (
 
     // res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Logout successful"));
   } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// Password Reset Functions
+
+// In-memory store for password reset tokens (in production, use Redis or database)
+const passwordResetTokens = new Map<
+  string,
+  { token: string; email: string; expiresAt: Date }
+>();
+
+export const requestPasswordReset = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json(new ApiError(400, "Email is required"));
+      return;
+    }
+
+    console.log("[PASSWORD RESET] Requesting password reset for:", email);
+
+    // Check if user exists
+    const [user] = await db
+      .select()
+      .from(userModel)
+      .where(eq(userModel.email, email));
+
+    if (!user) {
+      console.log("[PASSWORD RESET] User not found:", email);
+      res
+        .status(400)
+        .json(new ApiError(400, "User not found with this email address"));
+      return;
+    }
+
+    // Check if user is active
+    if (!user.isActive || user.isSuspended) {
+      console.log("[PASSWORD RESET] User account is disabled:", email);
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "Account is disabled. Please contact support."),
+        );
+      return;
+    }
+
+    // Generate secure token
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Store token in memory
+    passwordResetTokens.set(token, {
+      token,
+      email,
+      expiresAt,
+    });
+
+    console.log("[PASSWORD RESET] Token generated for:", email);
+
+    // For development/testing - return token directly
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { token },
+          "Password reset token generated. Use this token to reset your password.",
+        ),
+      );
+  } catch (error) {
+    console.error("[PASSWORD RESET] Error requesting password reset:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Token and new password are required"));
+      return;
+    }
+
+    console.log("[PASSWORD RESET] Attempting to reset password with token");
+
+    // Validate token
+    const tokenData = passwordResetTokens.get(token);
+
+    if (!tokenData) {
+      console.log("[PASSWORD RESET] Invalid token");
+      res.status(400).json(new ApiError(400, "Invalid or expired reset token"));
+      return;
+    }
+
+    // Check if token is expired
+    if (new Date() > tokenData.expiresAt) {
+      console.log("[PASSWORD RESET] Token expired");
+      passwordResetTokens.delete(token);
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            "Reset token has expired. Please request a new one",
+          ),
+        );
+      return;
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Password must be at least 8 characters long"));
+      return;
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    const [updatedUser] = await db
+      .update(userModel)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(userModel.email, tokenData.email))
+      .returning();
+
+    if (!updatedUser) {
+      console.log(
+        "[PASSWORD RESET] Failed to update password for:",
+        tokenData.email,
+      );
+      res
+        .status(500)
+        .json(new ApiError(500, "Failed to update password. Please try again"));
+      return;
+    }
+
+    // Remove used token
+    passwordResetTokens.delete(token);
+
+    console.log(
+      "[PASSWORD RESET] Password updated successfully for:",
+      tokenData.email,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          null,
+          "Password has been reset successfully",
+        ),
+      );
+  } catch (error) {
+    console.error("[PASSWORD RESET] Error resetting password:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const validateResetToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      res.status(400).json(new ApiError(400, "Token is required"));
+      return;
+    }
+
+    const tokenData = passwordResetTokens.get(token);
+
+    if (!tokenData) {
+      res.status(400).json(new ApiError(400, "Invalid reset token"));
+      return;
+    }
+
+    if (new Date() > tokenData.expiresAt) {
+      passwordResetTokens.delete(token);
+      res.status(400).json(new ApiError(400, "Reset token has expired"));
+      return;
+    }
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { email: tokenData.email },
+          "Token is valid",
+        ),
+      );
+  } catch (error) {
+    console.error("[PASSWORD RESET] Error validating token:", error);
+    handleError(error, res, next);
+  }
+};
+
+/**
+ * Clean up expired tokens (call this periodically)
+ */
+export function cleanupExpiredTokens(): void {
+  const now = new Date();
+  for (const [token, data] of passwordResetTokens.entries()) {
+    if (now > data.expiresAt) {
+      passwordResetTokens.delete(token);
+    }
+  }
+}
+
+// Simple password reset - accepts email and new password directly
+export const simplePasswordReset = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Email and new password are required"));
+      return;
+    }
+
+    console.log("[SIMPLE PASSWORD RESET] Resetting password for:", email);
+
+    // Check if user exists
+    const [user] = await db
+      .select()
+      .from(userModel)
+      .where(eq(userModel.email, email));
+
+    if (!user) {
+      console.log("[SIMPLE PASSWORD RESET] User not found:", email);
+      res
+        .status(400)
+        .json(new ApiError(400, "User not found with this email address"));
+      return;
+    }
+
+    // Check if user is active
+    if (!user.isActive || user.isSuspended) {
+      console.log("[SIMPLE PASSWORD RESET] User account is disabled:", email);
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "Account is disabled. Please contact support."),
+        );
+      return;
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Password must be at least 8 characters long"));
+      return;
+    }
+
+    // Hash new password with bcrypt
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    const [updatedUser] = await db
+      .update(userModel)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(userModel.email, email))
+      .returning();
+
+    if (!updatedUser) {
+      console.log(
+        "[SIMPLE PASSWORD RESET] Failed to update password for:",
+        email,
+      );
+      res
+        .status(500)
+        .json(new ApiError(500, "Failed to update password. Please try again"));
+      return;
+    }
+
+    console.log(
+      "[SIMPLE PASSWORD RESET] Password updated successfully for:",
+      email,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          null,
+          "Password has been reset successfully",
+        ),
+      );
+  } catch (error) {
+    console.error("[SIMPLE PASSWORD RESET] Error resetting password:", error);
     handleError(error, res, next);
   }
 };

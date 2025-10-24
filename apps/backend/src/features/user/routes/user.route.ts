@@ -9,6 +9,9 @@ import {
   getProfileInfo,
   exportStudents,
   getUserStatsHandler,
+  requestPasswordResetController,
+  resetPasswordController,
+  validateResetTokenController,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
@@ -19,6 +22,12 @@ router.get("/:userId/profile", getProfileInfo);
 router.get("/export/students", exportStudents);
 // Get user statistics
 router.get("/stats", getUserStatsHandler);
+
+// Password Reset Routes (no JWT required)
+router.post("/password-reset/request", requestPasswordResetController);
+router.post("/password-reset/reset", resetPasswordController);
+router.get("/password-reset/validate/:token", validateResetTokenController);
+
 router.use(verifyJWT);
 
 // Profile
