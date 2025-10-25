@@ -1816,6 +1816,8 @@ interface CuRegistrationExportData {
   // Basic Info
   studentId: number;
   studentName: string;
+  studentUid: string;
+  programCourseName: string;
   cuRegistrationApplicationNumber: string;
   status: string;
   onlineRegistrationDone: boolean;
@@ -1932,6 +1934,8 @@ export const exportCuRegistrationCorrectionRequests =
           studentUserId: studentModel.userId,
           studentBelongsToEWS: studentModel.belongsToEWS,
           studentApaarId: studentModel.apaarId,
+          studentUid: studentModel.uid,
+          studentProgramCourseId: studentModel.programCourseId,
 
           // User data
           userName: userModel.name,
@@ -1944,6 +1948,9 @@ export const exportCuRegistrationCorrectionRequests =
 
           // Nationality name
           nationalityName: nationalityModel.name,
+
+          // Program course name
+          programCourseName: programCourseModel.name,
 
           // Address data (residential)
           residentialAddressLine: addressModel.addressLine,
@@ -1974,6 +1981,10 @@ export const exportCuRegistrationCorrectionRequests =
         .leftJoin(
           nationalityModel,
           eq(personalDetailsModel.nationalityId, nationalityModel.id),
+        )
+        .leftJoin(
+          programCourseModel,
+          eq(studentModel.programCourseId, programCourseModel.id),
         )
         .leftJoin(
           addressModel,
@@ -2118,6 +2129,8 @@ export const exportCuRegistrationCorrectionRequests =
             // Basic Info
             studentId: request.studentId,
             studentName: request.userName || "",
+            studentUid: request.studentUid || "",
+            programCourseName: request.programCourseName || "",
             cuRegistrationApplicationNumber:
               request.cuRegistrationApplicationNumber || "",
             status: request.status || "",
