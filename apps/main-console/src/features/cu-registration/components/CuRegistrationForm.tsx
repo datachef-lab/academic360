@@ -80,7 +80,7 @@ interface CorrectionRequestStatus {
 
 export default function CuRegistrationForm({ studentId, studentData }: CuRegistrationFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
-
+  console.log("test");
   // Check if student is in BCOM program (for MDC display logic)
   const isBcomProgram = studentData?.programCourse?.course?.name
     ?.normalize("NFKD")
