@@ -4,6 +4,7 @@ import {
   getAllCuRegistrationCorrectionRequests,
   getCuRegistrationCorrectionRequestById,
   getCuRegistrationCorrectionRequestsByStudentId,
+  getCuRegistrationCorrectionRequestsByStudentUid,
   getCuRegistrationCorrectionRequestsByStatus,
   updateCuRegistrationCorrectionRequestById,
   approveCuRegistrationCorrectionRequestById,
@@ -15,6 +16,7 @@ import {
   exportCuRegistrationCorrectionRequestsController,
   updatePersonalInfoByAdmin,
   updateAddressInfoByAdmin,
+  markPhysicalRegistrationDoneController,
 } from "../controllers/cu-registration-correction-request.controller.js";
 import {
   submitCuRegistrationCorrectionRequestWithDocuments,
@@ -65,6 +67,12 @@ router.get(
   getCuRegistrationCorrectionRequestsByStudentId,
 );
 
+// Get CU registration correction requests by student UID
+router.get(
+  "/student-uid/:studentUid",
+  getCuRegistrationCorrectionRequestsByStudentUid,
+);
+
 // Get CU registration correction requests by status
 // Query parameters: page, limit
 router.get("/status/:status", getCuRegistrationCorrectionRequestsByStatus);
@@ -83,6 +91,9 @@ router.patch("/:id/approve", approveCuRegistrationCorrectionRequestById);
 
 // Reject CU registration correction request
 router.patch("/:id/reject", rejectCuRegistrationCorrectionRequestById);
+
+// Mark physical registration as done
+router.patch("/:id/mark-physical-done", markPhysicalRegistrationDoneController);
 
 // Delete CU registration correction request
 router.delete("/:id", deleteCuRegistrationCorrectionRequestById);

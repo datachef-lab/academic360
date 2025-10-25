@@ -354,6 +354,55 @@ export async function findCuRegistrationCorrectionRequestsByStudentId(
   return requestDtos;
 }
 
+// READ - Get by student UID
+export async function findCuRegistrationCorrectionRequestsByStudentUid(
+  studentUid: string,
+): Promise<CuRegistrationCorrectionRequestDto[]> {
+  // First get student by UID
+  const [student] = await db
+    .select({ id: studentModel.id })
+    .from(studentModel)
+    .where(eq(studentModel.uid, studentUid))
+    .limit(1);
+
+  if (!student) {
+    return [];
+  }
+
+  const requests = await db
+    .select()
+    .from(cuRegistrationCorrectionRequestModel)
+    .where(eq(cuRegistrationCorrectionRequestModel.studentId, student.id))
+    .orderBy(desc(cuRegistrationCorrectionRequestModel.createdAt));
+
+  const requestDtos = await Promise.all(
+    requests.map((request) => modelToDto(request)),
+  );
+
+  return requestDtos;
+}
+
+// UPDATE - Mark physical registration as done
+export async function markPhysicalRegistrationDone(
+  id: number,
+): Promise<CuRegistrationCorrectionRequestDto | null> {
+  const [updated] = await db
+    .update(cuRegistrationCorrectionRequestModel)
+    .set({
+      physicalRegistrationDone: true,
+      status: "PHYSICAL_REGISTRATION_DONE",
+      updatedAt: new Date(),
+    })
+    .where(eq(cuRegistrationCorrectionRequestModel.id, id))
+    .returning();
+
+  if (!updated) {
+    return null;
+  }
+
+  return await modelToDto(updated);
+}
+
 // UPDATE
 export async function updateCuRegistrationCorrectionRequest(
   id: number,
@@ -1386,7 +1435,7 @@ async function isSubjectSelectionRequired(studentId: number): Promise<boolean> {
 async function modelToDto(
   request: any,
 ): Promise<CuRegistrationCorrectionRequestDto> {
-  // Get student details with user info
+  // Get student details with user info and program course
   const [studentData] = await db
     .select({
       id: studentModel.id,
@@ -1416,6 +1465,7 @@ async function modelToDto(
       leavingReason: studentModel.leavingReason,
       createdAt: studentModel.createdAt,
       updatedAt: studentModel.updatedAt,
+      programCourseName: programCourseModel.name,
       user: {
         id: userModel.id,
         name: userModel.name,
@@ -1435,6 +1485,10 @@ async function modelToDto(
     })
     .from(studentModel)
     .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+    .leftJoin(
+      programCourseModel,
+      eq(studentModel.programCourseId, programCourseModel.id),
+    )
     .where(eq(studentModel.id, request.studentId));
 
   // Get approver details
@@ -1503,6 +1557,7 @@ async function modelToDto(
     subjectsDeclaration: request.subjectsDeclaration,
     documentsDeclaration: request.documentsDeclaration,
     onlineRegistrationDone: request.onlineRegistrationDone,
+    physicalRegistrationDone: request.physicalRegistrationDone,
     genderCorrectionRequest: request.genderCorrectionRequest,
     nationalityCorrectionRequest: request.nationalityCorrectionRequest,
     aadhaarCardNumberCorrectionRequest:

@@ -82,6 +82,7 @@ import BoardSubjectUnivSubjectMappingPaper from "./features/academic-year-setup/
 import * as examManagementModule from "@/features/exam-management";
 import RealTimeTrackerPage from "./features/realtime-tracker/pages";
 import ReportsPage from "./features/reports/page";
+import PhysicalCURegMarkingPage from "./features/cu-registration/pages/PhysicalCURegMarkingPage";
 
 // import * as resourceModule from "@/pages/resources";
 
@@ -205,6 +206,10 @@ const router = createBrowserRouter(
         {
           path: "cu-registration",
           element: <CuRegStudentPage />,
+        },
+        {
+          path: "cu-reg/physical-marking",
+          element: <PhysicalCURegMarkingPage />,
         },
         {
           path: "reports",

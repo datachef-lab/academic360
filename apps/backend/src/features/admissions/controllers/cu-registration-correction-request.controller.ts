@@ -2,12 +2,16 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { ApiError } from "@/utils/ApiError.js";
+import { db } from "@/db/index.js";
+import { studentModel } from "@repo/db/schemas/models/user";
+import { ilike } from "drizzle-orm";
 import { cuRegistrationCorrectionRequestInsertSchema } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import {
   createCuRegistrationCorrectionRequest,
   findCuRegistrationCorrectionRequestById,
   findAllCuRegistrationCorrectionRequests,
   findCuRegistrationCorrectionRequestsByStudentId,
+  findCuRegistrationCorrectionRequestsByStudentUid,
   updateCuRegistrationCorrectionRequest,
   approveCuRegistrationCorrectionRequest,
   rejectCuRegistrationCorrectionRequest,
@@ -17,6 +21,7 @@ import {
   validateCuRegistrationApplicationNumber,
   getCuRegistrationApplicationNumberStats,
   exportCuRegistrationCorrectionRequests,
+  markPhysicalRegistrationDone,
 } from "../services/cu-registration-correction-request.service.js";
 import {
   uploadToS3,
@@ -755,6 +760,76 @@ export const updateAddressInfoByAdmin = async (
       );
   } catch (error) {
     console.error("[CU-REG ADMIN] Address info update error:", error);
+    handleError(error, res, next);
+  }
+};
+
+// Get CU registration correction requests by student UID
+export const getCuRegistrationCorrectionRequestsByStudentUid = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { studentUid } = req.params;
+
+    if (!studentUid) {
+      res.status(400).json(new ApiError(400, "Student UID is required"));
+      return;
+    }
+
+    const requests =
+      await findCuRegistrationCorrectionRequestsByStudentUid(studentUid);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          requests,
+          "CU registration correction requests retrieved successfully by student UID!",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// Mark physical registration as done
+export const markPhysicalRegistrationDoneController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const correctionRequestId = parseInt(id);
+
+    if (isNaN(correctionRequestId)) {
+      res.status(400).json(new ApiError(400, "Invalid correction request ID"));
+      return;
+    }
+
+    const updatedRequest =
+      await markPhysicalRegistrationDone(correctionRequestId);
+
+    if (!updatedRequest) {
+      res.status(404).json(new ApiError(404, "Correction request not found"));
+      return;
+    }
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { correctionRequest: updatedRequest },
+          "Physical registration marked as done successfully!",
+        ),
+      );
+  } catch (error) {
     handleError(error, res, next);
   }
 };
