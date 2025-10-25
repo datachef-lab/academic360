@@ -747,14 +747,36 @@ export async function updateCuRegistrationCorrectionRequest(
           );
         }
 
-        // Student APAAR/ABC update
-        if (payload.personalInfo.apaarId) {
-          // Format APAAR ID to 3-3-3-3 format before saving to database
-          const digits = payload.personalInfo.apaarId.replace(/\D/g, "");
-          const formattedApaarId =
-            digits.length === 12
-              ? digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{3})$/, "$1-$2-$3-$4")
-              : payload.personalInfo.apaarId;
+        // Student APAAR/ABC update - always process if present in payload
+        if (payload.personalInfo.hasOwnProperty("apaarId")) {
+          let formattedApaarId = null;
+
+          console.info("[CU-REG CORRECTION][UPDATE] Processing APAAR ID", {
+            received: payload.personalInfo.apaarId,
+            type: typeof payload.personalInfo.apaarId,
+            isEmpty: payload.personalInfo.apaarId === "",
+            isNull: payload.personalInfo.apaarId === null,
+            isUndefined: payload.personalInfo.apaarId === undefined,
+          });
+
+          if (
+            payload.personalInfo.apaarId &&
+            payload.personalInfo.apaarId.trim() !== ""
+          ) {
+            // Format APAAR ID to 3-3-3-3 format before saving to database
+            const digits = payload.personalInfo.apaarId.replace(/\D/g, "");
+            formattedApaarId =
+              digits.length === 12
+                ? digits.replace(
+                    /^(\d{3})(\d{3})(\d{3})(\d{3})$/,
+                    "$1-$2-$3-$4",
+                  )
+                : payload.personalInfo.apaarId;
+          } else {
+            // If empty string is sent, set to null in database
+            formattedApaarId = null;
+          }
+
           await tx
             .update(studentModel)
             .set({ apaarId: formattedApaarId })
@@ -762,7 +784,16 @@ export async function updateCuRegistrationCorrectionRequest(
           console.info("[CU-REG CORRECTION][UPDATE] Updated APAAR ID", {
             original: payload.personalInfo.apaarId,
             formatted: formattedApaarId,
+            studentId: student.id,
           });
+        } else {
+          console.info(
+            "[CU-REG CORRECTION][UPDATE] APAAR ID not present in payload",
+            {
+              personalInfoKeys: Object.keys(payload.personalInfo),
+              hasApaarId: "apaarId" in payload.personalInfo,
+            },
+          );
         }
 
         // Student EWS status update (EWS is editable by students)
@@ -1122,14 +1153,42 @@ export async function updateStudentDataFromCorrectionRequest(
       updatedFields.push("personalDetailsCorrectionRequested");
     }
 
-    // Note: APAAR ID is not updated by students
-    // Students can only request corrections via flags, but cannot provide new values
-    // These corrections need to be handled by admin separately
-    if (correctionFlags.apaarId) {
-      console.info(
-        "[CU-REG DB UPDATE] APAAR ID correction requested but not updated - requires admin approval",
-      );
-      updatedFields.push("apaarIdCorrectionRequested");
+    // APAAR ID update logic
+    if (formData.personalInfo?.apaarId !== undefined) {
+      if (correctionFlags.apaarId) {
+        // Correction request - requires admin approval
+        console.info(
+          "[CU-REG DB UPDATE] APAAR ID correction requested but not updated - requires admin approval",
+        );
+        updatedFields.push("apaarIdCorrectionRequested");
+      } else {
+        // New APAAR ID entry - allow student to update
+        let formattedApaarId = null;
+
+        if (
+          formData.personalInfo.apaarId &&
+          formData.personalInfo.apaarId.trim() !== ""
+        ) {
+          // Format APAAR ID to 3-3-3-3 format before saving to database
+          const digits = formData.personalInfo.apaarId.replace(/\D/g, "");
+          formattedApaarId =
+            digits.length === 12
+              ? digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{3})$/, "$1-$2-$3-$4")
+              : formData.personalInfo.apaarId;
+        }
+
+        await db
+          .update(studentModel)
+          .set({ apaarId: formattedApaarId })
+          .where(eq(studentModel.id, studentId));
+
+        console.info("[CU-REG DB UPDATE] Updated APAAR ID", {
+          original: formData.personalInfo.apaarId,
+          formatted: formattedApaarId,
+          studentId: studentId,
+        });
+        updatedFields.push("apaarId");
+      }
     }
 
     // Update EWS status if provided (EWS is editable by students)

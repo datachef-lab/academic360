@@ -124,53 +124,62 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
         // Auto-populate existing selections if they exist
         if (hasExisting && resp.actualStudentSelections && resp.actualStudentSelections.length > 0) {
-          type ActualSelection = {
-            subjectSelectionMeta?: { id?: number; label?: string | null } | null;
-            subject?: { id?: number; name?: string | null } | null;
-          };
-
-          const isActualSelection = (x: unknown): x is ActualSelection => {
-            if (typeof x !== "object" || x === null) return false;
-            const s = x as Record<string, unknown>;
-            const meta = s["subjectSelectionMeta"];
-            const subj = s["subject"];
-            const okMeta = meta === undefined || meta === null || typeof meta === "object";
-            const okSubj = subj === undefined || subj === null || typeof subj === "object";
-            return okMeta && okSubj;
-          };
-
-          const existingSelections = (resp.actualStudentSelections as unknown[]).filter(isActualSelection);
-          console.log("Auto-populating existing selections:", existingSelections);
+          console.log("🔍 Main Console - Auto-populating existing selections:", resp.actualStudentSelections);
 
           // Transform and populate form fields with existing selections
-          for (const selection of existingSelections) {
-            const metaId = selection.subjectSelectionMeta?.id ?? undefined;
-            const subjectName = selection.subject?.name ?? undefined;
+          for (const selection of resp.actualStudentSelections) {
+            console.log("🔍 Main Console - Processing selection:", selection);
 
-            if (!metaId || !subjectName) continue;
+            // Type guard to ensure selection is an object
+            if (typeof selection !== "object" || selection === null) {
+              console.log("🔍 Main Console - Skipping non-object selection");
+              continue;
+            }
 
-            // Find the meta label by looking up the metaId in the metas array
-            const meta = resp.subjectSelectionMetas?.find((m) => m.id === metaId);
-            const metaLabel = meta?.label;
+            const sel = selection as Record<string, unknown>; // Cast to object to access properties
 
-            if (!metaLabel) continue;
+            // Use the correct field names from the actual data structure
+            const metaId =
+              (sel.metaId as number | undefined) ??
+              ((sel.subjectSelectionMeta as Record<string, unknown>)?.id as number | undefined);
+            const subjectName =
+              (sel.subjectName as string | undefined) ??
+              ((sel.subject as Record<string, unknown>)?.name as string | undefined);
+            const metaLabel =
+              (sel.metaLabel as string | undefined) ??
+              ((sel.subjectSelectionMeta as Record<string, unknown>)?.label as string | undefined);
+
+            console.log("🔍 Main Console - Extracted:", { metaId, subjectName, metaLabel });
+
+            if (!subjectName || !metaLabel) {
+              console.log("🔍 Main Console - Skipping due to missing subjectName or metaLabel");
+              continue;
+            }
 
             // Map meta labels to form fields
             if (metaLabel.includes("Minor 1")) {
+              console.log("🔍 Main Console - Setting Minor 1:", subjectName);
               setMinor1(subjectName);
             } else if (metaLabel.includes("Minor 2")) {
+              console.log("🔍 Main Console - Setting Minor 2:", subjectName);
               setMinor2(subjectName);
             } else if (metaLabel.includes("Minor 3")) {
+              console.log("🔍 Main Console - Setting Minor 3:", subjectName);
               setMinor3(subjectName);
             } else if (metaLabel.includes("IDC 1")) {
+              console.log("🔍 Main Console - Setting IDC 1:", subjectName);
               setIdc1(subjectName);
             } else if (metaLabel.includes("IDC 2")) {
+              console.log("🔍 Main Console - Setting IDC 2:", subjectName);
               setIdc2(subjectName);
             } else if (metaLabel.includes("IDC 3")) {
+              console.log("🔍 Main Console - Setting IDC 3:", subjectName);
               setIdc3(subjectName);
             } else if (metaLabel.includes("AEC")) {
+              console.log("🔍 Main Console - Setting AEC 3:", subjectName);
               setAec3(subjectName);
             } else if (metaLabel.includes("CVAC")) {
+              console.log("🔍 Main Console - Setting CVAC 4:", subjectName);
               setCvac4(subjectName);
             }
           }

@@ -209,6 +209,22 @@ export default function CURegistrationPage() {
     (async () => {
       try {
         if (!student?.id) return;
+
+        // Check if student's program course is BBA (bypass subject selection requirement)
+        const programName = student?.programCourse?.name || "";
+        const normalizedProgramName = programName
+          .normalize("NFKD")
+          .replace(/[^A-Za-z]/g, "")
+          .toUpperCase();
+        const isBBAProgram = normalizedProgramName.startsWith("BBA");
+
+        if (isBBAProgram) {
+          // Bypass subject selection requirement for BBA programs
+          setIsSubjectSelectionCompleted(true);
+          setIsCheckingSubjectSelection(false);
+          return;
+        }
+
         const data = await fetchStudentSubjectSelections(Number(student.id)).catch(() => null as any);
         const completed = !!(
           data?.hasFormSubmissions ||
@@ -342,10 +358,17 @@ export default function CURegistrationPage() {
 
   // Helper: clean APAAR ID (remove formatting for backend)
   const cleanApaarId = (apaarId: string) => {
-    return apaarId.replace(/\D/g, "");
+    // If the field is empty, return empty string
+    if (!apaarId || apaarId.trim() === "") {
+      return "";
+    }
+
+    // Remove formatting (dashes) but keep the digits
+    const cleaned = apaarId.replace(/\D/g, "");
+    return cleaned;
   };
 
-  // File size limits based on document type (matching main-console)
+  // File size limits for display only (compression handled in backend)
   const getFileSizeLimit = (documentName: string): { maxSizeKB: number; maxSizeMB: number } => {
     const name = documentName.toLowerCase();
 
@@ -646,9 +669,9 @@ export default function CURegistrationPage() {
 
         actualSelections.forEach((r: any, index: number) => {
           console.log(`🔍 Processing selection ${index}:`, r);
-          const label = String(r?.subjectSelectionMeta?.label || "");
-          const name = r?.subject?.name || r?.subject?.code || "";
-          const subjectTypeName = String(r?.subjectSelectionMeta?.subjectType?.name || "");
+          const label = String(r?.metaLabel || r?.subjectSelectionMeta?.label || "");
+          const name = r?.subjectName || r?.subject?.name || r?.subject?.code || "";
+          const subjectTypeName = String(r?.subjectTypeName || r?.subjectSelectionMeta?.subjectType?.name || "");
           console.log(
             `🔍 Selection ${index} - label: "${label}", name: "${name}", subjectTypeName: "${subjectTypeName}"`,
           );
@@ -1206,6 +1229,19 @@ export default function CURegistrationPage() {
         console.info("[CU-REG FRONTEND] Debug - updateData.flags:", updateData.flags);
         console.info("[CU-REG FRONTEND] Debug - updateData.payload:", updateData.payload);
         console.info("[CU-REG FRONTEND] Debug - updateData.payload.personalInfo:", updateData.payload.personalInfo);
+        console.info("[CU-REG FRONTEND] Debug - APAAR ID details:", {
+          original: personalInfo.apaarId,
+          cleaned: cleanApaarId(personalInfo.apaarId),
+          type: typeof cleanApaarId(personalInfo.apaarId),
+        });
+        console.info("[CU-REG FRONTEND] Debug - Full personalInfo state:", personalInfo);
+        console.info("[CU-REG FRONTEND] Debug - Form submission timestamp:", new Date().toISOString());
+        console.info("[CU-REG FRONTEND] Debug - APAAR ID in personalInfo:", {
+          hasApaarId: "apaarId" in personalInfo,
+          apaarIdValue: personalInfo.apaarId,
+          apaarIdLength: personalInfo.apaarId?.length || 0,
+          apaarIdType: typeof personalInfo.apaarId,
+        });
         console.info("[CU-REG FRONTEND] Debug - correctionFlags being sent:", correctionFlags);
         console.info("[CU-REG FRONTEND] Debug - flags object being sent:", updateData.flags);
         await submitPersonalInfoDeclaration({
@@ -1258,11 +1294,18 @@ export default function CURegistrationPage() {
     if (hasCorrections) {
       return "You have requested corrections on this section. You must inform of the same at the time of submitting your Admission & Registration Datasheet and documents physically at the College.";
     }
+
+    // Check if APAAR ID is missing
+    if (personalInfo.apaarId.trim() === "") {
+      return "⚠️ You must enter your APAAR ID to proceed to the next page.";
+    }
+
     return "I declare that the information in Personal Info is accurate.";
   };
 
   const isPersonalTabValid = () => {
-    return personalDeclared;
+    // Check if personal info is declared AND APAAR ID is filled
+    return personalDeclared && personalInfo.apaarId.trim() !== "";
   };
 
   const validateAddressFields = () => {
@@ -1588,30 +1631,7 @@ export default function CURegistrationPage() {
 
   const handleFileUpload = (documentType: keyof typeof documents, file: File | null) => {
     if (file) {
-      // Get file size limits for this document type
-      const limits = getFileSizeLimit(documentType);
-      const fileSizeKB = file.size / 1024;
-      const fileSizeMB = file.size / (1024 * 1024);
-
-      console.info(`[CU-REG FRONTEND] File upload validation:`, {
-        documentType,
-        fileName: file.name,
-        fileSizeKB: fileSizeKB.toFixed(2),
-        fileSizeMB: fileSizeMB.toFixed(2),
-        maxSizeKB: limits.maxSizeKB,
-        maxSizeMB: limits.maxSizeMB,
-        isValid: fileSizeKB <= limits.maxSizeKB,
-      });
-
-      // Validate file size
-      if (fileSizeKB > limits.maxSizeKB) {
-        toast.error(
-          `File size (${fileSizeMB.toFixed(2)}MB) exceeds the maximum allowed size (${limits.maxSizeMB}MB) for ${documentType}`,
-        );
-        return;
-      }
-
-      // Validate file type
+      // Validate file type only (file size compression handled in backend)
       const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
       if (!allowedTypes.includes(file.type)) {
         toast.error(`Invalid file type. Only JPEG and PNG files are allowed.`);
@@ -1633,23 +1653,10 @@ export default function CURegistrationPage() {
     };
   };
 
-  // Helper function to format file size
+  // Helper function to format file size (always in KB)
   const formatFileSize = (bytes: number): string => {
     const sizeKB = bytes / 1024;
-    const sizeMB = bytes / (1024 * 1024);
-
-    if (sizeMB >= 1) {
-      return `${sizeMB.toFixed(2)} MB`;
-    } else {
-      return `${sizeKB.toFixed(2)} KB`;
-    }
-  };
-
-  // Helper function to check if file size is valid
-  const isFileSizeValid = (file: File, documentType: keyof typeof documents): boolean => {
-    const limits = getFileSizeLimit(documentType);
-    const fileSizeKB = file.size / 1024;
-    return fileSizeKB <= limits.maxSizeKB;
+    return `${sizeKB.toFixed(2)} KB`;
   };
 
   const handleFilePreview = (file: File) => {
@@ -1782,7 +1789,31 @@ export default function CURegistrationPage() {
   };
 
   const canReviewConfirm = () => {
-    return isPersonalTabValid() && isAddressTabValid() && isSubjectsTabValid() && isDocumentsTabValid();
+    const personalValid = isPersonalTabValid();
+    const addressValid = isAddressTabValid();
+    const subjectsValid = isSubjectsTabValid();
+    const documentsValid = isDocumentsTabValid();
+
+    // All validations must pass AND documents must be confirmed
+    const canReview = personalValid && addressValid && subjectsValid && documentsValid && documentsConfirmed;
+
+    console.log("🔍 Review & Confirm Validation Status:", {
+      personalValid,
+      addressValid,
+      subjectsValid,
+      documentsValid,
+      personalDeclared,
+      apaarId: personalInfo.apaarId,
+      addressDeclared,
+      addressErrors: addressErrors.length,
+      subjectsDeclared,
+      documentsConfirmed,
+      missingDocuments: getMissingDocuments().length,
+      missingDocsList: getMissingDocuments(),
+      canReview,
+    });
+
+    return canReview;
   };
 
   const handleReviewConfirm = () => {
@@ -2153,17 +2184,12 @@ export default function CURegistrationPage() {
           {/* Main Form Card - Show tabs for editing, PDF preview for final submission */}
           <Card className="shadow-lg border border-gray-200 bg-white rounded-lg overflow-hidden">
             <CardContent className="p-0">
-              {/* Show PDF Preview when online or physical registration is done */}
+              {/* Show PDF Preview when application number exists */}
               {(() => {
-                const shouldShowPdf =
-                  correctionRequest &&
-                  (correctionRequest.onlineRegistrationDone || correctionRequest.physicalRegistrationDone) &&
-                  correctionRequest?.cuRegistrationApplicationNumber;
+                const shouldShowPdf = correctionRequest?.cuRegistrationApplicationNumber;
 
                 console.info(`[CU-REG FRONTEND] PDF Preview condition check:`, {
                   correctionRequestStatus,
-                  onlineRegistrationDone: correctionRequest?.onlineRegistrationDone,
-                  physicalRegistrationDone: correctionRequest?.physicalRegistrationDone,
                   hasApplicationNumber: !!correctionRequest?.cuRegistrationApplicationNumber,
                   applicationNumber: correctionRequest?.cuRegistrationApplicationNumber,
                   shouldShowPdf,
@@ -2587,14 +2613,19 @@ export default function CURegistrationPage() {
                             <div className="flex flex-col gap-2">
                               {(() => {
                                 // Check if APAAR ID came from backend (not null/empty) vs user input
-                                const hasBackendApaarId = student?.apaarId && student.apaarId.trim() !== "";
+                                const hasBackendApaarId =
+                                  student?.apaarId &&
+                                  student.apaarId.trim() !== "" &&
+                                  student.apaarId !== "null" &&
+                                  student.apaarId !== null;
 
                                 if (hasBackendApaarId) {
-                                  // If backend has APAAR ID, show as read-only with correction flag
+                                  // If backend has APAAR ID, always show as read-only with correction flag
+                                  // Users cannot directly edit - corrections must be handled by admin
                                   return (
                                     <>
                                       <div className={getReadOnlyDivStyle()}>
-                                        {formatApaarId(personalInfo.apaarId) || "Not provided"}
+                                        {formatApaarId(student.apaarId || "") || "Not provided"}
                                       </div>
                                       {shouldShowCorrectionFlags() && (
                                         <div className="flex items-center space-x-2">
@@ -2607,24 +2638,50 @@ export default function CURegistrationPage() {
                                           />
                                         </div>
                                       )}
+                                      {correctionFlags.apaarId && (
+                                        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                                          <p className="text-sm text-yellow-800">
+                                            <strong>Correction Requested:</strong> Your APAAR ID correction request has
+                                            been noted. The admin will review and update your APAAR ID information.
+                                          </p>
+                                        </div>
+                                      )}
                                     </>
                                   );
                                 } else {
                                   // If backend has no APAAR ID, allow editing
+                                  const isApaarIdEmpty = personalInfo.apaarId.trim() === "";
+                                  const isApaarIdInvalid =
+                                    personalInfo.apaarId.trim() !== "" &&
+                                    personalInfo.apaarId.replace(/\D/g, "").length !== 12;
+
                                   return (
-                                    <Input
-                                      id="apaarId"
-                                      value={personalInfo.apaarId}
-                                      onChange={(e) => handleApaarIdChange(e.target.value)}
-                                      onKeyDown={handleApaarIdKeyDown}
-                                      onPaste={handleApaarIdPaste}
-                                      placeholder="Enter APAAR ID (12 digits)"
-                                      className="border-gray-300"
-                                      disabled={!isFieldEditable()}
-                                      maxLength={15} // 12 digits + 3 hyphens = 15 characters
-                                      inputMode="numeric"
-                                      pattern="\\d*"
-                                    />
+                                    <div className="space-y-1">
+                                      <Input
+                                        id="apaarId"
+                                        value={personalInfo.apaarId}
+                                        onChange={(e) => handleApaarIdChange(e.target.value)}
+                                        onKeyDown={handleApaarIdKeyDown}
+                                        onPaste={handleApaarIdPaste}
+                                        placeholder="Enter APAAR ID (12 digits)"
+                                        className={`border-gray-300 ${isApaarIdEmpty ? "border-red-300 bg-red-50" : isApaarIdInvalid ? "border-yellow-300 bg-yellow-50" : "border-green-300 bg-green-50"}`}
+                                        disabled={!isFieldEditable()}
+                                        maxLength={15} // 12 digits + 3 hyphens = 15 characters
+                                        inputMode="numeric"
+                                        pattern="\\d*"
+                                      />
+                                      {isApaarIdEmpty && (
+                                        <p className="text-sm text-red-600">
+                                          ⚠️ APAAR ID is required to proceed to the next page
+                                        </p>
+                                      )}
+                                      {isApaarIdInvalid && (
+                                        <p className="text-sm text-yellow-600">⚠️ APAAR ID must be exactly 12 digits</p>
+                                      )}
+                                      {!isApaarIdEmpty && !isApaarIdInvalid && (
+                                        <p className="text-sm text-green-600">✅ APAAR ID is valid</p>
+                                      )}
+                                    </div>
                                   );
                                 }
                               })()}
@@ -3399,11 +3456,6 @@ export default function CURegistrationPage() {
                                         <p className="text-xs text-gray-500">
                                           {formatFileSize(documents.classXIIMarksheet.size)}
                                         </p>
-                                        {!isFileSizeValid(documents.classXIIMarksheet, "classXIIMarksheet") && (
-                                          <span className="text-xs text-red-500 font-medium">
-                                            (Exceeds {getFileSizeLimit("classXIIMarksheet").maxSizeKB}KB limit)
-                                          </span>
-                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -3478,7 +3530,7 @@ export default function CURegistrationPage() {
                                     <div className="flex-1">
                                       <p className="text-xs text-gray-600 truncate">{documents.aadhaarCard.name}</p>
                                       <p className="text-xs text-gray-500">
-                                        {(documents.aadhaarCard.size / 1024 / 1024).toFixed(2)} MB
+                                        {formatFileSize(documents.aadhaarCard.size)}
                                       </p>
                                     </div>
                                   </div>
@@ -3551,7 +3603,7 @@ export default function CURegistrationPage() {
                                     <div className="flex-1">
                                       <p className="text-xs text-gray-600 truncate">{documents.apaarIdCard.name}</p>
                                       <p className="text-xs text-gray-500">
-                                        {(documents.apaarIdCard.size / 1024 / 1024).toFixed(2)} MB
+                                        {formatFileSize(documents.apaarIdCard.size)}
                                       </p>
                                     </div>
                                   </div>
@@ -3623,7 +3675,7 @@ export default function CURegistrationPage() {
                                     <div className="flex-1">
                                       <p className="text-xs text-gray-600 truncate">{documents.fatherPhotoId.name}</p>
                                       <p className="text-xs text-gray-500">
-                                        {(documents.fatherPhotoId.size / 1024 / 1024).toFixed(2)} MB
+                                        {formatFileSize(documents.fatherPhotoId.size)}
                                       </p>
                                     </div>
                                   </div>
@@ -3701,7 +3753,7 @@ export default function CURegistrationPage() {
                                     <div className="flex-1">
                                       <p className="text-xs text-gray-600 truncate">{documents.motherPhotoId.name}</p>
                                       <p className="text-xs text-gray-500">
-                                        {(documents.motherPhotoId.size / 1024 / 1024).toFixed(2)} MB
+                                        {formatFileSize(documents.motherPhotoId.size)}
                                       </p>
                                     </div>
                                   </div>
@@ -3777,7 +3829,7 @@ export default function CURegistrationPage() {
                                           {documents.ewsCertificate.name}
                                         </p>
                                         <p className="text-xs text-gray-500">
-                                          {(documents.ewsCertificate.size / 1024 / 1024).toFixed(2)} MB
+                                          {formatFileSize(documents.ewsCertificate.size)}
                                         </p>
                                       </div>
                                     </div>
@@ -3878,7 +3930,7 @@ export default function CURegistrationPage() {
                         <div className="text-center">
                           <div className="text-6xl text-red-600 mb-4">📄</div>
                           <p className="text-lg font-medium text-gray-700 mb-2">{previewFile.file.name}</p>
-                          <p className="text-sm text-gray-500">{(previewFile.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <p className="text-sm text-gray-500">{formatFileSize(previewFile.file.size)}</p>
                           <p className="text-sm text-gray-500 mt-2">
                             PDF files cannot be previewed in the browser. Please download to view.
                           </p>

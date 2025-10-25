@@ -42,6 +42,7 @@ import {
   subjectTypeModel,
   streamModel,
   programCourseModel,
+  courseModel,
 } from "@repo/db/schemas/models/course-design";
 import { CuRegistrationFormData } from "./pdf-generation.service.js";
 
@@ -90,6 +91,7 @@ export class CuRegistrationDataService {
           aadhaarCardNumber: personalDetailsModel.aadhaarCardNumber,
           // Program course fields
           programCourseName: programCourseModel.name,
+          courseName: courseModel.name, // Fetch course name from course table
           specializationName: specializationModel.name,
         })
         .from(studentModel)
@@ -102,6 +104,7 @@ export class CuRegistrationDataService {
           programCourseModel,
           eq(studentModel.programCourseId, programCourseModel.id),
         )
+        .leftJoin(courseModel, eq(programCourseModel.courseId, courseModel.id))
         .leftJoin(
           specializationModel,
           eq(studentModel.specializationId, specializationModel.id),
@@ -111,6 +114,11 @@ export class CuRegistrationDataService {
       if (!studentData) {
         throw new Error("Student not found");
       }
+
+      console.info("[CU-REG DATA] Raw student data from database:", {
+        courseName: studentData.courseName,
+        courseNameType: typeof studentData.courseName,
+      });
 
       // Fetch correction request to check for rectification flags and get application number
       const [correctionRequest] = await db
@@ -271,6 +279,7 @@ export class CuRegistrationDataService {
         options.studentId,
         programCourseId,
         sessionId,
+        studentData.courseName || "",
       );
 
       console.info("[CU-REG DATA] Dynamic subject details for template:", {
@@ -335,7 +344,7 @@ export class CuRegistrationDataService {
           studentData.cuFormNumber ||
           academicDetails?.cuRegistrationNumber ||
           "",
-        programCourseName: studentData.programCourseName || "",
+        programCourseName: studentData.courseName || "",
         shiftName: "Day", // Default shift - this might need to be fetched from actual data
         studentPhotoUrl: `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${studentData.uid}.jpg`,
 
@@ -418,6 +427,8 @@ export class CuRegistrationDataService {
         academicDetailsCuReg: academicDetails?.cuRegistrationNumber,
         showRectificationBanner: formData.showRectificationBanner,
         photoUrl: formData.studentPhotoUrl,
+        courseName: studentData.courseName,
+        programCourseName: studentData.programCourseName,
       });
 
       return formData;
@@ -505,10 +516,13 @@ export class CuRegistrationDataService {
   private static formatSubjectDetails(
     subjectSelections: any[],
     isBcomProgram: boolean = false,
+    programCourseName: string = "",
   ): Array<{ headers: string[]; subjects: string[] }> {
     console.info("[CU-REG DATA] formatSubjectDetails called with:", {
       count: subjectSelections?.length || 0,
       data: subjectSelections,
+      courseName: programCourseName,
+      courseNameType: typeof programCourseName,
     });
 
     if (!subjectSelections || subjectSelections.length === 0) {
@@ -581,6 +595,13 @@ export class CuRegistrationDataService {
       // For Sem III & IV, use minor2 if available, otherwise use minor3
       const minorSem3And4 = minor2.length > 0 ? minor2 : minor3;
 
+      console.info(
+        "[CU-REG DATA] Creating Core/Major table with courseName:",
+        programCourseName,
+        "Type:",
+        typeof programCourseName,
+      );
+
       const coreMinorTable = {
         headers: [
           "Core/Major",
@@ -590,7 +611,7 @@ export class CuRegistrationDataService {
           "Minor For Sem IV",
         ],
         subjects: [
-          coreSubjects[0]?.subjectName || "",
+          programCourseName || "", // Use course name for Core/Major
           minor1[0]?.subjectName || "",
           minor1[0]?.subjectName || "", // Minor For Sem II uses minor1
           minorSem3And4[0]?.subjectName || "", // Minor For Sem III uses minor2 or minor3
@@ -906,6 +927,7 @@ export class CuRegistrationDataService {
     studentId: number,
     programCourseId: number,
     sessionId: number,
+    programCourseName: string = "",
   ): Promise<Array<{ headers: string[]; subjects: string[] }>> {
     try {
       console.log("[CU-REG DATA] Getting dynamic subject details", {
@@ -929,7 +951,10 @@ export class CuRegistrationDataService {
         console.warn(
           "[CU-REG DATA] Program course not found, using fallback subject selection",
         );
-        return await this.getFallbackSubjectDetails(studentId);
+        return await this.getFallbackSubjectDetails(
+          studentId,
+          programCourseName,
+        );
       }
 
       console.log("[CU-REG DATA] Program course details:", programCourse);
@@ -943,6 +968,7 @@ export class CuRegistrationDataService {
           studentId,
           programCourseId,
           sessionId,
+          programCourseName,
         );
       } else {
         // For non-Commerce streams, get subjects from both student selection AND papers table
@@ -950,6 +976,7 @@ export class CuRegistrationDataService {
           studentId,
           programCourseId,
           sessionId,
+          programCourseName,
         );
       }
     } catch (error) {
@@ -957,7 +984,7 @@ export class CuRegistrationDataService {
         "[CU-REG DATA] Error getting dynamic subject details:",
         error,
       );
-      return await this.getFallbackSubjectDetails(studentId);
+      return await this.getFallbackSubjectDetails(studentId, programCourseName);
     }
   }
 
@@ -968,6 +995,7 @@ export class CuRegistrationDataService {
     studentId: number,
     programCourseId: number,
     sessionId: number,
+    programCourseName: string = "",
   ): Promise<Array<{ headers: string[]; subjects: string[] }>> {
     try {
       // Get current academic year for the session
@@ -1159,6 +1187,7 @@ export class CuRegistrationDataService {
       const studentSubjects = this.formatSubjectDetails(
         subjectSelections || [],
         isBcomProgram,
+        programCourseName,
       );
       const papersSubjects = [coreMinorTable, aecIdcTable];
 
@@ -1180,11 +1209,18 @@ export class CuRegistrationDataService {
     studentId: number,
     programCourseId: number,
     sessionId: number,
+    programCourseName: string = "",
   ): Promise<Array<{ headers: string[]; subjects: string[] }>> {
     try {
       console.log(
         "[CU-REG DATA] Getting non-Commerce stream subjects with papers data",
       );
+
+      // Get program course name
+      const [programCourseInfo] = await db
+        .select({ name: programCourseModel.name })
+        .from(programCourseModel)
+        .where(eq(programCourseModel.id, programCourseId));
 
       // Get subjects from student selection
       const subjectSelections =
@@ -1192,12 +1228,14 @@ export class CuRegistrationDataService {
       const studentSubjects = this.formatSubjectDetails(
         subjectSelections || [],
         false, // Non-commerce streams don't use BCOM logic
+        programCourseName,
       );
 
       // Get additional subjects from papers table for missing categories
       const papersSubjects = await this.getAdditionalSubjectsFromPapers(
         programCourseId,
         sessionId,
+        programCourseName,
       );
 
       // Merge the two sources
@@ -1217,6 +1255,7 @@ export class CuRegistrationDataService {
   private static async getAdditionalSubjectsFromPapers(
     programCourseId: number,
     sessionId: number,
+    programCourseName: string = "",
   ): Promise<Array<{ headers: string[]; subjects: string[] }>> {
     try {
       console.log(
@@ -1369,6 +1408,13 @@ export class CuRegistrationDataService {
 
       console.log("[CU-REG DATA] Organized subjects by type:", subjectsByType);
 
+      console.info(
+        "[CU-REG DATA] Creating Core/Major table from papers with courseName:",
+        programCourseName,
+        "Type:",
+        typeof programCourseName,
+      );
+
       // Build Core/Major and Minor table (only Core/Major from papers)
       const coreMinorTable = {
         headers: [
@@ -1379,7 +1425,7 @@ export class CuRegistrationDataService {
           "Minor For Sem IV",
         ],
         subjects: [
-          subjectsByType["DSCC"]?.["SEMESTER I"] || "", // Core/Major from papers
+          programCourseName || "", // Use course name for Core/Majorid
           "", // Minor 1 - from student selection
           "", // Minor 2 - from student selection
           "", // Minor 3 - from student selection
@@ -1433,6 +1479,14 @@ export class CuRegistrationDataService {
   ): Array<{ headers: string[]; subjects: string[] }> {
     try {
       console.log("[CU-REG DATA] Merging subject sources");
+      console.log(
+        "[CU-REG DATA] Student subjects Core/Major:",
+        studentSubjects[0]?.subjects[0],
+      );
+      console.log(
+        "[CU-REG DATA] Papers subjects Core/Major:",
+        papersSubjects[0]?.subjects[0],
+      );
 
       if (studentSubjects.length === 0) {
         return papersSubjects;
@@ -1447,9 +1501,9 @@ export class CuRegistrationDataService {
         headers:
           studentSubjects[0]?.headers || papersSubjects[0]?.headers || [],
         subjects: [
-          papersSubjects[0]?.subjects[0] ||
-            studentSubjects[0]?.subjects[0] ||
-            "", // Core/Major from papers
+          studentSubjects[0]?.subjects[0] ||
+            papersSubjects[0]?.subjects[0] ||
+            "", // Core/Major from student (course name)
           studentSubjects[0]?.subjects[1] ||
             papersSubjects[0]?.subjects[1] ||
             "", // Minor 1 from student
@@ -1498,6 +1552,10 @@ export class CuRegistrationDataService {
         coreMinor: mergedCoreMinor,
         aecIdc: mergedAecIdc,
       });
+      console.log(
+        "[CU-REG DATA] Final Core/Major value:",
+        mergedCoreMinor.subjects[0],
+      );
 
       return [mergedCoreMinor, mergedAecIdc];
     } catch (error) {
@@ -1511,11 +1569,16 @@ export class CuRegistrationDataService {
    */
   private static async getFallbackSubjectDetails(
     studentId: number,
+    programCourseName: string = "",
   ): Promise<Array<{ headers: string[]; subjects: string[] }>> {
     try {
       const subjectSelections =
         await this.getAdmissionSubjectSelections(studentId);
-      return this.formatSubjectDetails(subjectSelections || [], false);
+      return this.formatSubjectDetails(
+        subjectSelections || [],
+        false,
+        programCourseName,
+      );
     } catch (error) {
       console.error("[CU-REG DATA] Error in fallback subject details:", error);
       return [];

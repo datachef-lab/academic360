@@ -37,6 +37,10 @@ import {
   uploadToFileSystem,
   deleteFromFileSystem,
 } from "@/services/filesystem-storage.service.js";
+import {
+  convertToJpg,
+  getDocumentConversionSettings,
+} from "@/services/image-conversion.service.js";
 import multer from "multer";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
@@ -219,11 +223,59 @@ export const createNewCuRegistrationDocumentUpload = async (
       },
     });
 
+    // Convert file to JPG with compression before upload
+    let processedFile = file;
+    try {
+      console.info(`[CU-REG DOC UPLOAD] Converting file: ${file.originalname}`);
+
+      // Get conversion settings for this document type
+      const conversionSettings = getDocumentConversionSettings(documentName);
+
+      console.info(
+        `[CU-REG DOC UPLOAD] Conversion settings for ${documentName}:`,
+        conversionSettings,
+      );
+
+      // Convert file to JPG with compression
+      const conversionResult = await convertToJpg(file, conversionSettings);
+
+      console.info(
+        `[CU-REG DOC UPLOAD] Conversion successful: ${file.originalname} -> ${conversionResult.mimeType}`,
+      );
+      console.info(
+        `[CU-REG DOC UPLOAD] Size reduction: ${conversionResult.originalSizeKB.toFixed(2)}KB -> ${conversionResult.sizeKB.toFixed(2)}KB`,
+      );
+
+      // Create a new file object with the converted buffer
+      processedFile = {
+        ...file,
+        buffer: conversionResult.buffer,
+        size: conversionResult.buffer.length,
+        mimetype: conversionResult.mimeType,
+        originalname: file.originalname.replace(/\.[^/.]+$/, ".jpg"), // Change extension to .jpg
+      };
+
+      console.info(`[CU-REG DOC UPLOAD] Processed file ready for upload:`, {
+        originalName: processedFile.originalname,
+        mimeType: processedFile.mimetype,
+        size: processedFile.size,
+      });
+    } catch (conversionError) {
+      console.error(
+        `[CU-REG DOC UPLOAD] Conversion failed for ${file.originalname}:`,
+        conversionError,
+      );
+      // Continue with original file if conversion fails
+      console.warn(
+        `[CU-REG DOC UPLOAD] Proceeding with original file without conversion`,
+      );
+    }
+
     // Try to upload to S3 first, fallback to file system if S3 is not configured
     let uploadResult;
     try {
       console.info("[CU-REG DOC UPLOAD] Attempting S3 upload...");
-      uploadResult = await uploadToS3(file, uploadConfig);
+      uploadResult = await uploadToS3(processedFile, uploadConfig);
       console.info("[CU-REG DOC UPLOAD] S3 upload successful:", {
         key: uploadResult.key,
         url: uploadResult.url,
@@ -236,7 +288,7 @@ export const createNewCuRegistrationDocumentUpload = async (
         );
         // Use the same CU registration path structure for file system storage
         uploadResult = await uploadToFileSystem(
-          file,
+          processedFile,
           pathConfig.cuRegNumber, // Use application number for file system storage
           pathConfig.documentCode, // Use document code as document type
         );
@@ -264,8 +316,8 @@ export const createNewCuRegistrationDocumentUpload = async (
       documentUrl: uploadResult.url,
       path: uploadResult.key, // Store S3 key or file system path
       fileName: pathConfig.filename, // Use the properly formatted filename
-      fileType: file.mimetype,
-      fileSize: file.size,
+      fileType: processedFile.mimetype,
+      fileSize: processedFile.size,
       remarks: remarks || null,
     };
 

@@ -45,7 +45,7 @@
         }
 
         .college-name {
-            font-size: 16pt;
+            font-size: 17pt;
             font-weight: bold;
             margin-bottom: 5px;
             color: #000;
@@ -106,7 +106,7 @@
         .label-cell {
             background-color: #f5f5f5;
             font-weight: bold;
-            padding: 8px 12px;
+            padding: 15px 12px;
             border-right: 1px solid #000;
             display: flex;
             align-items: center;
@@ -116,7 +116,7 @@
 
         .data-cell {
             background-color: white;
-            padding: 8px 12px;
+            padding: 15px 12px;
             border-right: 1px solid #000;
             flex: 1;
             display: flex;
@@ -128,7 +128,6 @@
             background-color: white;
             color: #d32f2f;
             font-weight: bold;
-            padding: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -592,14 +591,14 @@
 
         .subject-cell {
             flex: 1;
-            padding: 4px 6px;
+            padding: 6px 8px;
             border-right: 1px solid #000;
             text-align: center;
-            font-size: 7pt;
+            font-size: 11px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 20px;
+            min-height: 24px;
         }
 
         .subject-cell:last-child {
@@ -655,7 +654,11 @@
                             <div style="width: 20%"></div>
                         </nav>
                     </header>
-                    <div class="pt-5">
+                    <div class="pt-3">
+                        <h2 class="fs-6 text-center font-weight-bold text-decoration-underline pb-2"
+                            style="font-weight: bold; text-underline-offset: 4px; font-size: 11px;">
+                            ADMISSION & REGISTRATION TOP SHEET
+                        </h2>
                         <!-- Rectification Banner (only show if rectification is opted) -->
                         <% if (showRectificationBanner) { %>
                             <div class="text-center mt-2 mb-4">
@@ -667,7 +670,7 @@
                                 <!-- Student Information Section -->
                                 <div class="d-flex justify-content-between align-items-center"
                                     style="border: 1px solid #000">
-                                    <div style="width: 80%" class="left">
+                                    <div style="width: 80%; height: 100%;" class="left">
                                         <!-- Row 1: Name -->
                                         <div class="d-flex" style="border-bottom: 1px solid #000">
                                             <div style="width: 25%; border-right: 1px solid #000" class="label-cell">
@@ -708,17 +711,26 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div style="width: 20%" class="right">
-                                        <div class="photo-cell">
-                                            <img src="<%= studentPhotoUrl %>" width="80" height="80" alt="Student Photo"
-                                                style="width: 80px; height: 80px; border: 1px solid #000; object-fit: cover;"
-                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='block'; console.log('Image failed to load:', this.src);"
-                                                onload="console.log('Image loaded successfully:', this.src);" />
-                                            <div
-                                                style="display: none; color: #d32f2f; font-weight: bold; text-align: center; padding: 10px; font-size: 10px;">
+                                    <div style="width: 20%; height: 100%;" class="right">
+                                        <div class="photo-cell" 
+                                             style="width: 144px; object-fit: contain; height: 145px; background-image: url('<%= studentPhotoUrl %>'); background-size: 100% 100%; background-position: 0 0; background-repeat: no-repeat; position: relative; margin: 0; padding: 0; box-sizing: border-box;">
+                                            <div id="photo-error" 
+                                                 style="display: none; color: #d32f2f; font-weight: bold; text-align: center; padding: 10px; font-size: 10px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
                                                 Student photo to be captured from A360
                                             </div>
                                         </div>
+                                        <script>
+                                            // Check if image loads successfully
+                                            const img = new Image();
+                                            img.onload = function() {
+                                                console.log('Image loaded successfully:', '<%= studentPhotoUrl %>');
+                                            };
+                                            img.onerror = function() {
+                                                console.log('Image failed to load:', '<%= studentPhotoUrl %>');
+                                                document.getElementById('photo-error').style.display = 'block';
+                                            };
+                                            img.src = '<%= studentPhotoUrl %>';
+                                        </script>
                                     </div>
                                 </div>
 
@@ -731,62 +743,62 @@
                                     <!-- Always required documents -->
                                     <div class="document-item">
                                         <span class="document-checkbox"></span>
-                                        <span>Photocopy of the original Class XII Board Marksheet.</span>
+                                        <span>1 Photocopy (One) of the original Class XII Board Marksheet.</span>
                                     </div>
                                     <div class="document-item">
                                         <span class="document-checkbox"></span>
-                                        <span>Photocopy of Class X Board Admit Card / Birth Certificate issued by
+                                        <span>1 Photocopy (One) of Class X Board Admit Card / Birth Certificate issued by
                                             Government.</span>
                                     </div>
 
                                     <!-- Nationality-based documents -->
                                     <div class="document-item <%= isIndian ? '' : 'hidden' %>">
                                         <span class="document-checkbox"></span>
-                                        <span>Photocopy of Aadhaar Card.</span>
+                                        <span>1 Photocopy (One) of Aadhaar Card.</span>
                                     </div>
                                     <div class="document-item <%= isIndian ? '' : 'hidden' %>">
                                         <span class="document-checkbox"></span>
-                                        <span>Photocopy of the APAAR (ABC) ID Card. (Not applicable for Foreign
+                                        <span>1 Photocopy (One) of the APAAR (ABC) ID Card. (Not applicable for Foreign
                                             Nationals)</span>
                                     </div>
                                     <div class="document-item <%= isIndian ? 'hidden' : '' %>">
                                         <span class="document-checkbox"></span>
-                                        <span>Photocopy of First and Last Page of Passport. (Applicable only for Foreign
+                                        <span>1 Photocopy (One) of First and Last Page of Passport. (Applicable only for Foreign
                                             Nationals)</span>
                                     </div>
 
                                     <!-- Category-based documents -->
                                     <div class="document-item <%= isSCSTOBC ? '' : 'hidden' %>">
                                         <span class="document-checkbox"></span>
-                                        <span>Photocopy of the Caste Certificate, issued by the Govt. of West Bengal.
+                                        <span>1 Photocopy (One) of the Caste Certificate, issued by the Govt. of West Bengal.
                                             (Applicable only if applied under SC/ST/OBC category)</span>
                                     </div>
 
                                     <!-- Migration Certificate (always show with note) -->
                                     <div class="document-item">
                                         <span class="document-checkbox"></span>
-                                        <span>Photocopy of the Original Migration Certificate. (NOT applicable for
+                                        <span>1 Photocopy (One) of the Original Migration Certificate. (NOT applicable for
                                             students belonging to WBCHSE/ISC/CBSE/NIOS board)</span>
                                     </div>
 
                                     <!-- PWD Certificate -->
                                     <div class="document-item <%= isPWD ? '' : 'hidden' %>">
                                         <span class="document-checkbox"></span>
-                                        <span>Photocopy of the PWD Certificate. (Applicable only if applied under the
+                                        <span>1 Photocopy (One)  of the PWD Certificate. (Applicable only if applied under the
                                             Physically Handicap category)</span>
                                     </div>
 
                                     <!-- EWS Certificate -->
                                     <div class="document-item <%= isEWS ? '' : 'hidden' %>">
                                         <span class="document-checkbox"></span>
-                                        <span>Photocopy of the EWS Certificate, issued by the Govt. of West Bengal.
+                                        <span>1 Photocopy (One) of the EWS Certificate, issued by the Govt. of West Bengal.
                                             (Applicable only if applied under EWS category)</span>
                                     </div>
 
                                     <!-- CU Registration Certificate -->
                                     <div class="document-item <%= hasCURegistration ? '' : 'hidden' %>">
                                         <span class="document-checkbox"></span>
-                                        <span>Photocopy of the Calcutta University Registration Certificate. (Applicable
+                                        <span>1 Photocopy (One) of the Calcutta University Registration Certificate. (Applicable
                                             only for students registered with Calcutta University in the year 2024 or
                                             before)</span>
                                     </div>
@@ -819,7 +831,7 @@
                     </div> <!-- End Main Content Container -->
 
                     <div class="d-flex justify-content-between align-items-center position-relative"
-                        style=" bottom: -310px; z-index: 1000;">
+                        style=" bottom: -280px; z-index: 1000;">
                         <p style="width: 85%; font-size: 10px">
                             This sheet is to be printed and submitted to the college in
                             original as per the physical submission schedule given on the
@@ -860,7 +872,7 @@
                         <div style="width: 20%; padding-left: 30px;" >
                             <% if (qrCodeDataUrl) { %>
                                 <img src="<%= qrCodeDataUrl %>" alt="QR Code" 
-                                     style="width: 80px; height: 80px; border: 1px solid #000; object-fit: cover;" />
+                                     style="width: 80px; height: 80px; object-fit: cover;" />
                             <% } else { %>
                                 <div style="width: 80px; height: 80px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; background-color: #f5f5f5; color: #666; font-size: 10px; text-align: center;">
                                     QR Code<br/>Not Available
@@ -1037,7 +1049,11 @@
                                 <div class="form-field">
                                     <div class="field-label">CU Registration No:</div>
                                     <div class="field-input">
-                                        <%= cuRegistrationNumber %>
+                                        <% if (cuRegistrationNumber && cuRegistrationNumber.trim() !== '') { %>
+                                            <%= cuRegistrationNumber %>
+                                        <% } else { %>
+                                            Applicable on for previous registration
+                                        <% } %>
                                             <span class="office-use"></span>
                                     </div>
                                 </div>
@@ -1061,7 +1077,7 @@
                                     <div class="subject-header">
                                         <% subjectGroup.headers.forEach(function(header) { %>
                                             <div class="subject-cell" style="font-weight: bold;">
-                                                <%= header.replace('MDC', 'IDC') %>
+                                                <%= header.replace('MDC', 'IDC').replace('Core/Major', 'Core/DSCC') %>
                                             </div>
                                             <% }); %>
                                     </div>
@@ -1082,7 +1098,7 @@
                                 style="font-weight: bold; text-underline-offset: 4px; font-size: 12px;">
                                 Declaration
                             </h2>
-                            <ol class="verification-list">
+                            <ol class="verification-list" style="font-size: 7px;">
                                 <li>
                                     I shall abide by all rules and regulations of The Bhawanipur Education Society College,
                                     University of Calcutta, and UGC, as existing or amended from time to time.
@@ -1139,7 +1155,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between align-items-center position-relative" style="bottom: 12px">
+                <div class="d-flex justify-content-between align-items-center position-relative" style="bottom: 15px">
                     <p style="width: 85%; font-size: 10px">
                         This sheet is to be printed and submitted to the college in
                         original as per the physical submission schedule given on the
@@ -1179,14 +1195,14 @@
                         <div style="width: 20%"></div>
                     </nav>
                 </header>
-                <div class="pt-3">
+                <div>
                     <!-- Anti-Ragging Section -->
                     <div>
-                        <h2 class="fs-6 mb-2 text-center font-weight-bold text-decoration-underline py-4"
+                        <h2 class="fs-6 mb-2 text-center font-weight-bold text-decoration-underline py-3"
                             style="font-weight: bold; text-underline-offset: 4px">
                             ANTI-RAGGING FORM BY THE APPLICANT
                         </h2>
-                        <ol class="anti-ragging-list m-0 px-3">
+                        <ol class="anti-ragging-list m-0 px-3" style="text-align: justify;">
                             <li>
                                 I, <span class="highlight-text">
                                     <%= studentName %>
@@ -1258,18 +1274,18 @@
                         <h3 style="font-size: 14px; padding: 15px 0;" class="fw-bold">
                             DECLARED ON <%= formDownloadDate %>
                         </h3>
-                        <div class="anti-ragging-text pt-4 m-0">
-                            <span class="highlight-text">Signature of Applicant</span>
+                        <div class="anti-ragging-text pt-4 m-0 mb-2">
+                            <span class="highlight-text">Full Signature of Applicant</span>
                         </div>
                         <div class="anti-ragging-text pt-0">
                             <span class="highlight-text">(<%= studentName %>)</span>
                         </div>
 
-                        <h2 class="fs-6 mb-2 text-center font-weight-bold text-decoration-underline pb-4"
+                        <h2 class="fs-6 mb-2 text-center font-weight-bold text-decoration-underline py-4"
                             style="font-weight: bold; text-underline-offset: 4px">
                             VERIFICATION
                         </h2>
-                        <ol class="verification-list">
+                        <ol class="verification-list" style="text-align: justify;">
                             <li>
                                 I confirm that I have read UGC's regulations on Ragging.(To
                                 read, visit the link ABSTRACT OF UGC REGULATIONS ON RAGGING)
@@ -1296,7 +1312,7 @@
                             </li>
                         </ol>
 
-                        <div class="anti-ragging-text" style="margin: 25px 0;">
+                        <div class="anti-ragging-text" style="margin: 25px 0; text-align: justify;">
                             Verified that the contents of this affidavit are true to the
                             best of my knowledge. No part of the affidavit is false, and
                             nothing has been concealed or misstated therein.
@@ -1325,7 +1341,7 @@
                     </div>
                 </div>
                 <div class="d-flex justify-content-between align-items-center position-relative"
-                    style="bottom: -170px;">
+                    style="bottom: -155px;">
                     <p style="width: 85%; font-size: 10px">
                         This sheet is to be printed and submitted to the college in
                         original as per the physical submission schedule given on the
@@ -1365,12 +1381,12 @@
                         <div style="width: 20%"></div>
                     </nav>
                 </header>
-                <div class="py-4">
-                    <h2 class="fs-6 py-4 mb-2 text-center font-weight-bold text-decoration-underline"
+                <div class="py-3">
+                    <h2 class="fs-6 pb-3 mb-2 text-center font-weight-bold text-decoration-underline"
                         style="font-weight: bold; text-underline-offset: 4px">
                         ANTI-RAGGING FORM BY PARENT/GUARDIAN
                     </h2>
-                    <ol class="anti-ragging-list m-0 px-3">
+                    <ol class="anti-ragging-list m-0 px-3" style="text-align: justify;">
                         <li>
                             I, Mr./Mrs./Miss
                             <span class="highlight-text">
@@ -1449,11 +1465,11 @@
                         </span>
                     </div>
 
-                    <h2 class="fs-6 mb-2 text-center font-weight-bold text-decoration-underline pb-4"
+                    <h2 class="fs-6 mb-2 text-center font-weight-bold text-decoration-underline py-4"
                         style="font-weight: bold; text-underline-offset: 4px">
                         VERIFICATION
                     </h2>
-                    <div class="anti-ragging-text" style="margin: 25px 0;">
+                    <div class="anti-ragging-text" style="margin: 25px 0; text-align: justify;">
                         Verified that the contents of this affidavit are true to the best
                         of my knowledge. No part of the affidavit is false, and nothing
                         has been concealed or misstated therein.
@@ -1482,7 +1498,7 @@
                     </div>
                 </div>
                 <div class="d-flex justify-content-between align-items-center position-relative"
-                    style="bottom: -260px;">
+                    style="bottom: -275px;">
                     <p style="width: 85%; font-size: 10px">
                         This sheet is to be printed and submitted to the college in
                         original as per the physical submission schedule given on the

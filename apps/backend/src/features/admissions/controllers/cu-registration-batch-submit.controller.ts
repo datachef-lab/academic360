@@ -528,6 +528,14 @@ export const submitPersonalInfoDeclaration = async (
       flags,
       personalInfoKeys: personalInfo ? Object.keys(personalInfo) : [],
     });
+    console.info(
+      "[CU-REG BACKEND] Personal declaration - personalInfo details:",
+      {
+        apaarId: personalInfo?.apaarId,
+        apaarIdType: typeof personalInfo?.apaarId,
+        fullPersonalInfo: personalInfo,
+      },
+    );
 
     if (!correctionRequestId) {
       res
@@ -574,6 +582,17 @@ export const submitPersonalInfoDeclaration = async (
 
     // Update student data if payload is provided
     if (personalInfo && correctionRequest.student?.id) {
+      console.info(
+        "[CU-REG BACKEND] Personal declaration - calling updateStudentDataFromCorrectionRequest",
+        {
+          studentId: correctionRequest.student.id,
+          flags: flags || {},
+          personalInfo: personalInfo,
+          apaarIdInPersonalInfo: personalInfo.apaarId,
+          apaarIdType: typeof personalInfo.apaarId,
+        },
+      );
+
       const dbUpdateResult = await updateStudentDataFromCorrectionRequest(
         correctionRequest.student.id,
         flags || {},

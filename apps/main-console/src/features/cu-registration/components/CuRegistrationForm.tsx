@@ -1200,16 +1200,22 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
             // Process actualStudentSelections (actual form submissions)
             const actualSelections = studentRows?.actualStudentSelections || [];
+            console.log("🔍 CU-REG - Processing actualStudentSelections:", actualSelections);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             actualSelections.forEach((r: any) => {
-              const label = String(r?.subjectSelectionMeta?.label || "");
-              const name = r?.subject?.name || r?.subject?.code || "";
-              if (!label || !name) return;
+              // Use the correct field names from the actual data structure
+              const label = String(r?.metaLabel || r?.subjectSelectionMeta?.label || "");
+              const name = r?.subjectName || r?.subject?.name || r?.subject?.code || "";
+              console.log("🔍 CU-REG - Processing selection:", { label, name, raw: r });
+              if (!label || !name) {
+                console.log("🔍 CU-REG - Skipping due to missing label or name");
+                return;
+              }
 
               const key = getCategoryKey(label);
               if (!key || !next[key]) return;
 
-              let semesters: number[] = toSemNumsFromClasses(r?.subjectSelectionMeta?.forClasses);
+              let semesters: number[] = toSemNumsFromClasses(r?.forClasses || r?.subjectSelectionMeta?.forClasses);
 
               // Category-specific defaults when class span is unavailable
               if (semesters.length === 0 && /Minor\s*1/i.test(label)) semesters = [1, 2];

@@ -109,7 +109,6 @@ export default function SubjectSelectionForm({
       try {
         // Fetch data including meta data in single API call
         const resp = await fetchStudentSubjectSelections(student.id);
-        console.log("subject-selection-form data", resp);
 
         // Set meta data from the response
         setSubjectSelectionMetas(resp.subjectSelectionMetas || []);
@@ -122,20 +121,25 @@ export default function SubjectSelectionForm({
 
         // Check if student has actually submitted selections through the form
         const hasExisting = resp.hasFormSubmissions || false;
+        console.log("🔍 Debug - hasFormSubmissions:", hasExisting);
+        console.log("🔍 Debug - actualStudentSelections:", resp.actualStudentSelections);
         setHasExistingSelections(hasExisting);
 
         // If student has existing form submissions, populate the saved selections for display
         if (hasExisting) {
+          console.log("🔍 Debug - Processing existing selections");
           const savedSelectionsData: typeof savedSelections = {};
 
           // Extract saved selections from actualStudentSelections
           const actualSelections = resp.actualStudentSelections || [];
+          console.log("🔍 Debug - actualSelections:", actualSelections);
 
           // Transform actualStudentSelections array into the format expected by SavedSelectionsDisplay
           const transformedSelections = transformActualSelectionsToDisplayFormat(
             actualSelections,
             resp.subjectSelectionMetas || [],
           );
+          console.log("🔍 Debug - transformedSelections:", transformedSelections);
           setSavedSelections(transformedSelections);
         }
 
@@ -1337,69 +1341,52 @@ export default function SubjectSelectionForm({
   const transformActualSelectionsToDisplayFormat = (actualSelections: any[], metas: any[]) => {
     const result: any = {};
 
-    console.log("🔍 Frontend Debug - transformActualSelectionsToDisplayFormat called with:", {
-      actualSelectionsCount: actualSelections.length,
+    console.log("🔍 Transform Debug - Input data:", {
       actualSelections: actualSelections.map((s) => ({
-        subjectName: s.subject?.name,
-        metaId: s.subjectSelectionMeta?.id,
-        metaLabel: s.subjectSelectionMeta?.label,
-        fullSelection: s, // Add full selection object for debugging
+        subjectName: s.subjectName,
+        metaLabel: s.metaLabel,
+        subjectTypeCode: s.subjectTypeCode,
       })),
-      availableMetas: metas.map((m) => ({ id: m.id, label: m.label })),
+      metas: metas.map((m) => ({ id: m.id, label: m.label })),
     });
 
     for (const selection of actualSelections) {
-      const metaId = selection.subjectSelectionMeta?.id;
-      const subjectName = selection.subject?.name;
+      // Based on the actual data structure from the API response
+      const subjectName = selection.subjectName;
+      const metaLabel = selection.metaLabel;
+      const subjectTypeCode = selection.subjectTypeCode;
 
-      console.log("🔍 Frontend Debug - Processing selection:", { metaId, subjectName });
+      console.log("🔍 Transform Debug - Raw selection:", selection);
+      console.log("🔍 Transform Debug - Extracted:", { subjectName, metaLabel, subjectTypeCode });
 
-      if (!metaId || !subjectName) continue;
+      if (!subjectName || !metaLabel) continue;
 
-      // Find the meta label by looking up the metaId in the metas array
-      const meta = metas.find((m) => m.id === metaId);
-      const metaLabel = meta?.label;
-
-      console.log("🔍 Frontend Debug - Found meta:", { metaId, metaLabel });
-
-      if (!metaLabel) continue;
-
-      // Map meta labels to the expected format
+      // Map meta labels to the expected format - handle backend format "Minor 3 (Semester III)"
       if (metaLabel.includes("Minor 1")) {
         result.minor1 = subjectName;
-        console.log("🔍 Frontend Debug - Mapped to minor1:", subjectName);
       } else if (metaLabel.includes("Minor 2")) {
         result.minor2 = subjectName;
-        console.log("🔍 Frontend Debug - Mapped to minor2:", subjectName);
       } else if (metaLabel.includes("Minor 3")) {
-        result.minor3 = subjectName; // Minor 3 maps to minor3 slot
-        console.log("🔍 Frontend Debug - Mapped to minor3:", subjectName);
+        result.minor3 = subjectName;
       } else if (metaLabel.includes("IDC 1")) {
         result.idc1 = subjectName;
-        console.log("🔍 Frontend Debug - Mapped to idc1:", subjectName);
       } else if (metaLabel.includes("IDC 2")) {
         result.idc2 = subjectName;
-        console.log("🔍 Frontend Debug - Mapped to idc2:", subjectName);
       } else if (metaLabel.includes("IDC 3")) {
         result.idc3 = subjectName;
-        console.log("🔍 Frontend Debug - Mapped to idc3:", subjectName);
       } else if (metaLabel.includes("AEC")) {
         result.aec3 = subjectName;
-        console.log("🔍 Frontend Debug - Mapped to aec3:", subjectName);
       } else if (metaLabel.includes("CVAC")) {
         result.cvac4 = subjectName;
-        console.log("🔍 Frontend Debug - Mapped to cvac4:", subjectName);
       }
     }
 
-    console.log("🔍 Frontend Debug - Final transformed result:", result);
+    console.log("🔍 Transform Debug - Final result:", result);
     return result;
   };
 
   // Component to display saved selections in read-only table format
   const SavedSelectionsDisplay = () => {
-    console.log("🔍 Frontend Debug - SavedSelectionsDisplay rendering with:", savedSelections);
-
     return (
       <div className="space-y-6">
         <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
