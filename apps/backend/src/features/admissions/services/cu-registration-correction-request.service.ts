@@ -40,6 +40,7 @@ import {
   programCourseModel,
   specializationModel,
 } from "@repo/db/schemas/models/course-design";
+import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions";
 import ExcelJS from "exceljs";
 
 // Environment detection helpers
@@ -1882,6 +1883,7 @@ interface CuRegistrationExportData {
   rejectedRemarks: string;
   createdAt: string;
   updatedAt: string;
+  admissionRollNumber: string;
 
   // Personal Info (from UI)
   fullName: string;
@@ -2007,6 +2009,9 @@ export const exportCuRegistrationCorrectionRequests =
           // Program course name
           programCourseName: programCourseModel.name,
 
+          // Admission academic info
+          admissionRollNumber: admissionAcademicInfoModel.rollNumber,
+
           // Address data (residential)
           residentialAddressLine: addressModel.addressLine,
           residentialCountryId: addressModel.countryId,
@@ -2040,6 +2045,10 @@ export const exportCuRegistrationCorrectionRequests =
         .leftJoin(
           programCourseModel,
           eq(studentModel.programCourseId, programCourseModel.id),
+        )
+        .leftJoin(
+          admissionAcademicInfoModel,
+          eq(studentModel.id, admissionAcademicInfoModel.studentId),
         )
         .leftJoin(
           addressModel,
@@ -2196,6 +2205,7 @@ export const exportCuRegistrationCorrectionRequests =
             rejectedRemarks: request.rejectedRemarks || "",
             createdAt: request.createdAt?.toISOString() || "",
             updatedAt: request.updatedAt?.toISOString() || "",
+            admissionRollNumber: request.admissionRollNumber || "",
 
             // Personal Info
             fullName: request.userName || "",
