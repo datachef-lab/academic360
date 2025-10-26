@@ -575,18 +575,6 @@ jobs:
             sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} . || true
             chmod -R u+rw . || true
             find . -maxdepth 3 -name "*.tsbuildinfo" -delete || true
-
-            echo "🧹 Clean up any existing dist directories with force"
-            sudo rm -rf apps/backend/dist || true
-            sudo rm -rf apps/main-console/dist || true
-            sudo rm -rf apps/student-console/dist || true
-            sudo rm -rf apps/notification-system/dist || true
-            sudo rm -rf packages/db/dist || true
-
-            # More aggressive cleanup for nested dist directories
-            find . -name "dist" -type d -exec sudo rm -rf {} + 2>/dev/null || true
-            find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
-
             export CI=true
 
             echo "✅ Using latest staging branch code from git clone"
@@ -594,39 +582,21 @@ jobs:
             echo "Current branch: $(git branch --show-current)"
 
             echo "📦 Install workspace dependencies"
-            sudo -u ${{ secrets.SSH_USER }} pnpm install --frozen-lockfile
-
-            echo "🧹 Final cleanup before build (ensure clean state)"
-            sudo rm -rf apps/backend/dist apps/main-console/dist apps/student-console/dist apps/notification-system/dist packages/db/dist || true
-
-            # More aggressive cleanup for any remaining dist directories
-            find . -name "dist" -type d -exec sudo rm -rf {} + 2>/dev/null || true
-            find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
-
-            sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} . || true
+            pnpm install --frozen-lockfile
 
             echo "🏗️ Build shared DB and apps"
-
-            # Extra aggressive cleanup before backend build
-            echo "🧹 Extra aggressive cleanup before backend build"
-            sudo rm -rf apps/backend/dist || true
-            find apps/backend -name "dist" -type d -exec sudo rm -rf {} + 2>/dev/null || true
-            sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} apps/backend || true
-
-            # Build with sudo permissions
-            echo "📦 Building packages with sudo permissions"
-            sudo -u ${{ secrets.SSH_USER }} pnpm --filter @repo/db... build
-            sudo -u ${{ secrets.SSH_USER }} pnpm --filter backend... build
-            sudo -u ${{ secrets.SSH_USER }} pnpm --filter main-console... build
-            sudo -u ${{ secrets.SSH_USER }} pnpm --filter student-console... build || true
+            pnpm --filter @repo/db... build
+            pnpm --filter backend... build
+            pnpm --filter main-console... build
+            pnpm --filter student-console... build || true
             # Build notification-system so PM2 can run the compiled JS
-            sudo -u ${{ secrets.SSH_USER }} pnpm --filter notification-system... build
+            pnpm --filter notification-system... build
 
             echo "🚚 Run database migrations"
-            sudo -u ${{ secrets.SSH_USER }} pnpm --filter backend db:migrate
+            pnpm --filter backend db:migrate
 
             echo "🚀 Start/restart backend with PM2 (detect dist path)"
-            sudo -u ${{ secrets.SSH_USER }} pm2 delete academic360-backend || true
+            pm2 delete academic360-backend || true
             BACKEND_ENTRY=""
             if [ -f "apps/backend/dist/apps/backend/src/index.js" ]; then
               BACKEND_ENTRY="apps/backend/dist/apps/backend/src/index.js"
@@ -640,20 +610,20 @@ jobs:
               exit 1
             fi
             echo "Using backend entry: $BACKEND_ENTRY"
-            sudo -u ${{ secrets.SSH_USER }} pm2 start "node $BACKEND_ENTRY" --name academic360-backend --cwd "$(pwd)" --update-env
+            pm2 start "node $BACKEND_ENTRY" --name academic360-backend --cwd "$(pwd)" --update-env
 
             echo "🚀 Serve main-console dist with PM2 (repo root as CWD)"
-            sudo -u ${{ secrets.SSH_USER }} pm2 delete academic360-frontend || true
-            sudo -u ${{ secrets.SSH_USER }} pm2 start "serve -s apps/main-console/dist -l ${MAIN_CONSOLE_PORT:-8081}" --name academic360-frontend --cwd "$(pwd)" --update-env
+            pm2 delete academic360-frontend || true
+            pm2 start "serve -s apps/main-console/dist -l ${MAIN_CONSOLE_PORT:-8081}" --name academic360-frontend --cwd "$(pwd)" --update-env
 
             echo "🚀 Start student-console (Next.js) with PM2"
-            sudo -u ${{ secrets.SSH_USER }} pm2 delete besc-student-console || true
-            sudo -u ${{ secrets.SSH_USER }} pm2 start "bash -lc 'cd apps/student-console && pnpm install --frozen-lockfile && pnpm start -p ${STUDENT_CONSOLE_PORT:-3008}'" --name besc-student-console --cwd "$(pwd)" --update-env
+            pm2 delete besc-student-console || true
+            pm2 start "bash -lc 'cd apps/student-console && pnpm install --frozen-lockfile && pnpm start -p ${STUDENT_CONSOLE_PORT:-3008}'" --name besc-student-console --cwd "$(pwd)" --update-env
 
-            sudo -u ${{ secrets.SSH_USER }} pm2 save
-            sudo -u ${{ secrets.SSH_USER }} pm2 status
+            pm2 save
+            pm2 status
             echo "🚀 Start notification workers"
-            sudo -u ${{ secrets.SSH_USER }} pm2 delete academic360-notify-whatsapp || true
+            pm2 delete academic360-notify-whatsapp || true
             NOTIFY_ENTRY=""
             if [ -f "apps/notification-system/dist/apps/notification-system/src/index.js" ]; then
               NOTIFY_ENTRY="apps/notification-system/dist/apps/notification-system/src/index.js"
@@ -666,7 +636,7 @@ jobs:
               exit 1
             fi
             echo "Using notification entry: $NOTIFY_ENTRY"
-            sudo -u ${{ secrets.SSH_USER }} pm2 start "node $NOTIFY_ENTRY" --name academic360-notify-whatsapp --cwd "$(pwd)" --update-env
+            pm2 start "node $NOTIFY_ENTRY" --name academic360-notify-whatsapp --cwd "$(pwd)" --update-env
         if: steps.host.outputs.env == 'staging'
 
       - name: Deploy over SSH (compose down/build/migrate/up) (prod)
