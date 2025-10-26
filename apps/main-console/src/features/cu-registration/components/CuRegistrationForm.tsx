@@ -28,7 +28,7 @@ import { getCitiesByState } from "@/services/city.service";
 import { getDistrictsByState } from "@/services/address.service";
 import { getAllNationalities } from "@/services/nationalities.service";
 import type { StudentDto, ProfileInfo } from "@repo/db/dtos/user";
-import { genderTypeEnum, cuRegistrationCorrectionRequestStatusEnum } from "@repo/db";
+import { genderTypeEnum, cuRegistrationCorrectionRequestStatusEnum } from "@repo/db/enums";
 import axiosInstance from "@/utils/api";
 
 interface CuRegistrationFormProps {
@@ -256,9 +256,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     { value: "No", label: "No" },
   ];
 
-  const correctionStatusOptions = cuRegistrationCorrectionRequestStatusEnum.enumValues.map((value) => ({
+  const correctionStatusOptions = cuRegistrationCorrectionRequestStatusEnum.enumValues.map((value: string) => ({
     value,
-    label: value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+    label: value.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
   }));
 
   // Document types for file uploads - fetched from API
@@ -1425,7 +1425,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {correctionStatusOptions.map((option) => (
+                {correctionStatusOptions.map((option: { value: string; label: string }) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
