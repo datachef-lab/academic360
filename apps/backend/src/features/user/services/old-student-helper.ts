@@ -863,7 +863,7 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
   let parentType: "BOTH" | "FATHER_ONLY" | "MOTHER_ONLY" | null = null;
   if (oldStudent.issnglprnt) {
     const v = oldStudent.issnglprnt.toLowerCase();
-    if (v === "bth") parentType = "BOTH";
+    if (v === "bth" || v === "no") parentType = "BOTH";
     else if (v === "sngl_fthr") parentType = "FATHER_ONLY";
     else if (v === "sngl_mthr") parentType = "MOTHER_ONLY";
   }
@@ -968,11 +968,11 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
       return;
     }
 
-    await db.insert(personModel).values(values);
+    return (await db.insert(personModel).values(values).returning())[0];
   };
 
   // Father details
-  await upsertPerson({
+  const father = await upsertPerson({
     type: "FATHER",
     name: oldStudent.fatherName,
     title:
@@ -989,7 +989,7 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
   });
 
   // Mother details
-  await upsertPerson({
+  const mother = await upsertPerson({
     type: "MOTHER",
     name: oldStudent.motherName,
     title:
@@ -1004,6 +1004,29 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
       | number
       | undefined,
   });
+
+  if (father?.name && mother?.name) {
+    await db
+      .update(familyModel)
+      .set({
+        parentType: "BOTH",
+      })
+      .where(eq(familyModel.id, existingFamily.id));
+  } else if (father?.name) {
+    await db
+      .update(familyModel)
+      .set({
+        parentType: "FATHER_ONLY",
+      })
+      .where(eq(familyModel.id, existingFamily.id));
+  } else if (mother?.name) {
+    await db
+      .update(familyModel)
+      .set({
+        parentType: "MOTHER_ONLY",
+      })
+      .where(eq(familyModel.id, existingFamily.id));
+  }
 
   // Guardian details
   await upsertPerson({
