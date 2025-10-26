@@ -895,6 +895,14 @@ export async function updateCuRegistrationCorrectionRequest(
             addressUpdates.policeStationId = data.policeStationId || null;
           if (typeof data.otherPoliceStation !== "undefined")
             addressUpdates.otherPoliceStation = data.otherPoliceStation || null;
+          if (typeof data.otherDistrict !== "undefined")
+            addressUpdates.otherDistrict = data.otherDistrict || null;
+          if (typeof data.otherCity !== "undefined")
+            addressUpdates.otherCity = data.otherCity || null;
+          if (typeof data.otherState !== "undefined")
+            addressUpdates.otherState = data.otherState || null;
+          if (typeof data.otherCountry !== "undefined")
+            addressUpdates.otherCountry = data.otherCountry || null;
           if (typeof data.addressLine !== "undefined")
             addressUpdates.addressLine = data.addressLine || null;
           if (typeof data.pincode !== "undefined")
@@ -1306,6 +1314,14 @@ export async function updateStudentDataFromCorrectionRequest(
           addressUpdates.policeStationId = data.policeStationId || null;
         if (typeof data.otherPoliceStation !== "undefined")
           addressUpdates.otherPoliceStation = data.otherPoliceStation || null;
+        if (typeof data.otherDistrict !== "undefined")
+          addressUpdates.otherDistrict = data.otherDistrict || null;
+        if (typeof data.otherCity !== "undefined")
+          addressUpdates.otherCity = data.otherCity || null;
+        if (typeof data.otherState !== "undefined")
+          addressUpdates.otherState = data.otherState || null;
+        if (typeof data.otherCountry !== "undefined")
+          addressUpdates.otherCountry = data.otherCountry || null;
         if (typeof data.addressLine !== "undefined")
           addressUpdates.addressLine = data.addressLine || null;
         if (typeof data.pincode !== "undefined")

@@ -200,7 +200,39 @@ export default function CURegistrationPage() {
   const [addressDeclared, setAddressDeclared] = useState(false);
   const [addressErrors, setAddressErrors] = useState<string[]>([]);
 
-  // Removed environment gating; page available in all environments
+  // Track which fields are using fallback values and should be editable
+  const [editableFields, setEditableFields] = useState<{
+    residential: {
+      district: boolean;
+      city: boolean;
+      policeStation: boolean;
+      postOffice: boolean;
+    };
+    mailing: {
+      district: boolean;
+      city: boolean;
+      policeStation: boolean;
+      postOffice: boolean;
+    };
+  }>({
+    residential: {
+      district: false,
+      city: false,
+      policeStation: false,
+      postOffice: false,
+    },
+    mailing: {
+      district: false,
+      city: false,
+      policeStation: false,
+      postOffice: false,
+    },
+  });
+
+  // Debug: Log editableFields state changes
+  useEffect(() => {
+    console.log("🔍 EditableFields state changed:", editableFields);
+  }, [editableFields]);
 
   // Check subject selection status
   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState(false);
@@ -691,6 +723,30 @@ export default function CURegistrationPage() {
       const resAddr = addresses.find((a) => a?.type === "RESIDENTIAL") || null;
       const mailAddr = addresses.find((a) => a?.type === "MAILING") || null;
 
+      // Debug: Log address data structure
+      console.log("🔍 Address data debug:", {
+        resAddr: resAddr
+          ? {
+              districtId: resAddr?.districtId,
+              district: resAddr?.district?.name,
+              otherDistrict: resAddr?.otherDistrict,
+              cityId: resAddr?.cityId,
+              city: resAddr?.city?.name,
+              otherCity: resAddr?.otherCity,
+            }
+          : null,
+        mailAddr: mailAddr
+          ? {
+              districtId: mailAddr?.districtId,
+              district: mailAddr?.district?.name,
+              otherDistrict: mailAddr?.otherDistrict,
+              cityId: mailAddr?.cityId,
+              city: mailAddr?.city?.name,
+              otherCity: mailAddr?.otherCity,
+            }
+          : null,
+      });
+
       console.info("Address data from profile:", {
         addresses,
         resAddr,
@@ -711,30 +767,36 @@ export default function CURegistrationPage() {
       };
 
       if (resAddr || mailAddr) {
+        // Determine which fields are using fallback values
+        const residentialDistrictValue = getFieldWithFallback(
+          resAddr?.district?.name,
+          resAddr?.otherDistrict,
+          getFieldWithFallback(mailAddr?.district?.name, mailAddr?.otherDistrict),
+        );
+        const residentialCityValue = getFieldWithFallback(
+          resAddr?.city?.name,
+          resAddr?.otherCity,
+          getFieldWithFallback(mailAddr?.city?.name, mailAddr?.otherCity),
+        );
+        const residentialPoliceStationValue = getFieldWithFallback(
+          resAddr?.policeStation?.name,
+          resAddr?.otherPoliceStation,
+          getFieldWithFallback(mailAddr?.policeStation?.name, mailAddr?.otherPoliceStation),
+        );
+        const residentialPostOfficeValue = getFieldWithFallback(
+          resAddr?.postoffice?.name,
+          resAddr?.otherPostoffice,
+          getFieldWithFallback(mailAddr?.postoffice?.name, mailAddr?.otherPostoffice),
+        );
+
         setAddressData((prev) => ({
           ...prev,
           residential: {
             addressLine: getFieldWithFallback(resAddr?.addressLine, mailAddr?.addressLine),
-            city: getFieldWithFallback(
-              resAddr?.city?.name,
-              resAddr?.otherCity,
-              getFieldWithFallback(mailAddr?.city?.name, mailAddr?.otherCity),
-            ),
-            district: getFieldWithFallback(
-              resAddr?.district?.name,
-              resAddr?.otherDistrict,
-              getFieldWithFallback(mailAddr?.district?.name, mailAddr?.otherDistrict),
-            ),
-            policeStation: getFieldWithFallback(
-              resAddr?.policeStation?.name,
-              resAddr?.otherPoliceStation,
-              getFieldWithFallback(mailAddr?.policeStation?.name, mailAddr?.otherPoliceStation),
-            ),
-            postOffice: getFieldWithFallback(
-              resAddr?.postoffice?.name,
-              resAddr?.otherPostoffice,
-              getFieldWithFallback(mailAddr?.postoffice?.name, mailAddr?.otherPostoffice),
-            ),
+            city: residentialCityValue,
+            district: residentialDistrictValue,
+            policeStation: residentialPoliceStationValue,
+            postOffice: residentialPostOfficeValue,
             state: getFieldWithFallback(
               resAddr?.state?.name,
               resAddr?.otherState,
@@ -748,33 +810,72 @@ export default function CURegistrationPage() {
             pinCode: getFieldWithFallback(resAddr?.pincode, mailAddr?.pincode),
           },
         }));
+
+        // Update editable fields state for residential address
+        setEditableFields((prev) => {
+          const newState = {
+            ...prev,
+            residential: {
+              // Editable when FK is not set AND other field is also empty
+              district:
+                !resAddr?.districtId && !resAddr?.otherDistrict && !mailAddr?.districtId && !mailAddr?.otherDistrict,
+              city: !resAddr?.cityId && !resAddr?.otherCity && !mailAddr?.cityId && !mailAddr?.otherCity,
+              policeStation:
+                !resAddr?.policeStationId &&
+                !resAddr?.otherPoliceStation &&
+                !mailAddr?.policeStationId &&
+                !mailAddr?.otherPoliceStation,
+              postOffice:
+                !resAddr?.postofficeId &&
+                !resAddr?.otherPostoffice &&
+                !mailAddr?.postofficeId &&
+                !mailAddr?.otherPostoffice,
+            },
+          };
+
+          console.log("🔍 Setting residential editable fields:", {
+            resAddrDistrictId: resAddr?.districtId,
+            resAddrOtherDistrict: resAddr?.otherDistrict,
+            mailAddrDistrictId: mailAddr?.districtId,
+            mailAddrOtherDistrict: mailAddr?.otherDistrict,
+            willBeEditable: newState.residential.district,
+          });
+
+          return newState;
+        });
       }
 
       if (mailAddr || resAddr) {
+        // Determine which fields are using fallback values for mailing address
+        const mailingDistrictValue = getFieldWithFallback(
+          mailAddr?.district?.name,
+          mailAddr?.otherDistrict,
+          getFieldWithFallback(resAddr?.district?.name, resAddr?.otherDistrict),
+        );
+        const mailingCityValue = getFieldWithFallback(
+          mailAddr?.city?.name,
+          mailAddr?.otherCity,
+          getFieldWithFallback(resAddr?.city?.name, resAddr?.otherCity),
+        );
+        const mailingPoliceStationValue = getFieldWithFallback(
+          mailAddr?.policeStation?.name,
+          mailAddr?.otherPoliceStation,
+          getFieldWithFallback(resAddr?.policeStation?.name, resAddr?.otherPoliceStation),
+        );
+        const mailingPostOfficeValue = getFieldWithFallback(
+          mailAddr?.postoffice?.name,
+          mailAddr?.otherPostoffice,
+          getFieldWithFallback(resAddr?.postoffice?.name, resAddr?.otherPostoffice),
+        );
+
         setAddressData((prev) => ({
           ...prev,
           mailing: {
             addressLine: getFieldWithFallback(mailAddr?.addressLine, resAddr?.addressLine),
-            city: getFieldWithFallback(
-              mailAddr?.city?.name,
-              mailAddr?.otherCity,
-              getFieldWithFallback(resAddr?.city?.name, resAddr?.otherCity),
-            ),
-            district: getFieldWithFallback(
-              mailAddr?.district?.name,
-              mailAddr?.otherDistrict,
-              getFieldWithFallback(resAddr?.district?.name, resAddr?.otherDistrict),
-            ),
-            policeStation: getFieldWithFallback(
-              mailAddr?.policeStation?.name,
-              mailAddr?.otherPoliceStation,
-              getFieldWithFallback(resAddr?.policeStation?.name, resAddr?.otherPoliceStation),
-            ),
-            postOffice: getFieldWithFallback(
-              mailAddr?.postoffice?.name,
-              mailAddr?.otherPostoffice,
-              getFieldWithFallback(resAddr?.postoffice?.name, resAddr?.otherPostoffice),
-            ),
+            city: mailingCityValue,
+            district: mailingDistrictValue,
+            policeStation: mailingPoliceStationValue,
+            postOffice: mailingPostOfficeValue,
             state: getFieldWithFallback(
               mailAddr?.state?.name,
               mailAddr?.otherState,
@@ -788,6 +889,39 @@ export default function CURegistrationPage() {
             pinCode: getFieldWithFallback(mailAddr?.pincode, resAddr?.pincode),
           },
         }));
+
+        // Update editable fields state for mailing address
+        setEditableFields((prev) => {
+          const newState = {
+            ...prev,
+            mailing: {
+              // Editable when FK is not set AND other field is also empty
+              district:
+                !mailAddr?.districtId && !mailAddr?.otherDistrict && !resAddr?.districtId && !resAddr?.otherDistrict,
+              city: !mailAddr?.cityId && !mailAddr?.otherCity && !resAddr?.cityId && !resAddr?.otherCity,
+              policeStation:
+                !mailAddr?.policeStationId &&
+                !mailAddr?.otherPoliceStation &&
+                !resAddr?.policeStationId &&
+                !resAddr?.otherPoliceStation,
+              postOffice:
+                !mailAddr?.postofficeId &&
+                !mailAddr?.otherPostoffice &&
+                !resAddr?.postofficeId &&
+                !resAddr?.otherPostoffice,
+            },
+          };
+
+          console.log("🔍 Setting mailing editable fields:", {
+            mailAddrDistrictId: mailAddr?.districtId,
+            mailAddrOtherDistrict: mailAddr?.otherDistrict,
+            resAddrDistrictId: resAddr?.districtId,
+            resAddrOtherDistrict: resAddr?.otherDistrict,
+            willBeEditable: newState.mailing.district,
+          });
+
+          return newState;
+        });
       }
     }
   }, [profileInfo]);
@@ -1235,6 +1369,23 @@ export default function CURegistrationPage() {
     }));
   };
 
+  // Handle district field changes - save to otherDistrict when editable
+  const handleDistrictChange = (type: "residential" | "mailing", value: string) => {
+    setAddressData((prev) => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        district: value,
+      },
+    }));
+
+    // If this field is editable, it means we're saving to otherDistrict
+    if (editableFields[type].district) {
+      console.log(`Saving ${type} district to otherDistrict:`, value);
+      // This will be handled in the form submission
+    }
+  };
+
   const sanitizeTextOnly = (value: string, maxLen: number = 20) => {
     return value.replace(/[0-9]/g, "").slice(0, maxLen);
   };
@@ -1335,7 +1486,9 @@ export default function CURegistrationPage() {
 
         // Automatically switch to Address tab after a short delay
         setTimeout(() => {
-          handleTabChange("address");
+          // Force navigation to address tab after personal declaration
+          console.info("[CU-REG FRONTEND] Auto-navigating to address tab after personal declaration");
+          setActiveTab("address");
         }, 1000);
       } catch (error: any) {
         console.error("[PERSONAL DECLARATION] Error:", error);
@@ -1360,8 +1513,9 @@ export default function CURegistrationPage() {
   };
 
   const isPersonalTabValid = () => {
-    // Check if personal info is declared AND APAAR ID is filled
-    return personalDeclared && personalInfo.apaarId.trim() !== "";
+    // Check if personal info is declared AND APAAR ID is filled with exactly 12 digits
+    const apaarIdDigits = personalInfo.apaarId.replace(/\D/g, "");
+    return personalDeclared && personalInfo.apaarId.trim() !== "" && apaarIdDigits.length === 12;
   };
 
   const validateAddressFields = () => {
@@ -1498,6 +1652,7 @@ export default function CURegistrationPage() {
                   pincode: addressData.residential.pinCode,
                   city: addressData.residential.city,
                   district: addressData.residential.district,
+                  otherDistrict: editableFields.residential.district ? addressData.residential.district : undefined,
                   state: addressData.residential.state,
                   country: addressData.residential.country,
                 },
@@ -1516,6 +1671,7 @@ export default function CURegistrationPage() {
                   pincode: addressData.mailing.pinCode,
                   city: addressData.mailing.city,
                   district: addressData.mailing.district,
+                  otherDistrict: editableFields.mailing.district ? addressData.mailing.district : undefined,
                   state: addressData.mailing.state,
                   country: addressData.mailing.country,
                 },
@@ -1934,6 +2090,85 @@ export default function CURegistrationPage() {
       const mailingCityId = getIdByName(cities, addressData.mailing.city);
       const mailingDistrictId = getIdByName(mailingDistricts, addressData.mailing.district);
 
+      // Debug logging for district fields
+      console.log("🔍 District field debug info:", {
+        editableFields,
+        addressData: {
+          residential: {
+            district: addressData.residential.district,
+            editable: editableFields.residential.district,
+          },
+          mailing: {
+            district: addressData.mailing.district,
+            editable: editableFields.mailing.district,
+          },
+        },
+        willSaveToOtherDistrict: {
+          residential: editableFields.residential.district ? addressData.residential.district : undefined,
+          mailing: editableFields.mailing.district ? addressData.mailing.district : undefined,
+        },
+      });
+
+      console.log("🚀 About to submit correction request with payload:", {
+        correctionRequestId,
+        flags: correctionFlags,
+        editableFieldsState: editableFields,
+        addressData: {
+          residential: {
+            district: addressData.residential.district,
+            otherDistrict: editableFields.residential.district ? addressData.residential.district : undefined,
+            editable: editableFields.residential.district,
+            districtId: residentialDistrictId,
+          },
+          mailing: {
+            district: addressData.mailing.district,
+            otherDistrict: editableFields.mailing.district ? addressData.mailing.district : undefined,
+            editable: editableFields.mailing.district,
+            districtId: mailingDistrictId,
+          },
+        },
+        fullPayload: {
+          personalInfo: {
+            gender: personalInfo.gender,
+            nationality: personalInfo.nationality,
+            apaarId: cleanApaarId(personalInfo.apaarId),
+            ews: personalInfo.ews,
+          },
+          addressData: {
+            residential: {
+              cityId: residentialCityId,
+              districtId: residentialDistrictId,
+              postofficeId: null,
+              otherPostoffice: addressData.residential.postOffice,
+              policeStationId: null,
+              otherPoliceStation: addressData.residential.policeStation,
+              addressLine: addressData.residential.addressLine,
+              pincode: addressData.residential.pinCode,
+              city: addressData.residential.city,
+              district: addressData.residential.district,
+              otherDistrict: editableFields.residential.district ? addressData.residential.district : undefined,
+              state: addressData.residential.state,
+              country: addressData.residential.country,
+            },
+            mailing: {
+              cityId: mailingCityId,
+              districtId: mailingDistrictId,
+              postofficeId: null,
+              otherPostoffice: addressData.mailing.postOffice,
+              policeStationId: null,
+              otherPoliceStation: addressData.mailing.policeStation,
+              addressLine: addressData.mailing.addressLine,
+              pincode: addressData.mailing.pinCode,
+              city: addressData.mailing.city,
+              district: addressData.mailing.district,
+              otherDistrict: editableFields.mailing.district ? addressData.mailing.district : undefined,
+              state: addressData.mailing.state,
+              country: addressData.mailing.country,
+            },
+          },
+        },
+      });
+
       await submitCuRegistrationCorrectionRequestWithDocuments({
         correctionRequestId,
         flags: correctionFlags as unknown as Record<string, boolean>,
@@ -1956,6 +2191,7 @@ export default function CURegistrationPage() {
               pincode: addressData.residential.pinCode,
               city: addressData.residential.city,
               district: addressData.residential.district,
+              otherDistrict: editableFields.residential.district ? addressData.residential.district : undefined,
               state: addressData.residential.state,
               country: addressData.residential.country,
             },
@@ -1970,6 +2206,7 @@ export default function CURegistrationPage() {
               pincode: addressData.mailing.pinCode,
               city: addressData.mailing.city,
               district: addressData.mailing.district,
+              otherDistrict: editableFields.mailing.district ? addressData.mailing.district : undefined,
               state: addressData.mailing.state,
               country: addressData.mailing.country,
             },
@@ -2716,7 +2953,7 @@ export default function CURegistrationPage() {
                                         onKeyDown={handleApaarIdKeyDown}
                                         onPaste={handleApaarIdPaste}
                                         placeholder="Enter APAAR ID (12 digits)"
-                                        className={`border-gray-300 ${isApaarIdEmpty ? "border-red-300 bg-red-50" : isApaarIdInvalid ? "border-yellow-300 bg-yellow-50" : "border-green-300 bg-green-50"}`}
+                                        className="border-gray-300"
                                         disabled={!isFieldEditable()}
                                         maxLength={15} // 12 digits + 3 hyphens = 15 characters
                                         inputMode="numeric"
@@ -2740,18 +2977,25 @@ export default function CURegistrationPage() {
                                 id="personalDeclaration"
                                 checked={personalDeclared || correctionRequest?.personalInfoDeclaration}
                                 onCheckedChange={handleDeclarationChange}
-                                disabled={personalInfo.apaarId.trim() === ""}
+                                disabled={
+                                  personalInfo.apaarId.trim() === "" ||
+                                  personalInfo.apaarId.replace(/\D/g, "").length !== 12
+                                }
                                 className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                               />
                               <Label
                                 htmlFor="personalDeclaration"
                                 className={`text-sm text-gray-700 leading-relaxed ${
-                                  personalInfo.apaarId.trim() === ""
+                                  personalInfo.apaarId.trim() === "" ||
+                                  personalInfo.apaarId.replace(/\D/g, "").length !== 12
                                     ? "cursor-not-allowed opacity-50"
                                     : "cursor-pointer"
                                 }`}
                                 onClick={() => {
-                                  if (personalInfo.apaarId.trim() !== "") {
+                                  if (
+                                    personalInfo.apaarId.trim() !== "" &&
+                                    personalInfo.apaarId.replace(/\D/g, "").length === 12
+                                  ) {
                                     console.info("[CU-REG FRONTEND] Declaration label clicked");
                                     handleDeclarationChange(true);
                                   }
@@ -2768,8 +3012,21 @@ export default function CURegistrationPage() {
                             {!personalDeclared && !correctionRequest?.personalInfoDeclaration && (
                               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
                                 <p className="text-sm text-blue-700">
-                                  <span className="font-medium">Note:</span> Please fill in your APAAR ID and check the
-                                  declaration above to proceed to the next tab (Address Information).
+                                  <span className="font-medium">Note:</span>
+                                  {personalInfo.apaarId.trim() === "" ||
+                                  personalInfo.apaarId.replace(/\D/g, "").length !== 12 ? (
+                                    <>
+                                      {" "}
+                                      Please fill in your APAAR ID with exactly 12 digits and check the declaration
+                                      above to proceed to the next tab (Address Information).
+                                    </>
+                                  ) : (
+                                    <>
+                                      {" "}
+                                      Please check the declaration above to proceed to the next tab (Address
+                                      Information).
+                                    </>
+                                  )}
                                 </p>
                               </div>
                             )}
@@ -2847,9 +3104,19 @@ export default function CURegistrationPage() {
                                 <Label htmlFor="residential-district" className="text-sm font-medium text-gray-700">
                                   2.4 District
                                 </Label>
-                                <div className={getReadOnlyDivStyle()}>
-                                  {addressData.residential.district || "Not provided"}
-                                </div>
+                                {editableFields.residential.district ? (
+                                  <Input
+                                    id="residential-district"
+                                    value={addressData.residential.district}
+                                    onChange={(e) => handleDistrictChange("residential", e.target.value)}
+                                    placeholder="Enter district name"
+                                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                  />
+                                ) : (
+                                  <div className={getReadOnlyDivStyle()}>
+                                    {addressData.residential.district || "Not provided"}
+                                  </div>
+                                )}
                               </div>
 
                               {/* 5. City */}
@@ -2966,9 +3233,19 @@ export default function CURegistrationPage() {
                                 <Label htmlFor="mailing-district" className="text-sm font-medium text-gray-700">
                                   2.12 District
                                 </Label>
-                                <div className={getReadOnlyDivStyle()}>
-                                  {addressData.mailing.district || "Not provided"}
-                                </div>
+                                {editableFields.mailing.district ? (
+                                  <Input
+                                    id="mailing-district"
+                                    value={addressData.mailing.district}
+                                    onChange={(e) => handleDistrictChange("mailing", e.target.value)}
+                                    placeholder="Enter district name"
+                                    className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                  />
+                                ) : (
+                                  <div className={getReadOnlyDivStyle()}>
+                                    {addressData.mailing.district || "Not provided"}
+                                  </div>
+                                )}
                               </div>
 
                               {/* 5. City */}

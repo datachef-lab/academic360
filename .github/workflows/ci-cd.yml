@@ -583,6 +583,10 @@ jobs:
             sudo rm -rf apps/notification-system/dist || true
             sudo rm -rf packages/db/dist || true
 
+            # More aggressive cleanup for nested dist directories
+            find . -name "dist" -type d -exec sudo rm -rf {} + 2>/dev/null || true
+            find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
+
             export CI=true
 
             echo "✅ Using latest staging branch code from git clone"
@@ -594,9 +598,21 @@ jobs:
 
             echo "🧹 Final cleanup before build (ensure clean state)"
             sudo rm -rf apps/backend/dist apps/main-console/dist apps/student-console/dist apps/notification-system/dist packages/db/dist || true
+
+            # More aggressive cleanup for any remaining dist directories
+            find . -name "dist" -type d -exec sudo rm -rf {} + 2>/dev/null || true
+            find . -name "*.tsbuildinfo" -delete 2>/dev/null || true
+
             sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} . || true
 
             echo "🏗️ Build shared DB and apps"
+
+            # Extra aggressive cleanup before backend build
+            echo "🧹 Extra aggressive cleanup before backend build"
+            sudo rm -rf apps/backend/dist || true
+            find apps/backend -name "dist" -type d -exec sudo rm -rf {} + 2>/dev/null || true
+            sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} apps/backend || true
+
             pnpm --filter @repo/db... build
             pnpm --filter backend... build
             pnpm --filter main-console... build
