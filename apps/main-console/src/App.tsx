@@ -319,7 +319,7 @@ const router = createBrowserRouter(
           path: "attendance-timetable",
           element: <attendanceModule.AttendanceTimeTableMaster />,
           children: [
-            { path: "", element: <div>TODO: Attendan ce & Time-Tabel Home</div> },
+            { path: "", element: <div>TODO: Attendance & Time-Tabel Home</div> },
             { path: "timetable", element: <div>TODO: Time-table</div> },
           ],
         },
