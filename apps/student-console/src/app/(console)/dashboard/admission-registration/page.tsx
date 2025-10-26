@@ -127,32 +127,33 @@ export default function CURegistrationPage() {
     return normalizedName.startsWith("BCOM");
   }, [student?.programCourse?.name]);
 
-  // Redirect MA and MCOM students back to dashboard
-  React.useEffect(() => {
-    if (isBlockedProgram) {
-      console.info("[CU-REG FRONTEND] Student is in MA/MCOM program, redirecting to dashboard");
-      router.push("/dashboard");
+  // Helper: format APAAR ID to 3-3-3-3 format
+  const formatApaarId = (apaarId: string) => {
+    if (!apaarId || apaarId === "Not provided") return apaarId;
+    const digits = apaarId.replace(/\D/g, "");
+    if (digits.length === 12) {
+      return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{3})$/, "$1-$2-$3-$4");
     }
-  }, [isBlockedProgram, router]);
+    return apaarId;
+  };
 
-  // Show loading while checking program
-  if (isBlockedProgram) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Redirecting...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Helper: format Aadhaar number to 4-4-4 format
+  const formatAadhaarNumber = (aadhaar: string) => {
+    if (!aadhaar || aadhaar === "XXXX XXXX XXXX") return aadhaar;
+    const digits = aadhaar.replace(/\D/g, "");
+    if (digits.length === 12) {
+      return digits.replace(/^(\d{4})(\d{4})(\d{4})$/, "$1-$2-$3");
+    }
+    return aadhaar;
+  };
+
+  // All hooks must be called before any conditional returns to avoid "Rendered fewer hooks than expected" error
 
   // Debug: Track activeTab changes
   React.useEffect(() => {
     console.info("[CU-REG FRONTEND] activeTab changed to:", activeTab);
   }, [activeTab]);
+
   const [correctionFlags, setCorrectionFlags] = useState<CorrectionFlags>({
     gender: false,
     nationality: false,
@@ -205,6 +206,73 @@ export default function CURegistrationPage() {
   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState(false);
   const [isCheckingSubjectSelection, setIsCheckingSubjectSelection] = React.useState(true);
 
+  // Subjects loading state
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
+
+  // Legacy subjects data (keeping for backward compatibility)
+  const [subjectsData, setSubjectsData] = useState({
+    DSCC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    Minor: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    IDC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    SEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    AEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    CVAC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+  });
+  const [mandatorySubjects, setMandatorySubjects] = useState({
+    DSCC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    Minor: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    IDC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    SEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    AEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    CVAC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+  });
+  const [subjectsDeclared, setSubjectsDeclared] = useState(false);
+  const [documents, setDocuments] = useState({
+    classXIIMarksheet: null as File | null,
+    aadhaarCard: null as File | null,
+    apaarIdCard: null as File | null,
+    fatherPhotoId: null as File | null,
+    motherPhotoId: null as File | null,
+    ewsCertificate: null as File | null,
+  });
+  const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
+  const [showReviewConfirm, setShowReviewConfirm] = useState(false);
+  const [finalDeclaration, setFinalDeclaration] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{ file: File; type: string } | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+
+  // Map local keys to backend document names
+  const documentNameMap: Record<keyof typeof documents, string> = {
+    classXIIMarksheet: "Class XII Marksheet",
+    aadhaarCard: "Aadhaar Card",
+    apaarIdCard: "APAAR ID Card",
+    fatherPhotoId: "Father Photo ID",
+    motherPhotoId: "Mother Photo ID",
+    ewsCertificate: "EWS Certificate",
+  };
+
+  // CU Registration correction request states
+  const [correctionRequest, setCorrectionRequest] = useState<CuRegistrationCorrectionRequestDto | null>(null);
+  const [correctionRequestId, setCorrectionRequestId] = useState<number | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showStatusAlert, setShowStatusAlert] = useState<boolean>(true);
+  const [correctionRequestStatus, setCorrectionRequestStatus] = useState<string | null>(null);
+  const [uploadedDocuments, setUploadedDocuments] = useState<any[]>([]);
+  const [docPreviewUrls, setDocPreviewUrls] = useState<Record<number, string>>({});
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState<boolean>(false);
+  const [showPdfPreview, setShowPdfPreview] = useState<boolean>(true);
+
+  // Redirect MA and MCOM students back to dashboard
+  React.useEffect(() => {
+    if (isBlockedProgram) {
+      console.info("[CU-REG FRONTEND] Student is in MA/MCOM program, redirecting to dashboard");
+      router.push("/dashboard");
+    }
+  }, [isBlockedProgram, router]);
+
+  // Subject selection check effect
   useEffect(() => {
     (async () => {
       try {
@@ -284,279 +352,6 @@ export default function CURegistrationPage() {
       } catch {}
     })();
   }, [addressData.mailing.city, cities]);
-  // Subjects loading state
-  const [subjectsLoading, setSubjectsLoading] = useState(false);
-
-  // Legacy subjects data (keeping for backward compatibility)
-  const [subjectsData, setSubjectsData] = useState({
-    DSCC: { sem1: [], sem2: [], sem3: [], sem4: [] },
-    Minor: { sem1: [], sem2: [], sem3: [], sem4: [] },
-    IDC: { sem1: [], sem2: [], sem3: [], sem4: [] },
-    SEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
-    AEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
-    CVAC: { sem1: [], sem2: [], sem3: [], sem4: [] },
-  });
-  const [mandatorySubjects, setMandatorySubjects] = useState({
-    DSCC: { sem1: [], sem2: [], sem3: [], sem4: [] },
-    Minor: { sem1: [], sem2: [], sem3: [], sem4: [] },
-    IDC: { sem1: [], sem2: [], sem3: [], sem4: [] },
-    SEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
-    AEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
-    CVAC: { sem1: [], sem2: [], sem3: [], sem4: [] },
-  });
-  const [subjectsDeclared, setSubjectsDeclared] = useState(false);
-  const [documents, setDocuments] = useState({
-    classXIIMarksheet: null as File | null,
-    aadhaarCard: null as File | null,
-    apaarIdCard: null as File | null,
-    fatherPhotoId: null as File | null,
-    motherPhotoId: null as File | null,
-    ewsCertificate: null as File | null,
-  });
-  // Map local keys to backend document names
-  const documentNameMap: Record<keyof typeof documents, string> = {
-    classXIIMarksheet: "Class XII Marksheet",
-    aadhaarCard: "Aadhaar Card",
-    apaarIdCard: "APAAR ID Card",
-    fatherPhotoId: "Father Photo ID",
-    motherPhotoId: "Mother Photo ID",
-    ewsCertificate: "EWS Certificate",
-  };
-  const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
-  const [showReviewConfirm, setShowReviewConfirm] = useState(false);
-  const [finalDeclaration, setFinalDeclaration] = useState(false);
-  const [previewFile, setPreviewFile] = useState<{ file: File; type: string } | null>(null);
-  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
-
-  // Helper: convert backend-relative URLs (e.g. "/uploads/...") to absolute URLs using backend base
-  const toAbsoluteUrl = (url?: string) => {
-    if (!url) return "";
-    return /^https?:\/\//i.test(url)
-      ? url
-      : `${process.env.NEXT_PUBLIC_APP_BASE_URL || ""}${url.startsWith("/") ? url : `/${url}`}`;
-  };
-
-  // Helper: format Aadhaar number to 4-4-4 format
-  const formatAadhaarNumber = (aadhaar: string) => {
-    if (!aadhaar || aadhaar === "XXXX XXXX XXXX") return aadhaar;
-    const digits = aadhaar.replace(/\D/g, "");
-    if (digits.length === 12) {
-      return digits.replace(/^(\d{4})(\d{4})(\d{4})$/, "$1-$2-$3");
-    }
-    return aadhaar;
-  };
-
-  // Helper: format APAAR ID to 3-3-3-3 format
-  const formatApaarId = (apaarId: string) => {
-    if (!apaarId || apaarId === "Not provided") return apaarId;
-    const digits = apaarId.replace(/\D/g, "");
-    if (digits.length === 12) {
-      return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{3})$/, "$1-$2-$3-$4");
-    }
-    return apaarId;
-  };
-
-  // Helper: clean APAAR ID (remove formatting for backend)
-  const cleanApaarId = (apaarId: string) => {
-    // If the field is empty, return empty string
-    if (!apaarId || apaarId.trim() === "") {
-      return "";
-    }
-
-    // Remove formatting (dashes) but keep the digits
-    const cleaned = apaarId.replace(/\D/g, "");
-    return cleaned;
-  };
-
-  // File size limits for display only (compression handled in backend)
-  const getFileSizeLimit = (documentName: string): { maxSizeKB: number; maxSizeMB: number } => {
-    const name = documentName.toLowerCase();
-
-    if (name.includes("photo") || name.includes("signature")) {
-      return { maxSizeKB: 100, maxSizeMB: 0.1 }; // 100KB
-    } else {
-      return { maxSizeKB: 250, maxSizeMB: 0.25 }; // 250KB for all other documents
-    }
-  };
-
-  // Helper: format APAAR ID input as user types
-  const formatApaarIdInput = (value: string) => {
-    const digits = value.replace(/\D/g, "");
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-    if (digits.length <= 9) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-    if (digits.length <= 12)
-      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}-${digits.slice(9)}`;
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}-${digits.slice(9, 12)}`;
-  };
-
-  // Handle document uploads via backend API
-  const handleUpload = async (key: keyof typeof documents, documentId: number) => {
-    const file = documents[key];
-    if (!file) {
-      console.warn("[CU-REG FRONTEND] No file provided for upload");
-      return;
-    }
-    if (!correctionRequestId) {
-      console.error("[CU-REG FRONTEND] Cannot upload: correctionRequestId is null");
-      return;
-    }
-    try {
-      await uploadCuRegistrationDocument({
-        file,
-        cuRegistrationCorrectionRequestId: correctionRequestId,
-        documentId,
-      });
-      toast.success("Uploaded successfully");
-    } catch (e: any) {
-      console.error("[CU-REG FRONTEND] Upload failed:", e);
-      toast.error(e?.message || "Upload failed");
-    }
-  };
-
-  // Populate form data when profile data is loaded
-  React.useEffect(() => {
-    if (profileInfo?.personalDetails || student) {
-      const personalDetails = profileInfo?.personalDetails as any;
-      const familyDetails = profileInfo?.familyDetails as any;
-
-      console.log("Profile data loaded:", {
-        personalDetails,
-        familyDetails,
-        profileInfo,
-        student,
-      });
-
-      // Update personal info
-      setPersonalInfo((prev) => ({
-        ...prev,
-        fullName:
-          student?.name && student.name.trim().length > 0
-            ? student.name
-            : `${personalDetails?.firstName || ""} ${personalDetails?.middleName || ""} ${personalDetails?.lastName || ""}`.trim(),
-        parentName:
-          familyDetails?.members?.find((m: any) => m.type === "FATHER")?.name ||
-          familyDetails?.members?.find((m: any) => m.type === "MOTHER")?.name ||
-          familyDetails?.father?.name ||
-          familyDetails?.mother?.name ||
-          "",
-        gender: personalDetails?.gender || "",
-        nationality: personalDetails?.nationality?.name || "",
-        aadhaarNumber: formatAadhaarNumber(personalDetails?.aadhaarCardNumber || "XXXX XXXX XXXX"),
-        // APAAR (ABC) ID may be stored as apaarId, abcId, or apprid
-        apaarId: formatApaarId((student?.apaarId && student.apaarId.trim()) || prev.apaarId || ""),
-        ews: student?.belongsToEWS ? "Yes" : prev.ews,
-      }));
-
-      // Update address data by type
-      const addresses: any[] = personalDetails?.address || [];
-      const resAddr = addresses.find((a) => a?.type === "RESIDENTIAL") || null;
-      const mailAddr = addresses.find((a) => a?.type === "MAILING") || null;
-
-      // Debug: Log the address data from profile
-      console.info("Address data from profile:", {
-        addresses,
-        resAddr,
-        mailAddr,
-        resAddrPoliceStation: resAddr?.policeStation,
-        resAddrOtherPoliceStation: resAddr?.otherPoliceStation,
-        mailAddrPoliceStation: mailAddr?.policeStation,
-        mailAddrOtherPoliceStation: mailAddr?.otherPoliceStation,
-        resAddrPostoffice: resAddr?.postoffice,
-        resAddrOtherPostoffice: resAddr?.otherPostoffice,
-        mailAddrPostoffice: mailAddr?.postoffice,
-        mailAddrOtherPostoffice: mailAddr?.otherPostoffice,
-      });
-
-      if (resAddr || mailAddr) {
-        setAddressData((prev) => ({
-          ...prev,
-          residential: {
-            addressLine: (resAddr?.addressLine ?? mailAddr?.addressLine) || "",
-            city: (resAddr?.city?.name ?? resAddr?.otherCity ?? mailAddr?.city?.name ?? mailAddr?.otherCity) || "",
-            district:
-              (resAddr?.district?.name ??
-                resAddr?.otherDistrict ??
-                mailAddr?.district?.name ??
-                mailAddr?.otherDistrict) ||
-              "",
-            policeStation:
-              (resAddr?.otherPoliceStation ??
-                resAddr?.policeStation?.name ??
-                mailAddr?.otherPoliceStation ??
-                mailAddr?.policeStation?.name) ||
-              "",
-            postOffice:
-              (resAddr?.otherPostoffice ??
-                resAddr?.postoffice?.name ??
-                mailAddr?.otherPostoffice ??
-                mailAddr?.postoffice?.name) ||
-              "",
-            state: (resAddr?.state?.name ?? mailAddr?.state?.name) || "West Bengal",
-            country: (resAddr?.country?.name ?? mailAddr?.country?.name) || "India",
-            pinCode: (resAddr?.pincode ?? mailAddr?.pincode) || "",
-          },
-        }));
-      }
-
-      if (mailAddr || resAddr) {
-        setAddressData((prev) => ({
-          ...prev,
-          mailing: {
-            addressLine: (mailAddr?.addressLine ?? resAddr?.addressLine) || "",
-            city: (mailAddr?.city?.name ?? mailAddr?.otherCity ?? resAddr?.city?.name ?? resAddr?.otherCity) || "",
-            district:
-              (mailAddr?.district?.name ??
-                mailAddr?.otherDistrict ??
-                resAddr?.district?.name ??
-                resAddr?.otherDistrict) ||
-              "",
-            policeStation:
-              (mailAddr?.otherPoliceStation ??
-                mailAddr?.policeStation?.name ??
-                resAddr?.otherPoliceStation ??
-                resAddr?.policeStation?.name) ||
-              "",
-            postOffice:
-              (mailAddr?.otherPostoffice ??
-                mailAddr?.postoffice?.name ??
-                resAddr?.otherPostoffice ??
-                resAddr?.postoffice?.name) ||
-              "",
-            state: (mailAddr?.state?.name ?? resAddr?.state?.name) || "West Bengal",
-            country: (mailAddr?.country?.name ?? resAddr?.country?.name) || "India",
-            pinCode: (mailAddr?.pincode ?? resAddr?.pincode) || "",
-          },
-        }));
-      }
-    }
-  }, [profileInfo]);
-
-  // Prefill from personal-details and student models
-  useEffect(() => {
-    if (!student?.id) return;
-    fetchPersonalDetailsByStudentId(student.id)
-      .then((pd) => {
-        if (!pd) return;
-        setPersonalInfo((prev) => ({
-          ...prev,
-          gender: pd.gender || prev.gender,
-          aadhaarNumber: formatAadhaarNumber(pd.aadhaarCardNumber || prev.aadhaarNumber),
-        }));
-      })
-      .catch(() => undefined);
-  }, [student?.id]);
-
-  // Load subjects data using original subject selection service
-  useEffect(() => {
-    if (!student?.id) return;
-
-    setSubjectsLoading(true);
-    console.log("🔍 Loading subjects data for student:", student.id);
-
-    loadLegacySubjectsData();
-    setSubjectsLoading(false);
-  }, [student?.id]);
 
   // Load legacy subject overview from backend selections (fallback)
   const loadLegacySubjectsData = () => {
@@ -812,18 +607,182 @@ export default function CURegistrationPage() {
       });
   };
 
-  // Ensure a correction request exists (create draft if none)
-  const [correctionRequest, setCorrectionRequest] = useState<CuRegistrationCorrectionRequestDto | null>(null);
-  const [correctionRequestId, setCorrectionRequestId] = useState<number | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [showStatusAlert, setShowStatusAlert] = useState<boolean>(true);
-  const [correctionRequestStatus, setCorrectionRequestStatus] = useState<string | null>(null);
-  const [uploadedDocuments, setUploadedDocuments] = useState<any[]>([]);
-  const [docPreviewUrls, setDocPreviewUrls] = useState<Record<number, string>>({});
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState<boolean>(false);
-  const [showPdfPreview, setShowPdfPreview] = useState<boolean>(true);
+  // Populate form data when profile data is loaded
+  React.useEffect(() => {
+    if (profileInfo?.personalDetails || student) {
+      const personalDetails = profileInfo?.personalDetails as any;
+      const familyDetails = profileInfo?.familyDetails as any;
+
+      console.log("Profile data loaded:", {
+        personalDetails,
+        familyDetails,
+        student,
+      });
+
+      if (personalDetails) {
+        setPersonalInfo((prev) => ({
+          ...prev,
+          fullName: personalDetails.fullName || prev.fullName,
+          parentName: familyDetails?.fatherName || familyDetails?.motherName || prev.parentName,
+          gender: personalDetails.gender || prev.gender,
+          nationality: personalDetails.nationality?.name || prev.nationality,
+          ews: personalDetails.ews ? "Yes" : "No",
+          aadhaarNumber: formatAadhaarNumber(personalDetails.aadhaarCardNumber || prev.aadhaarNumber),
+          apaarId: formatApaarId(personalDetails.apaarId || prev.apaarId),
+        }));
+      }
+
+      if (familyDetails) {
+        setPersonalInfo((prev) => ({
+          ...prev,
+          parentName: familyDetails.fatherName || familyDetails.motherName || prev.parentName,
+        }));
+      }
+
+      if (student) {
+        setPersonalInfo((prev) => ({
+          ...prev,
+          fullName: student?.name || prev.fullName,
+          apaarId: formatApaarId(student.apaarId || prev.apaarId),
+        }));
+      }
+    }
+  }, [profileInfo]);
+
+  // Populate address data with fallbacks to "other" fields
+  React.useEffect(() => {
+    if (profileInfo?.personalDetails) {
+      const personalDetails = profileInfo.personalDetails as any;
+      const addresses: any[] = personalDetails?.address || [];
+      const resAddr = addresses.find((a) => a?.type === "RESIDENTIAL") || null;
+      const mailAddr = addresses.find((a) => a?.type === "MAILING") || null;
+
+      console.info("Address data from profile:", {
+        addresses,
+        resAddr,
+        mailAddr,
+        resAddrPoliceStation: resAddr?.policeStation,
+        resAddrOtherPoliceStation: resAddr?.otherPoliceStation,
+        mailAddrPoliceStation: mailAddr?.policeStation,
+        mailAddrOtherPoliceStation: mailAddr?.otherPoliceStation,
+        resAddrPostoffice: resAddr?.postoffice,
+        resAddrOtherPostoffice: resAddr?.otherPostoffice,
+        mailAddrPostoffice: mailAddr?.postoffice,
+        mailAddrOtherPostoffice: mailAddr?.otherPostoffice,
+      });
+
+      // Helper function to get field value with fallback to "other" field
+      const getFieldWithFallback = (primary: any, other: any, defaultValue: string = "") => {
+        return primary || other || defaultValue;
+      };
+
+      if (resAddr || mailAddr) {
+        setAddressData((prev) => ({
+          ...prev,
+          residential: {
+            addressLine: getFieldWithFallback(resAddr?.addressLine, mailAddr?.addressLine),
+            city: getFieldWithFallback(
+              resAddr?.city?.name,
+              resAddr?.otherCity,
+              getFieldWithFallback(mailAddr?.city?.name, mailAddr?.otherCity),
+            ),
+            district: getFieldWithFallback(
+              resAddr?.district?.name,
+              resAddr?.otherDistrict,
+              getFieldWithFallback(mailAddr?.district?.name, mailAddr?.otherDistrict),
+            ),
+            policeStation: getFieldWithFallback(
+              resAddr?.policeStation?.name,
+              resAddr?.otherPoliceStation,
+              getFieldWithFallback(mailAddr?.policeStation?.name, mailAddr?.otherPoliceStation),
+            ),
+            postOffice: getFieldWithFallback(
+              resAddr?.postoffice?.name,
+              resAddr?.otherPostoffice,
+              getFieldWithFallback(mailAddr?.postoffice?.name, mailAddr?.otherPostoffice),
+            ),
+            state: getFieldWithFallback(
+              resAddr?.state?.name,
+              resAddr?.otherState,
+              getFieldWithFallback(mailAddr?.state?.name, mailAddr?.otherState, "West Bengal"),
+            ),
+            country: getFieldWithFallback(
+              resAddr?.country?.name,
+              resAddr?.otherCountry,
+              getFieldWithFallback(mailAddr?.country?.name, mailAddr?.otherCountry, "India"),
+            ),
+            pinCode: getFieldWithFallback(resAddr?.pincode, mailAddr?.pincode),
+          },
+        }));
+      }
+
+      if (mailAddr || resAddr) {
+        setAddressData((prev) => ({
+          ...prev,
+          mailing: {
+            addressLine: getFieldWithFallback(mailAddr?.addressLine, resAddr?.addressLine),
+            city: getFieldWithFallback(
+              mailAddr?.city?.name,
+              mailAddr?.otherCity,
+              getFieldWithFallback(resAddr?.city?.name, resAddr?.otherCity),
+            ),
+            district: getFieldWithFallback(
+              mailAddr?.district?.name,
+              mailAddr?.otherDistrict,
+              getFieldWithFallback(resAddr?.district?.name, resAddr?.otherDistrict),
+            ),
+            policeStation: getFieldWithFallback(
+              mailAddr?.policeStation?.name,
+              mailAddr?.otherPoliceStation,
+              getFieldWithFallback(resAddr?.policeStation?.name, resAddr?.otherPoliceStation),
+            ),
+            postOffice: getFieldWithFallback(
+              mailAddr?.postoffice?.name,
+              mailAddr?.otherPostoffice,
+              getFieldWithFallback(resAddr?.postoffice?.name, resAddr?.otherPostoffice),
+            ),
+            state: getFieldWithFallback(
+              mailAddr?.state?.name,
+              mailAddr?.otherState,
+              getFieldWithFallback(resAddr?.state?.name, resAddr?.otherState, "West Bengal"),
+            ),
+            country: getFieldWithFallback(
+              mailAddr?.country?.name,
+              mailAddr?.otherCountry,
+              getFieldWithFallback(resAddr?.country?.name, resAddr?.otherCountry, "India"),
+            ),
+            pinCode: getFieldWithFallback(mailAddr?.pincode, resAddr?.pincode),
+          },
+        }));
+      }
+    }
+  }, [profileInfo]);
+
+  // Prefill from personal-details and student models
+  useEffect(() => {
+    if (!student?.id) return;
+    fetchPersonalDetailsByStudentId(student.id)
+      .then((pd) => {
+        if (!pd) return;
+        setPersonalInfo((prev) => ({
+          ...prev,
+          gender: pd.gender || prev.gender,
+          aadhaarNumber: formatAadhaarNumber(pd.aadhaarCardNumber || prev.aadhaarNumber),
+        }));
+      })
+      .catch(() => undefined);
+  }, [student?.id]);
+
+  // Load subjects data using original subject selection service
+  useEffect(() => {
+    if (!student?.id) return;
+
+    setSubjectsLoading(true);
+    console.log("🔍 Loading subjects data for student:", student.id);
+
+    loadLegacySubjectsData();
+    setSubjectsLoading(false);
+  }, [student?.id]);
 
   // Fetch uploaded documents when correction request is available
   useEffect(() => {
@@ -833,10 +792,8 @@ export default function CURegistrationPage() {
         console.info(`[CU-REG FRONTEND] Fetching documents for correction request: ${correctionRequestId}`);
         const docs = await getCuRegistrationDocuments(correctionRequestId);
         setUploadedDocuments(docs || []);
-        console.info(`[CU-REG FRONTEND] Loaded ${docs?.length || 0} documents`);
       } catch (error) {
-        console.error(`[CU-REG FRONTEND] Error fetching documents:`, error);
-        setUploadedDocuments([]);
+        console.error("[CU-REG FRONTEND] Error fetching documents:", error);
       }
     })();
   }, [correctionRequestId]);
@@ -858,19 +815,13 @@ export default function CURegistrationPage() {
       );
       return;
     }
-
     (async () => {
       try {
-        setPdfLoading(true);
         console.info(`[CU-REG FRONTEND] Fetching PDF URL for correction request: ${correctionRequestId}`);
-        const pdfData = await getCuRegistrationPdfUrlByRequestId(correctionRequestId);
-        setPdfUrl(pdfData.pdfUrl);
-        console.info(`[CU-REG FRONTEND] PDF URL loaded:`, pdfData);
+        const response = await getCuRegistrationPdfUrlByRequestId(correctionRequestId);
+        setPdfUrl(response.pdfUrl || null);
       } catch (error) {
-        console.error(`[CU-REG FRONTEND] Error fetching PDF URL:`, error);
-        setPdfUrl(null);
-      } finally {
-        setPdfLoading(false);
+        console.error("[CU-REG FRONTEND] Error fetching PDF URL:", error);
       }
     })();
   }, [correctionRequestId, correctionRequest?.cuRegistrationApplicationNumber]);
@@ -885,20 +836,16 @@ export default function CURegistrationPage() {
           try {
             // Prefer backend-provided URL for cross-origin correctness
             const url = await getCuRegistrationDocumentSignedUrl(d.id);
-            if (url) {
-              setDocPreviewUrls((prev) => ({ ...prev, [d.id]: url }));
-            }
-          } catch {
-            // Fallback to absolute URL based on documentUrl
-            if (d.documentUrl) {
-              setDocPreviewUrls((prev) => ({ ...prev, [d.id]: toAbsoluteUrl(d.documentUrl) }));
-            }
+            setDocPreviewUrls((prev) => ({ ...prev, [d.id]: url }));
+          } catch (error) {
+            console.warn(`[CU-REG FRONTEND] Failed to get signed URL for document ${d.id}:`, error);
           }
         });
       await Promise.allSettled(promises);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadedDocuments]);
+
   useEffect(() => {
     if (!student?.id) return;
     (async () => {
@@ -911,63 +858,17 @@ export default function CURegistrationPage() {
           setCorrectionRequest(existing);
           setCorrectionRequestId(existing.id ?? null);
           setCorrectionRequestStatus(existing.status ?? null);
-
-          // Sync declaration checkboxes from server state
-          setPersonalDeclared(!!existing.personalInfoDeclaration);
-          setAddressDeclared(!!existing.addressInfoDeclaration);
-          setSubjectsDeclared(!!existing.subjectsDeclaration);
-          setDocumentsConfirmed(!!existing.documentsDeclaration);
-          setInstructionsConfirmed(!!existing.introductoryDeclaration);
-
-          // Update correction flags from the existing request
-          setCorrectionFlags({
-            gender: existing.genderCorrectionRequest ?? false,
-            nationality: existing.nationalityCorrectionRequest ?? false,
-            aadhaarNumber: existing.aadhaarCardNumberCorrectionRequest ?? false,
-            apaarId: existing.apaarIdCorrectionRequest ?? false,
-            subjects: existing.subjectsCorrectionRequest ?? false,
-          });
-
-          // Debug: Log the introductory declaration status
-          console.info("[CU-REG FRONTEND] Correction request loaded:", {
-            id: existing.id,
-            introductoryDeclaration: existing.introductoryDeclaration,
-            currentActiveTab: activeTab,
-            allDeclarationFields: {
-              introductoryDeclaration: existing.introductoryDeclaration,
-              personalInfoDeclaration: existing.personalInfoDeclaration,
-              addressInfoDeclaration: existing.addressInfoDeclaration,
-              subjectsDeclaration: existing.subjectsDeclaration,
-              documentsDeclaration: existing.documentsDeclaration,
-            },
-          });
-
-          // Removed conflicting auto-navigation logic - main auto-navigation will handle this
-
-          // Set uploaded documents from the existing request
-          if (existing.documents) {
-            setUploadedDocuments(existing.documents);
-          }
         } else {
-          console.info(`[CU-REG FRONTEND] No existing correction request, creating new one for student: ${student.id}`);
-          const created = await createCuCorrectionRequest({
-            studentId: Number(student.id),
-            flags: correctionFlags as unknown as Record<string, boolean>,
-            payload: {},
-            // Don't generate CU registration application number here - it will be generated on final submit
-          });
-          console.info(`[CU-REG FRONTEND] Created new correction request: ${created.id}`);
-          setCorrectionRequest(created);
-          setCorrectionRequestId(created.id ?? null);
-          setCorrectionRequestStatus(created.status ?? null);
-          // Ensure declarations are initially unchecked for a new draft
-          setPersonalDeclared(!!created.personalInfoDeclaration);
-          setAddressDeclared(!!created.addressInfoDeclaration);
-          setSubjectsDeclared(!!created.subjectsDeclaration);
-          setDocumentsConfirmed(!!created.documentsDeclaration);
+          console.info(`[CU-REG FRONTEND] No existing correction request found, will create one when needed`);
+          setCorrectionRequest(null);
+          setCorrectionRequestId(null);
+          setCorrectionRequestStatus(null);
         }
       } catch (error) {
-        console.error("[CU-REG FRONTEND] Error handling CU correction request:", error);
+        console.error("[CU-REG FRONTEND] Error checking for existing correction request:", error);
+        setCorrectionRequest(null);
+        setCorrectionRequestId(null);
+        setCorrectionRequestStatus(null);
       }
     })();
   }, [student?.id]);
@@ -982,14 +883,11 @@ export default function CURegistrationPage() {
       subjectsDeclaration: correctionRequest.subjectsDeclaration,
       documentsDeclaration: correctionRequest.documentsDeclaration,
     });
-    setInstructionsConfirmed(!!correctionRequest.introductoryDeclaration);
     setPersonalDeclared(!!correctionRequest.personalInfoDeclaration);
     setAddressDeclared(!!correctionRequest.addressInfoDeclaration);
     setSubjectsDeclared(!!correctionRequest.subjectsDeclaration);
     setDocumentsConfirmed(!!correctionRequest.documentsDeclaration);
   }, [correctionRequest]);
-
-  // Removed immediate auto-navigation logic to prevent conflicts with main auto-navigation
 
   // Auto-switch to next tab on load/refresh based on completed declarations
   useEffect(() => {
@@ -1002,39 +900,19 @@ export default function CURegistrationPage() {
     const s = !!correctionRequest.subjectsDeclaration;
     const d = !!correctionRequest.documentsDeclaration;
 
-    console.info("[CU-REG FRONTEND] Auto-navigation check:", {
-      introductoryDeclaration: i,
-      personalInfoDeclaration: p,
-      addressInfoDeclaration: a,
-      subjectsDeclaration: s,
-      documentsDeclaration: d,
-      currentActiveTab: activeTab,
-    });
+    console.info("[CU-REG FRONTEND] Auto-navigation check:", { i, p, a, s, d, currentTab: activeTab });
 
-    // Simple logic: find the first incomplete declaration and navigate to that tab
-    let nextTab = "introductory"; // Default to introductory
+    // Only auto-navigate if we haven't manually navigated yet
+    if (!hasAutoNavigatedRef.current) {
+      let nextTab = "introductory";
+      if (i && !p) nextTab = "personal";
+      else if (i && p && !a) nextTab = "address";
+      else if (i && p && a && !s) nextTab = "subjects";
+      else if (i && p && a && s && !d) nextTab = "documents";
+      else if (i && p && a && s && d) nextTab = "review";
 
-    if (!i) {
-      nextTab = "introductory";
-    } else if (!p) {
-      nextTab = "personal";
-    } else if (!a) {
-      nextTab = "address";
-    } else if (!s) {
-      nextTab = "subjects";
-    } else if (!d) {
-      nextTab = "documents";
-    } else {
-      // All declarations are complete, stay on documents
-      nextTab = "documents";
-    }
-
-    console.info("[CU-REG FRONTEND] Auto-navigation decision:", { nextTab, currentTab: activeTab });
-
-    // Auto-navigate to the appropriate tab based on completed declarations
-    // Only navigate if we're not already on the correct tab
-    if (nextTab !== activeTab) {
-      console.info("[CU-REG FRONTEND] Auto-navigating to:", nextTab);
+      console.info(`[CU-REG FRONTEND] Auto-navigating to: ${nextTab}`);
+      hasAutoNavigatedRef.current = true;
       setActiveTab(nextTab);
     }
   }, [correctionRequest]); // Removed activeTab dependency to prevent conflicts with manual navigation
@@ -1048,6 +926,149 @@ export default function CURegistrationPage() {
       return () => clearTimeout(timer);
     }
   }, [correctionRequestStatus]);
+
+  // Show loading while checking program
+  if (isBlockedProgram) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Redirecting...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state while profile data is being fetched
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your profile data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state while checking subject selection
+  if (isCheckingSubjectSelection) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking subject selection status...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show subject selection required message if not completed
+  if (!isSubjectSelectionCompleted) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+              <h2 className="text-xl font-semibold text-yellow-800 mb-2">Subject Selection Required</h2>
+              <p className="text-yellow-700 mb-4">
+                You need to complete your subject selection before proceeding with CU registration.
+              </p>
+              <Button onClick={handleSubjectSelectionRedirect} className="bg-yellow-600 hover:bg-yellow-700">
+                Go to Subject Selection
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Helper: convert backend-relative URLs (e.g. "/uploads/...") to absolute URLs using backend base
+  const toAbsoluteUrl = (url?: string) => {
+    if (!url) return "";
+    return /^https?:\/\//i.test(url)
+      ? url
+      : `${process.env.NEXT_PUBLIC_APP_BASE_URL || ""}${url.startsWith("/") ? url : `/${url}`}`;
+  };
+
+  // Helper: clean APAAR ID (remove formatting for backend)
+  const cleanApaarId = (apaarId: string) => {
+    // If the field is empty, return empty string
+    if (!apaarId || apaarId.trim() === "") {
+      return "";
+    }
+
+    // Remove formatting (dashes) but keep the digits
+    const cleaned = apaarId.replace(/\D/g, "");
+    return cleaned;
+  };
+
+  // File size limits for display only (compression handled in backend)
+  const getFileSizeLimit = (documentName: string): { maxSizeKB: number; maxSizeMB: number } => {
+    // All documents now have 1MB limit
+    return { maxSizeKB: 1024, maxSizeMB: 1 }; // 1MB for all documents
+  };
+
+  // Helper: format APAAR ID input as user types
+  const formatApaarIdInput = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    if (digits.length <= 12)
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}-${digits.slice(9)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}-${digits.slice(9, 12)}`;
+  };
+
+  // Handle document uploads via backend API
+  const handleUpload = async (key: keyof typeof documents, documentId: number) => {
+    const file = documents[key];
+    if (!file) {
+      console.warn("[CU-REG FRONTEND] No file provided for upload");
+      return;
+    }
+    if (!correctionRequestId) {
+      console.error("[CU-REG FRONTEND] Cannot upload: correctionRequestId is null");
+      return;
+    }
+    try {
+      await uploadCuRegistrationDocument({
+        file,
+        cuRegistrationCorrectionRequestId: correctionRequestId,
+        documentId,
+      });
+      toast.success("Uploaded successfully");
+    } catch (e: any) {
+      console.error("[CU-REG FRONTEND] Upload failed:", e);
+      toast.error(e?.message || "Upload failed");
+    }
+  };
+
+  // Ensure a correction request exists (create draft if none)
+
+  // Prefill from personal-details and student models
+
+  // Ensure a correction request exists (create draft if none)
+
+  // Fetch uploaded documents when correction request is available
+
+  // Force introductory tab if instructions are not confirmed (but allow manual navigation to introductory tab)
+
+  // Fetch PDF URL when correction request is available and has application number
+
+  // Also resync local checkbox states whenever the loaded correctionRequest changes
+
+  // Removed immediate auto-navigation logic to prevent conflicts with main auto-navigation
+
+  // Auto-switch to next tab on load/refresh based on completed declarations
+  // Auto-hide status alert after 2 seconds
 
   // Helper function to determine if form is editable
   const isFormEditable = () => {
@@ -1653,10 +1674,10 @@ export default function CURegistrationPage() {
     };
   };
 
-  // Helper function to format file size (always in KB)
+  // Helper function to format file size (now in MB)
   const formatFileSize = (bytes: number): string => {
-    const sizeKB = bytes / 1024;
-    return `${sizeKB.toFixed(2)} KB`;
+    const sizeMB = bytes / (1024 * 1024);
+    return `${sizeMB.toFixed(2)} MB`;
   };
 
   const handleFilePreview = (file: File) => {
@@ -2044,6 +2065,9 @@ export default function CURegistrationPage() {
           : "min-h-screen py-4 sm:py-8"
       }`}
     >
+      <h1 className="text-2xl text-center font-bold text-gray-900 mb-2">
+        CU Registration: Admission & Registration Data (Part 1)
+      </h1>
       {/* Only show form content if subject selection is completed */}
       {isSubjectSelectionCompleted && (
         <div
@@ -2319,23 +2343,15 @@ export default function CURegistrationPage() {
                             <ul className="space-y-2 text-gray-700">
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Original Class XII Board Marksheet
+                                Your Original Class XII Board Marksheet
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Original Class X Board Admit Card / Birth Certificate (issued by the Government)
+                                Your Original Aadhaar Card (Applicable only for Indian Nationals)
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Original Aadhaar Card
-                              </li>
-                              <li className="flex items-start">
-                                <span className="text-blue-600 mr-2">•</span>
-                                First and Last Page of Passport (only for Foreign Nationals)
-                              </li>
-                              <li className="flex items-start">
-                                <span className="text-blue-600 mr-2">•</span>
-                                APAAR (ABC) ID Card (not applicable for Foreign Nationals)
+                                Your APAAR (ABC) ID Card (Applicable only for Indian Nationals)
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
@@ -2347,8 +2363,12 @@ export default function CURegistrationPage() {
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                EWS Certificate, issued by the Government of West Bengal (only if applying under EWS
-                                category)
+                                EWS Certificate, issued in your name, by the Government of West Bengal (only if applying
+                                under EWS category)
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                First and Last Page of your Passport (Applicable only for Foreign Nationals)
                               </li>
                             </ul>
                           </div>
@@ -2364,15 +2384,16 @@ export default function CURegistrationPage() {
                             <ul className="space-y-2 text-gray-700">
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                All documents must be uploaded in <strong>.JPG or .JPEG format only</strong>.
+                                All documents must be uploaded in <strong>.jpg or .jpeg format only</strong>.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                The maximum allowed file size per document is <strong>250 KB</strong>.
+                                The maximum allowed file size per document is <strong>1MB</strong>.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Ensure your scans are clearly readable and properly cropped before uploading.
+                                Ensure your scans are clearly readable, including the board name & logo, and you crop
+                                out any extra parts before uploading.
                               </li>
                             </ul>
                           </div>
@@ -2388,11 +2409,11 @@ export default function CURegistrationPage() {
                             <ul className="space-y-2 text-gray-700">
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Check every entry carefully in each section before final submission.
+                                Review every field carefully in each section before final submission.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Once submitted, no changes or edits will be permitted.
+                                After submission, you will not be allowed to make any edits or changes.
                               </li>
                             </ul>
                           </div>
@@ -2417,11 +2438,12 @@ export default function CURegistrationPage() {
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Do not refresh or close the browser while uploading your documents.
+                                Do not refresh or close the browser while the documents are being uploaded.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Your Mobile Number and Institutional Email ID must be active and accessible as all the
+                                Make sure your registered Mobile number (provided at the time of admission) and
+                                Institutional email ID (provided by the college) are active and accessible, as all
                                 communication will be sent there.
                               </li>
                             </ul>
@@ -2688,22 +2710,28 @@ export default function CURegistrationPage() {
                             </div>
                           </div>
 
-                          {/* Declaration - Always show, but disable when completed */}
+                          {/* Declaration - Always show, but disable when completed or APAAR ID is empty */}
                           <div className="pt-2 md:col-span-2">
                             <div className="flex items-start space-x-3">
                               <Checkbox
                                 id="personalDeclaration"
                                 checked={personalDeclared || correctionRequest?.personalInfoDeclaration}
                                 onCheckedChange={handleDeclarationChange}
-                                disabled={false}
+                                disabled={personalInfo.apaarId.trim() === ""}
                                 className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                               />
                               <Label
                                 htmlFor="personalDeclaration"
-                                className="text-sm text-gray-700 leading-relaxed cursor-pointer"
+                                className={`text-sm text-gray-700 leading-relaxed ${
+                                  personalInfo.apaarId.trim() === ""
+                                    ? "cursor-not-allowed opacity-50"
+                                    : "cursor-pointer"
+                                }`}
                                 onClick={() => {
-                                  console.info("[CU-REG FRONTEND] Declaration label clicked");
-                                  handleDeclarationChange(true);
+                                  if (personalInfo.apaarId.trim() !== "") {
+                                    console.info("[CU-REG FRONTEND] Declaration label clicked");
+                                    handleDeclarationChange(true);
+                                  }
                                 }}
                               >
                                 {getDeclarationText()}
@@ -2717,8 +2745,8 @@ export default function CURegistrationPage() {
                             {!personalDeclared && !correctionRequest?.personalInfoDeclaration && (
                               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
                                 <p className="text-sm text-blue-700">
-                                  <span className="font-medium">Note:</span> Please check the declaration above to
-                                  proceed to the next tab (Address Information).
+                                  <span className="font-medium">Note:</span> Please fill in your APAAR ID and check the
+                                  declaration above to proceed to the next tab (Address Information).
                                 </p>
                               </div>
                             )}
@@ -3409,7 +3437,7 @@ export default function CURegistrationPage() {
                                   Upload
                                 </Button>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("Class XII Marksheet").maxSizeKB}KB • JPEG / PNG
+                                  Max {getFileSizeLimit("Class XII Marksheet").maxSizeMB}MB • JPEG / PNG
                                 </p>
                                 <input
                                   id="classXIIMarksheet"
@@ -3488,7 +3516,7 @@ export default function CURegistrationPage() {
                                   Upload
                                 </Button>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("Aadhaar Card").maxSizeKB}KB • JPEG / PNG
+                                  Max {getFileSizeLimit("Aadhaar Card").maxSizeMB}MB • JPEG / PNG
                                 </p>
                                 <input
                                   id="aadhaarCard"
@@ -3561,7 +3589,7 @@ export default function CURegistrationPage() {
                                   Upload
                                 </Button>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("APAAR ID Card").maxSizeKB}KB • JPEG / PNG
+                                  Max {getFileSizeLimit("APAAR ID Card").maxSizeMB}MB • JPEG / PNG
                                 </p>
                                 <input
                                   id="apaarIdCard"
@@ -3631,7 +3659,7 @@ export default function CURegistrationPage() {
                                   className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("Father Photo ID").maxSizeKB}KB • JPEG / PNG
+                                  Max {getFileSizeLimit("Father Photo ID").maxSizeMB}MB • JPEG / PNG
                                 </p>
                                 <Button
                                   variant="outline"
@@ -3703,7 +3731,7 @@ export default function CURegistrationPage() {
                                   className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("Mother Photo ID").maxSizeKB}KB • JPEG / PNG
+                                  Max {getFileSizeLimit("Mother Photo ID").maxSizeMB}MB • JPEG / PNG
                                 </p>
                                 <Button
                                   variant="outline"
@@ -3777,7 +3805,7 @@ export default function CURegistrationPage() {
                                     className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                   />
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Max {getFileSizeLimit("EWS Certificate").maxSizeKB}KB • JPEG / PNG
+                                    Max {getFileSizeLimit("EWS Certificate").maxSizeMB}MB • JPEG / PNG
                                   </p>
                                   <Button
                                     variant="outline"

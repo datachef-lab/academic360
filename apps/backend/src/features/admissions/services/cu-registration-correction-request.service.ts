@@ -1903,6 +1903,10 @@ interface CuRegistrationExportData {
   residentialPinCode: string;
   residentialPoliceStation: string;
   residentialPostOffice: string;
+  residentialOtherCountry: string;
+  residentialOtherState: string;
+  residentialOtherDistrict: string;
+  residentialOtherCity: string;
 
   // Mailing Address (from UI)
   mailingAddressLine: string;
@@ -1913,6 +1917,10 @@ interface CuRegistrationExportData {
   mailingPinCode: string;
   mailingPoliceStation: string;
   mailingPostOffice: string;
+  mailingOtherCountry: string;
+  mailingOtherState: string;
+  mailingOtherDistrict: string;
+  mailingOtherCity: string;
 
   // Documents (from UI)
   classXIIMarksheet: string;
@@ -2021,6 +2029,10 @@ export const exportCuRegistrationCorrectionRequests =
           residentialPinCode: addressModel.pincode,
           residentialPoliceStation: addressModel.otherPoliceStation,
           residentialPostOffice: addressModel.otherPostoffice,
+          residentialOtherCountry: addressModel.otherCountry,
+          residentialOtherState: addressModel.otherState,
+          residentialOtherDistrict: addressModel.otherDistrict,
+          residentialOtherCity: addressModel.otherCity,
 
           // Country/State/District/City names for residential
           residentialCountryName: countryModel.name,
@@ -2078,6 +2090,10 @@ export const exportCuRegistrationCorrectionRequests =
           pincode: addressModel.pincode,
           otherPoliceStation: addressModel.otherPoliceStation,
           otherPostoffice: addressModel.otherPostoffice,
+          otherCountry: addressModel.otherCountry,
+          otherState: addressModel.otherState,
+          otherDistrict: addressModel.otherDistrict,
+          otherCity: addressModel.otherCity,
           countryName: countryModel.name,
           stateName: stateModel.name,
           districtName: districtModel.name,
@@ -2227,6 +2243,10 @@ export const exportCuRegistrationCorrectionRequests =
             residentialPinCode: request.residentialPinCode || "",
             residentialPoliceStation: request.residentialPoliceStation || "",
             residentialPostOffice: request.residentialPostOffice || "",
+            residentialOtherCountry: request.residentialOtherCountry || "",
+            residentialOtherState: request.residentialOtherState || "",
+            residentialOtherDistrict: request.residentialOtherDistrict || "",
+            residentialOtherCity: request.residentialOtherCity || "",
 
             // Mailing Address
             mailingAddressLine: mailingAddress?.addressLine || "",
@@ -2237,6 +2257,10 @@ export const exportCuRegistrationCorrectionRequests =
             mailingPinCode: mailingAddress?.pincode || "",
             mailingPoliceStation: mailingAddress?.otherPoliceStation || "",
             mailingPostOffice: mailingAddress?.otherPostoffice || "",
+            mailingOtherCountry: mailingAddress?.otherCountry || "",
+            mailingOtherState: mailingAddress?.otherState || "",
+            mailingOtherDistrict: mailingAddress?.otherDistrict || "",
+            mailingOtherCity: mailingAddress?.otherCity || "",
 
             // Documents
             classXIIMarksheet: documents.classXIIMarksheet || "",
