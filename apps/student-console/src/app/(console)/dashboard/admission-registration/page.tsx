@@ -148,14 +148,14 @@ export default function CURegistrationPage() {
   };
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_APP_ENV === "production") {
+    if (process.env.NEXT_PUBLIC_APP_ENV === "staging") {
       router.replace("/dashboard"); // Use replace instead of push to avoid adding to history
       return;
     }
   }, [router]);
 
   // Early return to prevent rendering in production
-  if (process.env.NEXT_PUBLIC_APP_ENV === "production") {
+  if (process.env.NEXT_PUBLIC_APP_ENV === "staging") {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
