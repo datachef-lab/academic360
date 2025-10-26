@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql, max, inArray } from "drizzle-orm";
 import * as programCourseService from "@/features/course-design/services/program-course.service";
 import * as sessionService from "@/features/academics/services/session.service";
 import {
@@ -375,6 +375,7 @@ export async function findSubjectsSelections(studentId: number) {
 
     // Check if student has actually submitted subject selections through the form
     // (not just admission selections)
+    // Get only the latest version for each subject category (subjectSelectionMetaId)
     const [actualStudentSelections] = await Promise.all([
       db
         .select({
@@ -426,6 +427,17 @@ export async function findSubjectsSelections(studentId: number) {
           and(
             eq(studentSubjectSelectionModel.studentId, studentId),
             eq(studentSubjectSelectionModel.isActive, true),
+            // Only get the latest version for each subject category
+            sql`${studentSubjectSelectionModel.id} IN (
+              SELECT DISTINCT ON (${studentSubjectSelectionModel.subjectSelectionMetaId}) 
+                ${studentSubjectSelectionModel.id}
+              FROM ${studentSubjectSelectionModel}
+              WHERE ${studentSubjectSelectionModel.studentId} = ${studentId}
+                AND ${studentSubjectSelectionModel.isActive} = true
+              ORDER BY ${studentSubjectSelectionModel.subjectSelectionMetaId}, 
+                       ${studentSubjectSelectionModel.version} DESC, 
+                       ${studentSubjectSelectionModel.createdAt} DESC
+            )`,
           ),
         ),
     ]);
@@ -434,13 +446,16 @@ export async function findSubjectsSelections(studentId: number) {
 
     // Debug: Log the actual student selections to see what subjects are being fetched
     console.log(
-      `[SUBJECT-SELECTION] Student ${studentId} - actualStudentSelections:`,
+      `[SUBJECT-SELECTION] Student ${studentId} - actualStudentSelections (latest versions only):`,
       actualStudentSelections.map((selection) => ({
+        id: selection.id,
         subjectName: selection.subjectName || "N/A",
         subjectCode: selection.subjectCode || "N/A",
         label: selection.metaLabel || "N/A",
         subjectTypeName: selection.subjectTypeName || "N/A",
         subjectTypeCode: selection.subjectTypeCode || "N/A",
+        version: selection.version,
+        createdAt: selection.createdAt,
       })),
     );
 

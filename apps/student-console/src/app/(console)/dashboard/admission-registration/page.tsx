@@ -619,11 +619,35 @@ export default function CURegistrationPage() {
         student,
       });
 
+      // Debug: Log family details structure
+      if (familyDetails) {
+        console.log("Family details structure:", {
+          members: familyDetails.members,
+          membersCount: familyDetails.members?.length || 0,
+        });
+
+        // Find father and mother from members array
+        const father = familyDetails.members?.find((member: any) => member.type === "FATHER");
+        const mother = familyDetails.members?.find((member: any) => member.type === "MOTHER");
+
+        console.log("Parent details:", {
+          father: father,
+          mother: mother,
+          fatherName: father?.name,
+          motherName: mother?.name,
+        });
+      }
+
       if (personalDetails) {
+        // Extract parent name from family details members array
+        const father = familyDetails?.members?.find((member: any) => member.type === "FATHER");
+        const mother = familyDetails?.members?.find((member: any) => member.type === "MOTHER");
+        const parentName = father?.name || mother?.name || "";
+
         setPersonalInfo((prev) => ({
           ...prev,
           fullName: personalDetails.fullName || prev.fullName,
-          parentName: familyDetails?.fatherName || familyDetails?.motherName || prev.parentName,
+          parentName: parentName || prev.parentName,
           gender: personalDetails.gender || prev.gender,
           nationality: personalDetails.nationality?.name || prev.nationality,
           ews: personalDetails.ews ? "Yes" : "No",
@@ -633,9 +657,19 @@ export default function CURegistrationPage() {
       }
 
       if (familyDetails) {
+        // Extract parent name from family details members array
+        const father = familyDetails.members?.find((member: any) => member.type === "FATHER");
+        const mother = familyDetails.members?.find((member: any) => member.type === "MOTHER");
+        const parentName = father?.name || mother?.name || "";
+
+        console.log("Setting parent name:", {
+          fatherName: father?.name,
+          motherName: mother?.name,
+          finalParentName: parentName,
+        });
         setPersonalInfo((prev) => ({
           ...prev,
-          parentName: familyDetails.fatherName || familyDetails.motherName || prev.parentName,
+          parentName: parentName || prev.parentName,
         }));
       }
 
@@ -2067,7 +2101,7 @@ export default function CURegistrationPage() {
       }`}
     >
       <h1 className="text-2xl text-center font-bold text-gray-900 mb-2">
-        CU Registration: Admission & Registration Data (Part 1)
+        Admission & Registration Online Data Submission (Part 1 of 2)
       </h1>
       {/* Only show form content if subject selection is completed */}
       {isSubjectSelectionCompleted && (
@@ -2385,11 +2419,11 @@ export default function CURegistrationPage() {
                             <ul className="space-y-2 text-gray-700">
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                All documents must be uploaded in <strong>.jpg or .jpeg format only</strong>.
+                                All documents must be uploaded in &nbsp;<strong>.jpg or .jpeg format only</strong>.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                The maximum allowed file size per document is <strong>1MB</strong>.
+                                The maximum allowed file size per document is &nbsp;<strong>1MB</strong>.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
@@ -2495,23 +2529,26 @@ export default function CURegistrationPage() {
                           Personal Information - Important Notes
                         </h3>
                         <div className="space-y-2 text-sm text-blue-800">
-                          <p className="font-medium">Please ensure the following:</p>
                           <ul className="list-disc list-inside space-y-1 ml-4">
                             <li>
-                              Spelling of your and your father/mother's full name is exactly as printed on your Class
-                              XII Board Marksheet
+                              Ensure your name and your father's/mother's full names are spelled exactly as per your
+                              Class XII Board Marksheet.
                             </li>
                             <li>
-                              Recheck your Gender, Nationality, Aadhaar Number, and APAAR ID fields before proceeding
-                            </li>
-                            <li>You must enter your APAAR ID if it is blank to proceed to the next page</li>
-                            <li>
-                              In case of any discrepancy in Gender, Nationality, or Aadhaar Number, click on the slider
-                              beside the respective serial no. to register a correction
+                              Recheck your Gender, Nationality, Aadhaar Number, and APAAR ID. (If APAAR ID is blank, you
+                              must enter it to proceed.)
                             </li>
                             <li>
-                              If you have EWS (Economically Weaker Section) Certificate issued by the Government of West
-                              Bengal, select Yes from the dropdown in serial no.1.5
+                              To report any mistake in Gender, Nationality, Aadhaar Number, or APAAR ID, click the
+                              correction slider below the respective field.
+                            </li>
+                            <li>
+                              If you have an EWS (Economically Weaker Section) Certificate issued by the Government of
+                              West Bengal, select "Yes" under Serial No. 1.5.
+                            </li>
+                            <li>
+                              Any correction must be informed during physical submission of your Admission &
+                              Registration Datasheet and documents at the College.
                             </li>
                           </ul>
                         </div>
@@ -2661,14 +2698,6 @@ export default function CURegistrationPage() {
                                           />
                                         </div>
                                       )}
-                                      {correctionFlags.apaarId && (
-                                        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                                          <p className="text-sm text-yellow-800">
-                                            <strong>Correction Requested:</strong> Your APAAR ID correction request has
-                                            been noted. The admin will review and update your APAAR ID information.
-                                          </p>
-                                        </div>
-                                      )}
                                     </>
                                   );
                                 } else {
@@ -2693,16 +2722,9 @@ export default function CURegistrationPage() {
                                         inputMode="numeric"
                                         pattern="\\d*"
                                       />
-                                      {isApaarIdEmpty && (
-                                        <p className="text-sm text-red-600">
-                                          ⚠️ APAAR ID is required to proceed to the next page
-                                        </p>
-                                      )}
+
                                       {isApaarIdInvalid && (
                                         <p className="text-sm text-yellow-600">⚠️ APAAR ID must be exactly 12 digits</p>
-                                      )}
-                                      {!isApaarIdEmpty && !isApaarIdInvalid && (
-                                        <p className="text-sm text-green-600">✅ APAAR ID is valid</p>
                                       )}
                                     </div>
                                   );
@@ -2762,19 +2784,15 @@ export default function CURegistrationPage() {
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                         <h3 className="text-lg font-semibold text-green-900 mb-3">Address Details - Important Notes</h3>
                         <div className="space-y-2 text-sm text-green-800">
-                          <p className="font-medium">Please ensure the following:</p>
                           <ul className="list-disc list-inside space-y-1 ml-4">
                             <li>
-                              Fill in the Pincode, Post Office, Police Station, District, City and State in case any of
-                              these fields are displayed blank
+                              If any of the fields like Pincode, Post Office, Police Station, District, City or State
+                              are blank, please fill them in. (Refer to your Aadhaar Card to check the spelling of your
+                              District, Post Office and Police Station.)
                             </li>
                             <li>
-                              Refer to your Aadhaar Card to know the correct spelling of your District, Post Office &
-                              Police Station
-                            </li>
-                            <li>
-                              If both your Residential & Mailing addresses are the same, click on the "Same as
-                              Residential" checkbox
+                              Any correction must be informed during physical submission of your Admission &
+                              Registration Datasheet and documents at the College.
                             </li>
                           </ul>
                         </div>
@@ -3073,22 +3091,25 @@ export default function CURegistrationPage() {
                           Academic Details - Important Notes
                         </h3>
                         <div className="space-y-2 text-sm text-purple-800">
-                          <p className="font-medium">Please note the following:</p>
                           <ul className="list-disc list-inside space-y-1 ml-4">
                             <li>
-                              The displayed subjects comprise of the mandatory subjects to be studied by you from
-                              Semesters I to IV and the subjects selected by you under Subject Selection Option
+                              The subjects displayed include the mandatory subjects you must study from Semesters I to
+                              IV, along with the subjects you selected during the Subject Selection process.
                             </li>
                             <li>
-                              In case you wish to change the order of the subjects chosen by you under Minor or{" "}
-                              {isBcomProgram ? "MDC" : "IDC"}
-                              categories only, you can click on the slider on the top right side of the page to register
-                              a correction
+                              BA & BSc Students: If you wish to change the order or subject under Minor / IDC / AEC /
+                              CVAC categories, you may click on the slider at the top-right corner of the page to
+                              register a correction.
                             </li>
                             <li>
-                              Please note that considering the request for changing the order of the subjects selected
-                              by you previously is solely at the college's discretion
+                              Please Note: Any request for changing the order of the previously selected subjects will
+                              be at the sole discretion of the college.
                             </li>
+                            <li>
+                              BCom Students: If you wish to change your Minor subject, you can click on the slider at
+                              the top-right corner to register a correction.
+                            </li>
+                            <li>BBA Students: All subjects displayed are mandatory and cannot be changed.</li>
                           </ul>
                         </div>
                       </div>
@@ -3274,29 +3295,29 @@ export default function CURegistrationPage() {
                           Document Upload - Important Notes
                         </h3>
                         <div className="space-y-2 text-sm text-orange-800">
-                          <p className="font-medium">Please ensure the following:</p>
                           <ul className="list-disc list-inside space-y-1 ml-4">
                             <li>
-                              Upload only the scanned originals — not photocopies/ screenshots/ internet versions of the
-                              documents will be accepted
+                              Upload only the scanned originals — photocopies, screenshots or internet-downloaded
+                              versions will not be accepted.
                             </li>
-                            <li>Each file should be in .JPG / .JPEG format, under 250 KB</li>
-                            <li>Ensure all text, seals, and photographs are clearly visible</li>
-                            <li>Do not rename files using special characters or spaces (e.g., use AadhaarCard.jpg)</li>
-                            <li>Upload Photo ID proof of both parents (as applicable), issued by the Government</li>
-                            <li>Upload the relevant certificates under the correct field name</li>
-                            <li>For EWS: certificate must be issued by the Govt. of West Bengal Only</li>
+                            <li>Each file must be in .jpg / .jpeg format and under 1 MB.</li>
+                            <li>Ensure all text, seals, and photographs are clearly visible.</li>
+                            <li>Do not use special characters or spaces while renaming files.</li>
+                            <li>Upload Photo ID proof of both parents (if applicable), issued by the Government.</li>
+                            <li>Make sure each document is uploaded under the correct field name.</li>
+                            <li>EWS Certificate must be issued only by the Government of West Bengal.</li>
                             <li>
-                              For Foreign Nationals: upload your Passport photo after merging the first & last pages of
-                              your Passport into a single page
+                              For Foreign Nationals: merge the first and last pages of your Passport into a single page
+                              and then upload.
+                            </li>
+                            <li>To preview the uploaded document, click on it to enlarge.</li>
+                            <li>
+                              To change or re-upload a document, click the Upload button again before clicking Review &
+                              Confirm.
                             </li>
                             <li>
-                              To preview your uploaded documents, click on the uploaded document to enlarge the same
-                            </li>
-                            <li>In case you want to change/ reupload the document, click on the Upload button again</li>
-                            <li>
-                              Once all the documents applicable for you are uploaded, click on the Review & Confirm
-                              button
+                              Once all applicable documents are uploaded, click on the Review & Confirm button to
+                              proceed.
                             </li>
                           </ul>
                         </div>
@@ -4016,17 +4037,16 @@ export default function CURegistrationPage() {
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <h3 className="text-lg font-semibold text-red-900 mb-3">Review & Confirm - Important Notes</h3>
                 <div className="space-y-2 text-sm text-red-800">
-                  <p className="font-medium">Please note the following:</p>
                   <ul className="list-disc list-inside space-y-1 ml-4">
                     <li>
                       If corrections are needed, click on the Back button and toggle to make the necessary corrections
-                      before final submission
+                      before final submission.
                     </li>
-                    <li>Once you click Submit, no further edits will be allowed</li>
-                    <li>Upon successful submission, you will get your Admission & Registration Datasheet</li>
+                    <li>Once you click Submit, no further edits will be allowed.</li>
+                    <li>Upon successful submission, you will get your Admission & Registration Datasheet.</li>
                     <li>
                       You are required to download the same & follow the instructions given on the 1st page of the
-                      Datasheet
+                      Datasheet.
                     </li>
                   </ul>
                 </div>
