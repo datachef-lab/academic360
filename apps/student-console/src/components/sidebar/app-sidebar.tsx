@@ -165,7 +165,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           items={navMainItems
             .map((item) => {
               if (
-                process.env.NEXT_PUBLIC_ENVIRONMENT === "production" &&
+                process.env.NEXT_PUBLIC_APP_ENV === "production" &&
                 item.url === "/dashboard/admission-registration"
               ) {
                 return undefined; // Hide admission registration in production
