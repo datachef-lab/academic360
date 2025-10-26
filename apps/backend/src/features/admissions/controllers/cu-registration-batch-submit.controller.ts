@@ -113,13 +113,13 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
 
     // Determine status based on correction flags
     // If any correction is requested, status should be REQUEST_CORRECTION
-    // If no corrections are requested, status should be ONLINE_REGISTRATION
+    // If no corrections are requested, status should be ONLINE_REGISTRATION_DONE
     const hasAnyCorrectionFlags = Object.values(parsedFlags).some(
       (flag) => flag === true,
     );
     const newStatus = hasAnyCorrectionFlags
       ? "REQUEST_CORRECTION"
-      : "ONLINE_REGISTRATION";
+      : "ONLINE_REGISTRATION_DONE";
 
     console.info(`[CU-REG BATCH SUBMIT] Status determination:`, {
       hasAnyCorrectionFlags,

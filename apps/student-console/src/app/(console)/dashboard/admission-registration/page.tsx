@@ -883,6 +883,7 @@ export default function CURegistrationPage() {
       subjectsDeclaration: correctionRequest.subjectsDeclaration,
       documentsDeclaration: correctionRequest.documentsDeclaration,
     });
+    setInstructionsConfirmed(!!correctionRequest.introductoryDeclaration);
     setPersonalDeclared(!!correctionRequest.personalInfoDeclaration);
     setAddressDeclared(!!correctionRequest.addressInfoDeclaration);
     setSubjectsDeclared(!!correctionRequest.subjectsDeclaration);
