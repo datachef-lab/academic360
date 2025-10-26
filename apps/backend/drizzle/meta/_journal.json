@@ -344,6 +344,20 @@
       "when": 1761484155462,
       "tag": "0048_young_nuke",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1761487709829,
+      "tag": "0049_brown_hemingway",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1761487918873,
+      "tag": "0050_huge_selene",
+      "breakpoints": true
     }
   ]
 }

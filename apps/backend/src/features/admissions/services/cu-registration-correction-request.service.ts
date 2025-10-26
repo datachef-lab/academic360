@@ -1007,6 +1007,53 @@ export async function updateCuRegistrationCorrectionRequest(
             applicationNumber: updatedRequest.cuRegistrationApplicationNumber,
           },
         );
+
+        // Send email notification with PDF attachment (same as student console)
+        if (pdfResult.pdfBuffer) {
+          try {
+            console.info(
+              `[CU-REG CORRECTION][UPDATE] Sending admission registration email notification`,
+              {
+                studentId: existing.studentId,
+                applicationNumber:
+                  updatedRequest.cuRegistrationApplicationNumber,
+                pdfBufferSize: pdfResult.pdfBuffer.length,
+                pdfUrl: pdfResult.s3Url,
+              },
+            );
+
+            const notificationResult =
+              await sendAdmissionRegistrationNotification(
+                existing.studentId,
+                updatedRequest.cuRegistrationApplicationNumber ||
+                  "TEMP-APP-NUM",
+                pdfResult.pdfBuffer,
+                pdfResult.s3Url!,
+              );
+
+            if (notificationResult.success) {
+              console.info(
+                `[CU-REG CORRECTION][UPDATE] Email notification sent successfully`,
+                { notificationId: notificationResult.notificationId },
+              );
+            } else {
+              console.error(
+                `[CU-REG CORRECTION][UPDATE] Failed to send email notification:`,
+                notificationResult.error,
+              );
+            }
+          } catch (notificationError) {
+            console.error(
+              `[CU-REG CORRECTION][UPDATE] Error sending email notification:`,
+              notificationError,
+            );
+            // Don't fail the entire request if notification fails
+          }
+        } else {
+          console.warn(
+            `[CU-REG CORRECTION][UPDATE] PDF buffer not available for notification`,
+          );
+        }
       } else {
         console.error("[CU-REG CORRECTION][UPDATE] PDF regeneration failed", {
           error: pdfResult.error,

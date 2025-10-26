@@ -147,7 +147,24 @@ export default function CURegistrationPage() {
     return aadhaar;
   };
 
-  // All hooks must be called before any conditional returns to avoid "Rendered fewer hooks than expected" error
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_ENVIRONMENT === "production") {
+      router.replace("/dashboard"); // Use replace instead of push to avoid adding to history
+      return;
+    }
+  }, [router]);
+
+  // Early return to prevent rendering in production
+  if (process.env.NEXT_PUBLIC_ENVIRONMENT === "production") {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Debug: Track activeTab changes
   React.useEffect(() => {

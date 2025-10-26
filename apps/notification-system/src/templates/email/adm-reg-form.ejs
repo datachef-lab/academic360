@@ -204,14 +204,17 @@
       }
       
       .document-checkbox {
-        width: 16px;
-        height: 16px;
-        border: 2px solid #0ea5e9;
-        border-radius: 3px;
+        width: 20px;
+        height: 20px;
         margin-right: 12px;
         margin-top: 2px;
         flex-shrink: 0;
-        background: white;
+        font-size: 18px;
+        color: #0ea5e9;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       
       .document-text {
@@ -342,8 +345,7 @@
         <div class="college-logo">
           <img src="https://besc.academic360.app/api/api/v1/settings/file/4" alt="The Bhawanipur Education Society College" />
         </div>
-        <h1>🎉 Congratulations!</h1>
-        <div class="subtitle">Admission Registration Form Successfully Submitted</div>
+        <h1>Important Notification!</h1>
       </div>
       
       <!-- Content -->
@@ -352,7 +354,7 @@
         
         
         <div class="intro-text">
-          We are pleased to inform you that you have successfully completed <strong>Part 1</strong> of your Admission & Registration Data Submission, i.e., online submission and confirmation of your data.
+            Congratulations! You have successfully completed <strong>Part 1</strong> of your Admission & Registration Data Submission, i.e., online submission and confirmation of your data.
         </div>
         
         <div class="intro-text">
@@ -369,61 +371,73 @@
           
           <!-- Always required documents -->
           <div class="document-item">
-            <div class="document-checkbox"></div>
+            <div class="document-checkbox">☐</div>
             <div class="document-text">Download & Print the Admission & Registration Datasheet attached with this email on an A4 size, white paper in Portrait mode with double-sided printing (mandatory).</div>
           </div>
           <div class="document-item">
-            <div class="document-checkbox"></div>
-            <div class="document-text">A photocopy of the Original Class XII board marksheet.</div>
+            <div class="document-checkbox">☐</div>
+            <div class="document-text">1 (One) Photocopy of the original Class XII Board Marksheet.</div>
           </div>
           <div class="document-item">
-            <div class="document-checkbox"></div>
-            <div class="document-text">A photocopy of the Original Class X Board Admit Card / Birth Certificate issued by the Government.</div>
+            <div class="document-checkbox">☐</div>
+            <div class="document-text">1 (One) Photocopy of Class X Board Admit Card / Birth Certificate issued by Government.</div>
           </div>
           
           <!-- Nationality-based documents -->
           <% if (content && content.isIndian !== false) { %>
           <div class="document-item">
-            <div class="document-checkbox"></div>
-            <div class="document-text">A photocopy of the Student's Aadhar Card (Mandatory for Indian Citizens).</div>
+            <div class="document-checkbox">☐</div>
+            <div class="document-text">1 (One) Photocopy of Aadhaar Card.</div>
+          </div>
+          <div class="document-item">
+            <div class="document-checkbox">☐</div>
+            <div class="document-text">1 (One) Photocopy of the APAAR (ABC) ID Card. (Not applicable for Foreign Nationals)</div>
+          </div>
+          <% } %>
+          
+          <!-- Foreign nationals documents -->
+          <% if (content && content.isIndian === false) { %>
+          <div class="document-item">
+            <div class="document-checkbox">☐</div>
+            <div class="document-text">1 (One) Photocopy of First and Last Page of Passport. (Applicable only for Foreign Nationals)</div>
           </div>
           <% } %>
           
           <!-- Category-based documents -->
           <% if (content && content.isSCSTOBC) { %>
           <div class="document-item">
-            <div class="document-checkbox"></div>
-            <div class="document-text">A Photocopy of the Original SC/ ST/ OBC-A/ OBC-B Certificate issued by the Government of West Bengal (Required only if applied under the SC/ ST/ OBC category).</div>
+            <div class="document-checkbox">☐</div>
+            <div class="document-text">1 (One) Photocopy of the Caste Certificate, issued by the Govt. of West Bengal. (Applicable only if applied under SC/ST/OBC category)</div>
           </div>
           <% } %>
           
           <!-- Migration Certificate (always show with note) -->
           <div class="document-item">
-            <div class="document-checkbox"></div>
-            <div class="document-text">An Original physical copy of the Class XII Board Migration Certificate (NOT APPLICABLE FOR STUDENTS COMING FROM CBSE/ ISC/ WBCHSE/ NIOS BOARD).</div>
+            <div class="document-checkbox">☐</div>
+            <div class="document-text">Original Class XII Board  Migration Certificate. (NOT applicable for students belonging to WBCHSE/ISC/CBSE/NIOS board)</div>
           </div>
-          
-          <!-- EWS Certificate -->
-          <% if (content && content.isEWS) { %>
-          <div class="document-item">
-            <div class="document-checkbox"></div>
-            <div class="document-text">A photocopy of the EWS (Economically Weaker Section) Certificate issued by the Government of West Bengal (if applicable).</div>
-          </div>
-          <% } %>
           
           <!-- PWD Certificate -->
           <% if (content && content.isPWD) { %>
           <div class="document-item">
-            <div class="document-checkbox"></div>
-            <div class="document-text">A photocopy of the Person with Disability Certificate (Required only if applied under the Physically Handicap category).</div>
+            <div class="document-checkbox">☐</div>
+            <div class="document-text">1 (One) Photocopy of the PWD Certificate. (Applicable only if applied under the Physically Handicap category)</div>
+          </div>
+          <% } %>
+          
+          <!-- EWS Certificate -->
+          <% if (content && content.isEWS) { %>
+          <div class="document-item">
+            <div class="document-checkbox">☐</div>
+            <div class="document-text">1 (One) Photocopy of the EWS Certificate, issued by the Govt. of West Bengal. (Applicable only if applied under EWS category)</div>
           </div>
           <% } %>
           
           <!-- CU Registration Certificate -->
           <% if (content && content.hasCURegistration) { %>
           <div class="document-item">
-            <div class="document-checkbox"></div>
-            <div class="document-text">A Photocopy of Calcutta University Registration Certificate (only applicable to students registered with Calcutta University in the year 2024 or before).</div>
+            <div class="document-checkbox">☐</div>
+            <div class="document-text">1 (One) Photocopy of the Calcutta University Registration Certificate. (Applicable only for students registered with Calcutta University in the year 2024 or before)</div>
           </div>
           <% } %>
         </div>
@@ -431,14 +445,16 @@
         <!-- Important Instructions -->
         <div class="important-instructions">
           <h3>⚠️ Important Instructions</h3>
-          <p>If you have opted for rectifications in your data at the time of Online Data submission (Part 1), please bring these rectifications to our attention during the physical submission of your Admission & Registration Datasheet. We will not be able to accommodate data rectification requests via email.</p>
-          <p>Your submitted data will be sent to Calcutta University for final verification and registration. Kindly refrain from contacting the college regarding the status of your registration approval. We will notify you once the University's verification process is complete.</p>
-          <p>Any further requirements/clarifications from Calcutta University will be communicated to your Institutional Email ID. Please ensure you check your institutional email ID regularly.</p>
+          <ol style="margin: 0; padding-left: 20px; list-style-type: lower-roman;">
+            <li style="color: #991b1b; margin-bottom: 12px; font-size: 14px; line-height: 1.5;">If you have opted for rectifications in your data at the time of Online Data submission (Part 1), please bring these rectifications to our attention during the physical submission of your Admission & Registration Datasheet. We will not be able to accommodate data rectification requests via email.</li>
+            <li style="color: #991b1b; margin-bottom: 12px; font-size: 14px; line-height: 1.5;">Your submitted data will be sent to Calcutta University for final verification and registration. Kindly refrain from contacting the college regarding the status of your registration approval. We will notify you once the University's verification process is complete.</li>
+            <li style="color: #991b1b; margin-bottom: 0; font-size: 14px; line-height: 1.5;">Any further requirements/clarifications from Calcutta University will be communicated to your Institutional Email ID. Please ensure you check your institutional email ID regularly.</li>
+          </ol>
         </div>
         
         <!-- Final Notice -->
         <div class="success-message">
-          <h2>🚨 IMPORTANT NOTICE</h2>
+          <h2>🚨 IMPORTANT NOTE</h2>
           <p><strong>THE ADMISSION PROCESS IS INCOMPLETE UNTIL YOU COMPLETE BOTH THE PARTS (PART 1 - ONLINE SUBMISSION OF DATA AND PART 2 - PHYSICAL SUBMISSION OF ADMISSION & REGISTRATION DATA SHEET AND RELEVANT DOCUMENTS) OF YOUR ADMISSION & REGISTRATION PROCESS.</strong></p>
         </div>
       </div>
