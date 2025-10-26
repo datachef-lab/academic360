@@ -35,9 +35,7 @@ router.post("/", createNewCuRegistrationCorrectionRequest);
 import multer from "multer";
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB per file
-  },
+  // No file size limits - backend handles conversion and compression
 });
 router.post(
   "/submit-with-documents",

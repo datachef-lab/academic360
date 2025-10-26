@@ -67,10 +67,7 @@ async function getDocumentNameById(documentId: string): Promise<string> {
 // Configure multer for memory storage (for S3 uploads)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize:
-      UploadConfigs.CU_REGISTRATION_DOCUMENTS.maxFileSizeMB * 1024 * 1024,
-  },
+  // No file size limits - backend handles conversion and compression
   fileFilter: (req, file, cb) => {
     console.info(
       `[CU-REG DOC UPLOAD] File received: ${file.originalname}, size: ${file.size || "undefined"} bytes, type: ${file.mimetype}`,
@@ -127,24 +124,11 @@ export const createNewCuRegistrationDocumentUpload = async (
       return;
     }
 
-    // Validate file size after multer has processed the file
+    // File size validation removed - backend handles conversion and compression
     const fileSizeMB = file.size / (1024 * 1024);
-    const maxSizeMB = UploadConfigs.CU_REGISTRATION_DOCUMENTS.maxFileSizeMB;
     console.info(
-      `[CU-REG DOC UPLOAD] Controller size check: ${fileSizeMB.toFixed(2)} MB <= ${maxSizeMB} MB = ${fileSizeMB <= maxSizeMB}`,
+      `[CU-REG DOC UPLOAD] File received: ${fileSizeMB.toFixed(2)} MB - no size limits applied`,
     );
-
-    if (fileSizeMB > maxSizeMB) {
-      res
-        .status(400)
-        .json(
-          new ApiError(
-            400,
-            `File size must be less than or equal to ${maxSizeMB}MB`,
-          ),
-        );
-      return;
-    }
 
     if (!cuRegistrationCorrectionRequestId || !documentId) {
       res

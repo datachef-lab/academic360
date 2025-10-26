@@ -81,6 +81,7 @@ import {
   BoardSubjectName,
   cuRegistrationCorrectionRequestModel,
 } from "@repo/db/schemas/models";
+import { personTitleType } from "@repo/db/schemas/enums";
 import {
   OldAdmStudentPersonalDetail,
   OldBoardResultStatus,
@@ -924,12 +925,14 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
     phone?: string | null;
     image?: string | null;
     legacyOccupationId?: number | null;
+    title?: (typeof personTitleType.enumValues)[number];
   }) => {
     const occupation = await resolveOccupation(
       args.legacyOccupationId ?? undefined,
     );
     const values: Partial<typeof personModel.$inferInsert> = {
       type: args.type,
+      title: args.title,
       familyId: existingFamily.id,
       name: args.name?.toUpperCase()?.trim(),
       email: args.email?.trim()?.toLowerCase(),
@@ -972,6 +975,8 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
   await upsertPerson({
     type: "FATHER",
     name: oldStudent.fatherName,
+    title:
+      oldStudent.fttl?.toUpperCase() as (typeof personTitleType.enumValues)[number],
     email: oldStudent.fatherEmail,
     aadhaar: oldStudent.fatheraadharno
       ? formatAadhaarCardNumber(oldStudent.fatheraadharno)
@@ -987,6 +992,8 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
   await upsertPerson({
     type: "MOTHER",
     name: oldStudent.motherName,
+    title:
+      oldStudent.mttl?.toUpperCase() as (typeof personTitleType.enumValues)[number],
     email: oldStudent.motherEmail,
     aadhaar: oldStudent.motheraadharno
       ? formatAadhaarCardNumber(oldStudent.motheraadharno)
@@ -1002,6 +1009,8 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
   await upsertPerson({
     type: "GUARDIAN",
     name: oldStudent.guardianName,
+    title:
+      oldStudent.gttl?.toUpperCase() as (typeof personTitleType.enumValues)[number],
     email: oldStudent.guardianEmail,
     aadhaar: oldStudent.gurdianaadharno
       ? formatAadhaarCardNumber(oldStudent.gurdianaadharno)
@@ -1874,7 +1883,7 @@ export async function processStudent(
       student?.uid,
       cuRegistrationRequest,
     );
-    if (cuRegistrationRequest?.status === "PENDING") {
+    if (!cuRegistrationRequest?.cuRegistrationApplicationNumber) {
       // Step 2: Check for the accomodation
       await upsertAccommodation(oldStudent, user.id!);
 

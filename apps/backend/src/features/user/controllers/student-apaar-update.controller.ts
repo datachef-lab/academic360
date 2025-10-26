@@ -23,9 +23,7 @@ const upload = multer({
       cb(new Error("Only Excel files (.xlsx, .xls) are allowed"));
     }
   },
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
+  // No file size limits - backend handles conversion and compression
 });
 
 // Middleware for file upload

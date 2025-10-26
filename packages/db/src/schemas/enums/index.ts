@@ -153,7 +153,7 @@ export const paymentStatus = pgEnum("payment_status", [
 ]);
 
 export const personTitleType = pgEnum("person_title_type", [
-    "MR", "MRS", "MS", "DR", "PROF", "REV", "OTHER"
+    "MR.", "MRS.", "MS.", "DR.", "PROF.", "REV.", "OTHER.", "LATE"
 ]);
 
 export const paymentMode = pgEnum("payment_mode", [

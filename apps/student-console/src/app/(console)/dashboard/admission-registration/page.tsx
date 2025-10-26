@@ -966,6 +966,46 @@ export default function CURegistrationPage() {
     })();
   }, [correctionRequestId]);
 
+  // Sync uploaded documents with local documents state to maintain UI state
+  useEffect(() => {
+    if (uploadedDocuments.length === 0) return;
+
+    console.info("[CU-REG FRONTEND] Syncing uploaded documents with local state:", uploadedDocuments);
+
+    // Create a mapping of document types to uploaded documents
+    const documentTypeMapping: Record<string, keyof typeof documents> = {
+      "Class XII Marksheet": "classXIIMarksheet",
+      "Aadhaar Card": "aadhaarCard",
+      "APAAR ID Card": "apaarIdCard",
+      "Father Photo ID": "fatherPhotoId",
+      "Mother Photo ID": "motherPhotoId",
+      "EWS Certificate": "ewsCertificate",
+    };
+
+    // Update local documents state to reflect uploaded documents
+    setDocuments((prevDocuments) => {
+      const updatedDocuments = { ...prevDocuments };
+
+      uploadedDocuments.forEach((uploadedDoc) => {
+        const documentName = uploadedDoc.document?.name;
+        if (documentName && documentTypeMapping[documentName]) {
+          const localKey = documentTypeMapping[documentName];
+          // Only update if we don't already have a local file selected
+          if (!updatedDocuments[localKey]) {
+            // Create a placeholder file object to maintain UI state
+            const placeholderFile = new File([], uploadedDoc.fileName || documentName, {
+              type: uploadedDoc.fileType || "image/jpeg",
+            });
+            updatedDocuments[localKey] = placeholderFile;
+            console.info(`[CU-REG FRONTEND] Synced ${documentName} to local state`);
+          }
+        }
+      });
+
+      return updatedDocuments;
+    });
+  }, [uploadedDocuments]);
+
   // Force introductory tab if instructions are not confirmed (but allow manual navigation to introductory tab)
   React.useEffect(() => {
     const instructionsConfirmedState = instructionsConfirmed || correctionRequest?.introductoryDeclaration;
@@ -1827,7 +1867,9 @@ export default function CURegistrationPage() {
 
         // Automatically switch to Documents tab after a short delay
         setTimeout(() => {
-          handleTabChange("documents");
+          // Force navigation to documents tab after subjects declaration
+          console.info("[CU-REG FRONTEND] Auto-navigating to documents tab after subjects declaration");
+          setActiveTab("documents");
         }, 1000);
       } catch (error: any) {
         console.error("[SUBJECTS DECLARATION] Error:", error);
@@ -1850,6 +1892,8 @@ export default function CURegistrationPage() {
         return;
       }
     }
+
+    console.info(`[CU-REG FRONTEND] Updating document ${documentType} with file:`, file?.name || "null");
 
     setDocuments((prev) => ({
       ...prev,
@@ -1882,7 +1926,34 @@ export default function CURegistrationPage() {
   };
 
   const getRequiredDocuments = () => {
-    const required = ["classXIIMarksheet", "fatherPhotoId", "motherPhotoId"];
+    const required = ["classXIIMarksheet"];
+
+    // Check family details to determine which parent documents are required
+    const familyDetails = profileInfo?.familyDetails as any;
+    const father = familyDetails?.members?.find((member: any) => member.type === "FATHER");
+    const mother = familyDetails?.members?.find((member: any) => member.type === "MOTHER");
+
+    // Debug logging for family details logic
+    console.log("[CU-REG DOCUMENTS] Family details logic:", {
+      familyDetails,
+      father: father,
+      mother: mother,
+      fatherExists: !!father,
+      motherExists: !!mother,
+      fatherHasName: !!father?.name?.trim(),
+      motherHasName: !!mother?.name?.trim(),
+    });
+
+    // Only require parent documents for parents that exist AND have meaningful names
+    if (father && father.name?.trim()) {
+      console.log("[CU-REG DOCUMENTS] Father exists with name - requiring father document");
+      required.push("fatherPhotoId");
+    }
+
+    if (mother && mother.name?.trim()) {
+      console.log("[CU-REG DOCUMENTS] Mother exists with name - requiring mother document");
+      required.push("motherPhotoId");
+    }
 
     // Always require APAAR ID Card (ABC ID) - this is mandatory
     required.push("apaarIdCard");
@@ -1897,12 +1968,28 @@ export default function CURegistrationPage() {
       required.push("ewsCertificate");
     }
 
+    console.log("[CU-REG DOCUMENTS] Final required documents:", required);
     return required;
   };
 
   const getMissingDocuments = () => {
     const required = getRequiredDocuments();
-    return required.filter((doc) => !documents[doc as keyof typeof documents]);
+    return required.filter((doc) => {
+      const hasLocalFile = !!documents[doc as keyof typeof documents];
+      const hasUploadedFile = uploadedDocuments.some((uploadedDoc) => {
+        const documentName = uploadedDoc.document?.name;
+        const documentTypeMapping: Record<string, keyof typeof documents> = {
+          "Class XII Marksheet": "classXIIMarksheet",
+          "Aadhaar Card": "aadhaarCard",
+          "APAAR ID Card": "apaarIdCard",
+          "Father Photo ID": "fatherPhotoId",
+          "Mother Photo ID": "motherPhotoId",
+          "EWS Certificate": "ewsCertificate",
+        };
+        return documentName && documentTypeMapping[documentName] === doc;
+      });
+      return !hasLocalFile && !hasUploadedFile;
+    });
   };
 
   const handleDocumentsDeclarationChange = async (checked: boolean) => {
@@ -3580,7 +3667,10 @@ export default function CURegistrationPage() {
                             <li>Each file must be in .jpg / .jpeg format and under 1 MB.</li>
                             <li>Ensure all text, seals, and photographs are clearly visible.</li>
                             <li>Do not use special characters or spaces while renaming files.</li>
-                            <li>Upload Photo ID proof of both parents (if applicable), issued by the Government.</li>
+                            <li>
+                              Upload Photo ID proof of parents (if applicable), issued by the Government. Only documents
+                              for parents with names listed in your family details are required.
+                            </li>
                             <li>Make sure each document is uploaded under the correct field name.</li>
                             <li>EWS Certificate must be issued only by the Government of West Bengal.</li>
                             <li>
@@ -3939,154 +4029,210 @@ export default function CURegistrationPage() {
                             </div>
 
                             {/* Father's Government-issued Photo ID */}
-                            <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
-                              <div className="flex items-center justify-between mb-3">
-                                <Label className="text-sm font-medium text-gray-700">
-                                  4.4 Father's Government-issued Photo ID
-                                </Label>
-                                <Badge variant="outline" className="text-xs text-red-600 border-red-600">
-                                  Required
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-gray-600 mb-2">
-                                Passport / Voter ID / Driving Licence (photo)
-                              </p>
-                              <div className="relative">
-                                <Input
-                                  value={documents.fatherPhotoId?.name || "No file chosen"}
-                                  readOnly
-                                  className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("Father Photo ID").maxSizeMB}MB • JPEG / PNG
-                                </p>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => document.getElementById("fatherPhotoId")?.click()}
-                                  className="absolute right-2 top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
-                                >
-                                  Upload
-                                </Button>
-                                <input
-                                  id="fatherPhotoId"
-                                  type="file"
-                                  accept=".jpg,.jpeg,.png"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const f = e.target.files?.[0] || null;
-                                    handleFileUpload("fatherPhotoId", f);
-                                  }}
-                                />
-                              </div>
-                              {documents.fatherPhotoId && (
-                                <div className="mt-3">
-                                  <div className="flex items-center space-x-2">
-                                    <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                      {documents.fatherPhotoId.type.startsWith("image/") ? (
-                                        <img
-                                          src={getFilePreviewUrl(documents.fatherPhotoId)}
-                                          alt="Preview"
-                                          className="w-full h-full object-cover cursor-pointer"
-                                          onClick={() => handleFilePreview(documents.fatherPhotoId!)}
-                                        />
+                            {(() => {
+                              const familyDetails = profileInfo?.familyDetails as any;
+                              const father = familyDetails?.members?.find((member: any) => member.type === "FATHER");
+
+                              // Only show father's document section if father exists AND has meaningful name
+                              if (!father || !father.name?.trim()) return null;
+
+                              return (
+                                <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <Label className="text-sm font-medium text-gray-700">
+                                      4.4 Father's Government-issued Photo ID
+                                    </Label>
+                                    {(() => {
+                                      const familyDetails = profileInfo?.familyDetails as any;
+                                      const father = familyDetails?.members?.find(
+                                        (member: any) => member.type === "FATHER",
+                                      );
+
+                                      // Show required only if father exists AND has meaningful name
+                                      const isRequired = !!(father && father.name?.trim());
+
+                                      return isRequired ? (
+                                        <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                          Required
+                                        </Badge>
                                       ) : (
-                                        <div
-                                          className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                          onClick={() => handleFilePreview(documents.fatherPhotoId!)}
-                                        >
-                                          PDF
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex-1">
-                                      <p className="text-xs text-gray-600 truncate">{documents.fatherPhotoId.name}</p>
-                                      <p className="text-xs text-gray-500">
-                                        {formatFileSize(documents.fatherPhotoId.size)}
-                                      </p>
-                                    </div>
+                                        <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
+                                          Not Required
+                                        </Badge>
+                                      );
+                                    })()}
                                   </div>
+                                  <p className="text-xs text-gray-600 mb-2">
+                                    Passport / Voter ID / Driving Licence (photo)
+                                  </p>
+                                  <div className="relative">
+                                    <Input
+                                      value={documents.fatherPhotoId?.name || "No file chosen"}
+                                      readOnly
+                                      className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Max {getFileSizeLimit("Father Photo ID").maxSizeMB}MB • JPEG / PNG
+                                    </p>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => document.getElementById("fatherPhotoId")?.click()}
+                                      className="absolute right-2 top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
+                                    >
+                                      Upload
+                                    </Button>
+                                    <input
+                                      id="fatherPhotoId"
+                                      type="file"
+                                      accept=".jpg,.jpeg,.png"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const f = e.target.files?.[0] || null;
+                                        handleFileUpload("fatherPhotoId", f);
+                                      }}
+                                    />
+                                  </div>
+                                  {documents.fatherPhotoId && (
+                                    <div className="mt-3">
+                                      <div className="flex items-center space-x-2">
+                                        <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                          {documents.fatherPhotoId.type.startsWith("image/") ? (
+                                            <img
+                                              src={getFilePreviewUrl(documents.fatherPhotoId)}
+                                              alt="Preview"
+                                              className="w-full h-full object-cover cursor-pointer"
+                                              onClick={() => handleFilePreview(documents.fatherPhotoId!)}
+                                            />
+                                          ) : (
+                                            <div
+                                              className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
+                                              onClick={() => handleFilePreview(documents.fatherPhotoId!)}
+                                            >
+                                              PDF
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="text-xs text-gray-600 truncate">
+                                            {documents.fatherPhotoId.name}
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            {formatFileSize(documents.fatherPhotoId.size)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
+                              );
+                            })()}
 
                             {/* Mother's Government-issued Photo ID */}
-                            <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
-                              <div className="flex items-center justify-between mb-3">
-                                <Label className="text-sm font-medium text-gray-700">
-                                  4.5 Mother's Government-issued Photo ID
-                                </Label>
-                                <Badge variant="outline" className="text-xs text-red-600 border-red-600">
-                                  Required
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-gray-600 mb-2">
-                                Passport / Voter ID / Driving Licence (photo)
-                              </p>
-                              <div className="relative">
-                                <Input
-                                  value={documents.motherPhotoId?.name || "No file chosen"}
-                                  readOnly
-                                  className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("Mother Photo ID").maxSizeMB}MB • JPEG / PNG
-                                </p>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => document.getElementById("motherPhotoId")?.click()}
-                                  className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
-                                >
-                                  Upload
-                                </Button>
-                                <input
-                                  id="motherPhotoId"
-                                  type="file"
-                                  accept=".jpg,.jpeg,.png"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const f = e.target.files?.[0] || null;
-                                    console.info(`[CU-REG FRONTEND] Mother Photo ID file selected:`, {
-                                      name: f?.name,
-                                      size: f?.size,
-                                      sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                      type: f?.type,
-                                    });
-                                    handleFileUpload("motherPhotoId", f);
-                                  }}
-                                />
-                              </div>
-                              {documents.motherPhotoId && (
-                                <div className="mt-3">
-                                  <div className="flex items-center space-x-2">
-                                    <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                      {documents.motherPhotoId.type.startsWith("image/") ? (
-                                        <img
-                                          src={getFilePreviewUrl(documents.motherPhotoId)}
-                                          alt="Preview"
-                                          className="w-full h-full object-cover cursor-pointer"
-                                          onClick={() => handleFilePreview(documents.motherPhotoId!)}
-                                        />
+                            {(() => {
+                              const familyDetails = profileInfo?.familyDetails as any;
+                              const mother = familyDetails?.members?.find((member: any) => member.type === "MOTHER");
+
+                              // Only show mother's document section if mother exists AND has meaningful name
+                              if (!mother || !mother.name?.trim()) return null;
+
+                              return (
+                                <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <Label className="text-sm font-medium text-gray-700">
+                                      4.5 Mother's Government-issued Photo ID
+                                    </Label>
+                                    {(() => {
+                                      const familyDetails = profileInfo?.familyDetails as any;
+                                      const mother = familyDetails?.members?.find(
+                                        (member: any) => member.type === "MOTHER",
+                                      );
+
+                                      // Show required only if mother exists AND has meaningful name
+                                      const isRequired = !!(mother && mother.name?.trim());
+
+                                      return isRequired ? (
+                                        <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                          Required
+                                        </Badge>
                                       ) : (
-                                        <div
-                                          className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                          onClick={() => handleFilePreview(documents.motherPhotoId!)}
-                                        >
-                                          PDF
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex-1">
-                                      <p className="text-xs text-gray-600 truncate">{documents.motherPhotoId.name}</p>
-                                      <p className="text-xs text-gray-500">
-                                        {formatFileSize(documents.motherPhotoId.size)}
-                                      </p>
-                                    </div>
+                                        <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
+                                          Not Required
+                                        </Badge>
+                                      );
+                                    })()}
                                   </div>
+                                  <p className="text-xs text-gray-600 mb-2">
+                                    Passport / Voter ID / Driving Licence (photo)
+                                  </p>
+                                  <div className="relative">
+                                    <Input
+                                      value={documents.motherPhotoId?.name || "No file chosen"}
+                                      readOnly
+                                      className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Max {getFileSizeLimit("Mother Photo ID").maxSizeMB}MB • JPEG / PNG
+                                    </p>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => document.getElementById("motherPhotoId")?.click()}
+                                      className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
+                                    >
+                                      Upload
+                                    </Button>
+                                    <input
+                                      id="motherPhotoId"
+                                      type="file"
+                                      accept=".jpg,.jpeg,.png"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const f = e.target.files?.[0] || null;
+                                        console.info(`[CU-REG FRONTEND] Mother Photo ID file selected:`, {
+                                          name: f?.name,
+                                          size: f?.size,
+                                          sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                          type: f?.type,
+                                        });
+                                        handleFileUpload("motherPhotoId", f);
+                                      }}
+                                    />
+                                  </div>
+                                  {documents.motherPhotoId && (
+                                    <div className="mt-3">
+                                      <div className="flex items-center space-x-2">
+                                        <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                          {documents.motherPhotoId.type.startsWith("image/") ? (
+                                            <img
+                                              src={getFilePreviewUrl(documents.motherPhotoId)}
+                                              alt="Preview"
+                                              className="w-full h-full object-cover cursor-pointer"
+                                              onClick={() => handleFilePreview(documents.motherPhotoId!)}
+                                            />
+                                          ) : (
+                                            <div
+                                              className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
+                                              onClick={() => handleFilePreview(documents.motherPhotoId!)}
+                                            >
+                                              PDF
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="text-xs text-gray-600 truncate">
+                                            {documents.motherPhotoId.name}
+                                          </p>
+                                          <p className="text-xs text-gray-500">
+                                            {formatFileSize(documents.motherPhotoId.size)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
+                              );
+                            })()}
 
                             {/* EWS Certificate - Only show if EWS is Yes */}
                             {personalInfo.ews === "Yes" && (
@@ -4135,17 +4281,21 @@ export default function CURegistrationPage() {
                                   <div className="mt-3">
                                     <div className="flex items-center space-x-2">
                                       <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                        {documents.ewsCertificate.type.startsWith("image/") ? (
+                                        {documents.ewsCertificate?.type.startsWith("image/") ? (
                                           <img
                                             src={getFilePreviewUrl(documents.ewsCertificate)}
                                             alt="Preview"
                                             className="w-full h-full object-cover cursor-pointer"
-                                            onClick={() => handleFilePreview(documents.ewsCertificate!)}
+                                            onClick={() =>
+                                              documents.ewsCertificate && handleFilePreview(documents.ewsCertificate)
+                                            }
                                           />
                                         ) : (
                                           <div
                                             className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                            onClick={() => handleFilePreview(documents.ewsCertificate!)}
+                                            onClick={() =>
+                                              documents.ewsCertificate && handleFilePreview(documents.ewsCertificate)
+                                            }
                                           >
                                             PDF
                                           </div>

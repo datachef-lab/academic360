@@ -330,6 +330,20 @@
       "when": 1761336592075,
       "tag": "0046_harsh_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1761484130008,
+      "tag": "0047_complete_rawhide_kid",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1761484155462,
+      "tag": "0048_young_nuke",
+      "breakpoints": true
     }
   ]
 }
