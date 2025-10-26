@@ -13,7 +13,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "rm -rf dist || rimraf dist",
     "build:ts": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "build:add-js": "ts-add-js-extension --dir=dist",
     "build": "pnpm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json && ts-add-js-extension --dir=dist && pnpm run copy-public-views",

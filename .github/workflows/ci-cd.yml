@@ -575,6 +575,14 @@ jobs:
             sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} . || true
             chmod -R u+rw . || true
             find . -maxdepth 3 -name "*.tsbuildinfo" -delete || true
+
+            echo "🧹 Clean up any existing dist directories with force"
+            sudo rm -rf apps/backend/dist || true
+            sudo rm -rf apps/main-console/dist || true
+            sudo rm -rf apps/student-console/dist || true
+            sudo rm -rf apps/notification-system/dist || true
+            sudo rm -rf packages/db/dist || true
+
             export CI=true
 
             echo "✅ Using latest staging branch code from git clone"
@@ -583,6 +591,10 @@ jobs:
 
             echo "📦 Install workspace dependencies"
             pnpm install --frozen-lockfile
+
+            echo "🧹 Final cleanup before build (ensure clean state)"
+            sudo rm -rf apps/backend/dist apps/main-console/dist apps/student-console/dist apps/notification-system/dist packages/db/dist || true
+            sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} . || true
 
             echo "🏗️ Build shared DB and apps"
             pnpm --filter @repo/db... build
