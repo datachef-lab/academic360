@@ -94,7 +94,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       ? []
       : [
           {
-            title: "Admission & Registration Data",
+            title: "Admission & Reg. Data",
             url: "/dashboard/admission-registration",
             icon: FileText,
             isActive: pathname === "/dashboard/admission-registration",
