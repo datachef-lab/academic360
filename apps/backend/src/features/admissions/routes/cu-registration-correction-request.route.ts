@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { verifyJWT } from "@/middlewares/index.js";
 import {
   createNewCuRegistrationCorrectionRequest,
   getAllCuRegistrationCorrectionRequests,
@@ -26,6 +27,11 @@ import {
   submitSubjectsDeclaration,
   submitDocumentsDeclaration,
 } from "../controllers/cu-registration-batch-submit.controller.js";
+import {
+  downloadCuRegistrationDocumentsController,
+  downloadCuRegistrationPdfsController,
+  downloadDocumentsController,
+} from "../controllers/cu-registration-document-download.controller.js";
 
 const router = Router();
 
@@ -125,6 +131,30 @@ router.get(
 router.get(
   "/pdf/:encodedApplicationNumber",
   getCuRegistrationPdfByApplicationNumber,
+);
+
+// Download CU Registration documents as ZIP files
+// GET /api/admissions/cu-registration-correction-requests/download/:year/:regulationType
+router.get(
+  "/download/:year/:regulationType",
+  verifyJWT,
+  downloadCuRegistrationDocumentsController,
+);
+
+// Download only PDFs as ZIP
+// GET /api/admissions/cu-registration-correction-requests/download-pdfs/:year/:regulationType
+router.get(
+  "/download-pdfs/:year/:regulationType",
+  verifyJWT,
+  downloadCuRegistrationPdfsController,
+);
+
+// Download only uploaded documents as ZIP
+// GET /api/admissions/cu-registration-correction-requests/download-documents/:year/:regulationType
+router.get(
+  "/download-documents/:year/:regulationType",
+  verifyJWT,
+  downloadDocumentsController,
 );
 
 export default router;

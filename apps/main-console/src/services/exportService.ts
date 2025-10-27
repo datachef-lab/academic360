@@ -54,12 +54,12 @@ export class ExportService {
           totalRecords: 0, // We don't get this from the response
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Export error:", error);
 
       return {
         success: false,
-        message: error.response?.data?.message || "Export failed",
+        message: error instanceof Error ? error.message : "Export failed",
       };
     }
   }
@@ -103,12 +103,85 @@ export class ExportService {
           totalRecords: 0, // We don't get this from the response
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("CU Registration export error:", error);
 
       return {
         success: false,
-        message: error.response?.data?.message || "Export failed",
+        message: error instanceof Error ? error.message : "Export failed",
+      };
+    }
+  }
+
+  /**
+   * Download CU registration documents as ZIP files
+   * @param year - Academic year (e.g., 2025)
+   * @param regulationType - Regulation type (e.g., 'CCF', 'CBCS')
+   * @param downloadType - Type of download: 'combined', 'pdfs', or 'documents'
+   * @param uploadSessionId - Socket session ID for progress tracking
+   * @returns Promise with export response
+   */
+  static async downloadCuRegistrationDocuments(
+    year: number,
+    regulationType: string,
+    downloadType: "combined" | "pdfs" | "documents" = "combined",
+    uploadSessionId?: string,
+  ): Promise<ExportResponse> {
+    try {
+      // Determine the correct endpoint based on download type
+      let endpoint = "";
+      switch (downloadType) {
+        case "combined":
+          endpoint = `/api/admissions/cu-registration-correction-requests/download/${year}/${regulationType}`;
+          break;
+        case "pdfs":
+          endpoint = `/api/admissions/cu-registration-correction-requests/download-pdfs/${year}/${regulationType}`;
+          break;
+        case "documents":
+          endpoint = `/api/admissions/cu-registration-correction-requests/download-documents/${year}/${regulationType}`;
+          break;
+      }
+
+      // Add session ID as query parameter for socket progress tracking
+      const url = uploadSessionId ? `${endpoint}?uploadSessionId=${uploadSessionId}` : endpoint;
+
+      const response = await axiosInstance.get(url, {
+        responseType: "blob", // Important for ZIP file downloads
+      });
+
+      // Extract filename from response headers
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = `cu-registration-${downloadType}-${year}-${regulationType}.zip`;
+
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+        }
+      }
+
+      // Create download URL
+      const blob = new Blob([response.data], {
+        type: "application/zip",
+      });
+
+      const downloadUrl = URL.createObjectURL(blob);
+
+      return {
+        success: true,
+        message: "Download completed successfully",
+        data: {
+          downloadUrl,
+          fileName,
+          totalRecords: 0, // We don't get this from the response
+        },
+      };
+    } catch (error: unknown) {
+      console.error("CU Registration documents download error:", error);
+
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Download failed",
       };
     }
   }

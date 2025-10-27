@@ -1663,3 +1663,304 @@ export async function updateStudentApaarIds(
     notFound,
   };
 }
+
+// A function which accepts a excel file with the following columns, and updates the parent titles for the students
+interface StudentParentTitleRow {
+  UID: string;
+  "Father Title": string;
+  "Mother Title": string;
+  "Guardian Title": string;
+}
+
+interface BulkUpdateFamilyTitlesResult {
+  total: number;
+  updated: number;
+  errors: Array<{ uid: string; error: string }>;
+  notFound: string[];
+}
+
+// Interface for updating family member titles
+interface UpdateFamilyMemberTitlesData {
+  fatherTitle?: string;
+  motherTitle?: string;
+  guardianTitle?: string;
+}
+
+interface UpdateFamilyMemberTitlesResult {
+  success: boolean;
+  error?: string;
+  updatedMembers?: string[];
+  updatedTitles?: {
+    fatherTitle?: string;
+    motherTitle?: string;
+    guardianTitle?: string;
+  };
+}
+
+// Update family member titles for a student by UID
+export async function updateFamilyMemberTitles(
+  studentUid: string,
+  titlesData: UpdateFamilyMemberTitlesData,
+): Promise<UpdateFamilyMemberTitlesResult> {
+  try {
+    console.info("[FAMILY-TITLE-UPDATE] Starting family member title update", {
+      studentUid,
+      titlesData,
+    });
+
+    // First, get the student by UID to get the userId
+    const [student] = await db
+      .select({
+        id: studentModel.id,
+        userId: studentModel.userId,
+        uid: studentModel.uid,
+      })
+      .from(studentModel)
+      .where(eq(studentModel.uid, studentUid))
+      .limit(1);
+
+    if (!student) {
+      console.error("[FAMILY-TITLE-UPDATE] Student not found", { studentUid });
+      return {
+        success: false,
+        error: `Student with UID '${studentUid}' not found`,
+      };
+    }
+
+    console.info("[FAMILY-TITLE-UPDATE] Found student", {
+      studentId: student.id,
+      userId: student.userId,
+      uid: student.uid,
+    });
+
+    // Get the family details for this user
+    const [familyDetails] = await db
+      .select({
+        id: familyModel.id,
+        userId: familyModel.userId,
+      })
+      .from(familyModel)
+      .where(eq(familyModel.userId, student.userId))
+      .limit(1);
+
+    if (!familyDetails) {
+      console.error("[FAMILY-TITLE-UPDATE] Family details not found", {
+        studentUid,
+        userId: student.userId,
+      });
+      return {
+        success: false,
+        error: `Family details not found for student '${studentUid}'`,
+      };
+    }
+
+    console.info("[FAMILY-TITLE-UPDATE] Found family details", {
+      familyId: familyDetails.id,
+      userId: familyDetails.userId,
+    });
+
+    // Get existing family members (father, mother, guardian)
+    const familyMembers = await db
+      .select({
+        id: personModel.id,
+        type: personModel.type,
+        title: personModel.title,
+        name: personModel.name,
+      })
+      .from(personModel)
+      .where(
+        and(
+          eq(personModel.familyId, familyDetails.id),
+          or(
+            eq(personModel.type, "FATHER"),
+            eq(personModel.type, "MOTHER"),
+            eq(personModel.type, "GUARDIAN"),
+          ),
+        ),
+      );
+
+    console.info("[FAMILY-TITLE-UPDATE] Found family members", {
+      familyMembers: familyMembers.map((member) => ({
+        id: member.id,
+        type: member.type,
+        currentTitle: member.title,
+        name: member.name,
+      })),
+    });
+
+    const updatedMembers: string[] = [];
+    const updatedTitles: {
+      fatherTitle?: string;
+      motherTitle?: string;
+      guardianTitle?: string;
+    } = {};
+
+    // Update titles for each family member type
+    for (const member of familyMembers) {
+      let shouldUpdate = false;
+      let newTitle: string | undefined;
+
+      switch (member.type) {
+        case "FATHER":
+          if (
+            titlesData.fatherTitle &&
+            titlesData.fatherTitle !== member.title
+          ) {
+            shouldUpdate = true;
+            newTitle = titlesData.fatherTitle;
+            updatedTitles.fatherTitle = newTitle;
+          }
+          break;
+        case "MOTHER":
+          if (
+            titlesData.motherTitle &&
+            titlesData.motherTitle !== member.title
+          ) {
+            shouldUpdate = true;
+            newTitle = titlesData.motherTitle;
+            updatedTitles.motherTitle = newTitle;
+          }
+          break;
+        case "GUARDIAN":
+          if (
+            titlesData.guardianTitle &&
+            titlesData.guardianTitle !== member.title
+          ) {
+            shouldUpdate = true;
+            newTitle = titlesData.guardianTitle;
+            updatedTitles.guardianTitle = newTitle;
+          }
+          break;
+      }
+
+      if (shouldUpdate && newTitle) {
+        await db
+          .update(personModel)
+          .set({
+            title: newTitle as any, // Cast to any to handle enum type
+            updatedAt: new Date(),
+          })
+          .where(eq(personModel.id, member.id));
+
+        updatedMembers.push(member.type as string);
+        console.info("[FAMILY-TITLE-UPDATE] Updated family member title", {
+          memberType: member.type,
+          memberName: member.name,
+          oldTitle: member.title,
+          newTitle: newTitle,
+        });
+      }
+    }
+
+    // Check if any requested family member types don't exist
+    const existingTypes = familyMembers.map((member) => member.type as string);
+    const requestedTypes = Object.keys(titlesData).map((key) =>
+      key.replace("Title", "").toUpperCase(),
+    );
+
+    const missingTypes = requestedTypes.filter(
+      (type) => !existingTypes.includes(type),
+    );
+    if (missingTypes.length > 0) {
+      console.warn(
+        "[FAMILY-TITLE-UPDATE] Some family member types don't exist",
+        {
+          missingTypes,
+          existingTypes,
+        },
+      );
+    }
+
+    console.info("[FAMILY-TITLE-UPDATE] Family member title update completed", {
+      studentUid,
+      updatedMembers,
+      updatedTitles,
+    });
+
+    return {
+      success: true,
+      updatedMembers,
+      updatedTitles:
+        Object.keys(updatedTitles).length > 0 ? updatedTitles : undefined,
+    };
+  } catch (error) {
+    console.error(
+      "[FAMILY-TITLE-UPDATE] Error updating family member titles:",
+      error,
+    );
+    return {
+      success: false,
+      error: (error as Error).message,
+    };
+  }
+}
+
+// Bulk update family member titles from Excel file
+export async function bulkUpdateFamilyMemberTitles(
+  rows: StudentParentTitleRow[],
+): Promise<BulkUpdateFamilyTitlesResult> {
+  const result: BulkUpdateFamilyTitlesResult = {
+    total: rows.length,
+    updated: 0,
+    errors: [],
+    notFound: [],
+  };
+
+  console.info("[FAMILY-TITLE-BULK-UPDATE] Starting bulk update", {
+    totalRows: rows.length,
+  });
+
+  for (const row of rows) {
+    try {
+      const {
+        UID: uid,
+        "Father Title": fatherTitle,
+        "Mother Title": motherTitle,
+        "Guardian Title": guardianTitle,
+      } = row;
+
+      if (!uid) {
+        result.errors.push({
+          uid: uid || "Unknown",
+          error: "UID is required",
+        });
+        continue;
+      }
+
+      // Call the single update function
+      const updateResult = await updateFamilyMemberTitles(uid, {
+        fatherTitle,
+        motherTitle,
+        guardianTitle,
+      });
+
+      if (updateResult.success) {
+        result.updated++;
+      } else {
+        // Check if student was not found
+        if (updateResult.error?.includes("not found")) {
+          result.notFound.push(uid);
+        } else {
+          result.errors.push({
+            uid,
+            error: updateResult.error || "Unknown error",
+          });
+        }
+      }
+    } catch (error) {
+      result.errors.push({
+        uid: row.UID || "Unknown",
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  console.info("[FAMILY-TITLE-BULK-UPDATE] Completed", {
+    total: result.total,
+    updated: result.updated,
+    errors: result.errors.length,
+    notFound: result.notFound.length,
+  });
+
+  return result;
+}

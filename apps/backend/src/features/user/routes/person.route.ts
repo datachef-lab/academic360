@@ -6,6 +6,7 @@ import {
   getAllPersonsController,
   updatePerson,
   deletePerson,
+  updateFamilyMemberTitlesController,
 } from "../controllers/person.controller.js";
 
 const router = express.Router();
@@ -22,5 +23,7 @@ router.get("/:id", getPersonById);
 router.put("/:id", updatePerson);
 // Delete
 router.delete("/:id", deletePerson);
+// Update family member titles for a student
+router.put("/student/:uid/family-titles", updateFamilyMemberTitlesController);
 
 export default router;

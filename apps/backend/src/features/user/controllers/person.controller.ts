@@ -1,6 +1,5 @@
 import { NextFunction, Response, Request } from "express";
-import { handleError } from "@/utils/handleError.js";
-import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError, ApiResponse, ApiError } from "@/utils/index.js";
 import { createPersonSchema } from "@repo/db/schemas/models/user";
 import {
   addPerson,
@@ -10,6 +9,7 @@ import {
   getAllPersons,
 } from "../services/person.service.js";
 import { Person } from "@repo/db/schemas/models/user";
+import { updateFamilyMemberTitles } from "../services/student.service.js";
 
 export const createPerson = async (
   req: Request,
@@ -199,6 +199,149 @@ export const deletePerson = async (
         new ApiResponse(200, "DELETED", null, "Person deleted successfully"),
       );
   } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// Update family member titles for a student
+export const updateFamilyMemberTitlesController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { uid } = req.params;
+    const { fatherTitle, motherTitle, guardianTitle } = req.body;
+
+    // Validate UID parameter
+    if (!uid || typeof uid !== "string") {
+      res.status(400).json(new ApiError(400, "Student UID is required"));
+      return;
+    }
+
+    // Validate that at least one title is provided
+    if (!fatherTitle && !motherTitle && !guardianTitle) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            "At least one family member title must be provided",
+          ),
+        );
+      return;
+    }
+
+    // Validate title values if provided
+    const validTitles = [
+      "MR.",
+      "MRS.",
+      "MS.",
+      "DR.",
+      "PROF.",
+      "REV.",
+      "OTHER.",
+      "LATE",
+      "MR",
+      "MRS",
+      "MS",
+      "DR",
+      "PROF",
+      "REV",
+      "OTHER",
+    ];
+
+    if (fatherTitle && !validTitles.includes(fatherTitle)) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            `Invalid father title. Must be one of: ${validTitles.join(", ")}`,
+          ),
+        );
+      return;
+    }
+
+    if (motherTitle && !validTitles.includes(motherTitle)) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            `Invalid mother title. Must be one of: ${validTitles.join(", ")}`,
+          ),
+        );
+      return;
+    }
+
+    if (guardianTitle && !validTitles.includes(guardianTitle)) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            `Invalid guardian title. Must be one of: ${validTitles.join(", ")}`,
+          ),
+        );
+      return;
+    }
+
+    console.info("[FAMILY-TITLE-UPDATE] Starting family member title update", {
+      uid,
+      fatherTitle,
+      motherTitle,
+      guardianTitle,
+    });
+
+    // Call the service to update family member titles
+    const result = await updateFamilyMemberTitles(uid, {
+      fatherTitle,
+      motherTitle,
+      guardianTitle,
+    });
+
+    if (!result.success) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            result.error || "Failed to update family member titles",
+          ),
+        );
+      return;
+    }
+
+    console.info(
+      "[FAMILY-TITLE-UPDATE] Family member titles updated successfully",
+      {
+        uid,
+        updatedMembers: result.updatedMembers,
+      },
+    );
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        "SUCCESS",
+        {
+          uid,
+          updatedMembers: result.updatedMembers,
+          updatedTitles: {
+            fatherTitle: result.updatedTitles?.fatherTitle,
+            motherTitle: result.updatedTitles?.motherTitle,
+            guardianTitle: result.updatedTitles?.guardianTitle,
+          },
+        },
+        "Family member titles updated successfully",
+      ),
+    );
+  } catch (error) {
+    console.error(
+      "[FAMILY-TITLE-UPDATE] Error updating family member titles:",
+      error,
+    );
     handleError(error, res, next);
   }
 };

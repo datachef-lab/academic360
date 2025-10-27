@@ -4,20 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-
-interface ProgressUpdate {
-  id: string;
-  userId: string;
-  type: "export_progress";
-  message: string;
-  progress: number; // 0-100
-  status: "started" | "in_progress" | "completed" | "error";
-  fileName?: string;
-  downloadUrl?: string;
-  error?: string;
-  createdAt: Date;
-  meta?: Record<string, unknown>;
-}
+import { ProgressUpdate } from "@/types/progress";
 
 interface ExportProgressDialogProps {
   isOpen: boolean;
@@ -31,6 +18,12 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
   const [status, setStatus] = useState<"started" | "in_progress" | "completed" | "error">("started");
   const [fileName, setFileName] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
+  const [stage, setStage] = useState<string>("");
+  const [pdfCount, setPdfCount] = useState<number | undefined>(undefined);
+  const [pdfTotal, setPdfTotal] = useState<number | undefined>(undefined);
+  const [documentsCount, setDocumentsCount] = useState<number | undefined>(undefined);
+  const [documentsTotal, setDocumentsTotal] = useState<number | undefined>(undefined);
+  const [currentFile, setCurrentFile] = useState<string>("");
 
   useEffect(() => {
     if (!isOpen) {
@@ -40,6 +33,12 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
       setStatus("started");
       setFileName(undefined);
       setError(undefined);
+      setStage("");
+      setPdfCount(undefined);
+      setPdfTotal(undefined);
+      setDocumentsCount(undefined);
+      setDocumentsTotal(undefined);
+      setCurrentFile("");
     }
   }, [isOpen]);
 
@@ -57,6 +56,31 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
 
       if (progressUpdate.error) {
         setError(progressUpdate.error);
+      }
+
+      // Handle download progress specific fields
+      if (progressUpdate.stage) {
+        setStage(progressUpdate.stage);
+      }
+
+      if (progressUpdate.pdfCount !== undefined) {
+        setPdfCount(progressUpdate.pdfCount);
+      }
+
+      if (progressUpdate.pdfTotal !== undefined) {
+        setPdfTotal(progressUpdate.pdfTotal);
+      }
+
+      if (progressUpdate.documentsCount !== undefined) {
+        setDocumentsCount(progressUpdate.documentsCount);
+      }
+
+      if (progressUpdate.documentsTotal !== undefined) {
+        setDocumentsTotal(progressUpdate.documentsTotal);
+      }
+
+      if (progressUpdate.currentFile) {
+        setCurrentFile(progressUpdate.currentFile);
       }
     }
   }, [progressUpdate]);
@@ -109,7 +133,7 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getStatusIcon()}
-            Export Progress
+            {progressUpdate?.type === "download_progress" ? "Download Progress" : "Export Progress"}
             {getStatusBadge()}
           </DialogTitle>
         </DialogHeader>
@@ -137,6 +161,45 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
               <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded font-mono break-all whitespace-pre-wrap">
                 {fileName}
               </p>
+            </div>
+          )}
+
+          {/* Download Progress Details */}
+          {(stage || pdfCount !== undefined || documentsCount !== undefined || currentFile) && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-700">Download Details:</p>
+              <div className="text-sm text-slate-600 bg-slate-50 p-2 rounded space-y-1">
+                {stage && (
+                  <div className="flex justify-between">
+                    <span>Stage:</span>
+                    <span className="font-medium capitalize">{stage.replace("_", " ")}</span>
+                  </div>
+                )}
+                {pdfCount !== undefined && pdfTotal !== undefined && progressUpdate?.stage === "downloading_pdfs" && (
+                  <div className="flex justify-between">
+                    <span>PDFs Downloaded:</span>
+                    <span className="font-medium">
+                      {pdfCount} of {pdfTotal}
+                    </span>
+                  </div>
+                )}
+                {documentsCount !== undefined &&
+                  documentsTotal !== undefined &&
+                  progressUpdate?.stage === "downloading_documents" && (
+                    <div className="flex justify-between">
+                      <span>Documents Downloaded:</span>
+                      <span className="font-medium">
+                        {documentsCount} of {documentsTotal}
+                      </span>
+                    </div>
+                  )}
+                {currentFile && (
+                  <div className="flex justify-between">
+                    <span>Current File:</span>
+                    <span className="font-medium truncate ml-2">{currentFile}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

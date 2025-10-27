@@ -1,19 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-
-interface ProgressUpdate {
-  id: string;
-  userId: string;
-  type: "export_progress";
-  message: string;
-  progress: number;
-  status: "started" | "in_progress" | "completed" | "error";
-  fileName?: string;
-  downloadUrl?: string;
-  error?: string;
-  createdAt: Date;
-  meta?: Record<string, unknown>;
-}
+import { ProgressUpdate } from "@/types/progress";
 
 interface UseSocketOptions {
   userId?: string;
@@ -99,8 +86,9 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketResult {
       setIsConnected(false);
     });
 
-    // Progress update handler
+    // Progress update handlers
     socket.on("progress_update", handleProgressUpdate);
+    socket.on("download_progress", handleProgressUpdate);
 
     // Notification handler
     socket.on("notification", handleNotification);

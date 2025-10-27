@@ -24,25 +24,14 @@ import { CuRegistrationSearch } from "../components/CuRegistrationSearch";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import { useSocket } from "@/hooks/useSocket";
 import { ExportService } from "@/services/exportService";
+import { ProgressUpdate } from "@/types/progress";
 
 export default function CuRegistrationHomePage() {
   const [processControlOpen, setProcessControlOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [exportProgressOpen, setExportProgressOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [currentProgressUpdate, setCurrentProgressUpdate] = useState<{
-    id: string;
-    userId: string;
-    type: "export_progress";
-    message: string;
-    progress: number;
-    status: "started" | "in_progress" | "completed" | "error";
-    fileName?: string;
-    downloadUrl?: string;
-    error?: string;
-    createdAt: Date;
-    meta?: Record<string, unknown>;
-  } | null>(null);
+  const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);
 
   // Debug: Log component re-renders
   console.log("CuRegistrationHomePage rendered", { isExporting, exportProgressOpen });
@@ -52,35 +41,20 @@ export default function CuRegistrationHomePage() {
   const userId = (user?.id ?? "").toString();
 
   // Memoize the progress update handler to prevent re-renders
-  const handleProgressUpdate = useCallback(
-    (data: {
-      id: string;
-      userId: string;
-      type: "export_progress";
-      message: string;
-      progress: number;
-      status: "started" | "in_progress" | "completed" | "error";
-      fileName?: string;
-      downloadUrl?: string;
-      error?: string;
-      createdAt: Date;
-      meta?: Record<string, unknown>;
-    }) => {
-      console.log("Progress update received:", data);
-      setCurrentProgressUpdate(data);
+  const handleProgressUpdate = useCallback((data: ProgressUpdate) => {
+    console.log("Progress update received:", data);
+    setCurrentProgressUpdate(data);
 
-      // Handle completion status from socket updates
-      if (data.status === "completed") {
-        console.log("Export completed via socket update");
-        setIsExporting(false);
-        // The modal will auto-close due to the completed status in ExportProgressDialog
-      } else if (data.status === "error") {
-        console.log("Export failed via socket update");
-        setIsExporting(false);
-      }
-    },
-    [],
-  );
+    // Handle completion status from socket updates
+    if (data.status === "completed") {
+      console.log("Export completed via socket update");
+      setIsExporting(false);
+      // The modal will auto-close due to the completed status in ExportProgressDialog
+    } else if (data.status === "error") {
+      console.log("Export failed via socket update");
+      setIsExporting(false);
+    }
+  }, []);
 
   // Initialize WebSocket connection
   useSocket({

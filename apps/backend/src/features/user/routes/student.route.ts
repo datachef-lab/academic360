@@ -10,6 +10,8 @@ import {
   getStudentById,
   getStudentByUid,
   updateStudent,
+  updateFamilyMemberTitlesController,
+  bulkUpdateFamilyMemberTitlesController,
 } from "../controllers/student.controller.js";
 
 import { uploadMiddleware } from "../controllers/student-apaar-update.controller.js";
@@ -43,6 +45,18 @@ router.put("/", updateStudent);
 // POST /api/students/update-apaar-ids
 // Upload Excel file and update APAAR IDs for students
 router.post("/update-apaar-ids", uploadMiddleware, updateApaarIdsFromExcel);
+
+// POST /api/students/bulk-update-family-titles
+// Upload Excel file and bulk update family member titles
+router.post(
+  "/bulk-update-family-titles",
+  uploadMiddleware,
+  bulkUpdateFamilyMemberTitlesController,
+);
+
+// PUT /api/students/:uid/family-titles
+// Update family member titles (father, mother, guardian) for a student
+router.put("/:uid/family-titles", updateFamilyMemberTitlesController);
 
 router.delete("/", deleteStudent);
 
