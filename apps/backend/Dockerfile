@@ -67,6 +67,9 @@ COPY --from=builder /app/dist /app/dist
 COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/package.json /app/package.json
 
+# Copy templates folder from source (since it's not compiled)
+COPY --from=builder /app/apps/backend/src/templates /app/dist/apps/backend/src/templates
+
 # Drop privileges: use non-root node user
 USER node
 

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { verifyJWT } from "@/middlewares/index.js";
 import {
   createNewCuRegistrationDocumentUpload,
   getCuRegistrationDocumentUploadById,
@@ -15,6 +16,9 @@ import {
 } from "../controllers/cu-registration-document-upload.controller.js";
 
 const router = Router();
+
+// Apply JWT verification middleware to all routes
+router.use(verifyJWT);
 
 // Create a new document upload (with file upload)
 router.post("/", uploadMiddleware, createNewCuRegistrationDocumentUpload);

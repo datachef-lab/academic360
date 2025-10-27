@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Save, CheckCircle } from "lucide-react";
 import { getAllAnnualIncomes } from "@/services/annual-income.service";
 import { getAllOccupations } from "@/services/occupation.service";
+import { personTitleType } from "@repo/db/enums";
 
 interface FamilyDetailsProps {
   studentId: number;
@@ -28,6 +29,7 @@ type Person = {
   aadhaarCardNumber: string | null;
   qualification: { id?: number; name?: string } | null;
   occupation: { id?: number; name?: string } | null;
+  title: PersonTitle | null;
   officePhone?: string | null;
   image?: string | null;
   createdAt?: string | Date;
@@ -54,6 +56,11 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+// Available person titles
+const PERSON_TITLES = personTitleType.enumValues;
+
+type PersonTitle = (typeof PERSON_TITLES)[number];
+
 export default function FamilyDetails({ studentId, initialData }: FamilyDetailsProps) {
   const queryClient = useQueryClient();
   const [showSuccess, setShowSuccess] = useState(false);
@@ -70,6 +77,7 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
             aadhaarCardNumber: initialData.father.aadhaarCardNumber ?? null,
             qualification: initialData.father.qualification ?? null,
             occupation: initialData.father.occupation ?? null,
+            title: (initialData.father as { title?: PersonTitle })?.title ?? null,
           }
         : null,
       motherDetails: initialData?.mother
@@ -80,6 +88,7 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
             aadhaarCardNumber: initialData.mother.aadhaarCardNumber ?? null,
             qualification: initialData.mother.qualification ?? null,
             occupation: initialData.mother.occupation ?? null,
+            title: (initialData.mother as { title?: PersonTitle })?.title ?? null,
           }
         : null,
       guardianDetails: initialData?.guardian
@@ -90,6 +99,7 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
             aadhaarCardNumber: initialData.guardian.aadhaarCardNumber ?? null,
             qualification: initialData.guardian.qualification ?? null,
             occupation: initialData.guardian.occupation ?? null,
+            title: (initialData.guardian as { title?: PersonTitle })?.title ?? null,
           }
         : null,
       annualIncome: initialData?.annualIncome
@@ -133,6 +143,7 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
             aadhaarCardNumber: initialData.father.aadhaarCardNumber ?? null,
             qualification: initialData.father.qualification ?? null,
             occupation: initialData.father.occupation ?? null,
+            title: (initialData.father as { title?: PersonTitle })?.title ?? null,
           }
         : null,
       motherDetails: initialData.mother
@@ -144,6 +155,7 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
             aadhaarCardNumber: initialData.mother.aadhaarCardNumber ?? null,
             qualification: initialData.mother.qualification ?? null,
             occupation: initialData.mother.occupation ?? null,
+            title: (initialData.mother as { title?: PersonTitle })?.title ?? null,
           }
         : null,
       guardianDetails: initialData.guardian
@@ -155,10 +167,11 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
             aadhaarCardNumber: initialData.guardian.aadhaarCardNumber ?? null,
             qualification: initialData.guardian.qualification ?? null,
             occupation: initialData.guardian.occupation ?? null,
+            title: (initialData.guardian as { title?: PersonTitle })?.title ?? null,
           }
         : null,
     }));
-  }, [initialData?.id, initialData?.parentType]);
+  }, [initialData]);
 
   const mutation = useMutation({
     mutationFn: async (payload: FormState) => {
@@ -172,6 +185,7 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
           aadhaarCardNumber: p.aadhaarCardNumber ?? null,
           occupationId: p.occupation?.id ?? null,
           qualificationId: p.qualification?.id ?? null,
+          title: p.title as PersonTitle | null,
         };
         try {
           const maybeId = (p as { id?: number }).id;
@@ -265,7 +279,30 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
 
           {/* Father's Details */}
           <SectionHeader title="Father's Details" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="flex flex-col gap-1">
+              <Label>Title</Label>
+              <Select
+                value={formData.fatherDetails?.title ?? ""}
+                onValueChange={(v) =>
+                  setFormData((p) => ({
+                    ...p,
+                    fatherDetails: { ...(p.fatherDetails ?? {}), title: v } as Person,
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Title" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERSON_TITLES.map((title) => (
+                    <SelectItem key={title} value={title}>
+                      {title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex flex-col gap-1">
               <Label>Name</Label>
               <Input
@@ -331,7 +368,30 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
 
           {/* Mother's Details */}
           <SectionHeader title="Mother's Details" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="flex flex-col gap-1">
+              <Label>Title</Label>
+              <Select
+                value={formData.motherDetails?.title ?? ""}
+                onValueChange={(v) =>
+                  setFormData((p) => ({
+                    ...p,
+                    motherDetails: { ...(p.motherDetails ?? {}), title: v } as Person,
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Title" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERSON_TITLES.map((title) => (
+                    <SelectItem key={title} value={title}>
+                      {title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex flex-col gap-1">
               <Label>Name</Label>
               <Input
@@ -397,7 +457,30 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
 
           {/* Guardian's Details */}
           <SectionHeader title="Guardian's Details" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
+            <div className="flex flex-col gap-1">
+              <Label>Title</Label>
+              <Select
+                value={formData.guardianDetails?.title ?? ""}
+                onValueChange={(v) =>
+                  setFormData((p) => ({
+                    ...p,
+                    guardianDetails: { ...(p.guardianDetails ?? {}), title: v } as Person,
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Title" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERSON_TITLES.map((title) => (
+                    <SelectItem key={title} value={title}>
+                      {title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex flex-col gap-1">
               <Label>Name</Label>
               <Input

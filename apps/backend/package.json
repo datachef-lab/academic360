@@ -17,7 +17,7 @@
     "build:ts": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "build:add-js": "ts-add-js-extension --dir=dist",
     "build": "pnpm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json && ts-add-js-extension --dir=dist && pnpm run copy-public-views",
-    "copy-public-views": "cp -r ./views ./dist/apps/backend/views && cp -r ./public ./dist/apps/backend/public",
+    "copy-public-views": "cp -r ./views ./dist/apps/backend/views && cp -r ./public ./dist/apps/backend/public && cp -r ./src/templates ./dist/apps/backend/src/templates",
     "start": "node --stack-size=8192 dist/apps/backend/src/index.js",
     "dev": "nodemon --watch src --exec tsx --stack-size=8192 src/index.ts",
     "db:generate": "pnpm run build && drizzle-kit generate",

@@ -93,6 +93,11 @@ export default function CURegistrationPage() {
   const [instructionsConfirmed, setInstructionsConfirmed] = useState(false);
   const hasAutoNavigatedRef = React.useRef(false);
 
+  // Debug activeTab changes
+  useEffect(() => {
+    console.info("[CU-REG FRONTEND] activeTab changed to:", activeTab);
+  }, [activeTab]);
+
   // Check if student's program course is MA or MCOM (redirect if so)
   const isBlockedProgram = React.useMemo(() => {
     if (!student?.programCourse?.name) return false;
@@ -1126,22 +1131,58 @@ export default function CURegistrationPage() {
     const s = !!correctionRequest.subjectsDeclaration;
     const d = !!correctionRequest.documentsDeclaration;
 
-    console.info("[CU-REG FRONTEND] Auto-navigation check:", { i, p, a, s, d, currentTab: activeTab });
+    console.info("[CU-REG FRONTEND] Auto-navigation check:", {
+      i,
+      p,
+      a,
+      s,
+      d,
+      currentTab: activeTab,
+      hasAutoNavigated: hasAutoNavigatedRef.current,
+    });
 
-    // Only auto-navigate if we haven't manually navigated yet
-    if (!hasAutoNavigatedRef.current) {
-      let nextTab = "introductory";
-      if (i && !p) nextTab = "personal";
-      else if (i && p && !a) nextTab = "address";
-      else if (i && p && a && !s) nextTab = "subjects";
-      else if (i && p && a && s && !d) nextTab = "documents";
-      else if (i && p && a && s && d) nextTab = "review";
+    // Determine the appropriate tab based on completed declarations
+    let nextTab = "introductory";
+    if (i && !p) nextTab = "personal";
+    else if (i && p && !a) nextTab = "address";
+    else if (i && p && a && !s) nextTab = "subjects";
+    else if (i && p && a && s && !d) nextTab = "documents";
+    else if (i && p && a && s && d) nextTab = "documents"; // Stay on documents even when all declarations are done
 
+    // Only auto-navigate if we haven't manually navigated yet OR if all declarations are completed
+    const shouldAutoNavigate = !hasAutoNavigatedRef.current || (i && p && a && s && !d);
+
+    console.info("[CU-REG FRONTEND] Navigation decision:", {
+      nextTab,
+      shouldAutoNavigate,
+      currentActiveTab: activeTab,
+      willNavigate: shouldAutoNavigate && activeTab !== nextTab,
+    });
+
+    if (shouldAutoNavigate && activeTab !== nextTab) {
       console.info(`[CU-REG FRONTEND] Auto-navigating to: ${nextTab}`);
       hasAutoNavigatedRef.current = true;
       setActiveTab(nextTab);
     }
-  }, [correctionRequest]); // Removed activeTab dependency to prevent conflicts with manual navigation
+  }, [correctionRequest]);
+
+  // Auto-navigate to documents tab when all declarations are completed
+  useEffect(() => {
+    if (!correctionRequest) return;
+    if (correctionRequest?.onlineRegistrationDone) return; // don't navigate after final submit
+
+    const allDeclarationsChecked =
+      correctionRequest.introductoryDeclaration &&
+      correctionRequest.personalInfoDeclaration &&
+      correctionRequest.addressInfoDeclaration &&
+      correctionRequest.subjectsDeclaration;
+
+    // Navigate to documents if all declarations are checked (regardless of documents declaration status)
+    if (allDeclarationsChecked && activeTab !== "documents") {
+      console.info("[CU-REG FRONTEND] All declarations checked, setting active tab to documents");
+      setActiveTab("documents");
+    }
+  }, [correctionRequest, activeTab]);
 
   // Auto-hide status alert after 2 seconds
   useEffect(() => {
@@ -3106,9 +3147,6 @@ export default function CURegistrationPage() {
                                 }}
                               >
                                 {getDeclarationText()}
-                                {correctionRequest?.personalInfoDeclaration && (
-                                  <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
-                                )}
                               </Label>
                             </div>
 
@@ -3435,9 +3473,6 @@ export default function CURegistrationPage() {
                               onClick={() => handleAddressDeclarationChange(true)}
                             >
                               I declare that the addresses provided are correct (all fields mandatory).
-                              {correctionRequest?.addressInfoDeclaration && (
-                                <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
-                              )}
                             </Label>
                           </div>
 
@@ -3659,9 +3694,6 @@ export default function CURegistrationPage() {
                               {correctionFlags.subjects && shouldShowSubjectsCorrectionFlag()
                                 ? "You have requested corrections on this section. You must inform of the same at the time of submitting your Admission & Registration Datasheet and documents physically at the College."
                                 : "I confirm the subjects listed above for Semesters 1-4."}
-                              {correctionRequest?.subjectsDeclaration && (
-                                <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
-                              )}
                             </Label>
                           </div>
                         </div>
@@ -4339,9 +4371,9 @@ export default function CURegistrationPage() {
                           <div className="flex items-start space-x-3">
                             <Checkbox
                               id="documentsConfirmation"
-                              checked={documentsConfirmed || correctionRequest?.documentsDeclaration}
+                              checked={correctionRequest?.onlineRegistrationDone || false}
                               onCheckedChange={handleDocumentsDeclarationChange}
-                              disabled={false}
+                              disabled={correctionRequest?.onlineRegistrationDone || false}
                               className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                             />
                             <Label
@@ -4351,9 +4383,6 @@ export default function CURegistrationPage() {
                               }`}
                             >
                               I confirm that the uploaded documents correspond to the data provided.
-                              {correctionRequest?.documentsDeclaration && (
-                                <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
-                              )}
                             </Label>
                           </div>
                         </div>
