@@ -9,7 +9,37 @@
  */
 
 import puppeteer from "puppeteer";
+import fs from "fs/promises";
 import { ApiError } from "@/utils/ApiError.js";
+
+// Helper function to find Chromium executable path
+async function findChromiumExecutable(): Promise<string | undefined> {
+  const possiblePaths = [
+    "/usr/bin/chromium-browser", // Ubuntu/Debian
+    "/usr/bin/chromium", // Alternative Ubuntu/Debian
+    "/usr/bin/google-chrome", // Google Chrome
+    "/usr/bin/google-chrome-stable", // Google Chrome stable
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // macOS Chrome
+    "/Applications/Chromium.app/Contents/MacOS/Chromium", // macOS Chromium
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Windows Chrome
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", // Windows Chrome (x86)
+  ];
+
+  for (const executablePath of possiblePaths) {
+    try {
+      await fs.access(executablePath);
+      console.log(`[IMAGE CONVERSION] Found Chromium at: ${executablePath}`);
+      return executablePath;
+    } catch {
+      // Path doesn't exist, continue to next
+    }
+  }
+
+  console.warn(
+    "[IMAGE CONVERSION] No Chromium executable found, using default Puppeteer behavior",
+  );
+  return undefined;
+}
 
 export interface ImageConversionOptions {
   targetSizeKB?: number; // Target file size in KB (e.g., 100, 250)
@@ -37,10 +67,17 @@ export async function convertPdfToJpg(
     console.info("[IMAGE CONVERSION] Starting PDF to JPG conversion");
 
     // Launch headless browser
-    browser = await puppeteer.launch({
+    const executablePath = await findChromiumExecutable();
+    const launchOptions: any = {
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    };
+
+    if (executablePath) {
+      launchOptions.executablePath = executablePath;
+    }
+
+    browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
 
@@ -127,10 +164,17 @@ export async function convertImageToJpg(
     // Use Puppeteer to convert image
     let browser;
     try {
-      browser = await puppeteer.launch({
+      const executablePath = await findChromiumExecutable();
+      const launchOptions: any = {
         headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
+      };
+
+      if (executablePath) {
+        launchOptions.executablePath = executablePath;
+      }
+
+      browser = await puppeteer.launch(launchOptions);
 
       const page = await browser.newPage();
 
@@ -237,10 +281,17 @@ async function compressImageToTarget(
     );
 
     try {
-      const browser = await puppeteer.launch({
+      const executablePath = await findChromiumExecutable();
+      const launchOptions: any = {
         headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
+      };
+
+      if (executablePath) {
+        launchOptions.executablePath = executablePath;
+      }
+
+      const browser = await puppeteer.launch(launchOptions);
 
       const page = await browser.newPage();
 

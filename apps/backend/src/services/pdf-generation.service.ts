@@ -8,6 +8,35 @@ import { QRCodeService } from "./qr-code.service.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Helper function to find Chromium executable path
+async function findChromiumExecutable(): Promise<string | undefined> {
+  const possiblePaths = [
+    "/usr/bin/chromium-browser", // Ubuntu/Debian
+    "/usr/bin/chromium", // Alternative Ubuntu/Debian
+    "/usr/bin/google-chrome", // Google Chrome
+    "/usr/bin/google-chrome-stable", // Google Chrome stable
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // macOS Chrome
+    "/Applications/Chromium.app/Contents/MacOS/Chromium", // macOS Chromium
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Windows Chrome
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", // Windows Chrome (x86)
+  ];
+
+  for (const executablePath of possiblePaths) {
+    try {
+      await fs.access(executablePath);
+      console.log(`[PDF GENERATION] Found Chromium at: ${executablePath}`);
+      return executablePath;
+    } catch {
+      // Path doesn't exist, continue to next
+    }
+  }
+
+  console.warn(
+    "[PDF GENERATION] No Chromium executable found, using default Puppeteer behavior",
+  );
+  return undefined;
+}
+
 export interface CuRegistrationFormData {
   // College Information
   collegeLogoUrl: string;
@@ -98,7 +127,9 @@ export class PdfGenerationService {
 
   private async getBrowser(): Promise<Browser> {
     if (!this.browser) {
-      this.browser = await puppeteer.launch({
+      const executablePath = await findChromiumExecutable();
+
+      const launchOptions: any = {
         headless: true,
         args: [
           "--no-sandbox",
@@ -109,7 +140,14 @@ export class PdfGenerationService {
           "--no-zygote",
           "--disable-gpu",
         ],
-      });
+      };
+
+      // Only set executablePath if we found a valid Chromium installation
+      if (executablePath) {
+        launchOptions.executablePath = executablePath;
+      }
+
+      this.browser = await puppeteer.launch(launchOptions);
     }
     return this.browser;
   }

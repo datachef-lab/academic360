@@ -1035,7 +1035,7 @@ export default function CURegistrationPage() {
       console.info("[CU-REG FRONTEND] Forcing back to introductory tab - instructions not confirmed");
       setActiveTab("introductory");
     }
-  }, [instructionsConfirmed, correctionRequest?.introductoryDeclaration]);
+  }, [instructionsConfirmed, correctionRequest?.introductoryDeclaration, activeTab]);
 
   // Fetch PDF URL when correction request is available and has application number
   useEffect(() => {
@@ -1147,10 +1147,11 @@ export default function CURegistrationPage() {
     else if (i && p && !a) nextTab = "address";
     else if (i && p && a && !s) nextTab = "subjects";
     else if (i && p && a && s && !d) nextTab = "documents";
-    else if (i && p && a && s && d) nextTab = "documents"; // Stay on documents even when all declarations are done
+    // When all declarations are done, don't force navigation - let user navigate freely
 
-    // Only auto-navigate if we haven't manually navigated yet OR if all declarations are completed
-    const shouldAutoNavigate = !hasAutoNavigatedRef.current || (i && p && a && s && !d);
+    // Auto-navigate only on initial load, but respect manual navigation
+    // Manual navigation takes precedence over auto-navigation
+    const shouldAutoNavigate = !hasAutoNavigatedRef.current;
 
     console.info("[CU-REG FRONTEND] Navigation decision:", {
       nextTab,
@@ -1160,9 +1161,10 @@ export default function CURegistrationPage() {
     });
 
     if (shouldAutoNavigate && activeTab !== nextTab) {
-      console.info(`[CU-REG FRONTEND] Auto-navigating to: ${nextTab}`);
-      hasAutoNavigatedRef.current = true;
+      console.info(`[CU-REG FRONTEND] Auto-navigating to: ${nextTab} (user hasn't manually navigated yet)`);
       setActiveTab(nextTab);
+    } else if (!shouldAutoNavigate) {
+      console.info(`[CU-REG FRONTEND] Auto-navigation disabled - user has manually navigated`);
     }
   }, [correctionRequest]);
 
@@ -1170,6 +1172,7 @@ export default function CURegistrationPage() {
   useEffect(() => {
     if (!correctionRequest) return;
     if (correctionRequest?.onlineRegistrationDone) return; // don't navigate after final submit
+    if (hasAutoNavigatedRef.current) return; // Don't auto-navigate if user has manually navigated
 
     const allDeclarationsChecked =
       correctionRequest.introductoryDeclaration &&
@@ -2051,27 +2054,36 @@ export default function CURegistrationPage() {
   };
 
   const handleDocumentsDeclarationChange = async (checked: boolean) => {
+    // Prevent checking if there are missing documents
+    if (checked) {
+      const missingDocs = getMissingDocuments();
+      if (missingDocs.length > 0) {
+        console.info("[CU-REG FRONTEND] Cannot check documents declaration - missing documents:", missingDocs);
+        return;
+      }
+    }
+
     // Prevent toggling if already declared
     if (correctionRequest?.documentsDeclaration && !checked) {
       console.info("[CU-REG FRONTEND] Declaration already completed, cannot toggle back to false");
       return;
     }
 
-    // Always save data and flags if checked OR if already declared (for updates)
-    if (correctionRequestId && (checked || correctionRequest?.documentsDeclaration)) {
+    // Update local state immediately
+    setDocumentsConfirmed(checked);
+
+    // Save to backend if there are no missing documents
+    if (correctionRequestId) {
       const missingDocs = getMissingDocuments();
       if (missingDocs.length === 0) {
         try {
-          // If already declared, always set to true for updates
-          setDocumentsConfirmed(correctionRequest?.documentsDeclaration ? true : checked);
-
           // Always save data and flags, regardless of declaration status
           console.info("[CU-REG FRONTEND] Saving Documents declaration", { correctionRequestId });
 
           const updateData = {
             flags: {}, // Documents don't have specific correction flags
             payload: {}, // Documents are handled separately via file uploads
-            // Only set declaration flag if it's a new declaration
+            // Only set declaration flag if it's checked
             ...(checked && { documentsDeclaration: true }),
           };
 
@@ -2126,19 +2138,39 @@ export default function CURegistrationPage() {
     return documentsConfirmed && getMissingDocuments().length === 0;
   };
 
+  const canCheckDocumentsDeclaration = () => {
+    return getMissingDocuments().length === 0;
+  };
+
   // Removed saveCurrentTabData function to prevent navigation conflicts
   // Data saving is now handled by individual declaration handlers
 
   // Custom tab change handler
   const handleTabChange = async (newTab: string) => {
-    console.info("[CU-REG FRONTEND] handleTabChange called with:", newTab);
+    console.info("[CU-REG FRONTEND] Manual tab change requested:", newTab);
     console.info("[CU-REG FRONTEND] Current activeTab:", activeTab);
 
     // Check if navigation is allowed
     if (!canNavigateToTab(newTab)) {
       console.warn("[CU-REG FRONTEND] Navigation to", newTab, "not allowed");
+      console.warn("[CU-REG FRONTEND] Debug navigation state:", {
+        instructionsConfirmedState: instructionsConfirmed || correctionRequest?.introductoryDeclaration,
+        personalDeclaredState: personalDeclared || correctionRequest?.personalInfoDeclaration,
+        addressDeclaredState: addressDeclared || correctionRequest?.addressInfoDeclaration,
+        subjectsDeclaredState: subjectsDeclared || correctionRequest?.subjectsDeclaration,
+        isPersonalTabValid: isPersonalTabValid(),
+        isAddressTabValid: isAddressTabValid(),
+        isSubjectsTabValid: isSubjectsTabValid(),
+        isFormEditable: isFormEditable(),
+        correctionRequestId: correctionRequestId,
+        correctionRequest: correctionRequest,
+      });
       return;
     }
+
+    // Mark that user has manually navigated - this will disable auto-navigation
+    hasAutoNavigatedRef.current = true;
+    console.info("[CU-REG FRONTEND] Manual navigation detected - disabling auto-navigation");
 
     // Removed saveCurrentTabData() call to prevent navigation conflicts
     console.info("[CU-REG FRONTEND] Setting activeTab to:", newTab);
@@ -2420,7 +2452,21 @@ export default function CURegistrationPage() {
     // Check if subjects are declared
     const subjectsDeclaredState = subjectsDeclared || correctionRequest?.subjectsDeclaration;
 
-    // Allow navigation based on completed declarations
+    // Define tab order for smart navigation
+    const tabOrder = ["introductory", "personal", "address", "subjects", "documents"];
+    const currentTabIndex = tabOrder.indexOf(activeTab);
+    const targetTabIndex = tabOrder.indexOf(tabName);
+
+    // Smart navigation logic:
+    // 1. Always allow going BACK to previous tabs (target < current)
+    // 2. Allow going to NEXT tab only if current tab is completed
+    // 3. Allow going to any tab that has been completed
+    if (targetTabIndex < currentTabIndex) {
+      // Going back - always allow
+      return true;
+    }
+
+    // Going forward or to same tab - check prerequisites
     switch (tabName) {
       case "introductory":
         return true; // Always allow access to introductory tab
@@ -4371,15 +4417,17 @@ export default function CURegistrationPage() {
                           <div className="flex items-start space-x-3">
                             <Checkbox
                               id="documentsConfirmation"
-                              checked={correctionRequest?.onlineRegistrationDone || false}
+                              checked={documentsConfirmed || correctionRequest?.documentsDeclaration || false}
                               onCheckedChange={handleDocumentsDeclarationChange}
-                              disabled={correctionRequest?.onlineRegistrationDone || false}
+                              disabled={!isDeclarationInteractive() || !canCheckDocumentsDeclaration()}
                               className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                             />
                             <Label
                               htmlFor="documentsConfirmation"
                               className={`text-sm text-gray-700 leading-relaxed ${
-                                isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
+                                isDeclarationInteractive() && canCheckDocumentsDeclaration()
+                                  ? "cursor-pointer"
+                                  : "cursor-default"
                               }`}
                             >
                               I confirm that the uploaded documents correspond to the data provided.
