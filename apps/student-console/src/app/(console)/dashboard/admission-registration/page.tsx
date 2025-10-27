@@ -3875,7 +3875,7 @@ export default function CURegistrationPage() {
                                   Upload
                                 </Button>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("Class XII Marksheet").maxSizeMB}MB • JPEG / JPG/PNG
+                                  Max {getFileSizeLimit("Class XII Marksheet").maxSizeMB}MB • JPEG / JPG /PNG
                                 </p>
                                 <input
                                   id="classXIIMarksheet"
@@ -3954,7 +3954,7 @@ export default function CURegistrationPage() {
                                   Upload
                                 </Button>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("Aadhaar Card").maxSizeMB}MB • JPEG / JPG/PNG
+                                  Max {getFileSizeLimit("Aadhaar Card").maxSizeMB}MB • JPEG / JPG /PNG
                                 </p>
                                 <input
                                   id="aadhaarCard"
@@ -4027,7 +4027,7 @@ export default function CURegistrationPage() {
                                   Upload
                                 </Button>
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("APAAR ID Card").maxSizeMB}MB • JPEG / JPG/PNG
+                                  Max {getFileSizeLimit("APAAR ID Card").maxSizeMB}MB • JPEG / JPG /PNG
                                 </p>
                                 <input
                                   id="apaarIdCard"
@@ -4121,7 +4121,7 @@ export default function CURegistrationPage() {
                                       className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                      Max {getFileSizeLimit("Father Photo ID").maxSizeMB}MB • JPEG / JPG/PNG
+                                      Max {getFileSizeLimit("Father Photo ID").maxSizeMB}MB • JPEG / JPG /PNG
                                     </p>
                                     <Button
                                       variant="outline"
@@ -4221,7 +4221,7 @@ export default function CURegistrationPage() {
                                       className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                      Max {getFileSizeLimit("Mother Photo ID").maxSizeMB}MB • JPEG / JPG/PNG
+                                      Max {getFileSizeLimit("Mother Photo ID").maxSizeMB}MB • JPEG/JPG/PNG
                                     </p>
                                     <Button
                                       variant="outline"
@@ -4299,7 +4299,7 @@ export default function CURegistrationPage() {
                                     className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                   />
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Max {getFileSizeLimit("EWS Certificate").maxSizeMB}MB • JPEG / JPG/PNG
+                                    Max {getFileSizeLimit("EWS Certificate").maxSizeMB}MB • JPEG / JPG /PNG
                                   </p>
                                   <Button
                                     variant="outline"
