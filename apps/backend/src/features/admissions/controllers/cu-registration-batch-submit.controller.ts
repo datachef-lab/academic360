@@ -33,7 +33,12 @@ import { sendAdmissionRegistrationNotification } from "../services/cu-registrati
 // Configure multer for handling multiple files
 const upload = multer({
   storage: multer.memoryStorage(),
-  // No file size limits - backend handles conversion and compression
+  // Explicitly set high limits to prevent 413 errors - backend handles compression
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB per file
+    files: 10, // Maximum 10 files
+    fieldSize: 50 * 1024 * 1024, // 50MB for form fields
+  },
 });
 
 // Submit CU registration correction request with documents (batch upload)

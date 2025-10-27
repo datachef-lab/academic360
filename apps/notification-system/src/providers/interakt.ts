@@ -6,6 +6,7 @@ export async function sendWhatsAppMessage(
   messageArr: string[] = [],
   templateName: string,
   headerMediaUrl?: string,
+  buttonValues?: string[],
 ): Promise<{ ok: true } | { ok: false; error: string; status?: number }> {
   try {
     console.log("[whatsapp.interakt] Starting WhatsApp message send");
@@ -14,6 +15,7 @@ export async function sendWhatsAppMessage(
       messageArr,
       templateName,
       headerMediaUrl,
+      buttonValues,
       nodeEnv: process.env.NODE_ENV,
     });
 
@@ -29,7 +31,7 @@ export async function sendWhatsAppMessage(
       developerPhone: process.env.DEVELOPER_PHONE,
     });
 
-    const requestBody = {
+    const requestBody: any = {
       countryCode: "+91",
       phoneNumber: phoneNumber,
       type: "Template",
@@ -44,12 +46,20 @@ export async function sendWhatsAppMessage(
       },
     };
 
+    // Add button values if provided
+    if (buttonValues && buttonValues.length > 0) {
+      requestBody.template.buttonValues = {
+        "0": buttonValues,
+      };
+    }
+
     // Log the exact payload being sent to Interakt (sanitized)
     console.log("[whatsapp.interakt] Request details:", {
       to: phoneNumber,
       templateName,
       headerMediaUrl: Boolean(headerMediaUrl) ? headerMediaUrl : undefined,
       bodyValues: Array.isArray(messageArr) ? messageArr : [],
+      buttonValues: Array.isArray(buttonValues) ? buttonValues : [],
       baseUrl: INTERAKT_BASE_URL,
       hasApiKey: Boolean(INTERAKT_API_KEY),
       apiKeyLength: INTERAKT_API_KEY?.length || 0,

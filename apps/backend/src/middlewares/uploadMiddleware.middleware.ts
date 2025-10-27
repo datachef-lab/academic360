@@ -40,8 +40,15 @@ const fileFilter = (
   }
 };
 
-// Multer instance
-const upload = multer({ storage, fileFilter });
+// Multer instance with high limits to prevent 413 errors
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB per file
+    fieldSize: 50 * 1024 * 1024, // 50MB for form fields
+  },
+});
 
 // Middleware function
 export const uploadExcelMiddleware = upload.single("file"); // 'file' should match frontend form field name

@@ -17,6 +17,7 @@ import {
   updatePersonalInfoByAdmin,
   updateAddressInfoByAdmin,
   markPhysicalRegistrationDoneController,
+  getCuRegistrationPdfByApplicationNumber,
 } from "../controllers/cu-registration-correction-request.controller.js";
 import {
   submitCuRegistrationCorrectionRequestWithDocuments,
@@ -35,7 +36,12 @@ router.post("/", createNewCuRegistrationCorrectionRequest);
 import multer from "multer";
 const upload = multer({
   storage: multer.memoryStorage(),
-  // No file size limits - backend handles conversion and compression
+  // Explicitly set high limits to prevent 413 errors - backend handles compression
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB per file
+    files: 10, // Maximum 10 files
+    fieldSize: 50 * 1024 * 1024, // 50MB for form fields
+  },
 });
 router.post(
   "/submit-with-documents",
@@ -113,6 +119,12 @@ router.post(
 router.get(
   "/application-number-stats",
   getCuRegistrationApplicationNumberStatsController,
+);
+
+// Get CU Registration PDF by encoded application number (for WhatsApp redirect)
+router.get(
+  "/pdf/:encodedApplicationNumber",
+  getCuRegistrationPdfByApplicationNumber,
 );
 
 export default router;

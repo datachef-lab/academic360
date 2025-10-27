@@ -24,6 +24,7 @@ import { CuRegistrationNumberService } from "@/services/cu-registration-number.s
 import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
 import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
 import { enqueueNotification } from "@/services/notificationClient.js";
+import { AdmRegFormService } from "./adm-reg-form.service.js";
 import {
   nationalityModel,
   religionModel,
@@ -439,10 +440,35 @@ export async function updateCuRegistrationCorrectionRequest(
     .from(personalDetailsModel)
     .where(eq(personalDetailsModel.userId, student.userId as number));
 
+  // Check PDF generation conditions before transaction
+  const flags: any = (updateData as any)?.flags || {};
+  const hasCorrectionFlags = Object.values(flags).some(Boolean);
+  const isFinalSubmission = (updateData as any).onlineRegistrationDone === true;
+
+  // Check if all declarations are completed
+  const personalInfoDeclared =
+    (updateData as any).personalInfoDeclaration === true;
+  const addressInfoDeclared =
+    (updateData as any).addressInfoDeclaration === true;
+  const subjectsDeclared = (updateData as any).subjectsDeclaration === true;
+  const documentsDeclared = (updateData as any).documentsDeclaration === true;
+
+  // Check if subject selection is required for this student's program
+  const subjectSelectionRequired = await isSubjectSelectionRequired(
+    existing.studentId,
+  );
+
+  const allDeclarationsCompleted =
+    personalInfoDeclared &&
+    addressInfoDeclared &&
+    (subjectSelectionRequired ? subjectsDeclared : true) && // Skip subjects check if not required
+    documentsDeclared;
+
+  // Only generate PDF and send notifications for final submission, not declaration updates
+  const shouldGeneratePdf = isFinalSubmission && allDeclarationsCompleted;
+
   // Begin transactional update to keep data in sync
   const [updatedRequest] = await db.transaction(async (tx) => {
-    // Note: derive flags first so we can log them safely
-    const flags: any = (updateData as any)?.flags || {};
     console.info("[CU-REG BACKEND] Updating correction request", {
       id,
       flags,
@@ -567,30 +593,6 @@ export async function updateCuRegistrationCorrectionRequest(
       );
     }
 
-    // Check PDF generation conditions regardless of status setting
-    const hasCorrectionFlags = Object.values(flags).some(Boolean);
-    const isFinalSubmission =
-      (updateData as any).onlineRegistrationDone === true;
-
-    // Check if all declarations are completed
-    const personalInfoDeclared =
-      (updateData as any).personalInfoDeclaration === true;
-    const addressInfoDeclared =
-      (updateData as any).addressInfoDeclaration === true;
-    const subjectsDeclared = (updateData as any).subjectsDeclaration === true;
-    const documentsDeclared = (updateData as any).documentsDeclaration === true;
-
-    // Check if subject selection is required for this student's program
-    const subjectSelectionRequired = await isSubjectSelectionRequired(
-      existing.studentId,
-    );
-
-    const allDeclarationsCompleted =
-      personalInfoDeclared &&
-      addressInfoDeclared &&
-      (subjectSelectionRequired ? subjectsDeclared : true) && // Skip subjects check if not required
-      documentsDeclared;
-
     // Debug logging for PDF generation conditions
     console.info(
       "[CU-REG CORRECTION][UPDATE] PDF Generation Conditions Check:",
@@ -603,19 +605,14 @@ export async function updateCuRegistrationCorrectionRequest(
         allDeclarationsCompleted,
         isFinalSubmission,
         hasApplicationNumber: !!existing.cuRegistrationApplicationNumber,
+        shouldGeneratePdf,
         willGeneratePdf:
-          allDeclarationsCompleted &&
-          isFinalSubmission &&
-          !existing.cuRegistrationApplicationNumber,
+          shouldGeneratePdf && !existing.cuRegistrationApplicationNumber,
       },
     );
 
     // Generate PDF and application number if conditions are met
-    if (
-      allDeclarationsCompleted &&
-      isFinalSubmission &&
-      !existing.cuRegistrationApplicationNumber
-    ) {
+    if (shouldGeneratePdf && !existing.cuRegistrationApplicationNumber) {
       // All declarations completed AND final submission done AND no application number yet
       const applicationNumber =
         await CuRegistrationNumberService.generateNextApplicationNumber();
@@ -963,7 +960,7 @@ export async function updateCuRegistrationCorrectionRequest(
   if (!updatedRequest) return null;
 
   // Only regenerate PDF when all declarations are completed AND data was actually updated
-  const allDeclarationsCompleted =
+  const allDeclarationsCompletedInDB =
     updatedRequest.personalInfoDeclaration &&
     updatedRequest.addressInfoDeclaration &&
     updatedRequest.subjectsDeclaration &&
@@ -978,10 +975,10 @@ export async function updateCuRegistrationCorrectionRequest(
     (updateData as any).payload !== undefined ||
     (updateData as any).flags !== undefined;
 
-  if (allDeclarationsCompleted && dataFieldsUpdated) {
+  if (shouldGeneratePdf && allDeclarationsCompletedInDB && dataFieldsUpdated) {
     try {
       console.info(
-        "[CU-REG CORRECTION][UPDATE] All declarations completed and data updated, regenerating PDF with latest data",
+        "[CU-REG CORRECTION][UPDATE] Final submission with all declarations completed and data updated, regenerating PDF with latest data",
       );
 
       // Import the PDF integration service
@@ -1009,7 +1006,11 @@ export async function updateCuRegistrationCorrectionRequest(
         );
 
         // Send email notification with PDF attachment (same as student console)
-        if (pdfResult.pdfBuffer) {
+        // Only send notifications if CU application number is not null
+        if (
+          pdfResult.pdfBuffer &&
+          updatedRequest.cuRegistrationApplicationNumber
+        ) {
           try {
             console.info(
               `[CU-REG CORRECTION][UPDATE] Sending admission registration email notification`,
@@ -1025,8 +1026,7 @@ export async function updateCuRegistrationCorrectionRequest(
             const notificationResult =
               await sendAdmissionRegistrationNotification(
                 existing.studentId,
-                updatedRequest.cuRegistrationApplicationNumber ||
-                  "TEMP-APP-NUM",
+                updatedRequest.cuRegistrationApplicationNumber,
                 pdfResult.pdfBuffer,
                 pdfResult.s3Url!,
               );
@@ -1050,9 +1050,16 @@ export async function updateCuRegistrationCorrectionRequest(
             // Don't fail the entire request if notification fails
           }
         } else {
-          console.warn(
-            `[CU-REG CORRECTION][UPDATE] PDF buffer not available for notification`,
-          );
+          if (!pdfResult.pdfBuffer) {
+            console.warn(
+              `[CU-REG CORRECTION][UPDATE] PDF buffer not available for notification`,
+            );
+          }
+          if (!updatedRequest.cuRegistrationApplicationNumber) {
+            console.warn(
+              `[CU-REG CORRECTION][UPDATE] CU application number is null - skipping notifications`,
+            );
+          }
         }
       } else {
         console.error("[CU-REG CORRECTION][UPDATE] PDF regeneration failed", {
@@ -1068,21 +1075,18 @@ export async function updateCuRegistrationCorrectionRequest(
       // Don't fail the update if PDF regeneration fails
     }
   } else {
-    if (!allDeclarationsCompleted) {
-      console.info(
-        "[CU-REG CORRECTION][UPDATE] Not all declarations completed, skipping PDF regeneration",
-        {
-          personalInfoDeclaration: updatedRequest.personalInfoDeclaration,
-          addressInfoDeclaration: updatedRequest.addressInfoDeclaration,
-          subjectsDeclaration: updatedRequest.subjectsDeclaration,
-          documentsDeclaration: updatedRequest.documentsDeclaration,
-        },
-      );
-    } else if (!dataFieldsUpdated) {
-      console.info(
-        "[CU-REG CORRECTION][UPDATE] Only status changed, no data updates, skipping PDF regeneration",
-      );
-    }
+    // This is a declaration update, not a final submission - skip PDF generation
+    console.info(
+      "[CU-REG CORRECTION][UPDATE] Declaration update - skipping PDF generation and notifications",
+      {
+        isFinalSubmission,
+        allDeclarationsCompleted,
+        shouldGeneratePdf,
+        reason: !isFinalSubmission
+          ? "Not a final submission"
+          : "Not all declarations completed",
+      },
+    );
   }
 
   console.info(
@@ -1665,6 +1669,8 @@ export interface AdmissionRegistrationNotificationData {
   submissionDate: string;
   pdfUrl: string;
   pdfBuffer: Buffer;
+  studentPhone?: string;
+  studentWhatsappNumber?: string;
 }
 
 export interface AdmissionRegistrationNotificationResult {
@@ -1847,6 +1853,261 @@ export const sendAdmissionRegistrationEmailNotification = async (
 };
 
 /**
+ * Send admission registration WhatsApp notification with PDF access link
+ */
+export const sendAdmissionRegistrationWhatsAppNotification = async (
+  data: AdmissionRegistrationNotificationData,
+): Promise<AdmissionRegistrationNotificationResult> => {
+  try {
+    console.log(
+      "📱 [CU-REG-NOTIF] Sending admission registration WhatsApp notification",
+    );
+    console.log("📱 [CU-REG-NOTIF] Data:", {
+      studentId: data.studentId,
+      studentName: data.studentName,
+      applicationNumber: data.applicationNumber,
+      studentPhone: data.studentPhone,
+      studentWhatsappNumber: data.studentWhatsappNumber,
+    });
+
+    // Check if phone number is available
+    const phoneNumber = data.studentWhatsappNumber || data.studentPhone;
+    if (!phoneNumber) {
+      console.warn(
+        "📱 [CU-REG-NOTIF] No phone number available for WhatsApp notification",
+      );
+      return {
+        success: false,
+        error: "No phone number available for WhatsApp notification",
+      };
+    }
+
+    // Get the admission registration notification master for WHATSAPP
+    console.log(
+      "📱 [CU-REG-NOTIF] Searching for WhatsApp notification master...",
+    );
+    const [whatsappMaster] = await db
+      .select()
+      .from(notificationMasterModel)
+      .where(
+        and(
+          eq(notificationMasterModel.name, "Admission Reg. Form"),
+          eq(notificationMasterModel.template, "regp1conf"),
+          eq(notificationMasterModel.variant, "WHATSAPP"),
+        ),
+      );
+
+    console.log(
+      "📱 [CU-REG-NOTIF] WhatsApp master search result:",
+      whatsappMaster,
+    );
+
+    if (!whatsappMaster) {
+      console.error(
+        "📱 [CU-REG-NOTIF] WhatsApp notification master not found!",
+      );
+      console.log("📱 [CU-REG-NOTIF] Available notification masters:");
+      const allMasters = await db
+        .select()
+        .from(notificationMasterModel)
+        .where(eq(notificationMasterModel.name, "Admission Reg. Form"));
+      console.log(
+        "📱 [CU-REG-NOTIF] All 'Admission Reg. Form' masters:",
+        allMasters,
+      );
+
+      return {
+        success: false,
+        error: "Admission Registration WHATSAPP notification master not found",
+      };
+    }
+
+    console.log(
+      "📱 [CU-REG-NOTIF] Found WhatsApp notification master:",
+      whatsappMaster.id,
+    );
+
+    // Check environment-specific logic
+    const redirectToDev = shouldRedirectToDeveloper();
+    const sendToStaffOnly = shouldSendToStaffOnly();
+    const { devPhone } = getDeveloperContact();
+
+    // Determine notification recipients based on environment
+    let targetPhone = phoneNumber;
+    let shouldSendToStudent = false; // Default: not send to student
+
+    if (redirectToDev && devPhone) {
+      // Development: send ONLY to developer, NOT to student
+      targetPhone = devPhone;
+      shouldSendToStudent = false; // Don't send to student in dev
+      console.log(
+        `📱 [CU-REG-NOTIF] [DEV MODE] Sending ONLY to developer: ${devPhone} (NOT to student)`,
+      );
+    } else if (sendToStaffOnly) {
+      // Staging: send ONLY to staff, NOT to student
+      try {
+        const staffUsers = await db
+          .select({
+            phone: userModel.phone,
+            whatsappNumber: userModel.whatsappNumber,
+          })
+          .from(userModel)
+          .where(
+            and(
+              or(eq(userModel.type, "STAFF"), eq(userModel.type, "ADMIN")),
+              eq(userModel.sendStagingNotifications, true),
+              eq(userModel.isActive, true),
+              eq(userModel.isSuspended, false),
+            ),
+          );
+
+        const staffPhones = staffUsers
+          .map((user) => user.whatsappNumber || user.phone)
+          .filter(
+            (phone): phone is string => phone !== null && phone !== undefined,
+          );
+
+        if (staffPhones.length > 0) {
+          targetPhone = staffPhones[0]; // Use first staff phone for staging
+          shouldSendToStudent = false; // Don't send to student in staging
+          console.log(
+            `📱 [CU-REG-NOTIF] [STAGING] Sending ONLY to staff: ${targetPhone} (NOT to student)`,
+          );
+        } else {
+          console.log(
+            `📱 [CU-REG-NOTIF] [STAGING] No staff users found with staging notifications enabled`,
+          );
+          return {
+            success: false,
+            error: "No staff users found for staging notifications",
+          };
+        }
+      } catch (error) {
+        console.error(
+          "❌ [CU-REG-NOTIF] Error fetching staff users for staging:",
+          error,
+        );
+        return {
+          success: false,
+          error: "Error fetching staff users for staging",
+        };
+      }
+    } else {
+      // Production: send to real user (no additional recipients)
+      shouldSendToStudent = true; // Send to student in production
+      console.log(
+        `📱 [CU-REG-NOTIF] [PRODUCTION] Sending to real user: ${phoneNumber}`,
+      );
+    }
+
+    // Generate PDF access URL using encoded application number
+    const admRegFormService = new AdmRegFormService();
+    const baseUrl =
+      process.env.BACKEND_SELF_BASE ||
+      `http://localhost:${process.env.PORT || 8080}`;
+    const pdfAccessUrl = admRegFormService.generatePdfAccessUrl(
+      data.applicationNumber,
+      baseUrl,
+    );
+
+    console.log("📱 [CU-REG-NOTIF] Generated PDF access URL:", pdfAccessUrl);
+
+    // Prepare notification data based on environment
+    let notificationData;
+
+    if (shouldSendToStudent) {
+      // Production: send to student
+      notificationData = {
+        userId: data.studentId,
+        variant: "WHATSAPP" as const,
+        type: "ADMISSION" as const,
+        message: `Your admission registration form has been successfully submitted. Application Number: ${data.applicationNumber}`,
+        notificationMasterId: whatsappMaster.id,
+        notificationEvent: {
+          templateData: {
+            studentName: data.studentName,
+            applicationNumber: data.applicationNumber,
+            courseName: data.courseName,
+            submissionDate: data.submissionDate,
+            pdfAccessUrl: pdfAccessUrl,
+          },
+          // Body values for Interakt template placeholders
+          bodyValues: [data.studentName, data.applicationNumber, pdfAccessUrl],
+        },
+      };
+    } else {
+      // Development/Staging: send to other users only
+      notificationData = {
+        userId: data.studentId, // Still need a userId for the notification record
+        variant: "WHATSAPP" as const,
+        type: "ADMISSION" as const,
+        message: `Admission registration form submitted for testing. Application Number: ${data.applicationNumber}`,
+        notificationMasterId: whatsappMaster.id,
+        notificationEvent: {
+          templateData: {
+            studentName: redirectToDev
+              ? `Developer (Original: ${data.studentName})`
+              : `Staff Member (${data.studentName})`,
+            applicationNumber: data.applicationNumber,
+            courseName: data.courseName,
+            submissionDate: data.submissionDate,
+            pdfAccessUrl: pdfAccessUrl,
+            ...(redirectToDev && {
+              originalRecipient: phoneNumber,
+              originalStudentName: data.studentName,
+            }),
+            ...(sendToStaffOnly && {
+              environment: "staging",
+              recipientType: "staff",
+            }),
+          },
+          // Body values for Interakt template placeholders
+          bodyValues: [
+            redirectToDev
+              ? `Developer (Original: ${data.studentName})`
+              : `Staff Member (${data.studentName})`,
+            data.applicationNumber,
+            pdfAccessUrl,
+          ],
+        },
+      };
+    }
+
+    console.log(
+      "📱 [CU-REG-NOTIF] Enqueuing WhatsApp notification with data:",
+      {
+        userId: notificationData.userId,
+        variant: notificationData.variant,
+        type: notificationData.type,
+        notificationMasterId: notificationData.notificationMasterId,
+        shouldSendToStudent: shouldSendToStudent,
+        targetPhone: targetPhone,
+      },
+    );
+
+    // Enqueue the notification
+    const result = await enqueueNotification(notificationData);
+    console.log(
+      "✅ [CU-REG-NOTIF] Admission registration WhatsApp notification enqueued successfully",
+    );
+
+    return {
+      success: true,
+      notificationId: (result as any)?.id || (result as any)?.notificationId,
+    };
+  } catch (error) {
+    console.error(
+      "❌ [CU-REG-NOTIF] Error sending admission registration WhatsApp notification:",
+      error,
+    );
+    return {
+      success: false,
+      error: (error as Error).message,
+    };
+  }
+};
+
+/**
  * Send admission registration notification with PDF attachment
  * This function should be called after successful PDF generation
  */
@@ -1869,6 +2130,8 @@ export const sendAdmissionRegistrationNotification = async (
         userId: studentModel.userId,
         userName: userModel.name,
         userEmail: userModel.email,
+        userPhone: userModel.phone,
+        userWhatsappNumber: userModel.whatsappNumber,
       })
       .from(studentModel)
       .innerJoin(userModel, eq(studentModel.userId, userModel.id))
@@ -1900,24 +2163,50 @@ export const sendAdmissionRegistrationNotification = async (
       }),
       pdfUrl: pdfUrl,
       pdfBuffer: pdfBuffer,
+      studentPhone: studentData.userPhone || undefined,
+      studentWhatsappNumber: studentData.userWhatsappNumber || undefined,
     };
 
-    // Send the notification
-    const result =
+    // Send both email and WhatsApp notifications
+    console.log("📧 [CU-REG-NOTIF] Starting email notification...");
+    const emailResult =
       await sendAdmissionRegistrationEmailNotification(notificationData);
 
-    if (result.success) {
+    console.log("📱 [CU-REG-NOTIF] Starting WhatsApp notification...");
+    const whatsappResult =
+      await sendAdmissionRegistrationWhatsAppNotification(notificationData);
+
+    console.log("📧 [CU-REG-NOTIF] Email notification result:", {
+      success: emailResult.success,
+      error: emailResult.error,
+    });
+
+    console.log("📱 [CU-REG-NOTIF] WhatsApp notification result:", {
+      success: whatsappResult.success,
+      error: whatsappResult.error,
+    });
+
+    // Return success if at least one notification was sent successfully
+    const overallSuccess = emailResult.success || whatsappResult.success;
+
+    if (overallSuccess) {
       console.log(
-        "✅ [CU-REG-NOTIF] Admission registration notification sent successfully",
+        "✅ [CU-REG-NOTIF] Admission registration notifications sent successfully",
       );
     } else {
       console.error(
-        "❌ [CU-REG-NOTIF] Failed to send admission registration notification:",
-        result.error,
+        "❌ [CU-REG-NOTIF] Failed to send admission registration notifications",
       );
     }
 
-    return result;
+    return {
+      success: overallSuccess,
+      error: overallSuccess
+        ? undefined
+        : "Both email and WhatsApp notifications failed",
+      notificationId:
+        emailResult.notificationId || whatsappResult.notificationId,
+    };
   } catch (error) {
     console.error(
       "❌ [CU-REG-NOTIF] Error in admission registration notification process:",

@@ -67,7 +67,11 @@ async function getDocumentNameById(documentId: string): Promise<string> {
 // Configure multer for memory storage (for S3 uploads)
 const upload = multer({
   storage: multer.memoryStorage(),
-  // No file size limits - backend handles conversion and compression
+  // Explicitly set high limits to prevent 413 errors - backend handles compression
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB per file
+    fieldSize: 50 * 1024 * 1024, // 50MB for form fields
+  },
   fileFilter: (req, file, cb) => {
     console.info(
       `[CU-REG DOC UPLOAD] File received: ${file.originalname}, size: ${file.size || "undefined"} bytes, type: ${file.mimetype}`,

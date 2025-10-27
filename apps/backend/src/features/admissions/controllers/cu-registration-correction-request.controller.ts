@@ -4,7 +4,8 @@ import { handleError } from "@/utils/handleError.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { db } from "@/db/index.js";
 import { studentModel } from "@repo/db/schemas/models/user";
-import { ilike } from "drizzle-orm";
+import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
+import { ilike, eq } from "drizzle-orm";
 import { cuRegistrationCorrectionRequestInsertSchema } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import {
   createCuRegistrationCorrectionRequest,
@@ -23,6 +24,9 @@ import {
   exportCuRegistrationCorrectionRequests,
   markPhysicalRegistrationDone,
 } from "../services/cu-registration-correction-request.service.js";
+import { AdmRegFormService } from "../services/adm-reg-form.service.js";
+import { getCuRegPdfPathDynamic } from "../services/cu-registration-document-path.service.js";
+import { getSignedUrlForFile } from "@/services/s3.service.js";
 import {
   uploadToS3,
   deleteFromS3,
@@ -830,6 +834,104 @@ export const markPhysicalRegistrationDoneController = async (
         ),
       );
   } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// Get CU Registration PDF by encoded application number (for WhatsApp redirect)
+export const getCuRegistrationPdfByApplicationNumber = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { encodedApplicationNumber } = req.params;
+
+    if (!encodedApplicationNumber) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Encoded application number is required"));
+      return;
+    }
+
+    // Decode the application number
+    const admRegFormService = new AdmRegFormService();
+    let applicationNumber: string;
+
+    try {
+      applicationNumber = admRegFormService.decodeApplicationNumber(
+        encodedApplicationNumber,
+      );
+    } catch (error) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Invalid encoded application number"));
+      return;
+    }
+
+    console.info(
+      `[CU-REG PDF] Decoded application number: ${applicationNumber}`,
+    );
+
+    // Find the correction request by application number
+    const [correctionRequest] = await db
+      .select({
+        id: cuRegistrationCorrectionRequestModel.id,
+        studentId: cuRegistrationCorrectionRequestModel.studentId,
+        cuRegistrationApplicationNumber:
+          cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+      })
+      .from(cuRegistrationCorrectionRequestModel)
+      .where(
+        eq(
+          cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+          applicationNumber,
+        ),
+      )
+      .limit(1);
+
+    if (!correctionRequest) {
+      res.status(404).json(new ApiError(404, "CU registration form not found"));
+      return;
+    }
+
+    // Get student UID
+    const [student] = await db
+      .select({ uid: studentModel.uid })
+      .from(studentModel)
+      .where(eq(studentModel.id, correctionRequest.studentId))
+      .limit(1);
+
+    if (!student?.uid) {
+      res.status(404).json(new ApiError(404, "Student UID not found"));
+      return;
+    }
+
+    // Generate PDF path
+    const pdfPathConfig = await getCuRegPdfPathDynamic(
+      correctionRequest.studentId,
+      student.uid,
+      applicationNumber,
+    );
+
+    console.info(`[CU-REG PDF] Generated PDF path: ${pdfPathConfig.fullPath}`);
+
+    // Generate pre-signed URL for the PDF (expires in 1 hour)
+    const signedUrl = await getSignedUrlForFile(pdfPathConfig.fullPath, 3600); // 1 hour expiry
+
+    if (!signedUrl) {
+      res.status(404).json(new ApiError(404, "PDF file not found in storage"));
+      return;
+    }
+
+    console.info(
+      `[CU-REG PDF] Generated signed URL for application number: ${applicationNumber}`,
+    );
+
+    // Redirect to the signed URL
+    res.redirect(302, signedUrl);
+  } catch (error) {
+    console.error("[CU-REG PDF] Error generating PDF access:", error);
     handleError(error, res, next);
   }
 };

@@ -217,6 +217,70 @@ async function processBatch() {
         }
       }
 
+      // Extract button values from template data
+      let buttonValues: string[] = [];
+      console.log("[whatsapp.worker] DTO template data:", dto?.templateData);
+      console.log("[whatsapp.worker] DTO full:", JSON.stringify(dto, null, 2));
+
+      if (
+        dto?.templateData?.pdfAccessUrl &&
+        typeof dto.templateData.pdfAccessUrl === "string"
+      ) {
+        buttonValues.push(dto.templateData.pdfAccessUrl);
+        console.log(
+          "[whatsapp.worker] Found pdfAccessUrl:",
+          dto.templateData.pdfAccessUrl,
+        );
+      } else {
+        console.log("[whatsapp.worker] No pdfAccessUrl found in template data");
+
+        // Try to extract from notification message as fallback
+        try {
+          const messageData = JSON.parse(notif.message || "{}");
+          console.log(
+            "[whatsapp.worker] Message data:",
+            JSON.stringify(messageData, null, 2),
+          );
+
+          // Check if pdfAccessUrl is in notificationEvent.templateData
+          if (
+            messageData.notificationEvent?.templateData?.pdfAccessUrl &&
+            typeof messageData.notificationEvent.templateData.pdfAccessUrl ===
+              "string"
+          ) {
+            buttonValues.push(
+              messageData.notificationEvent.templateData.pdfAccessUrl,
+            );
+            console.log(
+              "[whatsapp.worker] Found pdfAccessUrl in message templateData:",
+              messageData.notificationEvent.templateData.pdfAccessUrl,
+            );
+          }
+          // Check if pdfAccessUrl is in bodyValues (third element)
+          else if (
+            messageData.bodyValues &&
+            Array.isArray(messageData.bodyValues) &&
+            messageData.bodyValues.length >= 3
+          ) {
+            const pdfUrl = messageData.bodyValues[2]; // Third element (index 2)
+            if (
+              typeof pdfUrl === "string" &&
+              pdfUrl.includes(
+                "/api/admissions/cu-registration-correction-requests/pdf/",
+              )
+            ) {
+              buttonValues.push(pdfUrl);
+              console.log(
+                "[whatsapp.worker] Found pdfAccessUrl in bodyValues:",
+                pdfUrl,
+              );
+            }
+          }
+        } catch (e) {
+          console.log("[whatsapp.worker] Could not parse message data:", e);
+        }
+      }
+
       // Guard: ensure required placeholders have values; otherwise throw before provider call
       const expectedCount = metaEntries.length;
       const providedCount = bodyValues.filter(
@@ -289,6 +353,7 @@ async function processBatch() {
           to: resolvedPhone,
           templateName,
           bodyValues,
+          buttonValues,
           headerMediaUrl: dto.whatsappHeaderMediaUrl,
         });
         const resp = await sendWhatsAppMessage(
@@ -296,6 +361,7 @@ async function processBatch() {
           bodyValues,
           templateName,
           dto.whatsappHeaderMediaUrl,
+          buttonValues,
         );
         if (!resp.ok) throw new Error(resp.error);
         await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
@@ -310,6 +376,7 @@ async function processBatch() {
           to: resolvedPhone,
           templateName,
           bodyValues,
+          buttonValues,
           headerMediaUrl: dto.whatsappHeaderMediaUrl,
         });
         const resp = await sendWhatsAppMessage(
@@ -317,6 +384,7 @@ async function processBatch() {
           bodyValues,
           templateName,
           dto.whatsappHeaderMediaUrl,
+          buttonValues,
         );
         if (!resp.ok) throw new Error(resp.error);
         await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
