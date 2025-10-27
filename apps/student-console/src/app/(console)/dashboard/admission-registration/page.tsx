@@ -2034,7 +2034,8 @@ export default function CURegistrationPage() {
 
     // Add migration certificate if board is migratory (not CBSE, ISC, WBCHSE, NIOS)
     const migratoryBoards = ["CBSE", "ISC", "WBCHSE", "NIOS"];
-    if (academicInfo.board && !migratoryBoards.includes(academicInfo.board)) {
+    const boardCode = profileInfo?.applicationFormDto?.academicInfo?.board?.code;
+    if (boardCode && !migratoryBoards.includes(boardCode)) {
       required.push("migrationCertificate");
     }
 
@@ -4434,8 +4435,8 @@ export default function CURegistrationPage() {
                             {/* Migration Certificate - Only show for migratory boards */}
                             {(() => {
                               const migratoryBoards = ["CBSE", "ISC", "WBCHSE", "NIOS"];
-                              const isMigratoryBoard =
-                                academicInfo.board && !migratoryBoards.includes(academicInfo.board);
+                              const boardCode = profileInfo?.applicationFormDto?.academicInfo?.board?.code;
+                              const isMigratoryBoard = boardCode && !migratoryBoards.includes(boardCode);
                               return isMigratoryBoard;
                             })() && (
                               <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
