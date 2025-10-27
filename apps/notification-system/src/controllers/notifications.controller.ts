@@ -44,7 +44,13 @@ export class NotificationsController {
         variant: req.body?.variant,
         type: req.body?.type,
         hasMasterId: Boolean(req.body?.notificationMasterId),
+        hasNotificationEvent: !!req.body?.notificationEvent,
+        hasTemplateData: !!req.body?.notificationEvent?.templateData,
       });
+      console.log(
+        "[notif-sys] Full notificationEvent:",
+        JSON.stringify(req.body?.notificationEvent, null, 2),
+      );
 
       const id = await NotificationsService.enqueue(req.body, {
         meta: { devOnly },

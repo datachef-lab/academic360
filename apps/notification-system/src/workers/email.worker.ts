@@ -154,9 +154,41 @@ async function processBatch() {
         JSON.stringify(contentRows, null, 2),
       );
 
+      // Extract templateData from notification message if present
+      let extractedTemplateData: Record<string, any> = {};
+      try {
+        if (notif?.message) {
+          console.log(
+            "[email.worker] Raw notification message:",
+            notif.message,
+          );
+          const parsedMessage = JSON.parse(notif.message);
+          console.log(
+            "[email.worker] Parsed notification message:",
+            JSON.stringify(parsedMessage, null, 2),
+          );
+          if (parsedMessage?.notificationEvent?.templateData) {
+            extractedTemplateData =
+              parsedMessage.notificationEvent.templateData;
+            console.log(
+              "[email.worker] ✅ Extracted templateData from notification message:",
+              JSON.stringify(extractedTemplateData, null, 2),
+            );
+          } else {
+            console.log(
+              "[email.worker] ❌ No templateData found in parsed message",
+            );
+          }
+        } else {
+          console.log("[email.worker] ⚠️ No message field in notification");
+        }
+      } catch (e) {
+        console.log("[email.worker] ❌ Error parsing notification message:", e);
+      }
+
       // Build dto from notification event data (not from content rows)
       const dto: NotificationEventDto = {
-        templateData: {},
+        templateData: extractedTemplateData,
         meta: { devOnly: true },
         emailAttachments: await prepareEmailAttachments(notif.emailAttachments),
       } as NotificationEventDto;
@@ -372,27 +404,69 @@ async function processBatch() {
         templateList: computedTemplateList,
         subjectsByCategory,
         academicYear: computedTemplateData?.["academicYear"] || "",
+        // Merge templateData properties into top level for easier access in templates
+        ...(computedTemplateData ?? (dto.templateData || {})),
+        // Explicitly merge individual flags to ensure they're available
+        ...(computedTemplateData && {
+          isEWS: computedTemplateData.isEWS,
+          isPWD: computedTemplateData.isPWD,
+          isSCSTOBC: computedTemplateData.isSCSTOBC,
+          isIndian: computedTemplateData.isIndian,
+          hasCURegistration: computedTemplateData.hasCURegistration,
+          boardCode: computedTemplateData.boardCode,
+        }),
+        ...(dto.templateData && {
+          isEWS: dto.templateData.isEWS,
+          isPWD: dto.templateData.isPWD,
+          isSCSTOBC: dto.templateData.isSCSTOBC,
+          isIndian: dto.templateData.isIndian,
+          hasCURegistration: dto.templateData.hasCURegistration,
+          boardCode: dto.templateData.boardCode,
+        }),
       };
 
       console.log(
         "[email.worker] transformed subjectsByCategory:",
         JSON.stringify(subjectsByCategory, null, 2),
       );
-      // Debug: log subject/template/otp for visibility
       console.log(
-        "[email.worker] resolved subject/template/otp ->",
+        "[email.worker] resolvedContent with merged templateData:",
         JSON.stringify(
           {
-            subject,
-            templateKey,
-            otpCode:
-              (resolvedContent as any)?.otpCode ||
-              resolvedContent?.templateData?.["otpCode"],
+            isEWS: (resolvedContent as any).isEWS,
+            isPWD: (resolvedContent as any).isPWD,
+            isSCSTOBC: (resolvedContent as any).isSCSTOBC,
+            isIndian: (resolvedContent as any).isIndian,
+            hasCURegistration: (resolvedContent as any).hasCURegistration,
+            boardCode: (resolvedContent as any).boardCode,
+            templateDataKeys: Object.keys(resolvedContent.templateData || {}),
+            dtoTemplateData: dto.templateData,
+            computedTemplateData,
           },
           null,
           2,
         ),
       );
+      // Log full resolvedContent for debugging
+      console.log(
+        "[email.worker] Full resolvedContent object:",
+        JSON.stringify(resolvedContent, null, 2),
+      );
+      // Debug: log subject/template/otp for visibility
+      // console.log(
+      //     "[email.worker] resolved subject/template/otp ->",
+      //     JSON.stringify(
+      //         {
+      //             subject,
+      //             templateKey,
+      //             otpCode:
+      //                 (resolvedContent as any)?.otpCode ||
+      //                 resolvedContent?.templateData?.["otpCode"],
+      //         },
+      //         null,
+      //         2,
+      //     ),
+      // );
 
       let html: string;
       if (templateKey) {
@@ -538,31 +612,62 @@ async function processBatch() {
           );
         }
       } else {
-        // production -> send to real user
-        const resolvedEmail = asString(
-          user?.email,
-          process.env.DEVELOPER_EMAIL!,
-        );
-        console.log(
-          `[email.worker] sending to production user: ${resolvedEmail}`,
-        );
-        const res = await sendZeptoMail(
-          resolvedEmail,
-          subject,
-          html,
-          undefined,
-          dto.emailAttachments,
-          asString(
-            dto.emailFromName,
-            "The Bhawanipur Education Society College - Important Notification",
-          ),
-        );
-        console.log(`[email.worker] sendZeptoMail response:`, res);
-        if (!res.ok) {
-          console.log(`[email.worker] ZeptoMail failed with error:`, res.error);
-          throw new Error(`ZeptoMail API Error: ${res.error}`);
+        // production -> send to real user ONLY in production environment
+        // Check if we're actually in production before sending to real user
+        if (process.env.NODE_ENV === "production") {
+          const resolvedEmail = asString(
+            user?.email,
+            process.env.DEVELOPER_EMAIL!,
+          );
+          console.log(
+            `[email.worker] sending to production user: ${resolvedEmail}`,
+          );
+          const res = await sendZeptoMail(
+            resolvedEmail,
+            subject,
+            html,
+            undefined,
+            dto.emailAttachments,
+            asString(
+              dto.emailFromName,
+              "The Bhawanipur Education Society College - Important Notification",
+            ),
+          );
+          console.log(`[email.worker] sendZeptoMail response:`, res);
+          if (!res.ok) {
+            console.log(
+              `[email.worker] ZeptoMail failed with error:`,
+              res.error,
+            );
+            throw new Error(`ZeptoMail API Error: ${res.error}`);
+          }
+          await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+        } else {
+          // Non-production environment, but didn't match dev/staging logic - send to developer
+          console.log(
+            `[email.worker] Non-production environment (${process.env.NODE_ENV}), redirecting to developer: ${process.env.DEVELOPER_EMAIL}`,
+          );
+          const res = await sendZeptoMail(
+            process.env.DEVELOPER_EMAIL!,
+            subject,
+            html,
+            undefined,
+            dto.emailAttachments,
+            asString(
+              dto.emailFromName,
+              "The Bhawanipur Education Society College - Important Notification",
+            ),
+          );
+          console.log(`[email.worker] sendZeptoMail response:`, res);
+          if (!res.ok) {
+            console.log(
+              `[email.worker] ZeptoMail failed with error:`,
+              res.error,
+            );
+            throw new Error(`ZeptoMail API Error: ${res.error}`);
+          }
+          await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
         }
-        await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
       }
 
       await db

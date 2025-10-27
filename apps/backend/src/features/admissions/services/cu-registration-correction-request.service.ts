@@ -975,10 +975,14 @@ export async function updateCuRegistrationCorrectionRequest(
     (updateData as any).payload !== undefined ||
     (updateData as any).flags !== undefined;
 
-  if (shouldGeneratePdf && allDeclarationsCompletedInDB && dataFieldsUpdated) {
+  // Check if we should generate PDF: either final submission OR all declarations completed
+  const shouldGeneratePdfNow =
+    isFinalSubmission || allDeclarationsCompletedInDB;
+
+  if (shouldGeneratePdfNow && dataFieldsUpdated) {
     try {
       console.info(
-        "[CU-REG CORRECTION][UPDATE] Final submission with all declarations completed and data updated, regenerating PDF with latest data",
+        "[CU-REG CORRECTION][UPDATE] All declarations completed and data updated, regenerating PDF with latest data",
       );
 
       // Import the PDF integration service
@@ -1671,6 +1675,13 @@ export interface AdmissionRegistrationNotificationData {
   pdfBuffer: Buffer;
   studentPhone?: string;
   studentWhatsappNumber?: string;
+  // Template data for conditional document display
+  isEWS?: boolean;
+  isPWD?: boolean;
+  isSCSTOBC?: boolean;
+  isIndian?: boolean;
+  hasCURegistration?: boolean;
+  boardCode?: string;
 }
 
 export interface AdmissionRegistrationNotificationResult {
@@ -1800,6 +1811,17 @@ export const sendAdmissionRegistrationEmailNotification = async (
         otherUsersWhatsAppNumbers: undefined,
         // Store PDF S3 URL for email worker to download
         emailAttachments: data.pdfUrl ? [{ pdfS3Url: data.pdfUrl }] : undefined,
+        // Pass template data for conditional document display
+        notificationEvent: {
+          templateData: {
+            isEWS: data.isEWS,
+            isPWD: data.isPWD,
+            isSCSTOBC: data.isSCSTOBC,
+            isIndian: data.isIndian,
+            hasCURegistration: data.hasCURegistration,
+            boardCode: data.boardCode,
+          },
+        },
       };
     } else {
       // Development/Staging: send to other users only
@@ -1809,14 +1831,23 @@ export const sendAdmissionRegistrationEmailNotification = async (
         type: "ADMISSION" as const,
         message: `Admission registration form submitted for testing. Application Number: ${data.applicationNumber}`,
         notificationMasterId: emailMaster.id,
+        // Set otherUsersEmails for development/staging (not sent to real student)
         otherUsersEmails:
           otherUsersEmails.length > 0 ? otherUsersEmails : undefined,
-        otherUsersWhatsAppNumbers:
-          otherUsersWhatsAppNumbers.length > 0
-            ? otherUsersWhatsAppNumbers
-            : undefined,
+        otherUsersWhatsAppNumbers: undefined, // Email variant doesn't need WhatsApp numbers
         // Store PDF S3 URL for email worker to download
         emailAttachments: data.pdfUrl ? [{ pdfS3Url: data.pdfUrl }] : undefined,
+        // Pass template data for conditional document display
+        notificationEvent: {
+          templateData: {
+            isEWS: data.isEWS,
+            isPWD: data.isPWD,
+            isSCSTOBC: data.isSCSTOBC,
+            isIndian: data.isIndian,
+            hasCURegistration: data.hasCURegistration,
+            boardCode: data.boardCode,
+          },
+        },
       };
     }
 
@@ -1828,6 +1859,10 @@ export const sendAdmissionRegistrationEmailNotification = async (
       shouldSendToStudent: shouldSendToStudent,
       hasOtherUsersEmails: otherUsersEmails.length > 0,
       hasOtherUsersWhatsApp: otherUsersWhatsAppNumbers.length > 0,
+      hasTemplateData: !!notificationData.notificationEvent?.templateData,
+      templateDataKeys: notificationData.notificationEvent?.templateData
+        ? Object.keys(notificationData.notificationEvent.templateData)
+        : [],
     });
 
     // Enqueue the notification
@@ -1935,10 +1970,12 @@ export const sendAdmissionRegistrationWhatsAppNotification = async (
     // Determine notification recipients based on environment
     let targetPhone = phoneNumber;
     let shouldSendToStudent = false; // Default: not send to student
+    let otherUsersWhatsAppNumbers: string[] = []; // For dev/staging WhatsApp notifications
 
     if (redirectToDev && devPhone) {
       // Development: send ONLY to developer, NOT to student
       targetPhone = devPhone;
+      otherUsersWhatsAppNumbers = [devPhone];
       shouldSendToStudent = false; // Don't send to student in dev
       console.log(
         `📱 [CU-REG-NOTIF] [DEV MODE] Sending ONLY to developer: ${devPhone} (NOT to student)`,
@@ -1969,6 +2006,7 @@ export const sendAdmissionRegistrationWhatsAppNotification = async (
 
         if (staffPhones.length > 0) {
           targetPhone = staffPhones[0]; // Use first staff phone for staging
+          otherUsersWhatsAppNumbers = staffPhones; // Set all staff phones for otherUsersWhatsAppNumbers
           shouldSendToStudent = false; // Don't send to student in staging
           console.log(
             `📱 [CU-REG-NOTIF] [STAGING] Sending ONLY to staff: ${targetPhone} (NOT to student)`,
@@ -2043,6 +2081,12 @@ export const sendAdmissionRegistrationWhatsAppNotification = async (
         type: "ADMISSION" as const,
         message: `Admission registration form submitted for testing. Application Number: ${data.applicationNumber}`,
         notificationMasterId: whatsappMaster.id,
+        // Set otherUsersWhatsAppNumbers for development/staging (not sent to real student)
+        otherUsersEmails: undefined, // WhatsApp variant doesn't need email addresses
+        otherUsersWhatsAppNumbers:
+          otherUsersWhatsAppNumbers.length > 0
+            ? otherUsersWhatsAppNumbers
+            : undefined,
         notificationEvent: {
           templateData: {
             studentName: redirectToDev
@@ -2122,7 +2166,12 @@ export const sendAdmissionRegistrationNotification = async (
       "📧 [CU-REG-NOTIF] Starting admission registration notification process",
     );
 
-    // Get student details with user info (studentId -> student -> user)
+    // Get student details with user info, personal details, board, and category (studentId -> student -> user -> personal details -> admission academic info -> board/category/nationality)
+    const { personalDetailsModel, boardModel, admissionAcademicInfoModel } =
+      await import("@repo/db/schemas/models");
+    const { categoryModel, nationalityModel } = await import(
+      "@repo/db/schemas/models/resources"
+    );
     const [studentData] = await db
       .select({
         studentId: studentModel.id,
@@ -2132,9 +2181,37 @@ export const sendAdmissionRegistrationNotification = async (
         userEmail: userModel.email,
         userPhone: userModel.phone,
         userWhatsappNumber: userModel.whatsappNumber,
+        handicapped: studentModel.handicapped,
+        belongsToEWS: studentModel.belongsToEWS,
+        boardCode: boardModel.code,
+        cuRegistrationNumber: admissionAcademicInfoModel.cuRegistrationNumber,
+        // Personal details
+        disability: personalDetailsModel.disability,
+        categoryName: categoryModel.name,
+        nationalityName: nationalityModel.name,
       })
       .from(studentModel)
       .innerJoin(userModel, eq(studentModel.userId, userModel.id))
+      .leftJoin(
+        personalDetailsModel,
+        eq(userModel.id, personalDetailsModel.userId),
+      )
+      .leftJoin(
+        admissionAcademicInfoModel,
+        eq(studentModel.id, admissionAcademicInfoModel.studentId),
+      )
+      .leftJoin(
+        boardModel,
+        eq(admissionAcademicInfoModel.boardId, boardModel.id),
+      )
+      .leftJoin(
+        nationalityModel,
+        eq(personalDetailsModel.nationalityId, nationalityModel.id),
+      )
+      .leftJoin(
+        categoryModel,
+        eq(personalDetailsModel.categoryId, categoryModel.id),
+      )
       .where(eq(studentModel.id, studentId));
 
     console.log("📧 [CU-REG-NOTIF] Fetched student data from database:", {
@@ -2147,6 +2224,32 @@ export const sendAdmissionRegistrationNotification = async (
     if (!studentData) {
       throw new Error(`Student not found for ID: ${studentId}`);
     }
+
+    // Compute flags for conditional document display (same logic as PDF generation)
+    const isPWD = !!(studentData.handicapped || !!studentData.disability);
+    const isEWS = !!studentData.belongsToEWS;
+    const isSCSTOBC = ["SC", "ST", "OBC"].includes(
+      (studentData.categoryName || "").toUpperCase(),
+    );
+    const isIndian =
+      (studentData.nationalityName || "").toLowerCase() === "indian";
+    const hasCURegistration = !!studentData.cuRegistrationNumber;
+    const boardCode = studentData.boardCode || undefined;
+
+    console.log("📧 [CU-REG-NOTIF] Computed flags:", {
+      isPWD,
+      isEWS,
+      isSCSTOBC,
+      isIndian,
+      hasCURegistration,
+      boardCode,
+      handicapped: studentData.handicapped,
+      disability: studentData.disability,
+      belongsToEWS: studentData.belongsToEWS,
+      categoryName: studentData.categoryName,
+      nationalityName: studentData.nationalityName,
+      cuRegistrationNumber: studentData.cuRegistrationNumber,
+    });
 
     // Prepare notification data
     const notificationData: AdmissionRegistrationNotificationData = {
@@ -2165,6 +2268,13 @@ export const sendAdmissionRegistrationNotification = async (
       pdfBuffer: pdfBuffer,
       studentPhone: studentData.userPhone || undefined,
       studentWhatsappNumber: studentData.userWhatsappNumber || undefined,
+      // Template data for conditional document display
+      isEWS,
+      isPWD,
+      isSCSTOBC,
+      isIndian,
+      hasCURegistration,
+      boardCode,
     };
 
     // Send both email and WhatsApp notifications

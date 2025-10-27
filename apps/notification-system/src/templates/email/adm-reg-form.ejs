@@ -391,7 +391,7 @@
           </div>
           <div class="document-item">
             <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of the APAAR (ABC) ID Card. (Not applicable for Foreign Nationals)</div>
+            <div class="document-text">1 (One) Photocopy of the APAAR (ABC) ID Card.</div>
           </div>
           <% } %>
           
@@ -399,7 +399,7 @@
           <% if (content && content.isIndian === false) { %>
           <div class="document-item">
             <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of First and Last Page of Passport. (Applicable only for Foreign Nationals)</div>
+            <div class="document-text">1 (One) Photocopy of First and Last Page of Passport.</div>
           </div>
           <% } %>
           
@@ -407,15 +407,21 @@
           <% if (content && content.isSCSTOBC) { %>
           <div class="document-item">
             <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of the Caste Certificate, issued by the Govt. of West Bengal. (Applicable only if applied under SC/ST/OBC category)</div>
+            <div class="document-text">1 (One) Photocopy of the Caste Certificate, issued by the Govt. of West Bengal.</div>
           </div>
           <% } %>
           
-          <!-- Migration Certificate (always show with note) -->
+          <!-- Migration Certificate (dynamic based on board) -->
+          <% 
+            const excludedBoards = ['WBCHSE', 'ISC', 'CBSE', 'NIOS'];
+            const isMigrationCertificateRequired = content && content.boardCode && !excludedBoards.includes(content.boardCode);
+          %>
+          <% if (isMigrationCertificateRequired) { %>
           <div class="document-item">
             <div class="document-checkbox">☐</div>
-            <div class="document-text">Original Class XII Board  Migration Certificate. (NOT applicable for students belonging to WBCHSE/ISC/CBSE/NIOS board)</div>
+            <div class="document-text">Original Class XII Board Migration Certificate.</div>
           </div>
+          <% } %>
           
           <!-- PWD Certificate -->
           <% if (content && content.isPWD) { %>

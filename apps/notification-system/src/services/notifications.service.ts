@@ -88,6 +88,7 @@ export class NotificationsService {
     }
 
     // For WhatsApp notifications without fields, store bodyValues in message for worker access
+    // For EMAIL notifications, store templateData in message for worker access
     let message = dto.message;
     if (
       dto.variant === "WHATSAPP" &&
@@ -104,6 +105,25 @@ export class NotificationsService {
           bodyValues: dto.notificationEvent.bodyValues,
         });
       }
+    } else if (dto.variant === "EMAIL" && dto.notificationEvent?.templateData) {
+      // Store templateData in message field for email worker to access
+      message = JSON.stringify({
+        originalMessage: dto.message,
+        notificationEvent: {
+          templateData: dto.notificationEvent.templateData,
+        },
+      });
+      console.log(
+        "[notif-sys] Storing templateData in message for EMAIL variant:",
+        JSON.stringify(dto.notificationEvent.templateData, null, 2),
+      );
+    } else {
+      console.log(
+        "[notif-sys] NOT storing templateData - variant:",
+        dto.variant,
+        "hasTemplateData:",
+        !!dto.notificationEvent?.templateData,
+      );
     }
 
     const insertValues: Notification = {

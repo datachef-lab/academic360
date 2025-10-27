@@ -80,6 +80,7 @@ export interface CuRegistrationFormData {
 
   // Academic Information
   boardName: string;
+  boardCode?: string;
   yearOfPassing: string;
   apaarId: string;
   cuRegistrationNumber?: string;

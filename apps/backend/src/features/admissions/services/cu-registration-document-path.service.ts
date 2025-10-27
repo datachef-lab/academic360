@@ -51,6 +51,7 @@ const DOCUMENT_SUBFOLDER_MAP: Record<string, string> = {
   FP: "ParentPhotoId",
   MP: "ParentPhotoId",
   EWS: "EwsCertificate",
+  MC: "MigrationCertificate",
 };
 
 /**
@@ -63,6 +64,7 @@ export const DOCUMENT_NAME_TO_CODE_MAP: Record<string, string> = {
   "Father Photo ID": "FP",
   "Mother Photo ID": "MP",
   "EWS Certificate": "EWS",
+  "Migration Certificate": "MC",
   // Additional mappings
   Photo: "P",
   Signature: "S",

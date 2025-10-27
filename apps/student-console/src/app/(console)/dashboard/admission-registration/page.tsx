@@ -288,6 +288,7 @@ export default function CURegistrationPage() {
     fatherPhotoId: null as File | null,
     motherPhotoId: null as File | null,
     ewsCertificate: null as File | null,
+    migrationCertificate: null as File | null,
   });
   const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
   const [showReviewConfirm, setShowReviewConfirm] = useState(false);
@@ -303,6 +304,7 @@ export default function CURegistrationPage() {
     fatherPhotoId: "Father Photo ID",
     motherPhotoId: "Mother Photo ID",
     ewsCertificate: "EWS Certificate",
+    migrationCertificate: "Migration Certificate",
   };
 
   // CU Registration correction request states
@@ -1002,6 +1004,7 @@ export default function CURegistrationPage() {
       "Father Photo ID": "fatherPhotoId",
       "Mother Photo ID": "motherPhotoId",
       "EWS Certificate": "ewsCertificate",
+      "Migration Certificate": "migrationCertificate",
     };
 
     // Update local documents state to reflect uploaded documents
@@ -2029,6 +2032,12 @@ export default function CURegistrationPage() {
       required.push("ewsCertificate");
     }
 
+    // Add migration certificate if board is migratory (not CBSE, ISC, WBCHSE, NIOS)
+    const migratoryBoards = ["CBSE", "ISC", "WBCHSE", "NIOS"];
+    if (academicInfo.board && !migratoryBoards.includes(academicInfo.board)) {
+      required.push("migrationCertificate");
+    }
+
     console.log("[CU-REG DOCUMENTS] Final required documents:", required);
     return required;
   };
@@ -2046,6 +2055,7 @@ export default function CURegistrationPage() {
           "Father Photo ID": "fatherPhotoId",
           "Mother Photo ID": "motherPhotoId",
           "EWS Certificate": "ewsCertificate",
+          "Migration Certificate": "migrationCertificate",
         };
         return documentName && documentTypeMapping[documentName] === doc;
       });
@@ -2252,6 +2262,12 @@ export default function CURegistrationPage() {
         documentsToUpload.push({
           documentName: documentNameMap.ewsCertificate,
           file: documents.ewsCertificate,
+        });
+      }
+      if (documents.migrationCertificate) {
+        documentsToUpload.push({
+          documentName: documentNameMap.migrationCertificate,
+          file: documents.migrationCertificate,
         });
       }
 
@@ -2828,6 +2844,11 @@ export default function CURegistrationPage() {
                                 <span className="text-blue-600 mr-2">•</span>
                                 EWS Certificate, issued in your name, by the Government of West Bengal (only if applying
                                 under EWS category)
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                Migration Certificate from your Class XII Board (Applicable only for boards other than
+                                CBSE, ISC, WBCHSE, NIOS)
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
@@ -4402,6 +4423,94 @@ export default function CURegistrationPage() {
                                         </p>
                                         <p className="text-xs text-gray-500">
                                           {formatFileSize(documents.ewsCertificate.size)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Migration Certificate - Only show for migratory boards */}
+                            {(() => {
+                              const migratoryBoards = ["CBSE", "ISC", "WBCHSE", "NIOS"];
+                              const isMigratoryBoard =
+                                academicInfo.board && !migratoryBoards.includes(academicInfo.board);
+                              return isMigratoryBoard;
+                            })() && (
+                              <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
+                                <div className="flex items-center justify-between mb-3">
+                                  <Label className="text-sm font-medium text-gray-700">4.7 Migration Certificate</Label>
+                                  <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                    Required
+                                  </Badge>
+                                </div>
+                                <div className="relative">
+                                  <Input
+                                    value={documents.migrationCertificate?.name || "No file chosen"}
+                                    readOnly
+                                    className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
+                                  />
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Max {getFileSizeLimit("Migration Certificate").maxSizeMB}MB • JPEG / JPG /PNG
+                                  </p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => document.getElementById("migrationCertificate")?.click()}
+                                    className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300"
+                                  >
+                                    Upload
+                                  </Button>
+                                  <input
+                                    id="migrationCertificate"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0] || null;
+                                      console.info(`[CU-REG FRONTEND] Migration Certificate file selected:`, {
+                                        name: f?.name,
+                                        size: f?.size,
+                                        sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                        type: f?.type,
+                                      });
+                                      handleFileUpload("migrationCertificate", f);
+                                    }}
+                                  />
+                                </div>
+                                {documents.migrationCertificate && (
+                                  <div className="mt-3">
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                        {documents.migrationCertificate?.type.startsWith("image/") ? (
+                                          <img
+                                            src={getFilePreviewUrl(documents.migrationCertificate)}
+                                            alt="Preview"
+                                            className="w-full h-full object-cover cursor-pointer"
+                                            onClick={() =>
+                                              documents.migrationCertificate &&
+                                              handleFilePreview(documents.migrationCertificate)
+                                            }
+                                          />
+                                        ) : (
+                                          <div
+                                            className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
+                                            onClick={() =>
+                                              documents.migrationCertificate &&
+                                              handleFilePreview(documents.migrationCertificate)
+                                            }
+                                          >
+                                            PDF
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-xs text-gray-600 truncate">
+                                          {documents.migrationCertificate.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {formatFileSize(documents.migrationCertificate.size)}
                                         </p>
                                       </div>
                                     </div>

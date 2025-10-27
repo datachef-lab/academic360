@@ -118,6 +118,10 @@ export class CuRegistrationDataService {
       console.info("[CU-REG DATA] Raw student data from database:", {
         courseName: studentData.courseName,
         courseNameType: typeof studentData.courseName,
+        handicapped: studentData.handicapped,
+        handicappedType: typeof studentData.handicapped,
+        belongsToEWS: studentData.belongsToEWS,
+        belongsToEWSType: typeof studentData.belongsToEWS,
       });
 
       // Fetch correction request to check for rectification flags and get application number
@@ -198,6 +202,11 @@ export class CuRegistrationDataService {
           ),
         );
 
+      console.info("[CU-REG DATA] Raw personal details from database:", {
+        disability: personalDetails?.disability,
+        disabilityType: typeof personalDetails?.disability,
+      });
+
       // Fetch residential address
       const [residentialAddress] = await db
         .select({
@@ -241,6 +250,7 @@ export class CuRegistrationDataService {
       const [academicDetails] = await db
         .select({
           boardName: boardModel.name,
+          boardCode: boardModel.code,
           yearOfPassing: admissionAcademicInfoModel.yearOfPassing,
           rollNumber: admissionAcademicInfoModel.rollNumber,
           cuRegistrationNumber: admissionAcademicInfoModel.cuRegistrationNumber,
@@ -365,7 +375,10 @@ export class CuRegistrationDataService {
         ),
         religionName: personalDetails?.religionName || "",
         annualIncome: annualIncomeRange,
-        pwdStatus: personalDetails?.disability ? "Yes" : "No",
+        pwdStatus:
+          studentData.handicapped || !!personalDetails?.disability
+            ? "Yes"
+            : "No",
         pwdCode: personalDetails?.disability || "",
         ewsStatus: studentData.belongsToEWS ? "Yes" : "No",
 
@@ -386,6 +399,7 @@ export class CuRegistrationDataService {
 
         // Academic Information
         boardName: academicDetails?.boardName || "",
+        boardCode: academicDetails?.boardCode || "",
         yearOfPassing: academicDetails?.yearOfPassing?.toString() || "",
         apaarId: this.formatApaarId(studentData.apaarId),
         cuRegistrationNumber:
@@ -415,6 +429,18 @@ export class CuRegistrationDataService {
         // Session information
         sessionName: sessionName,
       };
+
+      console.info("[CU-REG DATA] Document filtering flags:", {
+        isIndian: formData.isIndian,
+        isSCSTOBC: formData.isSCSTOBC,
+        isPWD: formData.isPWD,
+        isEWS: formData.isEWS,
+        isForeignNational: formData.isForeignNational,
+        hasCURegistration: formData.hasCURegistration,
+        belongsToEWS: studentData.belongsToEWS,
+        handicapped: studentData.handicapped,
+        disability: personalDetails?.disability,
+      });
 
       console.info("[CU-REG DATA] Student data fetched successfully", {
         studentName: formData.studentName,
