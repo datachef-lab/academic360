@@ -189,6 +189,9 @@
         color: #0c4a6e;
         margin: 0 0 16px 0;
       }
+      /* Roman numbered list for documents */
+      .document-list { list-style-type: lower-roman; padding-left: 20px; margin: 0; }
+      .document-list li { color: #0c4a6e; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
       
       .document-item {
         display: flex;
@@ -357,7 +360,7 @@
             Congratulations! You have successfully completed <strong>Part 1</strong> of your Admission & Registration Data Submission, i.e., online submission and confirmation of your data.
         </div>
         
-        <div class="intro-text">
+        <div class="intro-text" style="margin-top: 8px;">
           It is <strong>MANDATORY</strong> to complete <strong>Part 2</strong> of your Admission & Registration Data Submission process i.e., Physical Submission of Admission & Registration Datasheet.<br>
           The Exact schedule and process for physical submission will be published on the College Website Notice Board on <strong>29/10/2025 by 4:00 PM</strong>.
         </div>
@@ -368,84 +371,53 @@
           <p style="margin-bottom: 16px; color: #0c4a6e; font-size: 14px;">
             Documents which will be required to be submitted at the time of Physical Submission of Admission & Registration Datasheet are listed below for your reference.
           </p>
-          
-          <!-- Always required documents -->
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">Download & Print the Admission & Registration Datasheet attached with this email on an A4 size, white paper in Portrait mode with double-sided printing (mandatory).</div>
-          </div>
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of the original Class XII Board Marksheet.</div>
-          </div>
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of Class X Board Admit Card / Birth Certificate issued by Government.</div>
-          </div>
-          
-          <!-- Nationality-based documents -->
-          <% if (content && content.isIndian !== false) { %>
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of Aadhaar Card.</div>
-          </div>
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of the APAAR (ABC) ID Card.</div>
-          </div>
-          <% } %>
-          
-          <!-- Foreign nationals documents -->
-          <% if (content && content.isIndian === false) { %>
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of First and Last Page of Passport.</div>
-          </div>
-          <% } %>
-          
-          <!-- Category-based documents -->
-          <% if (content && content.isSCSTOBC) { %>
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of the Caste Certificate, issued by the Govt. of West Bengal.</div>
-          </div>
-          <% } %>
-          
-          <!-- Migration Certificate (dynamic based on board) -->
-          <% 
-            const excludedBoards = ['WBCHSE', 'ISC', 'CBSE', 'NIOS'];
-            const isMigrationCertificateRequired = content && content.boardCode && !excludedBoards.includes(content.boardCode);
-          %>
-          <% if (isMigrationCertificateRequired) { %>
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">Original Class XII Board Migration Certificate.</div>
-          </div>
-          <% } %>
-          
-          <!-- PWD Certificate -->
-          <% if (content && content.isPWD) { %>
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of the PWD Certificate. (Applicable only if applied under the Physically Handicap category)</div>
-          </div>
-          <% } %>
-          
-          <!-- EWS Certificate -->
-          <% if (content && content.isEWS) { %>
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of the EWS Certificate, issued by the Govt. of West Bengal. (Applicable only if applied under EWS category)</div>
-          </div>
-          <% } %>
-          
-          <!-- CU Registration Certificate -->
-          <% if (content && content.hasCURegistration) { %>
-          <div class="document-item">
-            <div class="document-checkbox">☐</div>
-            <div class="document-text">1 (One) Photocopy of the Calcutta University Registration Certificate. (Applicable only for students registered with Calcutta University in the year 2024 or before)</div>
-          </div>
-          <% } %>
+
+          <ol class="document-list">
+            <!-- Always required documents -->
+            <li>Download & Print the Admission & Registration Datasheet attached with this email on an A4 size, white paper in Portrait mode with double-sided printing (mandatory).</li>
+            <li>1 (One) Photocopy of the original Class XII Board Marksheet.</li>
+            <li>1 (One) Photocopy of Class X Board Admit Card / Birth Certificate issued by Government.</li>
+
+            <!-- Nationality-based documents -->
+            <% if (content && content.isIndian !== false) { %>
+              <li>1 (One) Photocopy of Aadhaar Card.</li>
+              <li>1 (One) Photocopy of the APAAR (ABC) ID Card.</li>
+            <% } %>
+
+            <!-- Foreign nationals documents -->
+            <% if (content && content.isIndian === false) { %>
+              <li>1 (One) Photocopy of First and Last Page of Passport.</li>
+            <% } %>
+
+            <!-- Category-based documents -->
+            <% if (content && content.isSCSTOBC) { %>
+              <li>1 (One) Photocopy of the Caste Certificate, issued by the Govt. of West Bengal.</li>
+            <% } %>
+
+            <!-- Migration Certificate (dynamic based on board) -->
+            <% 
+              const excludedBoards = ['WBCHSE', 'ISC', 'CBSE', 'NIOS'];
+              const isMigrationCertificateRequired = content && content.boardCode && !excludedBoards.includes(content.boardCode);
+            %>
+            <% if (isMigrationCertificateRequired) { %>
+              <li>Original Class XII Board Migration Certificate.</li>
+            <% } %>
+
+            <!-- PWD Certificate -->
+            <% if (content && content.isPWD) { %>
+              <li>1 (One) Photocopy of the PWD Certificate. (Applicable only if applied under the Physically Handicap category)</li>
+            <% } %>
+
+            <!-- EWS Certificate -->
+            <% if (content && content.isEWS) { %>
+              <li>1 (One) Photocopy of the EWS Certificate, issued by the Govt. of West Bengal. (Applicable only if applied under EWS category)</li>
+            <% } %>
+
+            <!-- CU Registration Certificate -->
+            <% if (content && content.hasCURegistration) { %>
+              <li>1 (One) Photocopy of the Calcutta University Registration Certificate. (Applicable only for students registered with Calcutta University in the year 2024 or before)</li>
+            <% } %>
+          </ol>
         </div>
         
         <!-- Important Instructions -->

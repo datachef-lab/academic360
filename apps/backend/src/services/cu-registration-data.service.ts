@@ -34,6 +34,7 @@ import {
   sessionModel,
   academicYearModel,
   classModel,
+  shiftModel,
 } from "@repo/db/schemas/models/academics";
 import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model";
 import {
@@ -302,6 +303,30 @@ export class CuRegistrationDataService {
         .from(sessionModel)
         .where(eq(sessionModel.isCurrentSession, true))
         .limit(1);
+      // Resolve student's latest shift from promotions
+      let shiftName: string = "Day";
+      try {
+        const [promotionWithShift] = await db
+          .select({
+            shiftName: shiftModel.name,
+          })
+          .from(promotionModel)
+          .leftJoin(
+            shiftModel,
+            eq(promotionModel.shiftId as any, shiftModel.id),
+          )
+          .where(eq(promotionModel.studentId, options.studentId))
+          .orderBy(desc(promotionModel.createdAt))
+          .limit(1);
+        if (promotionWithShift?.shiftName) {
+          shiftName = promotionWithShift.shiftName;
+        }
+      } catch (e) {
+        console.warn(
+          "[CU-REG DATA] Could not resolve shift from promotions, using default 'Day'",
+          e,
+        );
+      }
 
       const sessionId = currentSession?.id || 1; // Fallback to session 1
 
@@ -389,7 +414,7 @@ export class CuRegistrationDataService {
           academicDetails?.cuRegistrationNumber ||
           "",
         programCourseName: studentData.programCourseName || "",
-        shiftName: "Day", // Default shift - this might need to be fetched from actual data
+        shiftName,
         studentPhotoUrl: `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${studentData.uid}.jpg`,
 
         // Debug: Log the photo URL being generated
