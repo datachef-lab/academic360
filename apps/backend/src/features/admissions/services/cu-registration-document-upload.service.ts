@@ -242,7 +242,7 @@ export async function downloadCuRegistrationDocumentsAsZip(
   downloadType: "combined" | "pdfs" | "documents" = "combined",
 ): Promise<CuRegistrationDownloadResult> {
   try {
-    console.info("[CU-REG-DOWNLOAD] Starting document download", {
+    console.info("[CU-REG-DOWNLOAD] Starting document download - ", {
       year,
       regulationType,
     });
