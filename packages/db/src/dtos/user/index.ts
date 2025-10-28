@@ -110,6 +110,7 @@ export interface ProfileInfo {
     familyDetails: FamilyDto | null;
     personalDetails: PersonalDetailsDto | null;
     healthDetails: HealthDto | null;
+    studentFamily: FamilyDto | null;
     emergencyContactDetails: EmergencyContactT | null;
     transportDetails: TransportDetailsDto | null;
     accommodationDetails: AccommodationDto | null;

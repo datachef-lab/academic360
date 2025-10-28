@@ -116,7 +116,12 @@ export default function CURegistrationPage() {
     // Check for MCOM
     const isMCOM = normalizedName.startsWith("MCOM");
 
-    return isMA || isMCOM;
+    // Check for BCOM
+    const isBCOM = normalizedName.startsWith("BCOM");
+
+    const isBBA = normalizedName.startsWith("BBA");
+
+    return isMA || isMCOM || isBCOM || isBBA;
   }, [student?.programCourse?.name]);
 
   // Check if student's program course is BCOM (for MDC subjects)
@@ -667,7 +672,7 @@ export default function CURegistrationPage() {
   React.useEffect(() => {
     if (profileInfo?.personalDetails || student) {
       const personalDetails = profileInfo?.personalDetails as any;
-      const familyDetails = profileInfo?.familyDetails as any;
+      const familyDetails = profileInfo?.studentFamily as any;
 
       console.log("Profile data loaded:", {
         personalDetails,
@@ -2008,7 +2013,7 @@ export default function CURegistrationPage() {
     const required = ["classXIIMarksheet"];
 
     // Check family details to determine which parent documents are required
-    const familyDetails = profileInfo?.familyDetails as any;
+    const familyDetails = profileInfo?.studentFamily as any;
     const father = familyDetails?.members?.find((member: any) => member.type === "FATHER");
     const mother = familyDetails?.members?.find((member: any) => member.type === "MOTHER");
 
@@ -4171,7 +4176,7 @@ export default function CURegistrationPage() {
 
                             {/* Father's Government-issued Photo ID */}
                             {(() => {
-                              const familyDetails = profileInfo?.familyDetails as any;
+                              const familyDetails = profileInfo?.studentFamily as any;
                               const father = familyDetails?.members?.find((member: any) => member.type === "FATHER");
 
                               // Only show father's document section if father exists AND has meaningful name AND is not late
@@ -4184,7 +4189,7 @@ export default function CURegistrationPage() {
                                       Father's Government-issued Photo ID
                                     </Label>
                                     {(() => {
-                                      const familyDetails = profileInfo?.familyDetails as any;
+                                      const familyDetails = profileInfo?.studentFamily as any;
                                       const father = familyDetails?.members?.find(
                                         (member: any) => member.type === "FATHER",
                                       );
@@ -4271,7 +4276,7 @@ export default function CURegistrationPage() {
 
                             {/* Mother's Government-issued Photo ID */}
                             {(() => {
-                              const familyDetails = profileInfo?.familyDetails as any;
+                              const familyDetails = profileInfo?.studentFamily as any;
                               const mother = familyDetails?.members?.find((member: any) => member.type === "MOTHER");
 
                               // Only show mother's document section if mother exists AND has meaningful name AND is not late
@@ -4284,7 +4289,7 @@ export default function CURegistrationPage() {
                                       Mother's Government-issued Photo ID
                                     </Label>
                                     {(() => {
-                                      const familyDetails = profileInfo?.familyDetails as any;
+                                      const familyDetails = profileInfo?.studentFamily as any;
                                       const mother = familyDetails?.members?.find(
                                         (member: any) => member.type === "MOTHER",
                                       );

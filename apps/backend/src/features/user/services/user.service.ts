@@ -559,6 +559,14 @@ export async function findProfileInfo(
       )[0] ?? null;
   }
 
+  let studentFamily =
+    (
+      await db
+        .select()
+        .from(familyModel)
+        .where(eq(familyModel.userId, student?.userId!))
+    )[0] ?? null;
+
   // Map course applications to DTOs (only for students)
   const admissionCourseDetailsDto: AdmissionCourseDetailsDto | null =
     isStudent && student?.admissionCourseDetailsId
@@ -595,6 +603,7 @@ export async function findProfileInfo(
     admissionCourseDetailsDto,
     academicInfo: (await mapAcademicInfoToDto(studentAcademicInfo))!,
     familyDetails: family ? await mapFamilyToDto(family) : null,
+    studentFamily: studentFamily ? await mapFamilyToDto(studentFamily) : null,
     personalDetails: personalDetailsDto,
     healthDetails: healthDto,
     emergencyContactDetails: emergencyContactDetails ?? null,
