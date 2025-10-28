@@ -161,20 +161,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent className="!bg-purple-600">
-        <NavMain
-          items={navMainItems
-            .map((item) => {
-              if (
-                process.env.NEXT_PUBLIC_APP_ENV === "production" &&
-                item.url === "/dashboard/admission-registration"
-              ) {
-                return undefined; // Hide admission registration in production
-              }
-              return item;
-            })
-            .filter((item) => !!item)}
-          className="p-0"
-        />
+        <NavMain items={navMainItems} className="p-0" />
       </SidebarContent>
       <SidebarFooter className="!bg-purple-600 p-2">
         <NavUser />
