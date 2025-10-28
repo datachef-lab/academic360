@@ -109,6 +109,13 @@ export interface CuRegistrationFormData {
   // QR Code for application number
   qrCodeDataUrl?: string;
 
+  // QR Code for physical registration (time and venue)
+  physicalRegistrationQrCodeDataUrl?: string;
+  physicalRegistrationTime?: string;
+  physicalRegistrationVenue?: string;
+  physicalRegistrationSubmissionDate?: string;
+  noticeBoardQrUrl?: string;
+
   // Debug fields
   photoUrlDebug?: string;
 }

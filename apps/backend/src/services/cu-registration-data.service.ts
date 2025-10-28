@@ -45,6 +45,10 @@ import {
   courseModel,
 } from "@repo/db/schemas/models/course-design";
 import { CuRegistrationFormData } from "./pdf-generation.service.js";
+import path from "path";
+import fs from "fs/promises";
+import { CuRegistrationExcelService } from "./cu-registration-excel.service.js";
+// QR code no longer required for physical submission schedule
 
 export interface CuRegistrationDataOptions {
   studentId: number;
@@ -354,7 +358,7 @@ export class CuRegistrationDataService {
           studentData.cuFormNumber ||
           academicDetails?.cuRegistrationNumber ||
           "",
-        programCourseName: studentData.courseName || "",
+        programCourseName: studentData.programCourseName || "",
         shiftName: "Day", // Default shift - this might need to be fetched from actual data
         studentPhotoUrl: `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${studentData.uid}.jpg`,
 
@@ -428,6 +432,13 @@ export class CuRegistrationDataService {
 
         // Session information
         sessionName: sessionName,
+
+        // Initialize physical registration fields (will be populated if Excel data is found)
+        physicalRegistrationQrCodeDataUrl: undefined,
+        physicalRegistrationTime: undefined,
+        physicalRegistrationVenue: undefined,
+        physicalRegistrationSubmissionDate: undefined,
+        noticeBoardQrUrl: undefined,
       };
 
       console.info("[CU-REG DATA] Document filtering flags:", {
@@ -442,6 +453,65 @@ export class CuRegistrationDataService {
         disability: personalDetails?.disability,
       });
 
+      // Fetch physical registration time and venue from Excel file
+      try {
+        console.info(
+          "[CU-REG DATA] Fetching physical registration time/venue from Excel",
+          {
+            studentUid: formData.studentUid,
+          },
+        );
+
+        const timeVenueInfo =
+          await CuRegistrationExcelService.getStudentTimeVenueInfo(
+            formData.studentUid,
+          );
+
+        if (timeVenueInfo.found) {
+          console.info("[CU-REG DATA] Found time/venue info in Excel:", {
+            time: timeVenueInfo.time,
+            venue: timeVenueInfo.venue,
+            submissionDate: timeVenueInfo.submissionDate,
+          });
+          // Populate schedule fields (no QR code required)
+          formData.physicalRegistrationTime = timeVenueInfo.time;
+          formData.physicalRegistrationVenue = timeVenueInfo.venue;
+          formData.physicalRegistrationSubmissionDate =
+            timeVenueInfo.submissionDate;
+
+          console.info(
+            "[CU-REG DATA] Physical registration schedule populated successfully",
+          );
+        } else {
+          console.warn(
+            "[CU-REG DATA] No time/venue info found in Excel for student:",
+            formData.studentUid,
+          );
+        }
+      } catch (error) {
+        console.error(
+          "[CU-REG DATA] Error fetching time/venue from Excel:",
+          error,
+        );
+        // Don't fail the entire process if Excel reading fails
+      }
+
+      // Ensure notice-board QR loads inside PDF by embedding as Data URL
+      try {
+        const noticePath = path.join(
+          process.cwd(),
+          "public",
+          "notice-board-qrcode.png",
+        );
+        const noticeBuffer = await fs.readFile(noticePath);
+        formData.noticeBoardQrUrl = `data:image/png;base64,${noticeBuffer.toString("base64")}`;
+      } catch (e) {
+        console.warn(
+          "[CU-REG DATA] Could not embed notice-board-qrcode.png:",
+          e,
+        );
+      }
+
       console.info("[CU-REG DATA] Student data fetched successfully", {
         studentName: formData.studentName,
         studentUid: formData.studentUid,
@@ -455,6 +525,12 @@ export class CuRegistrationDataService {
         photoUrl: formData.studentPhotoUrl,
         courseName: studentData.courseName,
         programCourseName: studentData.programCourseName,
+        hasPhysicalRegistrationQrCode:
+          !!formData.physicalRegistrationQrCodeDataUrl,
+        physicalRegistrationTime: formData.physicalRegistrationTime,
+        physicalRegistrationVenue: formData.physicalRegistrationVenue,
+        physicalRegistrationSubmissionDate:
+          formData.physicalRegistrationSubmissionDate,
       });
 
       return formData;

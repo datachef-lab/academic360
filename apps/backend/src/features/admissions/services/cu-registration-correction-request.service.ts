@@ -24,6 +24,8 @@ import { CuRegistrationNumberService } from "@/services/cu-registration-number.s
 import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
 import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
 import { enqueueNotification } from "@/services/notificationClient.js";
+import { socketService } from "@/services/socketService.js";
+import { getMisTableData } from "@/features/subject-selection/services/student-subject-selection.service.js";
 import { AdmRegFormService } from "./adm-reg-form.service.js";
 import {
   nationalityModel,
@@ -1097,6 +1099,41 @@ export async function updateCuRegistrationCorrectionRequest(
     "[CU-REG CORRECTION][UPDATE] Completed",
     JSON.stringify({ id: updatedRequest.id }),
   );
+
+  // Emit MIS dashboard update for this student so online/physical flags reflect immediately
+  try {
+    const [promotion] = await db
+      .select({
+        sessionId: promotionModel.sessionId,
+        classId: promotionModel.classId,
+      })
+      .from(promotionModel)
+      .where(eq(promotionModel.studentId, existing.studentId))
+      .orderBy(desc(promotionModel.createdAt))
+      .limit(1);
+
+    const sessionId = promotion?.sessionId;
+    const classId = promotion?.classId;
+    const misData = await getMisTableData(sessionId as any, classId as any);
+    socketService.sendMisTableUpdate({ sessionId, classId }, misData.data, {
+      trigger: "cu_reg_request_update",
+      affectedStudents: 1,
+    });
+    socketService.sendMisTableUpdateToAll(misData.data, {
+      trigger: "cu_reg_request_update",
+      affectedStudents: 1,
+    });
+    console.info(
+      "[CU-REG CORRECTION][UPDATE] Emitted MIS update for student",
+      existing.studentId,
+    );
+  } catch (emitError) {
+    console.warn(
+      "[CU-REG CORRECTION][UPDATE] Failed to emit MIS update:",
+      emitError,
+    );
+  }
+
   return await modelToDto(updatedRequest);
 }
 

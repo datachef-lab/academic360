@@ -758,7 +758,7 @@
                                     <!-- Always required documents -->
                                     <div class="document-item">
                                         <span class="document-checkbox"></span>
-                                        <span>1 (One) Photocopyof the original Class XII Board Marksheet.</span>
+                                        <span>1 (One) Photocopy of the original Class XII Board Marksheet.</span>
                                     </div>
                                     <div class="document-item">
                                         <span class="document-checkbox"></span>
@@ -840,29 +840,51 @@
                                     </div>
                                     <% } %>
                                 </div>
-                                <!-- QR Code Section -->
+                                <!-- Physical Submission Schedule (replaces QR code section) -->
                                 <div class="qr-section my-4 py-3">
-                                    <div class="qr-grid">
-                                        <div class="qr-left">
-                                            <div class="qr-title">
-                                                Scan the QR Code to know your reporting details for Physical
-                                                Submission
-                                            </div>
-                                            <svg class="qr-arrow" viewBox="0 0 80 16"
-                                                xmlns="http://www.w3.org/2000/svg">
-                                                <defs>
-                                                    <linearGradient id="arrowBlue" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                        <stop offset="0%" stop-color="#5b8bd6" />
-                                                        <stop offset="100%" stop-color="#2c5aa0" />
-                                                    </linearGradient>
-                                                </defs>
-                                                <rect x="0" y="5" width="60" height="6" fill="url(#arrowBlue)" />
-                                                <polygon points="60,2 80,8 60,14" fill="url(#arrowBlue)" />
-                                            </svg>
-                                        </div>
-                                        <div class="qr-right">
-                                            <!-- Reserved for QR image -->
-                                        </div>
+                                    <div style="width: 100%; border: none; padding: 12px; margin: 0 auto;">
+                                        <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                                            <thead>
+                                                <tr>
+                                                    <th colspan="3" style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: 700; " class="fs-6">
+                                                        YOUR SCHEDULE FOR<br/>
+                                                        PHYSICAL SUBMISSION OF ADMISSION & REGISTRATION DATASHEET
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td style="border: 1px solid #000; padding: 8px; font-weight: bold; width: 35%;">REPORTING DATE</td>
+                                                    <td style="border: 1px solid #000; padding: 8px; text-align: center; width: 45%;"><%= physicalRegistrationSubmissionDate || '' %></td>
+                                                    <td style="border: 1px solid #000; padding: 8px; width: 20%; text-align: center;" rowspan="4">
+                                                        <img src="<%= noticeBoardQrUrl || '/notice-board-qrcode.png' %>" alt="Notice Board QR" style="width: 120px; height: 120px; object-fit: contain;"/>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="border: 1px solid #000; padding: 8px; font-weight: bold;">REPORTING TIME</td>
+                                                    <td style="border: 1px solid #000; padding: 8px; text-align: center;"><%= physicalRegistrationTime || '' %></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="border: 1px solid #000; padding: 8px; font-weight: bold;">REPORTING VENUE</td>
+                                                    <td style="border: 1px solid #000; padding: 8px; text-align: center;">
+                                                        <div style="font-weight: 700; font-style: italic;">4A Hall, Lala Lajpat Rai Sarani,</div>
+                                                        <div>Kolkata 700020</div>
+                                                        <div style="font-style: italic;">(Building next to College Premises)</div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2" style="border: 1px solid #000; padding: 8px; font-weight: 700;">
+                                                        SCAN THE QR CODE FOR DETAILED NOTICE
+                                                        <span style="float: right; display: inline-block;">
+                                                            <svg viewBox="0 0 80 16" width="120" height="16" xmlns="http://www.w3.org/2000/svg">
+                                                                <rect x="0" y="5" width="60" height="6" fill="#000" />
+                                                                <polygon points="60,2 80,8 60,14" fill="#000" />
+                                                            </svg>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                 </div> <!-- End Middle Content Section -->
@@ -1401,9 +1423,9 @@
             </div>
 
             <!-- Page 4 -->
-            <div id="page-4" style="height: 100vh" class="pt-4">
+            <div id="page-4" style="height: 100vh; display: flex; flex-direction: column; overflow: hidden;">
                 <!-- Header Section -->
-                <header>
+                <header style="flex-shrink: 0;">
                     <nav class="d-flex justify-content-center align-items-center gap-3">
                         <div class="d-flex justify-content-center align-items-center pr-5 position-relative"
                             style="width: 20%">
@@ -1428,7 +1450,8 @@
                         <div style="width: 20%"></div>
                     </nav>
                 </header>
-                <div class="py-3">
+                <!-- Middle Content Section -->
+                <div style="flex: 1; overflow-y: auto; padding: 10px 0;">
                     <h2 style="font-size: 18px; font-weight: bold;" class="pb-3 mb-4 text-center font-weight-bold text-decoration-underline"
                         style="font-weight: bold; text-underline-offset: 4px; font-family: 'Calibri', sans-serif !important;">
                         ANTI-RAGGING FORM BY PARENT/GUARDIAN
@@ -1547,8 +1570,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between align-items-center position-relative"
-                    style="bottom: -220px;">
+                <!-- Footer Section -->
+                <footer class="d-flex justify-content-between align-items-center" style="flex-shrink: 0;">
                     <p style="width: 85%; font-size: 10px">
                         This sheet is to be printed and submitted to the college in
                         original as per the physical submission schedule given on the
@@ -1557,7 +1580,7 @@
                     <p style="width: 15%; font-size: 10px" class="text-end">
                         Page 4 of 4
                     </p>
-                </div>
+                </footer>
             </div>
         </main>
     </div>

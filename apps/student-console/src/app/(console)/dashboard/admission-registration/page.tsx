@@ -501,22 +501,22 @@ export default function CURegistrationPage() {
             return "CVAC" as any;
           }
 
-          console.log(`🔍 getCategoryKey: No match found for label: "${label}"`);
+          //   console.log(`🔍 getCategoryKey: No match found for label: "${label}"`);
           return undefined;
         };
 
         // Process student selections - extract actualStudentSelections from the response
-        console.log("🔍 Full student selections API response:", studentRows);
-        console.log("🔍 studentRows.actualStudentSelections:", studentRows?.actualStudentSelections);
-        console.log("🔍 studentRows.selectedMinorSubjects:", studentRows?.selectedMinorSubjects);
-        console.log("🔍 studentRows.studentSubjectsSelection:", studentRows?.studentSubjectsSelection);
-        console.log("🔍 studentRows.hasFormSubmissions:", studentRows?.hasFormSubmissions);
-        console.log("🔍 isBcomProgram:", isBcomProgram);
-        console.log("🔍 student program course:", student?.programCourse?.name);
+        // console.log("🔍 Full student selections API response:", studentRows);
+        // console.log("🔍 studentRows.actualStudentSelections:", studentRows?.actualStudentSelections);
+        // console.log("🔍 studentRows.selectedMinorSubjects:", studentRows?.selectedMinorSubjects);
+        // console.log("🔍 studentRows.studentSubjectsSelection:", studentRows?.studentSubjectsSelection);
+        // console.log("🔍 studentRows.hasFormSubmissions:", studentRows?.hasFormSubmissions);
+        // console.log("🔍 isBcomProgram:", isBcomProgram);
+        // console.log("🔍 student program course:", student?.programCourse?.name);
 
         const actualSelections = studentRows?.actualStudentSelections || [];
-        console.log("🔍 Processing actual student selections:", actualSelections);
-        console.log("🔍 actualSelections length:", actualSelections.length);
+        // console.log("🔍 Processing actual student selections:", actualSelections);
+        // console.log("🔍 actualSelections length:", actualSelections.length);
 
         actualSelections.forEach((r: any, index: number) => {
           console.log(`🔍 Processing selection ${index}:`, r);
@@ -2872,11 +2872,6 @@ export default function CURegistrationPage() {
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                Migration Certificate from your Class XII Board (Applicable only for boards other than
-                                CBSE, ISC, WBCHSE, NIOS)
-                              </li>
-                              <li className="flex items-start">
-                                <span className="text-blue-600 mr-2">•</span>
                                 First and Last Page of your Passport (Applicable only for Foreign Nationals)
                               </li>
                             </ul>
@@ -2938,8 +2933,8 @@ export default function CURegistrationPage() {
                             <ul className="space-y-2 text-gray-700">
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                For the best experience, use a desktop or laptop with the Microsoft OS and a stable
-                                internet connection.
+                                For the best experience, use a desktop or laptop with the Microsoft Windows OS and a
+                                stable internet connection.
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
