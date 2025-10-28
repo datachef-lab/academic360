@@ -398,7 +398,7 @@ export async function findProfileInfo(
   ]);
 
   const personalDetailsDto: PersonalDetailsDto | null = personalDetailsRaw
-    ? await mapPersonalDetailsToDtoWithAddresses(personalDetailsRaw)
+    ? await mapPersonalDetailsToDtoWithAddresses(personalDetailsRaw, student)
     : null;
   const healthDto: HealthDto | null = healthRaw
     ? await mapHealthToDto(healthRaw)
@@ -573,6 +573,22 @@ export async function findProfileInfo(
           )
           .then((r) => (r[0] ? mapCourseDetailsToDto(r[0]) : null))
       : null;
+
+  if (!personalDetailsDto) return null;
+
+  console.log("[EWS DEBUG] personalDetailsDto:", personalDetailsDto);
+
+  console.log(
+    "[EWS DEBUG] Student belongsToEWS value:",
+    student?.belongsToEWS,
+    typeof student?.belongsToEWS,
+  );
+  personalDetailsDto!.ewsStatus = student?.belongsToEWS === true ? "Yes" : "No";
+  personalDetailsDto!.isEWS = student?.belongsToEWS === true;
+  console.log("[EWS DEBUG] Set EWS fields:", {
+    ewsStatus: personalDetailsDto!.ewsStatus,
+    isEWS: personalDetailsDto!.isEWS,
+  });
 
   const result: ProfileInfo = {
     applicationFormDto,
@@ -850,6 +866,7 @@ async function mapPersonalDetailsToDto(
 // Same as mapPersonalDetailsToDto, but also loads addresses linked by personalDetailsId
 async function mapPersonalDetailsToDtoWithAddresses(
   p: PersonalDetails,
+  student?: any,
 ): Promise<PersonalDetailsDto> {
   const base = await mapPersonalDetailsToDto(p);
   const addresses = await db
@@ -882,7 +899,24 @@ async function mapPersonalDetailsToDtoWithAddresses(
     }
   }
 
-  return { ...base, address: sorted, userDetails } as any;
+  const result = { ...base, address: sorted, userDetails } as any;
+
+  // Add EWS information from student table if available
+  if (student) {
+    console.log(
+      "[EWS DEBUG] Profile service - Student belongsToEWS:",
+      student.belongsToEWS,
+      typeof student.belongsToEWS,
+    );
+    result.ewsStatus = student.belongsToEWS === true ? "Yes" : "No";
+    result.isEWS = student.belongsToEWS === true;
+    console.log("[EWS DEBUG] Profile service - Set EWS fields:", {
+      ewsStatus: result.ewsStatus,
+      isEWS: result.isEWS,
+    });
+  }
+
+  return result;
 }
 
 async function mapHealthToDto(h: Health): Promise<HealthDto> {

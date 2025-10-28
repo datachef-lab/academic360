@@ -84,6 +84,9 @@ export interface PersonalDetailsDto extends Omit<PersonalDetailsT, "nationalityI
     address: AddressDto[];
     disabilityCode?: DisabilityCodeT | null;
     userDetails: UserT | null;
+    // EWS fields from student table
+    ewsStatus?: string | null; // "Yes" or "No"
+    isEWS?: boolean | null;
 }
 
 export interface TransportDetailsDto extends Omit<TransportDetailsT, "transportId" | "pickupPointId"> {

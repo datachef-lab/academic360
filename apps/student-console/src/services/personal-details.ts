@@ -11,6 +11,9 @@ export interface PersonalDetailsDto {
   nationalityId?: number | null;
   otherNationality?: string | null;
   aadhaarCardNumber?: string | null;
+  // EWS fields from student table
+  ewsStatus?: string | null; // "Yes" or "No"
+  isEWS?: boolean | null;
 }
 
 export async function fetchPersonalDetailsByStudentId(studentId: number) {

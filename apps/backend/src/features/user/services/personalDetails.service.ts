@@ -88,11 +88,22 @@ export async function findPersonalDetailsById(
 export async function findPersonalDetailsByStudentId(
   studentId: number,
 ): Promise<PersonalDetailsDto | null> {
-  // First get the student to find their userId
+  // First get the student to find their userId and EWS status
   const [student] = await db
     .select()
     .from(studentModel)
     .where(eq(studentModel.id, studentId));
+
+  console.log("[EWS DEBUG] Fetched student data:", {
+    studentId,
+    student: student
+      ? {
+          id: student.id,
+          belongsToEWS: student.belongsToEWS,
+          userId: student.userId,
+        }
+      : null,
+  });
 
   if (!student) {
     return null;
@@ -110,6 +121,23 @@ export async function findPersonalDetailsByStudentId(
 
   const formattedPersonalDetails =
     await personalDetailsResponseFormat(foundPersonalDetail);
+
+  // Add EWS information from student table
+  if (formattedPersonalDetails) {
+    console.log(
+      "[EWS DEBUG] Student belongsToEWS value:",
+      student.belongsToEWS,
+      typeof student.belongsToEWS,
+    );
+    formattedPersonalDetails.ewsStatus =
+      student.belongsToEWS === true ? "Yes" : "No";
+    formattedPersonalDetails.isEWS = student.belongsToEWS === true;
+    console.log("[EWS DEBUG] Set EWS fields:", {
+      ewsStatus: formattedPersonalDetails.ewsStatus,
+      isEWS: formattedPersonalDetails.isEWS,
+    });
+  }
+
   return formattedPersonalDetails;
 }
 

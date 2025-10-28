@@ -694,11 +694,26 @@ export default function CURegistrationPage() {
         });
       }
 
+      console.log("[EWS DEBUG] personalDetails:", personalDetails);
+
       if (personalDetails) {
         // Extract parent name from family details members array
         const father = familyDetails?.members?.find((member: any) => member.type === "FATHER");
         const mother = familyDetails?.members?.find((member: any) => member.type === "MOTHER");
         const parentName = father?.name || mother?.name || "";
+
+        // Debug EWS value - check both possible fields
+        console.log("[EWS DEBUG] personalDetails.ews:", personalDetails, typeof personalDetails.ews);
+        console.log(
+          "[EWS DEBUG] personalDetails.ewsStatus:",
+          personalDetails.ewsStatus,
+          typeof personalDetails.ewsStatus,
+        );
+        console.log("[EWS DEBUG] personalDetails.isEWS:", personalDetails.isEWS, typeof personalDetails.isEWS);
+
+        // Use ewsStatus if available, otherwise fall back to ews boolean
+        const ewsValue = personalDetails.ewsStatus || (personalDetails.ews ? "Yes" : "No");
+        console.log("[EWS DEBUG] final ews value:", ewsValue);
 
         setPersonalInfo((prev) => ({
           ...prev,
@@ -706,7 +721,7 @@ export default function CURegistrationPage() {
           parentName: parentName || prev.parentName,
           gender: personalDetails.gender || prev.gender,
           nationality: personalDetails.nationality?.name || prev.nationality,
-          ews: personalDetails.ews ? "Yes" : "No",
+          ews: ewsValue,
           aadhaarNumber: formatAadhaarNumber(personalDetails.aadhaarCardNumber || prev.aadhaarNumber),
           apaarId: formatApaarId(personalDetails.apaarId || prev.apaarId),
         }));
@@ -2006,24 +2021,33 @@ export default function CURegistrationPage() {
       motherExists: !!mother,
       fatherHasName: !!father?.name?.trim(),
       motherHasName: !!mother?.name?.trim(),
+      fatherTitle: father?.title,
+      motherTitle: mother?.title,
+      fatherIsLate: father?.title === "LATE",
+      motherIsLate: mother?.title === "LATE",
     });
 
-    // Only require parent documents for parents that exist AND have meaningful names
-    if (father && father.name?.trim()) {
-      console.log("[CU-REG DOCUMENTS] Father exists with name - requiring father document");
+    // Only require parent documents for parents that exist AND have meaningful names AND are not late
+    if (father && father.name?.trim() && father.title !== "LATE") {
+      console.log("[CU-REG DOCUMENTS] Father exists with name and is not late - requiring father document");
       required.push("fatherPhotoId");
     }
 
-    if (mother && mother.name?.trim()) {
-      console.log("[CU-REG DOCUMENTS] Mother exists with name - requiring mother document");
+    if (mother && mother.name?.trim() && mother.title !== "LATE") {
+      console.log("[CU-REG DOCUMENTS] Mother exists with name and is not late - requiring mother document");
       required.push("motherPhotoId");
     }
 
     // Always require APAAR ID Card (ABC ID) - this is mandatory
     required.push("apaarIdCard");
 
-    // Add Aadhaar if available (in addition to APAAR)
-    if (personalInfo.aadhaarNumber && personalInfo.aadhaarNumber !== "XXXX XXXX XXXX") {
+    // Add Aadhaar if nationality is Indian AND Aadhaar number is available
+    if (
+      personalInfo.nationality === "Indian" &&
+      personalInfo.aadhaarNumber &&
+      personalInfo.aadhaarNumber !== "XXXX XXXX XXXX"
+    ) {
+      console.log("[CU-REG DOCUMENTS] Indian nationality with Aadhaar number - requiring Aadhaar card");
       required.push("aadhaarCard");
     }
 
@@ -3997,80 +4021,80 @@ export default function CURegistrationPage() {
                               )}
                             </div>
 
-                            {/* Aadhaar Card */}
-                            <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
-                              <div className="flex items-center justify-between mb-3">
-                                <Label className="text-sm font-medium text-gray-700">
-                                  4.2 Aadhaar Card (if Indian)
-                                </Label>
-                                <Badge variant="outline" className="text-xs text-red-600 border-red-600">
-                                  Required
-                                </Badge>
-                              </div>
-                              <div className="relative">
-                                <Input
-                                  value={documents.aadhaarCard?.name || "No file chosen"}
-                                  readOnly
-                                  className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => document.getElementById("aadhaarCard")?.click()}
-                                  className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300 bg-white"
-                                >
-                                  Upload
-                                </Button>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Max {getFileSizeLimit("Aadhaar Card").maxSizeMB}MB • JPEG / JPG /PNG
-                                </p>
-                                <input
-                                  id="aadhaarCard"
-                                  type="file"
-                                  accept=".jpg,.jpeg,.png"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const f = e.target.files?.[0] || null;
-                                    console.info(`[CU-REG FRONTEND] Aadhaar Card file selected:`, {
-                                      name: f?.name,
-                                      size: f?.size,
-                                      sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
-                                      type: f?.type,
-                                    });
-                                    handleFileUpload("aadhaarCard", f);
-                                  }}
-                                />
-                              </div>
-                              {documents.aadhaarCard && (
-                                <div className="mt-3">
-                                  <div className="flex items-center space-x-2">
-                                    <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
-                                      {documents.aadhaarCard.type.startsWith("image/") ? (
-                                        <img
-                                          src={getFilePreviewUrl(documents.aadhaarCard)}
-                                          alt="Preview"
-                                          className="w-full h-full object-cover cursor-pointer"
-                                          onClick={() => handleFilePreview(documents.aadhaarCard!)}
-                                        />
-                                      ) : (
-                                        <div
-                                          className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
-                                          onClick={() => handleFilePreview(documents.aadhaarCard!)}
-                                        >
-                                          PDF
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex-1">
-                                      <p className="text-xs text-gray-600 truncate">{documents.aadhaarCard.name}</p>
-                                      <p className="text-xs text-gray-500">
-                                        {formatFileSize(documents.aadhaarCard.size)}
-                                      </p>
+                            {/* Aadhaar Card - Only show for Indian nationals */}
+                            {personalInfo.nationality === "Indian" && (
+                              <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
+                                <div className="flex items-center justify-between mb-3">
+                                  <Label className="text-sm font-medium text-gray-700">4.2 Aadhaar Card</Label>
+                                  <Badge variant="outline" className="text-xs text-red-600 border-red-600">
+                                    Required
+                                  </Badge>
+                                </div>
+                                <div className="relative">
+                                  <Input
+                                    value={documents.aadhaarCard?.name || "No file chosen"}
+                                    readOnly
+                                    className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => document.getElementById("aadhaarCard")?.click()}
+                                    className="absolute right-[0.2rem] top-[32%] -translate-y-1/2 h-7 px-3 text-xs border-gray-300 bg-white"
+                                  >
+                                    Upload
+                                  </Button>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Max {getFileSizeLimit("Aadhaar Card").maxSizeMB}MB • JPEG / JPG /PNG
+                                  </p>
+                                  <input
+                                    id="aadhaarCard"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0] || null;
+                                      console.info(`[CU-REG FRONTEND] Aadhaar Card file selected:`, {
+                                        name: f?.name,
+                                        size: f?.size,
+                                        sizeMB: f ? (f.size / 1024 / 1024).toFixed(2) : "N/A",
+                                        type: f?.type,
+                                      });
+                                      handleFileUpload("aadhaarCard", f);
+                                    }}
+                                  />
+                                </div>
+                                {documents.aadhaarCard && (
+                                  <div className="mt-3">
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-8 h-8 border border-gray-300 rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                        {documents.aadhaarCard.type.startsWith("image/") ? (
+                                          <img
+                                            src={getFilePreviewUrl(documents.aadhaarCard)}
+                                            alt="Preview"
+                                            className="w-full h-full object-cover cursor-pointer"
+                                            onClick={() => handleFilePreview(documents.aadhaarCard!)}
+                                          />
+                                        ) : (
+                                          <div
+                                            className="w-full h-full flex items-center justify-center bg-red-50 text-red-600 text-xs cursor-pointer"
+                                            onClick={() => handleFilePreview(documents.aadhaarCard!)}
+                                          >
+                                            PDF
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-xs text-gray-600 truncate">{documents.aadhaarCard.name}</p>
+                                        <p className="text-xs text-gray-500">
+                                          {formatFileSize(documents.aadhaarCard.size)}
+                                        </p>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              )}
-                            </div>
+                                )}
+                              </div>
+                            )}
 
                             {/* APAAR ID Card */}
                             <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
@@ -4150,8 +4174,8 @@ export default function CURegistrationPage() {
                               const familyDetails = profileInfo?.familyDetails as any;
                               const father = familyDetails?.members?.find((member: any) => member.type === "FATHER");
 
-                              // Only show father's document section if father exists AND has meaningful name
-                              if (!father || !father.name?.trim()) return null;
+                              // Only show father's document section if father exists AND has meaningful name AND is not late
+                              if (!father || !father.name?.trim() || father.title === "LATE") return null;
 
                               return (
                                 <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
@@ -4165,8 +4189,8 @@ export default function CURegistrationPage() {
                                         (member: any) => member.type === "FATHER",
                                       );
 
-                                      // Show required only if father exists AND has meaningful name
-                                      const isRequired = !!(father && father.name?.trim());
+                                      // Show required only if father exists AND has meaningful name AND is not late
+                                      const isRequired = !!(father && father.name?.trim() && father.title !== "LATE");
 
                                       return isRequired ? (
                                         <Badge variant="outline" className="text-xs text-red-600 border-red-600">
@@ -4250,8 +4274,8 @@ export default function CURegistrationPage() {
                               const familyDetails = profileInfo?.familyDetails as any;
                               const mother = familyDetails?.members?.find((member: any) => member.type === "MOTHER");
 
-                              // Only show mother's document section if mother exists AND has meaningful name
-                              if (!mother || !mother.name?.trim()) return null;
+                              // Only show mother's document section if mother exists AND has meaningful name AND is not late
+                              if (!mother || !mother.name?.trim() || mother.title === "LATE") return null;
 
                               return (
                                 <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
@@ -4265,8 +4289,8 @@ export default function CURegistrationPage() {
                                         (member: any) => member.type === "MOTHER",
                                       );
 
-                                      // Show required only if mother exists AND has meaningful name
-                                      const isRequired = !!(mother && mother.name?.trim());
+                                      // Show required only if mother exists AND has meaningful name AND is not late
+                                      const isRequired = !!(mother && mother.name?.trim() && mother.title !== "LATE");
 
                                       return isRequired ? (
                                         <Badge variant="outline" className="text-xs text-red-600 border-red-600">
