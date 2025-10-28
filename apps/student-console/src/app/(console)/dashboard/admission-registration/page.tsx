@@ -2057,7 +2057,7 @@ export default function CURegistrationPage() {
     }
 
     // Add migration certificate if board is migratory (not CBSE, ISC, WBCHSE, NIOS)
-    const migratoryBoards = ["CBSE", "ISC", "WBCHSE", "NIOS"];
+    const migratoryBoards = ["CBSE", "ICSE", "WBCHSE", "NIOS"];
     const boardCode = profileInfo?.applicationFormDto?.academicInfo?.board?.code;
     if (boardCode && !migratoryBoards.includes(boardCode)) {
       required.push("migrationCertificate");
