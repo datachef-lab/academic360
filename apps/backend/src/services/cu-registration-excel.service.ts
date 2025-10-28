@@ -1,4 +1,9 @@
 import { readExcelFile } from "../utils/readExcel.js";
+import { db } from "@/db/index.js";
+import { eq } from "drizzle-orm";
+import { studentModel } from "@repo/db/schemas/models/user";
+import { cuPhysicalRegModel } from "@repo/db/schemas/models/admissions/cu-physical-reg-model.js";
+import { classModel } from "@repo/db/schemas/models/academics";
 import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
@@ -120,178 +125,72 @@ export class CuRegistrationExcelService {
       // Read Excel file
       const rawData = await readExcelFile<any>(filePath);
 
-      // Transform raw data to our interface
+      // Transform raw data to our interface (preserve exact strings from Excel)
       const transformedData: CuRegistrationExcelData[] = rawData.map(
         (row: any, index: number) => {
-          // Handle different possible column names/structures
-          // Try all possible column name variations
-          const rawSubmissionDate =
-            row["Submission dat"] ||
-            row["SubmissionDate"] ||
-            row["submissionDate"] ||
-            row["Submission Date"] ||
-            row["submission date"] ||
-            row["Date"] ||
-            row["date"] ||
-            row["Submission"] ||
-            row["submission"] ||
-            "";
-          const rawTime = row["Time"] || row["time"] || "";
-
-          // Debug: Log all available columns for first few records
-          if (index < 3) {
-            console.info(
-              `[CU-REG EXCEL] Available columns in row ${index + 1}:`,
-              Object.keys(row),
-            );
-            console.info(`[CU-REG EXCEL] Raw row data:`, row);
+          // Build a case-insensitive, trimmed key map for this row
+          const toKey = (s: string) =>
+            String(s || "")
+              .trim()
+              .toLowerCase()
+              .replace(/\s+/g, " ");
+          const rowKeyMap = new Map<string, string>();
+          for (const k of Object.keys(row)) {
+            rowKeyMap.set(toKey(k), k);
           }
-
-          // Debug logging for first few records
-          if (index < 3) {
-            console.info(`[CU-REG EXCEL] Record ${index + 1} raw values:`, {
-              rawSubmissionDate,
-              rawTime,
-              submissionDateType: typeof rawSubmissionDate,
-              timeType: typeof rawTime,
-            });
-          }
-
-          // Format submission date properly
-          let formattedSubmissionDate = "";
-          if (rawSubmissionDate) {
-            try {
-              // If it's a number (Excel date serial), convert it
-              if (typeof rawSubmissionDate === "number") {
-                // Check if it's just a year (like 2025)
-                if (rawSubmissionDate >= 2000 && rawSubmissionDate <= 2100) {
-                  console.warn(
-                    `[CU-REG EXCEL] Date appears to be just year: ${rawSubmissionDate}, using fallback`,
-                  );
-                  formattedSubmissionDate = `03/11/${rawSubmissionDate}`; // Default to Nov 3rd
-                } else {
-                  // Excel date serial number - convert to date
-                  const date = new Date(
-                    (rawSubmissionDate - 25569) * 86400 * 1000,
-                  );
-                  formattedSubmissionDate = date.toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  });
-                }
-              } else if (typeof rawSubmissionDate === "string") {
-                // If it's already a string, try to parse and format it
-                const parsedDate = new Date(rawSubmissionDate);
-                if (!isNaN(parsedDate.getTime())) {
-                  formattedSubmissionDate = parsedDate.toLocaleDateString(
-                    "en-GB",
-                    {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    },
-                  );
-                } else {
-                  formattedSubmissionDate = rawSubmissionDate; // Use as-is if can't parse
-                }
-              } else {
-                formattedSubmissionDate = String(rawSubmissionDate);
-              }
-            } catch (error) {
-              console.warn(
-                `[CU-REG EXCEL] Error formatting submission date: ${error}`,
-              );
-              formattedSubmissionDate = String(rawSubmissionDate);
+          const pick = (...cands: string[]) => {
+            for (const c of cands) {
+              const key = rowKeyMap.get(toKey(c));
+              if (key && key in row) return row[key];
             }
-          }
+            return "";
+          };
 
-          // If submission date is still empty, use default
-          if (!formattedSubmissionDate) {
-            console.warn(
-              `[CU-REG EXCEL] No submission date found, using default: 03/11/2025`,
-            );
-            formattedSubmissionDate = "03/11/2025";
-          }
+          const rawSubmissionDate = pick(
+            "Submission date",
+            "Submission Date",
+            "submission date",
+            "SubmissionDate",
+            "submissionDate",
+            "Date",
+            "Submission",
+          );
+          const rawTime = pick("Time");
+          const rawVenue = pick("Venue");
+          const rawCode = pick("Code");
+          const rawStudent = pick("Student");
+          const rawClass = pick("Class");
+          const rawCourse = pick("Course");
+          const rawSection = pick("Section");
+          const rawShift = pick("Shift");
+          const rawEmail = pick(
+            "Institute Email",
+            "InstituteEmail",
+            "instituteEmail",
+          );
 
-          // Format time properly
-          let formattedTime = "";
-          if (rawTime) {
-            try {
-              // If it's a number (Excel time decimal), convert it
-              if (typeof rawTime === "number") {
-                // Excel time is stored as decimal fraction of a day
-                const totalSeconds = Math.round(rawTime * 24 * 60 * 60);
-                const hours = Math.floor(totalSeconds / 3600);
-                const minutes = Math.floor((totalSeconds % 3600) / 60);
+          const codeRaw = String(rawCode ?? "").trim();
+          const paddedCode = /^\d+$/.test(codeRaw)
+            ? codeRaw.padStart(10, "0")
+            : codeRaw;
 
-                // Format as 12-hour time
-                const period = hours >= 12 ? "PM" : "AM";
-                const displayHours =
-                  hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                formattedTime = `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
-              } else if (typeof rawTime === "string") {
-                // If it's already a string, try to parse and format it
-                const timeMatch = rawTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-                if (timeMatch) {
-                  formattedTime = rawTime; // Already formatted
-                } else {
-                  // Try to parse as time
-                  const parsedTime = new Date(`2000-01-01 ${rawTime}`);
-                  if (!isNaN(parsedTime.getTime())) {
-                    formattedTime = parsedTime.toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    });
-                  } else {
-                    formattedTime = rawTime; // Use as-is if can't parse
-                  }
-                }
-              } else {
-                formattedTime = String(rawTime);
-              }
-            } catch (error) {
-              console.warn(`[CU-REG EXCEL] Error formatting time: ${error}`);
-              formattedTime = String(rawTime);
-            }
-          }
-
-          // If time is still empty, use default
-          if (!formattedTime) {
-            console.warn(
-              `[CU-REG EXCEL] No time found, using default: 10:30 AM`,
-            );
-            formattedTime = "10:30 AM";
-          }
-
-          // Debug logging for first few records after formatting
-          if (index < 3) {
-            console.info(
-              `[CU-REG EXCEL] Record ${index + 1} formatted values:`,
-              {
-                formattedSubmissionDate,
-                formattedTime,
-              },
-            );
-          }
+          // Sr No variants
+          const rawSr = pick("Sr. No", "Sr No", "SrNo", "Sr#", "Sr");
+          const srNo =
+            Number(String(rawSr || "").replace(/[^0-9]/g, "")) || index + 1;
 
           return {
-            srNo: row["Sr. No"] || row["Sr No"] || row["SrNo"] || index + 1,
-            code: row["Code"] || row["code"] || "",
-            student: row["Student"] || row["student"] || "",
-            class: row["Class"] || row["class"] || "",
-            course: row["Course"] || row["course"] || "",
-            section: row["Section"] || row["section"] || "",
-            shift: row["Shift"] || row["shift"] || "",
-            instituteEmail:
-              row["Institute Email"] ||
-              row["InstituteEmail"] ||
-              row["instituteEmail"] ||
-              "",
-            submissionDate: formattedSubmissionDate,
-            time: formattedTime,
-            venue: row["Venue"] || row["venue"] || "",
+            srNo,
+            code: paddedCode,
+            student: String(rawStudent ?? "").trim(),
+            class: String(rawClass ?? "").trim(),
+            course: String(rawCourse ?? "").trim(),
+            section: String(rawSection ?? "").trim(),
+            shift: String(rawShift ?? "").trim(),
+            instituteEmail: String(rawEmail ?? "").trim(),
+            submissionDate: String(rawSubmissionDate ?? "").trim(),
+            time: String(rawTime ?? "").trim(),
+            venue: String(rawVenue ?? "").trim(),
           };
         },
       );
@@ -354,11 +253,14 @@ export class CuRegistrationExcelService {
 
       const excelData = await this.loadExcelData();
 
-      // Find student by code (UID)
-      const studentRecord = excelData.find(
-        (record) =>
-          record.code === studentUid || record.code === studentUid.toString(),
-      );
+      const normalizedUid = (() => {
+        const s = String(studentUid || "").trim();
+        return /^\d+$/.test(s) ? s.padStart(10, "0") : s;
+      })();
+
+      // Find exact match by normalized code (multiple rows possible; prefer first with both time and venue)
+      const matches = excelData.filter((r) => r.code === normalizedUid);
+      let studentRecord = matches.find((r) => r.time && r.venue) || matches[0];
 
       if (!studentRecord) {
         console.warn(
@@ -390,16 +292,8 @@ export class CuRegistrationExcelService {
         studentRecord.submissionDate,
       );
 
-      // If submission date is empty, try to provide a fallback
-      let finalSubmissionDate = studentRecord.submissionDate || "";
-      if (!finalSubmissionDate) {
-        // Try to extract year from filename or provide current year
-        const currentYear = new Date().getFullYear();
-        finalSubmissionDate = `2025`; // Default to 2025 as mentioned in filename
-        console.warn(
-          `[CU-REG EXCEL] No submission date found, using fallback: ${finalSubmissionDate}`,
-        );
-      }
+      // Preserve submission date exactly as in Excel (no fallback)
+      const finalSubmissionDate = studentRecord.submissionDate || "";
 
       return {
         time: studentRecord.time || "",
@@ -470,5 +364,189 @@ Please maintain the above mentioned slot allotted to you for physical submission
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Sync all Excel schedule rows into DB table cu_physical_reg by matching student.uid to Excel code.
+   * - Normalizes UID/code (trim + zero-pad to 10 digits if numeric)
+   * - Upserts per student (update if exists, otherwise insert)
+   */
+  public static async syncAllToDatabase(): Promise<{
+    processed: number;
+    matched: number;
+    inserted: number;
+    updated: number;
+    unmatched: number;
+  }> {
+    const rows = await this.getAllExcelData();
+
+    // Load classes and build a case-insensitive lookup map
+    const classes = await db
+      .select({ id: classModel.id, name: classModel.name })
+      .from(classModel);
+    const normalizeKey = (s: any) =>
+      String(s ?? "")
+        .trim()
+        .toLowerCase();
+    const classNameToId = new Map<string, number>();
+    for (const c of classes) {
+      classNameToId.set(normalizeKey(c.name), c.id);
+    }
+
+    const normalizeUid = (v: any): string => {
+      let s = String(v ?? "").trim();
+      if (/^\d+$/.test(s)) s = s.padStart(10, "0");
+      return s;
+    };
+
+    const parseDdMmYyyy = (input: string): Date | null => {
+      if (!input) return null;
+      const d = String(input).trim();
+
+      // 1) dd/mm/yyyy or d/m/yyyy
+      let m = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (m) {
+        const day = Number(m[1]);
+        const month = Number(m[2]) - 1;
+        const year = Number(m[3]);
+        return new Date(Date.UTC(year, month, day));
+      }
+
+      // 2) dd-mm-yyyy or d-m-yyyy
+      m = d.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+      if (m) {
+        const day = Number(m[1]);
+        const month = Number(m[2]) - 1;
+        const year = Number(m[3]);
+        return new Date(Date.UTC(year, month, day));
+      }
+
+      // 3) Excel serial number (as string or number)
+      if (/^\d+(\.\d+)?$/.test(d)) {
+        const serial = parseFloat(d);
+        if (!isNaN(serial)) {
+          const ms = (serial - 25569) * 86400 * 1000;
+          const date = new Date(ms);
+          if (!isNaN(date.getTime()))
+            return new Date(
+              Date.UTC(
+                date.getUTCFullYear(),
+                date.getUTCMonth(),
+                date.getUTCDate(),
+              ),
+            );
+        }
+      }
+
+      // 4) Fallback: Date constructor (handles ISO etc.)
+      const parsed = new Date(d);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    const formatExcelTimeTo12h = (input: any): string => {
+      const s = String(input ?? "").trim();
+      if (!s) return "";
+      // Numeric fraction of day (e.g., 0.4375)
+      if (/^\d+(\.\d+)?$/.test(s)) {
+        const fraction = parseFloat(s);
+        if (!isNaN(fraction)) {
+          const totalMinutes = Math.round(fraction * 24 * 60);
+          const hours24 = Math.floor(totalMinutes / 60) % 24;
+          const minutes = totalMinutes % 60;
+          const period = hours24 >= 12 ? "PM" : "AM";
+          const hours12 = hours24 % 12 || 12;
+          return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
+        }
+      }
+      // Already a time string; return as-is
+      return s;
+    };
+
+    let processed = 0;
+    let matched = 0;
+    let inserted = 0;
+    let updated = 0;
+
+    for (const row of rows) {
+      processed++;
+      const code = normalizeUid(row.code);
+      if (!code) continue;
+
+      // Find student by exact uid
+      const [student] = await db
+        .select({ id: studentModel.id, uid: studentModel.uid })
+        .from(studentModel)
+        .where(eq(studentModel.uid, code))
+        .limit(1);
+
+      if (!student) {
+        continue; // unmatched
+      }
+      matched++;
+
+      // Resolve classId from Excel class string (case-insensitive, trimmed)
+      const classNameKey = normalizeKey(row.class);
+      const classId = classNameToId.get(classNameKey);
+      if (!classId) {
+        // If class not resolvable, skip this row to avoid wrong associations
+        console.warn(
+          `[CU-REG EXCEL] Skipping UID ${code} due to unknown class '${row.class}'`,
+        );
+        continue;
+      }
+
+      const submissionDate = parseDdMmYyyy(row.submissionDate);
+      const submissionDateStr = submissionDate
+        ? submissionDate.toISOString().slice(0, 10)
+        : null; // allow null in DB
+      const time = formatExcelTimeTo12h(row.time);
+      const venue = String(row.venue || "").trim();
+
+      // Check if record exists for this student
+      const [existing] = await db
+        .select({ id: cuPhysicalRegModel.id })
+        .from(cuPhysicalRegModel)
+        .where(
+          // composite match (studentId, classId)
+          // @ts-ignore drizzle types allow and()
+          (await import("drizzle-orm")).and(
+            eq(cuPhysicalRegModel.studentId, student.id),
+            eq(cuPhysicalRegModel.classId, classId),
+          ),
+        )
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(cuPhysicalRegModel)
+          .set({
+            time,
+            venue,
+            submissionDate: submissionDateStr as any,
+            updatedAt: new Date(),
+          })
+          .where(eq(cuPhysicalRegModel.id, existing.id));
+        updated++;
+      } else {
+        await db.insert(cuPhysicalRegModel).values({
+          studentId: student.id,
+          classId,
+          time,
+          venue,
+          submissionDate: submissionDateStr as any,
+        });
+        inserted++;
+      }
+    }
+
+    const result = {
+      processed,
+      matched,
+      inserted,
+      updated,
+      unmatched: processed - matched,
+    };
+    console.info("[CU-REG EXCEL] Sync complete:", result);
+    return result;
   }
 }

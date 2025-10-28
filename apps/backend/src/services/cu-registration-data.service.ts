@@ -51,6 +51,7 @@ import fs from "fs/promises";
 import { CuRegistrationExcelService } from "./cu-registration-excel.service.js";
 // QR code no longer required for physical submission schedule
 import { fileURLToPath } from "url";
+import { cuPhysicalRegModel } from "@repo/db/schemas/models/admissions/cu-physical-reg-model.js";
 
 export interface CuRegistrationDataOptions {
   studentId: number;
@@ -303,12 +304,14 @@ export class CuRegistrationDataService {
         .from(sessionModel)
         .where(eq(sessionModel.isCurrentSession, true))
         .limit(1);
-      // Resolve student's latest shift from promotions
+      // Resolve student's latest shift and class from promotions
       let shiftName: string = "Day";
+      let latestClassId: number | null = null;
       try {
         const [promotionWithShift] = await db
           .select({
             shiftName: shiftModel.name,
+            classId: promotionModel.classId,
           })
           .from(promotionModel)
           .leftJoin(
@@ -321,6 +324,7 @@ export class CuRegistrationDataService {
         if (promotionWithShift?.shiftName) {
           shiftName = promotionWithShift.shiftName;
         }
+        latestClassId = promotionWithShift?.classId ?? null;
       } catch (e) {
         console.warn(
           "[CU-REG DATA] Could not resolve shift from promotions, using default 'Day'",
@@ -508,47 +512,63 @@ export class CuRegistrationDataService {
         disability: personalDetails?.disability,
       });
 
-      // Fetch physical registration time and venue from Excel file
+      // Fetch physical registration time and venue from DB first; fallback to Excel
       try {
-        console.info(
-          "[CU-REG DATA] Fetching physical registration time/venue from Excel",
-          {
-            studentUid: formData.studentUid,
-          },
-        );
+        if (latestClassId) {
+          const [reg] = await db
+            .select({
+              time: cuPhysicalRegModel.time,
+              venue: cuPhysicalRegModel.venue,
+              submissionDate: cuPhysicalRegModel.submissionDate,
+            })
+            .from(cuPhysicalRegModel)
+            .where(
+              and(
+                eq(cuPhysicalRegModel.studentId, options.studentId),
+                eq(cuPhysicalRegModel.classId, latestClassId),
+              ),
+            )
+            .limit(1);
 
-        const timeVenueInfo =
-          await CuRegistrationExcelService.getStudentTimeVenueInfo(
-            formData.studentUid,
-          );
+          if (reg) {
+            const submissionDateStr =
+              CuRegistrationDataService.formatDateYYYYMMDDToDDMMYYYY(
+                reg.submissionDate as unknown as string,
+              );
+            formData.physicalRegistrationTime = reg.time || "";
+            formData.physicalRegistrationVenue = reg.venue || "";
+            formData.physicalRegistrationSubmissionDate =
+              submissionDateStr || "";
+            console.info(
+              "[CU-REG DATA] Populated schedule from DB model (cu_physical_reg)",
+            );
+          }
+        }
 
-        if (timeVenueInfo.found) {
-          console.info("[CU-REG DATA] Found time/venue info in Excel:", {
-            time: timeVenueInfo.time,
-            venue: timeVenueInfo.venue,
-            submissionDate: timeVenueInfo.submissionDate,
-          });
-          // Populate schedule fields (no QR code required)
-          formData.physicalRegistrationTime = timeVenueInfo.time;
-          formData.physicalRegistrationVenue = timeVenueInfo.venue;
-          formData.physicalRegistrationSubmissionDate =
-            timeVenueInfo.submissionDate;
-
+        if (
+          !formData.physicalRegistrationTime ||
+          !formData.physicalRegistrationVenue
+        ) {
           console.info(
-            "[CU-REG DATA] Physical registration schedule populated successfully",
+            "[CU-REG DATA] Falling back to Excel for time/venue using UID",
+            { uid: formData.studentUid },
           );
-        } else {
-          console.warn(
-            "[CU-REG DATA] No time/venue info found in Excel for student:",
-            formData.studentUid,
-          );
+          const timeVenueInfo =
+            await CuRegistrationExcelService.getStudentTimeVenueInfo(
+              formData.studentUid,
+            );
+          if (timeVenueInfo.found) {
+            formData.physicalRegistrationTime = timeVenueInfo.time;
+            formData.physicalRegistrationVenue = timeVenueInfo.venue;
+            formData.physicalRegistrationSubmissionDate =
+              timeVenueInfo.submissionDate;
+          }
         }
       } catch (error) {
         console.error(
-          "[CU-REG DATA] Error fetching time/venue from Excel:",
+          "[CU-REG DATA] Error fetching schedule from DB/Excel:",
           error,
         );
-        // Don't fail the entire process if Excel reading fails
       }
 
       // Ensure notice-board QR loads inside PDF by embedding as Data URL
@@ -611,6 +631,23 @@ export class CuRegistrationDataService {
         `Failed to fetch student data: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
+  }
+
+  private static formatDateYYYYMMDDToDDMMYYYY(
+    input: string | undefined | null,
+  ): string {
+    if (!input) return "";
+    // input may be YYYY-MM-DD or a Date string; try both
+    const isoMatch = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+      const [, y, m, d] = isoMatch;
+      return `${d}/${m}/${y}`;
+    }
+    const dt = new Date(input);
+    if (!isNaN(dt.getTime())) {
+      return dt.toLocaleDateString("en-GB");
+    }
+    return String(input);
   }
 
   private static formatStudentName(personalDetails: any): string {

@@ -32,6 +32,7 @@ import {
 } from "@/features/user/services/old-student.service";
 import { loadDefaultOtpNotificationMasters } from "@/features/auth/services/otp.service";
 // import { loadDefaultOtpNotificationMaster } from "@/features/auth/services/otp.service";
+import { CuRegistrationExcelService } from "@/services/cu-registration-excel.service.js";
 
 // Create a connection pool
 const pool = new pg.Pool({
@@ -77,6 +78,14 @@ export const connectToDatabase = async () => {
     // loadOldSubjects();
     // loadOldCourses();
     // loadOldSubjectTypes();
+
+    // Load CU physical registration schedule from Excel into DB (safe to re-run)
+    try {
+      const result = await CuRegistrationExcelService.syncAllToDatabase();
+      console.log("[backend] - CU Physical Reg Excel sync:", result);
+    } catch (e) {
+      console.warn("[backend] - CU Physical Reg Excel sync failed", e);
+    }
   } catch (error) {
     console.log(process.env.DATABASE_URL);
     console.error("[backend] - Failed to connect to the database: ⚠", error);
