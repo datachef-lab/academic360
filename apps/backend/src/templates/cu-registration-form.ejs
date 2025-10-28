@@ -728,7 +728,7 @@
                                     </div>
                                     <div style="width: 20%; height: 100%;" class="right">
                                         <div class="photo-cell" 
-                                             style="width: 144px; object-fit: contain; height: 144px; background-image: url('<%= studentPhotoUrl %>'); background-size: 100% 100%; background-position: 0 0; background-repeat: no-repeat; position: relative; margin: 0; padding: 0; box-sizing: border-box;">
+                                             style="width: 144px; object-fit: contain; height: 145px; background-image: url('<%= studentPhotoUrl %>'); background-size: 100% 100%; background-position: 0 0; background-repeat: no-repeat; position: relative; margin: 0; padding: 0; box-sizing: border-box;">
                                             <div id="photo-error" 
                                                  style="display: none; color: #d32f2f; font-weight: bold; text-align: center; padding: 10px; font-size: 10px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Calibri', sans-serif !important;">
                                                 Student photo to be captured from A360
@@ -795,7 +795,7 @@
 
                                     <!-- Migration Certificate (dynamic based on board) -->
                                     <% 
-                                        const excludedBoards = ['WBCHSE', 'ICSE', 'CBSE', 'NIOS'];
+                                        const excludedBoards = ['WBCHSE', 'ISC', 'CBSE', 'NIOS'];
                                         const isMigrationCertificateRequired = !excludedBoards.includes(boardCode);
                                     %>
                                     <% if (isMigrationCertificateRequired) { %>
@@ -890,12 +890,12 @@
                 </div> <!-- End Middle Content Section -->
 
                 <!-- Footer Section -->
-                <footer class="d-flex justify-content-between align-items-center" style="flex-shrink: 0;">
-                    <p style="width: 85%; font-size: 10px; padding-bottom: 10px;">
+                <footer class="d-flex justify-content-end align-items-center" style="flex-shrink: 0;">
+                    <!-- <p style="width: 85%; font-size: 10px; padding-bottom: 10px;">
                         This sheet is to be printed and submitted to the college in
                         original as per the physical submission schedule given on the
                         college website.
-                    </p>
+                    </p> -->
                     <p style="width: 15%; font-size: 10px; padding: 0px;" class="text-end">
                         Page 1 of 4
                     </p>
@@ -1217,12 +1217,12 @@
                 </div> <!-- End Middle Content Section -->
 
                 <!-- Footer Section -->
-                <footer class="d-flex justify-content-between align-items-center" style="flex-shrink: 0;">
-                    <p style="width: 85%; font-size: 10px; padding-bottom: 10px;">
+                <footer class="d-flex justify-content-end align-items-center" style="flex-shrink: 0;">
+                    <!-- <p style="width: 85%; font-size: 10px; padding-bottom: 10px;">
                         This sheet is to be printed and submitted to the college in
                         original as per the physical submission schedule given on the
                         college website.
-                    </p>
+                    </p> -->
                     <p style="width: 15%; font-size: 10px; padding: 0px;" class="text-end">
                         Page 2 of 4
                     </p>
@@ -1410,12 +1410,12 @@
                 </div>
 
                 <!-- Footer Section -->
-                <footer class="d-flex justify-content-between align-items-center" style="flex-shrink: 0;">
-                    <p style="width: 85%; font-size: 10px; padding-bottom: 10px;">
+                <footer class="d-flex justify-content-end align-items-center" style="flex-shrink: 0;">
+                    <!-- <p style="width: 85%; font-size: 10px; padding-bottom: 10px;">
                         This sheet is to be printed and submitted to the college in
                         original as per the physical submission schedule given on the
                         college website.
-                    </p>
+                    </p> -->
                     <p style="width: 15%; font-size: 10px; padding: 0px;" class="text-end">
                         Page 3 of 4
                     </p>
@@ -1571,12 +1571,12 @@
                     </div>
                 </div>
                 <!-- Footer Section -->
-                <footer class="d-flex justify-content-between align-items-center" style="flex-shrink: 0;">
-                    <p style="width: 85%; font-size: 10px">
+                <footer class="d-flex justify-content-end align-items-center" style="flex-shrink: 0;">
+                    <!-- <p style="width: 85%; font-size: 10px">
                         This sheet is to be printed and submitted to the college in
                         original as per the physical submission schedule given on the
                         college website
-                    </p>
+                    </p> -->
                     <p style="width: 15%; font-size: 10px" class="text-end">
                         Page 4 of 4
                     </p>
