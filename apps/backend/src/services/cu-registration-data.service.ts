@@ -49,6 +49,7 @@ import path from "path";
 import fs from "fs/promises";
 import { CuRegistrationExcelService } from "./cu-registration-excel.service.js";
 // QR code no longer required for physical submission schedule
+import { fileURLToPath } from "url";
 
 export interface CuRegistrationDataOptions {
   studentId: number;
@@ -62,6 +63,35 @@ export interface CuRegistrationDataOptions {
 }
 
 export class CuRegistrationDataService {
+  // Resolve a file from public/ robustly across dev and dist
+  private static async resolvePublicAssetPath(
+    fileName: string,
+  ): Promise<string> {
+    const candidates: string[] = [];
+    if (process.env.CU_REG_PUBLIC_DIR) {
+      candidates.push(path.join(process.env.CU_REG_PUBLIC_DIR, fileName));
+    }
+    candidates.push(path.join(process.cwd(), "public", fileName));
+    candidates.push(
+      path.join(process.cwd(), "apps", "backend", "public", fileName),
+    );
+    try {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      candidates.push(path.join(__dirname, "..", "..", "public", fileName));
+      candidates.push(
+        path.join(__dirname, "..", "..", "..", "public", fileName),
+      );
+    } catch {}
+
+    for (const p of candidates) {
+      try {
+        await fs.access(p, fs.constants.R_OK);
+        return p;
+      } catch {}
+    }
+    return path.join(process.cwd(), "public", fileName);
+  }
   public static async fetchStudentDataForPdf(
     options: CuRegistrationDataOptions,
   ): Promise<CuRegistrationFormData> {
@@ -498,11 +528,10 @@ export class CuRegistrationDataService {
 
       // Ensure notice-board QR loads inside PDF by embedding as Data URL
       try {
-        const noticePath = path.join(
-          process.cwd(),
-          "public",
-          "notice-board-qrcode.png",
-        );
+        const noticePath =
+          await CuRegistrationDataService.resolvePublicAssetPath(
+            "notice-board-qrcode.png",
+          );
         const noticeBuffer = await fs.readFile(noticePath);
         formData.noticeBoardQrUrl = `data:image/png;base64,${noticeBuffer.toString("base64")}`;
       } catch (e) {
@@ -510,6 +539,23 @@ export class CuRegistrationDataService {
           "[CU-REG DATA] Could not embed notice-board-qrcode.png:",
           e,
         );
+      }
+
+      // If collegeLogoUrl is a local public path, embed it as data URL too
+      try {
+        const logoUrl = formData.collegeLogoUrl || "";
+        const isDataUrl = logoUrl.startsWith("data:");
+        const isHttp = /^https?:\/\//i.test(logoUrl);
+        const isLocalPath = !isDataUrl && !isHttp && logoUrl.trim() !== "";
+        if (isLocalPath) {
+          const relative = logoUrl.startsWith("/") ? logoUrl.slice(1) : logoUrl;
+          const logoPath =
+            await CuRegistrationDataService.resolvePublicAssetPath(relative);
+          const buf = await fs.readFile(logoPath);
+          formData.collegeLogoUrl = `data:image/png;base64,${buf.toString("base64")}`;
+        }
+      } catch (e) {
+        console.warn("[CU-REG DATA] Could not embed local collegeLogoUrl:", e);
       }
 
       console.info("[CU-REG DATA] Student data fetched successfully", {

@@ -2872,6 +2872,11 @@ export default function CURegistrationPage() {
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
+                                Migration Certificate from your Class XII Board (Applicable only for boards other than
+                                CBSE, ISC, WBCHSE, NIOS)
+                              </li>
+                              <li className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
                                 First and Last Page of your Passport (Applicable only for Foreign Nationals)
                               </li>
                             </ul>
@@ -3827,7 +3832,7 @@ export default function CURegistrationPage() {
                       </div>
 
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Documents Uploads</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">4.0 Document Uploads</h2>
 
                         {/* Uploaded Documents Table */}
                         {uploadedDocuments.length > 0 && (
@@ -3941,7 +3946,7 @@ export default function CURegistrationPage() {
                             <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                               <div className="flex items-center justify-between mb-3">
                                 <Label className="text-sm font-medium text-gray-700">
-                                  4.1 Class XII Original Board Marksheet
+                                  Class XII Original Board Marksheet
                                 </Label>
                                 <Badge variant="outline" className="text-xs text-red-600 border-red-600">
                                   Required
@@ -4020,7 +4025,7 @@ export default function CURegistrationPage() {
                             {personalInfo.nationality === "Indian" && (
                               <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                                 <div className="flex items-center justify-between mb-3">
-                                  <Label className="text-sm font-medium text-gray-700">4.2 Aadhaar Card</Label>
+                                  <Label className="text-sm font-medium text-gray-700">Aadhaar Card</Label>
                                   <Badge variant="outline" className="text-xs text-red-600 border-red-600">
                                     Required
                                   </Badge>
@@ -4094,7 +4099,7 @@ export default function CURegistrationPage() {
                             {/* APAAR ID Card */}
                             <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                               <div className="flex items-center justify-between mb-3">
-                                <Label className="text-sm font-medium text-gray-700">4.3 APAAR (ABC) ID Card</Label>
+                                <Label className="text-sm font-medium text-gray-700">APAAR (ABC) ID Card</Label>
                                 <Badge variant="outline" className="text-xs text-red-600 border-red-600">
                                   Required
                                 </Badge>
@@ -4176,7 +4181,7 @@ export default function CURegistrationPage() {
                                 <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                                   <div className="flex items-center justify-between mb-3">
                                     <Label className="text-sm font-medium text-gray-700">
-                                      4.4 Father's Government-issued Photo ID
+                                      Father's Government-issued Photo ID
                                     </Label>
                                     {(() => {
                                       const familyDetails = profileInfo?.familyDetails as any;
@@ -4276,7 +4281,7 @@ export default function CURegistrationPage() {
                                 <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                                   <div className="flex items-center justify-between mb-3">
                                     <Label className="text-sm font-medium text-gray-700">
-                                      4.5 Mother's Government-issued Photo ID
+                                      Mother's Government-issued Photo ID
                                     </Label>
                                     {(() => {
                                       const familyDetails = profileInfo?.familyDetails as any;
@@ -4374,7 +4379,7 @@ export default function CURegistrationPage() {
                             {personalInfo.ews === "Yes" && (
                               <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                                 <div className="flex items-center justify-between mb-3">
-                                  <Label className="text-sm font-medium text-gray-700">4.6 EWS Certificate</Label>
+                                  <Label className="text-sm font-medium text-gray-700">EWS Certificate</Label>
                                   <Badge variant="outline" className="text-xs text-red-600 border-red-600">
                                     Required
                                   </Badge>
@@ -4460,7 +4465,7 @@ export default function CURegistrationPage() {
                             })() && (
                               <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                                 <div className="flex items-center justify-between mb-3">
-                                  <Label className="text-sm font-medium text-gray-700">4.7 Migration Certificate</Label>
+                                  <Label className="text-sm font-medium text-gray-700">Migration Certificate</Label>
                                   <Badge variant="outline" className="text-xs text-red-600 border-red-600">
                                     Required
                                   </Badge>

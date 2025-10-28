@@ -1,6 +1,7 @@
 import { readExcelFile } from "../utils/readExcel.js";
 import path from "path";
 import fs from "fs/promises";
+import { fileURLToPath } from "url";
 
 export interface CuRegistrationExcelData {
   srNo: number;
@@ -37,20 +38,67 @@ export class CuRegistrationExcelService {
   }
 
   /**
+   * Resolve public path robustly across dev and built (dist) environments
+   */
+  private static async resolvePublicPath(fileName: string): Promise<string> {
+    const candidates: string[] = [];
+
+    // 1) Explicit env override
+    if (process.env.CU_REG_PUBLIC_DIR) {
+      candidates.push(path.join(process.env.CU_REG_PUBLIC_DIR, fileName));
+    }
+
+    // 2) Monorepo root public
+    candidates.push(path.join(process.cwd(), "public", fileName));
+
+    // 3) apps/backend/public under repo root
+    candidates.push(
+      path.join(process.cwd(), "apps", "backend", "public", fileName),
+    );
+
+    // 4) Relative to compiled file location: dist/apps/backend/src/services -> ../../public
+    try {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      candidates.push(path.join(__dirname, "..", "..", "public", fileName));
+      // also one level further up if structure differs
+      candidates.push(
+        path.join(__dirname, "..", "..", "..", "public", fileName),
+      );
+    } catch {}
+
+    for (const p of candidates) {
+      try {
+        await fs.access(p, fs.constants.R_OK);
+        return p;
+      } catch {}
+    }
+
+    // Fallback to cwd/public
+    return path.join(process.cwd(), "public", fileName);
+  }
+
+  /**
    * Get the default Excel file path from the public directory
    */
   public static getDefaultExcelFilePath(): string {
-    const publicDir = path.join(process.cwd(), "public");
-    const excelFileName =
-      "CU Registration Physical submission allotment 2025.xlsx"; // Based on actual file name
-    return path.join(publicDir, excelFileName);
+    // Synchronous fallback; async resolver is used in load
+    return path.join(
+      process.cwd(),
+      "public",
+      "CU Registration Physical submission allotment 2025.xlsx",
+    );
   }
 
   /**
    * Load Excel data from file
    */
   private static async loadExcelData(): Promise<CuRegistrationExcelData[]> {
-    const filePath = this.excelFilePath || this.getDefaultExcelFilePath();
+    const filePath =
+      this.excelFilePath ||
+      (await this.resolvePublicPath(
+        "CU Registration Physical submission allotment 2025.xlsx",
+      ));
 
     try {
       // Check if file exists
