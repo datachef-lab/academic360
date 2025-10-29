@@ -119,10 +119,10 @@ export default function CURegistrationPage() {
     // // Check for BCOM
     // const isBCOM = normalizedName.startsWith("BCOM");
 
-    const isBBA = normalizedName.startsWith("BBA");
+    // const isBBA = normalizedName.startsWith("BBA");
 
     // return isMA || isMCOM || isBCOM || isBBA;
-    return isMA || isMCOM || isBBA;
+    return isMA || isMCOM;
   }, [student?.programCourse?.name]);
 
   // Check if student's program course is BCOM (for MDC subjects)
