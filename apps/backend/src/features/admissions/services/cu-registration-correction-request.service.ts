@@ -2077,9 +2077,7 @@ export const sendAdmissionRegistrationWhatsAppNotification = async (
 
     // Generate PDF access URL using encoded application number
     const admRegFormService = new AdmRegFormService();
-    const baseUrl =
-      process.env.BACKEND_SELF_BASE ||
-      `http://localhost:${process.env.PORT || 8080}`;
+    const baseUrl = `${process.env.BACKEND_URL}`;
     const pdfAccessUrl = admRegFormService.generatePdfAccessUrl(
       data.applicationNumber,
       baseUrl,
