@@ -77,7 +77,7 @@ async function prepareEmailAttachments(emailAttachments: any): Promise<
 
         // Download PDF from S3 using S3 client
         const command = new GetObjectCommand({
-          Bucket: process.env.AWS_S3_BUCKET_NAME || "stage-academic360-app",
+          Bucket: process.env.AWS_S3_BUCKET,
           Key: key,
         });
 
