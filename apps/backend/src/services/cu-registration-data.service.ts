@@ -1240,17 +1240,18 @@ export class CuRegistrationDataService {
         return [];
       }
 
-      // Get program course name to check if it's BCOM
+      // Get program course name to check if it's BCOM/BBA (both use MDC instead of IDC)
       const [programCourseInfo] = await db
         .select({ name: programCourseModel.name })
         .from(programCourseModel)
         .where(eq(programCourseModel.id, programCourseId));
 
-      const isBcomProgram = programCourseInfo?.name
-        ?.normalize("NFKD")
-        .replace(/[^A-Za-z]/g, "")
-        .toUpperCase()
-        .startsWith("BCOM");
+      const isBcomProgram =
+        programCourseInfo?.name
+          ?.normalize("NFKD")
+          .replace(/[^A-Za-z]/g, "")
+          .toUpperCase()
+          .match(/^(BCOM|BBA)/) != null;
 
       console.log(
         "[CU-REG DATA] Program course name:",

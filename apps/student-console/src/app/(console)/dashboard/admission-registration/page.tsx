@@ -138,6 +138,22 @@ export default function CURegistrationPage() {
     return normalizedName.startsWith("BCOM");
   }, [student?.programCourse?.name]);
 
+  // Check if student's program course is BBA (also uses MDC display like BCOM)
+  const isBbaProgram = React.useMemo(() => {
+    if (!student?.programCourse?.name) return false;
+
+    const rawName = student.programCourse.name;
+    const normalizedName = rawName
+      .normalize("NFKD")
+      .replace(/[^A-Za-z]/g, "")
+      .toUpperCase();
+
+    return normalizedName.startsWith("BBA");
+  }, [student?.programCourse?.name]);
+
+  // Programs for which MDC should be shown instead of IDC (BCOM, BBA)
+  const isMdcProgramForDisplay = isBcomProgram || isBbaProgram;
+
   // Helper: format APAAR ID to 3-3-3-3 format
   const formatApaarId = (apaarId: string) => {
     if (!apaarId || apaarId === "Not provided") return apaarId;
@@ -470,13 +486,18 @@ export default function CURegistrationPage() {
             console.log(`🔍 getCategoryKey: Matched DSCC`);
             return "DSCC" as any;
           }
+          // For BBA, map Core Course (CC) to DSCC row
+          if (isBbaProgram && (/Core\s*Course/i.test(label) || /\bCC\b/i.test(label))) {
+            console.log(`🔍 getCategoryKey: BBA - Matched Core Course (CC), mapping to DSCC`);
+            return "DSCC" as any;
+          }
           if (/Minor/i.test(label)) {
             console.log(`🔍 getCategoryKey: Matched Minor`);
             return "Minor" as any;
           }
 
-          // For BCOM students, show MDC instead of IDC
-          if (isBcomProgram) {
+          // For BCOM and BBA students, show MDC instead of IDC
+          if (isMdcProgramForDisplay) {
             if (
               /Major Discipline Course/i.test(label) ||
               /Multi Disciplinary Course/i.test(label) ||
@@ -551,8 +572,8 @@ export default function CURegistrationPage() {
           if (semesters.length === 0 && /Minor\s*2/i.test(label)) semesters = [3, 4];
           if (semesters.length === 0 && /Minor\s*3/i.test(label)) semesters = [3];
 
-          // Handle IDC/MDC subjects based on program
-          if (isBcomProgram) {
+          // Handle IDC/MDC subjects based on program (BCOM/BBA => MDC)
+          if (isMdcProgramForDisplay) {
             // For BCOM students, handle MDC subjects
             if (semesters.length === 0 && /MDC\s*1/i.test(label)) semesters = [1];
             if (semesters.length === 0 && /MDC\s*2/i.test(label)) semesters = [2];
@@ -564,6 +585,11 @@ export default function CURegistrationPage() {
             if (semesters.length === 0 && /IDC\s*1/i.test(label)) semesters = [1];
             if (semesters.length === 0 && /IDC\s*2/i.test(label)) semesters = [2];
             if (semesters.length === 0 && /IDC\s*3/i.test(label)) semesters = [3];
+          }
+
+          // For BBA Core Course (CC) mapped to DSCC above, default to Sem I–IV ONLY when span missing
+          if (isBbaProgram && (/Core\s*Course/i.test(label) || /\bCC\b/i.test(label)) && semesters.length === 0) {
+            semesters = [1, 2, 3, 4];
           }
 
           if (semesters.length === 0 && /AEC/i.test(label)) semesters = [3, 4];
@@ -612,14 +638,18 @@ export default function CURegistrationPage() {
             semesters = [semMap[sem]];
           }
 
-          // If no semester found in class name, try to infer from subject type
+          // If no semester found in class name, infer from subject type
           if (semesters.length === 0) {
+            // For BBA "Core Course (CC)" mapped to DSCC, default to Sem I–IV ONLY when span missing
+            if (isBbaProgram && (/Core\s*Course/i.test(subjectTypeName) || /\bCC\b/i.test(subjectTypeName))) {
+              semesters = [1, 2, 3, 4];
+            }
             if (/Minor\s*1/i.test(subjectTypeName)) semesters = [1, 2];
             else if (/Minor\s*2/i.test(subjectTypeName)) semesters = [3, 4];
             else if (/Minor\s*3/i.test(subjectTypeName)) semesters = [3];
 
-            // Handle IDC/MDC subjects based on program
-            if (isBcomProgram) {
+            // Handle IDC/MDC subjects based on program (BCOM/BBA => MDC)
+            if (isMdcProgramForDisplay) {
               // For BCOM students, handle MDC subjects
               if (/MDC\s*1/i.test(subjectTypeName)) semesters = [1];
               else if (/MDC\s*2/i.test(subjectTypeName)) semesters = [2];
@@ -2873,8 +2903,8 @@ export default function CURegistrationPage() {
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
-                                EWS Certificate, issued in your name, by the Government of West Bengal (only if applying
-                                under EWS category)
+                                EWS (Economically Weaker Section) Certificate, issued in your name, by the Government of
+                                West Bengal (only if applying under EWS category)
                               </li>
                               <li className="flex items-start">
                                 <span className="text-blue-600 mr-2">•</span>
@@ -3107,7 +3137,7 @@ export default function CURegistrationPage() {
                           {/* EWS */}
                           <div className="space-y-2">
                             <Label htmlFor="ews" className="text-sm font-medium text-gray-700">
-                              1.5 Whether belong to EWS
+                              1.5 Whether belong to EWS (Economically Weaker Section)
                             </Label>
                             <Select
                               value={personalInfo.ews}
@@ -3677,8 +3707,8 @@ export default function CURegistrationPage() {
                                   .map(([category, semesters]) => (
                                     <tr key={category} className="hover:bg-gray-50">
                                       <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
-                                        {/* Show MDC instead of IDC for BCOM students */}
-                                        {category === "IDC" && isBcomProgram ? "MDC" : category}
+                                        {/* Show MDC instead of IDC for BCOM/BBA students */}
+                                        {category === "IDC" && isMdcProgramForDisplay ? "MDC" : category}
                                       </td>
                                       {Object.entries(semesters).map(([sem, value]) => {
                                         const mandatorySubjectsList =
@@ -3738,8 +3768,8 @@ export default function CURegistrationPage() {
 
                                                 // If no subjects, display appropriate message
                                                 if (allSubjects.length === 0) {
-                                                  // For BCOM students, show specific message for MDC
-                                                  if (category === "IDC" && isBcomProgram) {
+                                                  // For BCOM/BBA students, show specific message for MDC
+                                                  if (category === "IDC" && isMdcProgramForDisplay) {
                                                     return (
                                                       <span className="text-gray-500 italic">
                                                         MDC subjects not available for this program
