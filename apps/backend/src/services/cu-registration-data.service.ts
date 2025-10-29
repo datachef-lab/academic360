@@ -1259,9 +1259,10 @@ export class CuRegistrationDataService {
       );
       console.log("[CU-REG DATA] Is BCOM program:", isBcomProgram);
 
-      // Get subject types - for BCOM, fetch MDC instead of IDC
+      // Get subject types - for BCOM/BBA, prefer MDC but include IDC as fallback
+      // Some BBA setups may still store IDC instead of MDC; include both to avoid empty columns
       const subjectTypeCodes = isBcomProgram
-        ? ["DSCC", "MN", "AEC", "MDC"]
+        ? ["DSCC", "MN", "AEC", "MDC", "IDC"]
         : ["DSCC", "MN", "AEC", "IDC"];
 
       const subjectTypes = await db
@@ -1276,8 +1277,10 @@ export class CuRegistrationDataService {
       const dsccType = subjectTypes.find((st) => st.code === "DSCC");
       const mnType = subjectTypes.find((st) => st.code === "MN");
       const aecType = subjectTypes.find((st) => st.code === "AEC");
+      // For BCOM/BBA, prefer MDC; if absent, use IDC (handles data encoded as IDC)
       const idcType = isBcomProgram
-        ? subjectTypes.find((st) => st.code === "MDC") // For BCOM, use MDC as IDC
+        ? subjectTypes.find((st) => st.code === "MDC") ||
+          subjectTypes.find((st) => st.code === "IDC")
         : subjectTypes.find((st) => st.code === "IDC");
 
       if (!dsccType || !mnType || !aecType || !idcType) {
@@ -1357,14 +1360,16 @@ export class CuRegistrationDataService {
           subjectsByType["DSCC"]?.["SEMESTER I"] || "",
           subjectsByType["MN"]?.["SEMESTER I"] || "",
           subjectsByType["MN"]?.["SEMESTER II"] || "",
-          "", // Minor 3 - from student selection
-          "", // Minor 4 - same as Minor 3
+          // Try to fill Sem III/IV for Minor from papers if available; fallback stays empty
+          subjectsByType["MN"]?.["SEMESTER III"] || "",
+          subjectsByType["MN"]?.["SEMESTER IV"] || "",
         ],
       };
 
-      // Build AEC/IDC table (fetch IDC from papers if available, or MDC for BCOM)
-      const subjectTypeKey = isBcomProgram ? "MDC" : "IDC";
+      // Build AEC/IDC(MDC) table
+      // For BCOM/BBA, label should be MDC; pick data key dynamically: prefer MDC if present else IDC
       const subjectTypeLabel = isBcomProgram ? "MDC" : "IDC";
+      const idcDataKey = isBcomProgram && subjectsByType["MDC"] ? "MDC" : "IDC";
 
       const aecIdcTable = {
         headers: [
@@ -1380,10 +1385,10 @@ export class CuRegistrationDataService {
           subjectsByType["AEC"]?.["SEMESTER I"] || "",
           subjectsByType["AEC"]?.["SEMESTER II"] || "",
           subjectsByType["AEC"]?.["SEMESTER III"] || "",
-          subjectsByType["AEC"]?.["SEMESTER III"] || "", // AEC4 = AEC3
-          subjectsByType[subjectTypeKey]?.["SEMESTER I"] || "", // IDC1/MDC1 from papers
-          subjectsByType[subjectTypeKey]?.["SEMESTER II"] || "", // IDC2/MDC2 from papers
-          subjectsByType[subjectTypeKey]?.["SEMESTER III"] || "", // IDC3/MDC3 from papers
+          subjectsByType["AEC"]?.["SEMESTER III"] || "", // AEC4 = AEC3 (reverted)
+          subjectsByType[idcDataKey]?.["SEMESTER I"] || "", // IDC1/MDC1 from papers
+          subjectsByType[idcDataKey]?.["SEMESTER II"] || "", // IDC2/MDC2 from papers
+          subjectsByType[idcDataKey]?.["SEMESTER III"] || "", // IDC3/MDC3 from papers
         ],
       };
 
@@ -1524,13 +1529,20 @@ export class CuRegistrationDataService {
           st.name?.toLowerCase().includes("inter disciplinary"),
         );
 
+      const mdcType = subjectTypes.find((st) => st.code === "MDC");
+      const mnType =
+        subjectTypes.find((st) => st.code === "MN") ||
+        subjectTypes.find((st) => st.name?.toLowerCase().includes("minor"));
+
       console.log("[CU-REG DATA] Mapped subject types:", {
         dscc: dsccType,
         aec: aecType,
         idc: idcType,
+        mdc: mdcType,
+        mn: mnType,
       });
 
-      if (!dsccType && !aecType && !idcType) {
+      if (!dsccType && !aecType && !idcType && !mdcType && !mnType) {
         console.warn(
           "[CU-REG DATA] No subject types found with codes DSCC, AEC, IDC",
         );
@@ -1550,9 +1562,13 @@ export class CuRegistrationDataService {
       }
 
       // Get papers for different subject types and semesters
-      const subjectTypeIds = [dsccType?.id, aecType?.id, idcType?.id].filter(
-        (id): id is number => id !== undefined,
-      );
+      const subjectTypeIds = [
+        dsccType?.id,
+        aecType?.id,
+        idcType?.id,
+        mdcType?.id,
+        mnType?.id,
+      ].filter((id): id is number => id !== undefined);
 
       if (subjectTypeIds.length === 0) {
         console.warn(
@@ -1619,6 +1635,16 @@ export class CuRegistrationDataService {
 
       console.log("[CU-REG DATA] Organized subjects by type:", subjectsByType);
 
+      // Determine program family for IDC/MDC labeling and data lookup
+      const isBcomOrBba =
+        (programCourseName || "")
+          .normalize("NFKD")
+          .replace(/[^A-Za-z]/g, "")
+          .toUpperCase()
+          .match(/^(BCOM|BBA)/) != null;
+      const idcDataKey = isBcomOrBba && subjectsByType["MDC"] ? "MDC" : "IDC";
+      const subjectTypeLabel = isBcomOrBba ? "MDC" : "IDC";
+
       console.info(
         "[CU-REG DATA] Creating Core/Major table from papers with courseName:",
         programCourseName,
@@ -1626,7 +1652,7 @@ export class CuRegistrationDataService {
         typeof programCourseName,
       );
 
-      // Build Core/Major and Minor table (only Core/Major from papers)
+      // Build Core/Major and Minor table (use Minor from papers when available)
       const coreMinorTable = {
         headers: [
           "Core/Major",
@@ -1636,33 +1662,33 @@ export class CuRegistrationDataService {
           "Minor For Sem IV",
         ],
         subjects: [
-          programCourseName || "", // Use course name for Core/Majorid
-          "", // Minor 1 - from student selection
-          "", // Minor 2 - from student selection
-          "", // Minor 3 - from student selection
-          "", // Minor 4 - from student selection
+          programCourseName || "", // Use course name for Core/Major
+          subjectsByType["MN"]?.["SEMESTER I"] || "",
+          subjectsByType["MN"]?.["SEMESTER II"] || "",
+          subjectsByType["MN"]?.["SEMESTER III"] || "",
+          subjectsByType["MN"]?.["SEMESTER IV"] || "",
         ],
       };
 
-      // Build AEC/IDC table (use papers data wherever available, student selection fills gaps)
+      // Build AEC/IDC(MDC) table (use papers data wherever available)
       const aecIdcTable = {
         headers: [
           "AEC For Sem I",
           "AEC For Sem II",
           "AEC For Sem III",
           "AEC For Sem IV",
-          "IDC For Sem I",
-          "IDC For Sem II",
-          "IDC For Sem III",
+          `${subjectTypeLabel} For Sem I`,
+          `${subjectTypeLabel} For Sem II`,
+          `${subjectTypeLabel} For Sem III`,
         ],
         subjects: [
           subjectsByType["AEC"]?.["SEMESTER I"] || "", // AEC1 from papers
           subjectsByType["AEC"]?.["SEMESTER II"] || "", // AEC2 from papers
           subjectsByType["AEC"]?.["SEMESTER III"] || "", // AEC3 from papers if exists
-          subjectsByType["AEC"]?.["SEMESTER IV"] || "", // AEC4 from papers if exists
-          subjectsByType["IDC"]?.["SEMESTER I"] || "", // IDC1 from papers if exists
-          subjectsByType["IDC"]?.["SEMESTER II"] || "", // IDC2 from papers if exists
-          subjectsByType["IDC"]?.["SEMESTER III"] || "", // IDC3 from papers if exists
+          subjectsByType["AEC"]?.["SEMESTER III"] || "", // AEC4 = AEC3 (reverted)
+          subjectsByType[idcDataKey]?.["SEMESTER I"] || "", // IDC/MDC from papers
+          subjectsByType[idcDataKey]?.["SEMESTER II"] || "",
+          subjectsByType[idcDataKey]?.["SEMESTER III"] || "",
         ],
       };
 
