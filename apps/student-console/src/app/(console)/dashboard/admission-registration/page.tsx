@@ -3708,7 +3708,7 @@ export default function CURegistrationPage() {
                                     <tr key={category} className="hover:bg-gray-50">
                                       <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
                                         {/* Show MDC instead of IDC for BCOM/BBA students */}
-                                        {category === "IDC" && isMdcProgramForDisplay ? "MDC" : category}
+                                        {category}
                                       </td>
                                       {Object.entries(semesters).map(([sem, value]) => {
                                         const mandatorySubjectsList =
@@ -3770,11 +3770,7 @@ export default function CURegistrationPage() {
                                                 if (allSubjects.length === 0) {
                                                   // For BCOM/BBA students, show specific message for MDC
                                                   if (category === "IDC" && isMdcProgramForDisplay) {
-                                                    return (
-                                                      <span className="text-gray-500 italic">
-                                                        MDC subjects not available for this program
-                                                      </span>
-                                                    );
+                                                    return <span className="text-gray-500 italic">Not Applicable</span>;
                                                   }
                                                   return <span className="text-gray-500 italic">Not Applicable</span>;
                                                 }
