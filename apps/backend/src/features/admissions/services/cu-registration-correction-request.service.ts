@@ -13,7 +13,16 @@ import {
   academicYearModel,
 } from "@repo/db/schemas/models/academics";
 import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model";
-import { eq, and, desc, count, ilike, or, inArray } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  count,
+  ilike,
+  or,
+  inArray,
+  isNotNull,
+} from "drizzle-orm";
 import { CuRegistrationCorrectionRequestInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { cuRegistrationDocumentUploadInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
 import {
@@ -41,10 +50,14 @@ import {
 } from "@repo/db/schemas/models/resources";
 import {
   programCourseModel,
+  regulationTypeModel,
   specializationModel,
 } from "@repo/db/schemas/models/course-design";
 import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions";
 import ExcelJS from "exceljs";
+import { getCuRegPdfPathDynamic } from "./cu-registration-document-path.service.js";
+import { getSignedUrlForFile } from "@/services/s3.service.js";
+import axios from "axios";
 
 // Environment detection helpers
 const shouldRedirectToDeveloper = () => {
@@ -2895,3 +2908,256 @@ export const exportCuRegistrationCorrectionRequests =
       throw error;
     }
   };
+
+// Function to send the notifications to the students for adm-reg-form for those who have submitted the reg-form (has application number) but pdf is not present in the s3 bucket
+export async function sendAdmRegFormToNotSendStudents() {
+  const arr: string[] = [];
+  // Step 1: Fetch the students for those adm-reg-form pdf was not generated for those who has done online-reg and generated application number and not got pdf notifications
+  const BATCH_SIZE = 500;
+  const [{ totalFormsCount }] = await db
+    .select({ totalFormsCount: count() })
+    .from(cuRegistrationCorrectionRequestModel)
+    .where(
+      and(
+        eq(cuRegistrationCorrectionRequestModel.onlineRegistrationDone, true),
+        isNotNull(
+          cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+        ),
+      ),
+    );
+
+  const totalBatches = Math.ceil(totalFormsCount / BATCH_SIZE);
+  let processed = 0; // how many with application number we actually checked
+  let okCount = 0; // how many returned 200
+  let missingCount = 0; // how many returned non-200
+  let skippedNoApp = 0; // how many had no application number
+  let errorCount = 0; // network or unexpected errors
+
+  for (let page = 0; page < totalBatches; page++) {
+    const forms = await db
+      .select()
+      .from(cuRegistrationCorrectionRequestModel)
+      .where(
+        and(
+          eq(cuRegistrationCorrectionRequestModel.onlineRegistrationDone, true),
+          isNotNull(
+            cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+          ),
+        ),
+      )
+      .orderBy(desc(cuRegistrationCorrectionRequestModel.createdAt))
+      .limit(BATCH_SIZE)
+      .offset(page * BATCH_SIZE);
+    for (const form of forms) {
+      if (!form.cuRegistrationApplicationNumber) {
+        console.log("no application number  for form id:", form.id);
+        skippedNoApp += 1;
+        continue;
+      }
+      processed += 1;
+      const [foundStudent] = await db
+        .select()
+        .from(studentModel)
+        .where(eq(studentModel.id, form.studentId));
+      // Now based on the adm-form-no see whether the pdf exist
+      const pdfPath = await getUrlForAdmRegForm(
+        foundStudent.id!,
+        foundStudent.uid!,
+        form.cuRegistrationApplicationNumber!,
+      );
+      try {
+        const response = await fetch(pdfPath, { method: "GET" });
+        // Request for pdf url and see whether the pdf is present
+        // console.log(`[Check PDF Exists] Response for ${form.cuRegistrationApplicationNumber}:`, response.status);
+        if (response.status !== 200) {
+          missingCount += 1;
+          console.log("form not found", form.cuRegistrationApplicationNumber);
+          arr.push(form.cuRegistrationApplicationNumber!);
+
+          // Generate the pdf and save it to the s3 bucket and notify the student
+          if (form.cuRegistrationApplicationNumber === "0170547") {
+            await tmptriggerNotif(form, foundStudent.uid!);
+            console.log(
+              "notified student",
+              form.cuRegistrationApplicationNumber,
+            );
+          }
+        } else if (response.status === 200) {
+          okCount += 1;
+        } else {
+          console.log("other status", response.status);
+        }
+      } catch (e) {
+        errorCount += 1;
+        console.warn(
+          "error fetching signed url for",
+          form.cuRegistrationApplicationNumber,
+          e,
+        );
+        // Treat as missing to be conservative
+        missingCount += 1;
+        arr.push(form.cuRegistrationApplicationNumber!);
+      }
+    }
+  }
+
+  console.log("total forms count", totalFormsCount);
+  console.log("checked (with application number)", processed);
+  console.log("ok (200)", okCount);
+  console.log("skipped (no application number)", skippedNoApp);
+  console.log("not found (404/non-200)", missingCount);
+  console.log("errors while checking", errorCount);
+  console.log("sanity total (checked + skipped)", processed + skippedNoApp);
+  // Print the smallest form number
+  console.log("smallest form number", arr.sort()[0]);
+}
+async function getUrlForAdmRegForm(
+  studentId: number,
+  studentUid: string,
+  applicationNumber: string,
+) {
+  // Get dynamic year and regulation data
+  const [promotionData] = await db
+    .select({
+      academicYear: academicYearModel.year,
+      regulationShortName: regulationTypeModel.shortName,
+    })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+    .innerJoin(
+      academicYearModel,
+      eq(sessionModel.academicYearId, academicYearModel.id),
+    )
+    .innerJoin(
+      programCourseModel,
+      eq(promotionModel.programCourseId, programCourseModel.id),
+    )
+    .innerJoin(
+      regulationTypeModel,
+      eq(programCourseModel.regulationTypeId, regulationTypeModel.id),
+    )
+    .where(eq(promotionModel.studentId, studentId))
+    .limit(1);
+
+  // Extract year from academic year string (e.g., "2025-2026" -> 2025)
+  const yearMatch = promotionData.academicYear.match(/^(\d{4})/);
+  const year = yearMatch
+    ? parseInt(yearMatch[1], 10)
+    : new Date().getFullYear();
+
+  // Get PDF path configuration
+  const pdfPathConfig = await getCuRegPdfPathDynamic(
+    studentId,
+    studentUid,
+    applicationNumber,
+    {
+      year,
+      course: promotionData.regulationShortName || "CCF",
+    },
+  );
+
+  // console.info(`[CU-REG PDF] PDF path config:`, pdfPathConfig);
+
+  // Get signed URL for the PDF
+  const signedUrl = await getSignedUrlForFile(pdfPathConfig.fullPath, 3600); // 1 hour expiry
+
+  return signedUrl;
+}
+
+async function tmptriggerNotif(
+  cuRegReqCorrection: CuRegistrationCorrectionRequestInsertTypeT,
+  uid: string,
+) {
+  try {
+    console.info(
+      "[CU-REG CORRECTION][UPDATE] All declarations completed and data updated, regenerating PDF with latest data",
+    );
+
+    // Import the PDF integration service
+    const { CuRegistrationPdfIntegrationService } = await import(
+      "@/services/cu-registration-pdf-integration.service.js"
+    );
+
+    // Regenerate PDF with latest data
+    const pdfResult =
+      await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
+        cuRegReqCorrection.studentId,
+        cuRegReqCorrection.id!,
+        cuRegReqCorrection.cuRegistrationApplicationNumber!,
+        uid!,
+      );
+
+    if (pdfResult.success) {
+      console.info("[CU-REG CORRECTION][UPDATE] PDF regenerated successfully", {
+        pdfPath: pdfResult.pdfPath,
+        s3Url: pdfResult.s3Url,
+        applicationNumber: cuRegReqCorrection.cuRegistrationApplicationNumber,
+      });
+
+      // Send email notification with PDF attachment (same as student console)
+      // Only send notifications if CU application number is not null
+      if (
+        pdfResult.pdfBuffer &&
+        cuRegReqCorrection.cuRegistrationApplicationNumber
+      ) {
+        try {
+          console.info(
+            `[CU-REG CORRECTION][UPDATE] Sending admission registration email notification`,
+            {
+              studentId: cuRegReqCorrection.studentId,
+              applicationNumber:
+                cuRegReqCorrection.cuRegistrationApplicationNumber,
+              pdfBufferSize: pdfResult.pdfBuffer.length,
+              pdfUrl: pdfResult.s3Url,
+            },
+          );
+
+          const notificationResult =
+            await sendAdmissionRegistrationNotification(
+              cuRegReqCorrection.studentId,
+              cuRegReqCorrection.cuRegistrationApplicationNumber,
+              pdfResult.pdfBuffer,
+              pdfResult.s3Url!,
+            );
+
+          if (notificationResult.success) {
+            console.info(
+              `[CU-REG CORRECTION][UPDATE] Email notification sent successfully`,
+              { notificationId: notificationResult.notificationId },
+            );
+          } else {
+            console.error(
+              `[CU-REG CORRECTION][UPDATE] Failed to send email notification:`,
+              notificationResult.error,
+            );
+          }
+        } catch (notificationError) {
+          console.error(
+            `[CU-REG CORRECTION][UPDATE] Error sending email notification:`,
+            notificationError,
+          );
+          // Don't fail the entire request if notification fails
+        }
+      } else {
+        if (!pdfResult.pdfBuffer) {
+          console.warn(
+            `[CU-REG CORRECTION][UPDATE] PDF buffer not available for notification`,
+          );
+        }
+        if (!cuRegReqCorrection.cuRegistrationApplicationNumber) {
+          console.warn(
+            `[CU-REG CORRECTION][UPDATE] CU application number is null - skipping notifications`,
+          );
+        }
+      }
+    } else {
+      console.error("[CU-REG CORRECTION][UPDATE] PDF regeneration failed", {
+        error: pdfResult.error,
+        applicationNumber: cuRegReqCorrection.cuRegistrationApplicationNumber,
+      });
+    }
+  } catch (error) {
+    console.error("[CU-REG CORRECTION][UPDATE] Error regenerating PDF:", error);
+    // Don't fail the update if PDF regeneration fails
+  }
+}

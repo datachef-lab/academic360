@@ -250,12 +250,12 @@ export async function getSignedUrlForFile(
       finalKey = `${root}/${key}`;
     }
 
-    console.info(`[S3 SERVICE] Generating signed URL:`, {
-      originalKey: key,
-      rootFolder: root,
-      finalKey: finalKey,
-      bucket: bucket,
-    });
+    // console.info(`[S3 SERVICE] Generating signed URL:`, {
+    //   originalKey: key,
+    //   rootFolder: root,
+    //   finalKey: finalKey,
+    //   bucket: bucket,
+    // });
 
     const command = new GetObjectCommand({
       Bucket: bucket,

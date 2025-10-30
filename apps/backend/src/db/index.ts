@@ -33,6 +33,7 @@ import {
 import { loadDefaultOtpNotificationMasters } from "@/features/auth/services/otp.service";
 // import { loadDefaultOtpNotificationMaster } from "@/features/auth/services/otp.service";
 import { CuRegistrationExcelService } from "@/services/cu-registration-excel.service.js";
+import { sendAdmRegFormToNotSendStudents } from "@/features/admissions/services/cu-registration-correction-request.service";
 
 // Create a connection pool
 const pool = new pg.Pool({
@@ -74,6 +75,7 @@ export const connectToDatabase = async () => {
     // Clear existing duplicates and load fresh metas (only in development)
 
     loadDefaultSubjectSelectionMetas();
+    sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();
     // loadOldSubjects();
     // loadOldCourses();
