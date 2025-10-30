@@ -14,6 +14,19 @@ import { ApiError } from "@/utils/ApiError.js";
 
 // Helper function to find Chromium executable path
 async function findChromiumExecutable(): Promise<string | undefined> {
+  // Prefer environment-provided executable path for server deployments
+  const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (envPath) {
+    try {
+      await fs.access(envPath);
+      console.log(`[IMAGE CONVERSION] Using Chromium from env: ${envPath}`);
+      return envPath;
+    } catch {
+      console.warn(
+        `[IMAGE CONVERSION] Env PUPPETEER_EXECUTABLE_PATH set but not accessible: ${envPath}`,
+      );
+    }
+  }
   const possiblePaths = [
     "/usr/bin/chromium-browser", // Ubuntu/Debian
     "/usr/bin/chromium", // Alternative Ubuntu/Debian
@@ -70,7 +83,11 @@ export async function convertPdfToJpg(
     const executablePath = await findChromiumExecutable();
     const launchOptions: any = {
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+      ],
     };
 
     if (executablePath) {
@@ -167,7 +184,11 @@ export async function convertImageToJpg(
       const executablePath = await findChromiumExecutable();
       const launchOptions: any = {
         headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+        ],
       };
 
       if (executablePath) {
@@ -284,7 +305,11 @@ async function compressImageToTarget(
       const executablePath = await findChromiumExecutable();
       const launchOptions: any = {
         headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+        ],
       };
 
       if (executablePath) {

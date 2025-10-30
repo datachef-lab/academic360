@@ -10,6 +10,19 @@ const __dirname = path.dirname(__filename);
 
 // Helper function to find Chromium executable path
 async function findChromiumExecutable(): Promise<string | undefined> {
+  // Prefer environment-provided executable path for server deployments
+  const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (envPath) {
+    try {
+      await fs.access(envPath);
+      console.log(`[PDF GENERATION] Using Chromium from env: ${envPath}`);
+      return envPath;
+    } catch {
+      console.warn(
+        `[PDF GENERATION] Env PUPPETEER_EXECUTABLE_PATH set but not accessible: ${envPath}`,
+      );
+    }
+  }
   const possiblePaths = [
     "/usr/bin/chromium-browser", // Ubuntu/Debian
     "/usr/bin/chromium", // Alternative Ubuntu/Debian
