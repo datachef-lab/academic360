@@ -3009,7 +3009,7 @@ export async function sendAdmRegFormToNotSendStudents() {
   console.log("errors while checking", errorCount);
   console.log("sanity total (checked + skipped)", processed + skippedNoApp);
   // Print the smallest form number
-  console.log("smallest form number", arr.sort()[0]);
+  console.log("smallest form number: ", arr.sort()[0]);
 }
 async function getUrlForAdmRegForm(
   studentId: number,

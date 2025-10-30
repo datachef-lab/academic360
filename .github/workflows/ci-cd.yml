@@ -147,6 +147,7 @@ jobs:
             # Backend
             echo "  📡 Backend configuration..."
             put PORT "$(choose '${{ secrets.PROD_PORT }}' '${{ secrets.PORT }}')"
+            put PUPPETEER_EXECUTABLE_PATH "$(choose '${{ secrets.PROD_PUPPETEER_EXECUTABLE_PATH }}' '${{ secrets.PUPPETEER_EXECUTABLE_PATH }}')"
             # Notification-system
             echo "  📬 Notification system configuration..."
             put NOTIFICATION_SYSTEM_PORT "${{ secrets.NOTIFICATION_SYSTEM_PORT }}"
@@ -229,6 +230,7 @@ jobs:
             # Backend
             echo "  📡 Backend configuration..."
             put PORT "$(choose '${{ secrets.STAGING_PORT }}' '${{ secrets.PORT }}')"
+            put PUPPETEER_EXECUTABLE_PATH "$(choose '${{ secrets.STAGE_PUPPETEER_EXECUTABLE_PATH }}' '${{ secrets.PUPPETEER_EXECUTABLE_PATH }}')"
             # Notification-system
             echo "  📬 Notification system configuration..."
             put NOTIFICATION_SYSTEM_PORT "${{ secrets.NOTIFICATION_SYSTEM_PORT }}"
@@ -355,6 +357,8 @@ jobs:
             "NODE_ENV" "PORT" "DATABASE_URL" "CORS_ORIGIN" "BACKEND_URL"
             "ACCESS_TOKEN_SECRET" "ACCESS_TOKEN_EXPIRY" "REFRESH_TOKEN_SECRET" "REFRESH_TOKEN_EXPIRY"
             "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET"
+            # Puppeteer/Chrome
+            "PUPPETEER_EXECUTABLE_PATH"
             # Notification system
             "NOTIFICATION_SYSTEM_PORT"
             # Email
