@@ -1,3 +1,5 @@
+import * as fs from "fs";
+import * as path from "path";
 import { db } from "@/db/index.js";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { cuRegistrationDocumentUploadModel } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
@@ -22,6 +24,9 @@ import {
   or,
   inArray,
   isNotNull,
+  asc,
+  gt,
+  sql,
 } from "drizzle-orm";
 import { CuRegistrationCorrectionRequestInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { cuRegistrationDocumentUploadInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
@@ -58,6 +63,8 @@ import ExcelJS from "exceljs";
 import { getCuRegPdfPathDynamic } from "./cu-registration-document-path.service.js";
 import { getSignedUrlForFile } from "@/services/s3.service.js";
 import axios from "axios";
+import { S3Client, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { writeExcelFile } from "@/utils/writeExcel.js";
 
 // Environment detection helpers
 const shouldRedirectToDeveloper = () => {
@@ -2932,7 +2939,7 @@ export async function sendAdmRegFormToNotSendStudents() {
   let missingCount = 0; // how many returned non-200
   let skippedNoApp = 0; // how many had no application number
   let errorCount = 0; // network or unexpected errors
-
+  const MIN_FORM_NUMBER = "0170500"; // ← String!
   for (let page = 0; page < totalBatches; page++) {
     const forms = await db
       .select()
@@ -2943,12 +2950,19 @@ export async function sendAdmRegFormToNotSendStudents() {
           isNotNull(
             cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
           ),
+          sql`${cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber} > ${MIN_FORM_NUMBER}`,
         ),
       )
-      .orderBy(desc(cuRegistrationCorrectionRequestModel.createdAt))
+      .orderBy(
+        asc(
+          cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+        ),
+      )
       .limit(BATCH_SIZE)
       .offset(page * BATCH_SIZE);
+    console.log(forms.length, "forms fetched in page", page + 1);
     for (const form of forms) {
+      console.log("Processing form id:", form.id);
       if (!form.cuRegistrationApplicationNumber) {
         console.log("no application number  for form id:", form.id);
         skippedNoApp += 1;
@@ -2975,13 +2989,13 @@ export async function sendAdmRegFormToNotSendStudents() {
           arr.push(form.cuRegistrationApplicationNumber!);
 
           // Generate the pdf and save it to the s3 bucket and notify the student
-          if (form.cuRegistrationApplicationNumber === "0170547") {
-            await tmptriggerNotif(form, foundStudent.uid!);
-            console.log(
-              "notified student",
-              form.cuRegistrationApplicationNumber,
-            );
-          }
+          //   if (form.cuRegistrationApplicationNumber === "0170547") {
+          //     await tmptriggerNotif(form, foundStudent.uid!);
+          //     console.log(
+          //       "notified student",
+          //       form.cuRegistrationApplicationNumber,
+          //     );
+          //   }
         } else if (response.status === 200) {
           okCount += 1;
         } else {
@@ -3010,7 +3024,17 @@ export async function sendAdmRegFormToNotSendStudents() {
   console.log("sanity total (checked + skipped)", processed + skippedNoApp);
   // Print the smallest form number
   console.log("smallest form number: ", arr.sort()[0]);
+  for (let i = 0; i < arr.length; i++) {
+    console.log(arr[i]);
+  }
+  console.log(arr.length);
+  writeExcelFile(
+    "./",
+    "missing-adm-reg-forms.xlsx",
+    arr.map((an) => ({ applicationNumber: an })),
+  );
 }
+
 async function getUrlForAdmRegForm(
   studentId: number,
   studentUid: string,
@@ -3063,6 +3087,8 @@ async function getUrlForAdmRegForm(
 
   return signedUrl;
 }
+
+// (reverted) no S3 key helper needed when using presigned GET
 
 async function tmptriggerNotif(
   cuRegReqCorrection: CuRegistrationCorrectionRequestInsertTypeT,

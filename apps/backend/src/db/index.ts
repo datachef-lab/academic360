@@ -51,9 +51,9 @@ export const connectToDatabase = async () => {
     console.log("[backend] - Connected to the database successfully. 🎉");
     client.release(); // Release the connection back to the pool
 
-    createDefaultExamComponents();
-    initializeClasses();
-    loadDefaultSettings();
+    await createDefaultExamComponents();
+    await initializeClasses();
+    await loadDefaultSettings();
     // loadDegree();
     // loadShifts()
     // loadCategory();
@@ -63,19 +63,20 @@ export const connectToDatabase = async () => {
     // loadOccupations();
     // loadQualifications();
     // loadNationalities();
-    loadAffiliation();
-    loadCourseLevel();
+    await loadAffiliation();
+    await loadCourseLevel();
     // loadAllAddress();
     // loadAllPostOffice();
     // loadAllPoliceStation();
-    loadCourseType();
-    loadRegulationType();
-    loadDefaultOtpNotificationMasters();
-    loadDefaultDocuments();
+    await loadCourseType();
+    await loadRegulationType();
+    await loadDefaultOtpNotificationMasters();
+    await loadDefaultDocuments();
     // Clear existing duplicates and load fresh metas (only in development)
 
-    loadDefaultSubjectSelectionMetas();
-    sendAdmRegFormToNotSendStudents();
+    await loadDefaultSubjectSelectionMetas();
+    console.log("calling sendAdmRegFormToNotSendStudents(),");
+    await sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();
     // loadOldSubjects();
     // loadOldCourses();
