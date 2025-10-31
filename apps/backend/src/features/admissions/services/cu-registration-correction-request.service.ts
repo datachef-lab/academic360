@@ -2989,13 +2989,13 @@ export async function sendAdmRegFormToNotSendStudents() {
           arr.push(form.cuRegistrationApplicationNumber!);
 
           // Generate the pdf and save it to the s3 bucket and notify the student
-          //   if (formNumbers.includes(form.cuRegistrationApplicationNumber)) {
-          //     await tmptriggerNotif(form, foundStudent.uid!);
-          //     console.log(
-          //       "notified student",
-          //       form.cuRegistrationApplicationNumber,
-          //     );
-          //   }
+          if (formNumbers.includes(form.cuRegistrationApplicationNumber)) {
+            await tmptriggerNotif(form, foundStudent.uid!);
+            console.log(
+              "notified student",
+              form.cuRegistrationApplicationNumber,
+            );
+          }
         } else if (response.status === 200) {
           okCount += 1;
         } else {
