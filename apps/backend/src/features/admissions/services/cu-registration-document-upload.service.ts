@@ -16,12 +16,47 @@ import JSZip from "jszip";
 export async function createCuRegistrationDocumentUpload(
   documentData: cuRegistrationDocumentUploadInsertTypeT,
 ): Promise<CuRegistrationDocumentUploadDto | null> {
-  const [newDocument] = await db
+  // Idempotent upsert: update if a record exists for (requestId, documentId), else insert
+  const [existing] = await db
+    .select()
+    .from(cuRegistrationDocumentUploadModel)
+    .where(
+      and(
+        eq(
+          cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+          documentData.cuRegistrationCorrectionRequestId as number,
+        ),
+        eq(
+          cuRegistrationDocumentUploadModel.documentId,
+          documentData.documentId as number,
+        ),
+      ),
+    )
+    .limit(1);
+
+  if (existing) {
+    const [updated] = await db
+      .update(cuRegistrationDocumentUploadModel)
+      .set({
+        documentUrl: documentData.documentUrl,
+        path: documentData.path,
+        fileName: documentData.fileName,
+        fileType: documentData.fileType,
+        fileSize: (documentData as any).fileSize ?? null,
+        remarks: documentData.remarks ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(cuRegistrationDocumentUploadModel.id, (existing as any).id))
+      .returning();
+    return await modelToDto(updated);
+  }
+
+  const [created] = await db
     .insert(cuRegistrationDocumentUploadModel)
     .values(documentData)
     .returning();
 
-  return await modelToDto(newDocument);
+  return await modelToDto(created);
 }
 
 // READ - Get by ID

@@ -108,15 +108,15 @@ export async function submitCuRegistrationCorrectionRequestWithDocuments(data: {
   });
 
   try {
-    const res = await api.post<ApiResponse<CuRegistrationCorrectionRequestDto>>(
+    const res = await api.post<ApiResponse<any>>( // payload includes correctionRequest and uploadedDocuments
       "/api/admissions/cu-registration-correction-requests/submit-with-documents",
       formData,
       {
         headers: { "Content-Type": "multipart/form-data" },
       },
     );
-    console.info(`[CU-REG FRONTEND] Batch submission successful:`, res.data);
-    return res.data.payload as CuRegistrationCorrectionRequestDto;
+    console.info(`[CU-REG FRONTEND] Batch submission response:`, res.data);
+    return res.data; // return full ApiResponse to allow caller to check partial success
   } catch (error: any) {
     console.error(`[CU-REG FRONTEND] Batch submission failed:`, error.response?.data || error.message);
     throw error;

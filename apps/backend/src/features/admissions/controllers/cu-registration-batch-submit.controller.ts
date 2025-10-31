@@ -16,7 +16,10 @@ import {
   getCuRegDocumentPathFromName,
   getCuRegDocumentPathFromNameDynamic,
 } from "../services/cu-registration-document-path.service.js";
-import { uploadToFileSystem } from "@/services/filesystem-storage.service.js";
+import {
+  uploadToFileSystem,
+  uploadToFileSystemAtPath,
+} from "@/services/filesystem-storage.service.js";
 import { createCuRegistrationDocumentUpload } from "../services/cu-registration-document-upload.service.js";
 import { db } from "@/db/index.js";
 import { documentModel } from "@repo/db/schemas";
@@ -216,6 +219,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
 
     // Process document uploads
     const uploadedDocuments = [];
+    let s3UploadedCount = 0; // track S3 successes deterministically
     const documentNamesArray = documentNames ? JSON.parse(documentNames) : [];
 
     for (let i = 0; i < files.length; i++) {
@@ -299,7 +303,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
           originalname: pathConfig.filename,
         };
 
-        // Try S3 first, fallback to file system
+        // Upload to S3 and mirror to filesystem — both must succeed
         let uploadResult;
         try {
           // Create upload config using the folder path from path service
@@ -325,20 +329,19 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
           console.info(
             `[CU-REG BATCH SUBMIT] S3 upload successful: ${pathConfig.fullPath}`,
           );
+          s3UploadedCount++;
+          // Mirror to filesystem (required)
+          await uploadToFileSystemAtPath(
+            convertedFile,
+            pathConfig.folder,
+            pathConfig.filename,
+          );
+          console.info(
+            `[CU-REG BATCH SUBMIT] Mirrored file to filesystem for application ${cuRegNumber}`,
+          );
         } catch (s3Error: any) {
-          if (s3Error.message?.includes("S3 service is not configured")) {
-            // Fallback to file system with new naming
-            uploadResult = await uploadToFileSystem(
-              convertedFile,
-              cuRegNumber,
-              pathConfig.documentCode,
-            );
-            console.info(
-              `[CU-REG BATCH SUBMIT] File system upload successful for: ${convertedFile.originalname}`,
-            );
-          } else {
-            throw s3Error;
-          }
+          // No fallback: both S3 and filesystem saves are required for consistency
+          throw s3Error;
         }
 
         // Create document upload record
@@ -367,16 +370,37 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
     }
 
     console.info(
-      `[CU-REG BATCH SUBMIT] Batch submission completed. Uploaded ${uploadedDocuments.length} documents`,
+      `[CU-REG BATCH SUBMIT] Batch submission completed. Uploaded ${uploadedDocuments.length}/${documentNamesArray.length} documents`,
     );
+
+    const allDocsUploaded =
+      uploadedDocuments.length === documentNamesArray.length;
+    const allDocsOnS3 = s3UploadedCount === documentNamesArray.length;
 
     // Check if there are any correction flags
     const hasCorrectionFlags = Object.values(parsedFlags).some(
       (flag) => flag === true,
     );
 
-    // Generate PDF after all documents are uploaded (only if no correction flags)
-    if (!hasCorrectionFlags) {
+    // Generate PDF only if: all docs uploaded to S3, application number exists, and final submit criteria met
+    const hasApplicationNumber =
+      !!updatedRequest?.cuRegistrationApplicationNumber;
+    const allDeclarationsTrue = !!(
+      updatedRequest?.personalInfoDeclaration &&
+      updatedRequest?.addressInfoDeclaration &&
+      updatedRequest?.subjectsDeclaration &&
+      updatedRequest?.documentsDeclaration
+    );
+    const statusNotPending =
+      !!updatedRequest?.status && updatedRequest.status !== "PENDING";
+    const isFinalSubmitted = allDeclarationsTrue && statusNotPending;
+
+    if (
+      allDocsUploaded &&
+      allDocsOnS3 &&
+      hasApplicationNumber &&
+      isFinalSubmitted
+    ) {
       try {
         console.info(
           `[CU-REG BATCH SUBMIT] Generating PDF for final submission`,
@@ -498,6 +522,44 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
         console.error(`[CU-REG BATCH SUBMIT] PDF generation error:`, pdfError);
         // Don't fail the entire request if PDF generation fails
       }
+    }
+
+    if (!allDocsUploaded || !allDocsOnS3) {
+      res.status(207).json(
+        new ApiResponse(
+          207,
+          "PARTIAL_SUCCESS",
+          {
+            correctionRequest: updatedRequest,
+            uploadedDocuments,
+            expectedDocuments: documentNamesArray.length,
+            uploadedCount: uploadedDocuments.length,
+            allDocsOnS3,
+          },
+          "Some documents failed to upload. Please retry the missing uploads.",
+        ),
+      );
+      return;
+    }
+
+    if (!hasApplicationNumber || !isFinalSubmitted) {
+      res.status(207).json(
+        new ApiResponse(
+          207,
+          "PARTIAL_SUCCESS",
+          {
+            correctionRequest: updatedRequest,
+            uploadedDocuments,
+            expectedDocuments: documentNamesArray.length,
+            uploadedCount: uploadedDocuments.length,
+            allDocsOnS3,
+            hasApplicationNumber,
+            isFinalSubmitted,
+          },
+          "Final submission incomplete (missing application number or final flag)",
+        ),
+      );
+      return;
     }
 
     res.status(200).json(

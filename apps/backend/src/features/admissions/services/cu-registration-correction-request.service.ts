@@ -994,7 +994,11 @@ export async function updateCuRegistrationCorrectionRequest(
   const shouldGeneratePdfNow =
     isFinalSubmission || allDeclarationsCompletedInDB;
 
-  if (shouldGeneratePdfNow && dataFieldsUpdated) {
+  if (
+    shouldGeneratePdfNow &&
+    dataFieldsUpdated &&
+    updatedRequest.cuRegistrationApplicationNumber
+  ) {
     try {
       console.info(
         "[CU-REG CORRECTION][UPDATE] All declarations completed and data updated, regenerating PDF with latest data",
@@ -1010,7 +1014,7 @@ export async function updateCuRegistrationCorrectionRequest(
         await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
           existing.studentId,
           id,
-          updatedRequest.cuRegistrationApplicationNumber || "TEMP-APP-NUM", // Use the updated application number
+          updatedRequest.cuRegistrationApplicationNumber, // Use the updated application number
           student.uid,
         );
 

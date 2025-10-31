@@ -2423,7 +2423,7 @@ export default function CURegistrationPage() {
         },
       });
 
-      await submitCuRegistrationCorrectionRequestWithDocuments({
+      const apiRes = await submitCuRegistrationCorrectionRequestWithDocuments({
         correctionRequestId,
         flags: correctionFlags as unknown as Record<string, boolean>,
         payload: {
@@ -2468,6 +2468,21 @@ export default function CURegistrationPage() {
         },
         documents: documentsToUpload,
       });
+
+      // Handle partial success vs full success based on backend response
+      const uploadedCount = apiRes?.payload?.uploadedDocuments?.length ?? 0;
+      const expectedCount = documentsToUpload.length;
+      const isPartial = apiRes?.httpStatusCode === 207 || uploadedCount < expectedCount;
+
+      if (isPartial) {
+        toast.error(
+          `Some documents failed to upload (${uploadedCount}/${expectedCount}). Please re-upload missing documents and submit again.`,
+        );
+        // Do not flip UI to success state or preview PDF on partial upload
+        setShowReviewConfirm(true);
+        setIsSubmitting(false);
+        return;
+      }
 
       toast.success("CU Registration Application Submitted Successfully!");
       setShowReviewConfirm(false);

@@ -90,3 +90,45 @@ export async function deleteFromFileSystem(key: string): Promise<void> {
     throw new ApiError(500, `Failed to delete file from filesystem: ${error}`);
   }
 }
+
+// Save a file at an explicit folder/filename under CU_REGISTRATION_APP_PATH
+export async function uploadToFileSystemAtPath(
+  file: Express.Multer.File,
+  folder: string, // e.g. 2025/CCF/adm-reg-docs/Marksheet
+  fileName: string, // e.g. M0170001.jpg
+): Promise<FileSystemUploadResult> {
+  try {
+    const cuRegAppPath = process.env.CU_REGISTRATION_APP_PATH;
+    if (!cuRegAppPath) {
+      throw new ApiError(
+        500,
+        "CU_REGISTRATION_APP_PATH environment variable is not set",
+      );
+    }
+
+    const targetDir = path.join(cuRegAppPath, folder);
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    const filePath = path.join(targetDir, fileName);
+    // Overwrite if exists (replacement behavior)
+    fs.writeFileSync(filePath, file.buffer);
+
+    const relativePath = path
+      .relative(cuRegAppPath, filePath)
+      .replace(/\\/g, "/");
+    const url = `/uploads/${relativePath}`; // normalized local URL pattern
+
+    console.info(`[FILESYSTEM UPLOAD] Saved at path: ${filePath}`);
+
+    return {
+      url,
+      key: relativePath,
+      fileName,
+    };
+  } catch (error) {
+    console.error("[FILESYSTEM UPLOAD] Error:", error);
+    throw new ApiError(500, `Failed to save file to filesystem: ${error}`);
+  }
+}

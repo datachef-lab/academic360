@@ -35,6 +35,7 @@ import {
 } from "../services/cu-registration-document-path.service.js";
 import {
   uploadToFileSystem,
+  uploadToFileSystemAtPath,
   deleteFromFileSystem,
 } from "@/services/filesystem-storage.service.js";
 import {
@@ -166,14 +167,18 @@ export const createNewCuRegistrationDocumentUpload = async (
     const documentName = await getDocumentNameById(documentId);
 
     // Generate CU registration specific path
-    const cuRegNumber =
-      correctionRequest.cuRegistrationApplicationNumber || "0000001";
+    const cuRegNumber = correctionRequest.cuRegistrationApplicationNumber;
     const studentId = correctionRequest.student.id;
 
-    if (!studentId) {
+    if (!studentId || !cuRegNumber) {
       res
         .status(400)
-        .json(new ApiError(400, "Student ID not found in correction request"));
+        .json(
+          new ApiError(
+            400,
+            "Student ID or CU registration number not found in correction request",
+          ),
+        );
       return;
     }
 
@@ -259,37 +264,29 @@ export const createNewCuRegistrationDocumentUpload = async (
       );
     }
 
-    // Try to upload to S3 first, fallback to file system if S3 is not configured
-    let uploadResult;
-    try {
-      console.info("[CU-REG DOC UPLOAD] Attempting S3 upload...");
-      uploadResult = await uploadToS3(processedFile, uploadConfig);
-      console.info("[CU-REG DOC UPLOAD] S3 upload successful:", {
-        key: uploadResult.key,
-        url: uploadResult.url,
-        bucket: uploadResult.bucket,
-      });
-    } catch (s3Error: any) {
-      if (s3Error.message?.includes("S3 service is not configured")) {
-        console.info(
-          "[CU-REG DOC UPLOAD] S3 not configured, falling back to file system storage",
-        );
-        // Use the same CU registration path structure for file system storage
-        uploadResult = await uploadToFileSystem(
-          processedFile,
-          pathConfig.cuRegNumber, // Use application number for file system storage
-          pathConfig.documentCode, // Use document code as document type
-        );
-        console.info("[CU-REG DOC UPLOAD] File system upload successful:", {
-          key: uploadResult.key,
-          url: uploadResult.url,
-          fileName: uploadResult.fileName,
-        });
-      } else {
-        console.error("[CU-REG DOC UPLOAD] S3 upload failed:", s3Error);
-        throw s3Error;
-      }
-    }
+    // Upload to S3 and also mirror to filesystem — both must succeed
+    console.info("[CU-REG DOC UPLOAD] Attempting S3 upload...");
+    const s3Upload = await uploadToS3(processedFile, uploadConfig);
+    console.info("[CU-REG DOC UPLOAD] S3 upload successful:", {
+      key: s3Upload.key,
+      url: s3Upload.url,
+      bucket: s3Upload.bucket,
+    });
+
+    console.info("[CU-REG DOC UPLOAD] Saving copy to filesystem...");
+    const fsUpload = await uploadToFileSystemAtPath(
+      processedFile,
+      pathConfig.folder,
+      pathConfig.filename,
+    );
+    console.info("[CU-REG DOC UPLOAD] Filesystem save successful:", {
+      key: fsUpload.key,
+      url: fsUpload.url,
+      fileName: fsUpload.fileName,
+    });
+
+    // Use S3 upload details for DB persistence
+    const uploadResult = s3Upload;
 
     // Validate upload result
     if (!uploadResult || !uploadResult.key || !uploadResult.url) {
@@ -384,22 +381,10 @@ export const createNewCuRegistrationDocumentUpload = async (
           `[CU-REG DOC UPLOAD] Database update failed for document ID: ${existingDocument.id}`,
           dbError,
         );
-        // Clean up the newly uploaded file since database update failed
-        try {
-          if (uploadResult.url.startsWith("/uploads/")) {
-            await deleteFromFileSystem(uploadResult.key);
-          } else {
-            await deleteFromS3(uploadResult.key);
-          }
-          console.info(
-            `[CU-REG DOC UPLOAD] Cleaned up newly uploaded file due to database error: ${uploadResult.key}`,
-          );
-        } catch (cleanupError) {
-          console.error(
-            "Failed to cleanup uploaded file after database error:",
-            cleanupError,
-          );
-        }
+        // Do not cleanup uploaded files on DB error — keep them for reconciliation
+        console.warn(
+          `[CU-REG DOC UPLOAD] Database error after upload; keeping uploaded file for reconciliation: ${uploadResult.key}`,
+        );
         throw dbError;
       }
 
