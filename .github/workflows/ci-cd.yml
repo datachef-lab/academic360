@@ -180,6 +180,8 @@ jobs:
             echo "  📁 File paths..."
             put SETTINGS_PATH "$(choose '${{ secrets.PROD_SETTINGS_PATH }}' '${{ secrets.SETTINGS_PATH }}')"
             put DOCUMENTS_PATH "$(choose '${{ secrets.PROD_DOCUMENTS_PATH }}' '${{ secrets.DOCUMENTS_PATH }}')"
+          # CU Registration filesystem mirror base path
+          put CU_REGISTRATION_APP_PATH "$(choose '${{ secrets.PROD_CU_REGISTRATION_APP_PATH }}' '${{ secrets.CU_REGISTRATION_APP_PATH }}')"
             echo "  🗄️  Legacy database..."
             put OLD_DB_HOST "$(choose '${{ secrets.PROD_OLD_DB_HOST }}' '${{ secrets.OLD_DB_HOST }}')"
             put OLD_DB_PORT "$(choose '${{ secrets.PROD_OLD_DB_PORT }}' '${{ secrets.OLD_DB_PORT }}')"
@@ -263,6 +265,8 @@ jobs:
             echo "  📁 File paths..."
             put SETTINGS_PATH "$(choose '${{ secrets.STAGING_SETTINGS_PATH }}' '${{ secrets.SETTINGS_PATH }}')"
             put DOCUMENTS_PATH "$(choose '${{ secrets.STAGING_DOCUMENTS_PATH }}' '${{ secrets.DOCUMENTS_PATH }}')"
+          # CU Registration filesystem mirror base path
+          put CU_REGISTRATION_APP_PATH "$(choose '${{ secrets.STAGE_CU_REGISTRATION_APP_PATH }}' '${{ secrets.CU_REGISTRATION_APP_PATH }}')"
             echo "  🗄️  Legacy database..."
             put OLD_DB_HOST "$(choose '${{ secrets.STAGING_OLD_DB_HOST }}' '${{ secrets.OLD_DB_HOST }}')"
             put OLD_DB_PORT "$(choose '${{ secrets.STAGING_OLD_DB_PORT }}' '${{ secrets.OLD_DB_PORT }}')"

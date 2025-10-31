@@ -80,6 +80,10 @@ export const connectToDatabase = async () => {
     // loadOldSubjects();
     // loadOldCourses();
     // loadOldSubjectTypes();
+    console.log(
+      "[backend] - CU Registration App Path:",
+      process.env.CU_REGISTRATION_APP_PATH,
+    );
 
     // Load CU physical registration schedule from Excel into DB (safe to re-run)
     try {
