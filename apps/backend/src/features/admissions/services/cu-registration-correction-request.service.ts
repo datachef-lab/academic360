@@ -2909,6 +2909,20 @@ export const exportCuRegistrationCorrectionRequests =
     }
   };
 
+const formNumbers: string[] = [
+  "0170547",
+  "0170521",
+  "0170522",
+  "0170523",
+  "0170524",
+  "0170525",
+  "0170526",
+  "0170527",
+  "0170528",
+  "0170529",
+  "0170530",
+];
+
 // Function to send the notifications to the students for adm-reg-form for those who have submitted the reg-form (has application number) but pdf is not present in the s3 bucket
 export async function sendAdmRegFormToNotSendStudents() {
   const arr: string[] = [];
@@ -2975,7 +2989,7 @@ export async function sendAdmRegFormToNotSendStudents() {
           arr.push(form.cuRegistrationApplicationNumber!);
 
           // Generate the pdf and save it to the s3 bucket and notify the student
-          if (form.cuRegistrationApplicationNumber === "0170547") {
+          if (formNumbers.includes(form.cuRegistrationApplicationNumber)) {
             await tmptriggerNotif(form, foundStudent.uid!);
             console.log(
               "notified student",
