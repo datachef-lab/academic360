@@ -166,8 +166,11 @@ export const createNewCuRegistrationDocumentUpload = async (
     const documentName = await getDocumentNameById(documentId);
 
     // Generate CU registration specific path
+    // Use application number if available; otherwise, use request ID as a unique fallback
+    // to avoid collisions like "0000001" across many uploads
     const cuRegNumber =
-      correctionRequest.cuRegistrationApplicationNumber || "0000001";
+      correctionRequest.cuRegistrationApplicationNumber ||
+      String(correctionRequest.id);
     const studentId = correctionRequest.student.id;
 
     if (!studentId) {

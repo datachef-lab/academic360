@@ -82,12 +82,12 @@ export const connectToDatabase = async () => {
     // loadOldSubjectTypes();
 
     // Load CU physical registration schedule from Excel into DB (safe to re-run)
-    try {
-      const result = await CuRegistrationExcelService.syncAllToDatabase();
-      console.log("[backend] - CU Physical Reg Excel sync:", result);
-    } catch (e) {
-      console.warn("[backend] - CU Physical Reg Excel sync failed", e);
-    }
+    // try {
+    //   const result = await CuRegistrationExcelService.syncAllToDatabase();
+    //   console.log("[backend] - CU Physical Reg Excel sync:", result);
+    // } catch (e) {
+    //   console.warn("[backend] - CU Physical Reg Excel sync failed", e);
+    // }
   } catch (error) {
     console.log(process.env.DATABASE_URL);
     console.error("[backend] - Failed to connect to the database: ⚠", error);

@@ -162,6 +162,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [isSavingSubjects, setIsSavingSubjects] = useState(false);
   const [isSavingDocuments, setIsSavingDocuments] = useState(false);
+  const [primaryParentType, setPrimaryParentType] = useState<"FATHER" | "MOTHER" | "UNKNOWN">("UNKNOWN");
 
   // Check if all declarations are completed
   const allDeclarationsCompleted = personalDeclared && addressDeclared && subjectsDeclared && documentsConfirmed;
@@ -261,6 +262,11 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     label: value.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
   }));
 
+  // Admin dropdown should not show these statuses
+  const filteredCorrectionStatusOptions = correctionStatusOptions.filter(
+    (opt) => !["REQUEST_CORRECTION", "APPROVED", "REJECTED"].includes(opt.value),
+  );
+
   // Document types for file uploads - fetched from API
   const [documentTypes, setDocumentTypes] = useState<Array<{ id: string; name: string; code: string }>>([]);
 
@@ -315,12 +321,18 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
         // Prepare the data to save
         const personalInfoData = {
+          fullName: editableData.fullName,
           gender: editableData.gender,
           nationality: editableData.nationality,
           aadhaarNumber: editableData.aadhaarNumber,
           apaarId: editableData.apaarId,
           ews: editableData.belongsToEWS,
-        };
+          ...(primaryParentType === "FATHER"
+            ? { fatherName: editableData.fatherMotherName }
+            : primaryParentType === "MOTHER"
+              ? { motherName: editableData.fatherMotherName }
+              : { parentName: editableData.fatherMotherName }),
+        } as Record<string, unknown>;
 
         // Call the backend API to save personal info
         await axiosInstance.post(
@@ -938,20 +950,26 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         console.info(`[CU-REG MAIN-CONSOLE] familyDetails from profile:`, familyDetails);
 
         if (personalDetails || studentData) {
+          const fatherNameCandidate =
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (familyDetails?.members?.find((m: any) => m.type === "FATHER")?.name as string) ||
+            (familyDetails?.father?.name as string) ||
+            "";
+          const motherNameCandidate =
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (familyDetails?.members?.find((m: any) => m.type === "MOTHER")?.name as string) ||
+            (familyDetails?.mother?.name as string) ||
+            "";
+
+          setPrimaryParentType(fatherNameCandidate ? "FATHER" : motherNameCandidate ? "MOTHER" : "UNKNOWN");
+
           setEditableData((prev) => ({
             ...prev,
             fullName:
               studentData?.name && studentData.name.trim().length > 0
                 ? studentData.name
                 : `${personalDetails?.firstName || ""} ${personalDetails?.middleName || ""} ${personalDetails?.lastName || ""}`.trim(),
-            fatherMotherName:
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              familyDetails?.members?.find((m: any) => m.type === "FATHER")?.name ||
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              familyDetails?.members?.find((m: any) => m.type === "MOTHER")?.name ||
-              familyDetails?.father?.name ||
-              familyDetails?.mother?.name ||
-              "",
+            fatherMotherName: fatherNameCandidate || motherNameCandidate || "",
             gender: personalDetails?.gender || "",
             nationality: String(personalDetails?.nationality?.id || ""),
             aadhaarNumber: formatAadhaarNumber(personalDetails?.aadhaarCardNumber || "XXXX XXXX XXXX"),
@@ -1425,7 +1443,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {correctionStatusOptions.map((option: { value: string; label: string }) => (
+                {filteredCorrectionStatusOptions.map((option: { value: string; label: string }) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -1550,8 +1568,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           id="fullName"
                           value={editableData.fullName}
                           onChange={(e) => handleInputChange("fullName", e.target.value)}
-                          className="bg-gray-100 text-gray-700 border-gray-300"
-                          disabled
+                          className="bg-white text-gray-900 border-gray-300"
                         />
                       </div>
 
@@ -1564,8 +1581,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           id="fatherMotherName"
                           value={editableData.fatherMotherName}
                           onChange={(e) => handleInputChange("fatherMotherName", e.target.value)}
-                          className="bg-gray-100 text-gray-700 border-gray-300"
-                          disabled
+                          className="bg-white text-gray-900 border-gray-300"
                         />
                       </div>
 
@@ -1698,6 +1714,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                             checked={personalDeclared}
                             onCheckedChange={handlePersonalInfoDeclarationChange}
                             disabled={isSavingPersonal}
+                            onClick={() => handlePersonalInfoDeclarationChange(true)}
                             className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                           />
                           <Label
@@ -2072,6 +2089,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           checked={addressDeclared}
                           onCheckedChange={handleAddressInfoDeclarationChange}
                           disabled={isSavingAddress}
+                          onClick={() => handleAddressInfoDeclarationChange(true)}
                           className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                         />
                         <Label
@@ -2231,6 +2249,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           checked={subjectsDeclared}
                           onCheckedChange={handleSubjectsDeclarationChange}
                           disabled={isSavingSubjects}
+                          onClick={() => handleSubjectsDeclarationChange(true)}
                           className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                         />
                         <Label
@@ -2495,6 +2514,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                             handleDocumentsDeclarationChange(checked as boolean);
                           }}
                           disabled={isSavingDocuments}
+                          onClick={() => handleDocumentsDeclarationChange(true)}
                           className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
                         />
                         <Label

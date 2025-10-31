@@ -6,6 +6,8 @@ import { userModel } from "@repo/db/schemas/models/user";
 import {
   personalDetailsModel,
   addressModel,
+  familyModel,
+  personModel,
 } from "@repo/db/schemas/models/user";
 import {
   documentModel,
@@ -807,6 +809,83 @@ export async function updateCuRegistrationCorrectionRequest(
           console.info(
             "[CU-REG CORRECTION][UPDATE] No personal details to update",
           );
+        }
+
+        // User name update (student's display name)
+        if (payload.personalInfo.fullName !== undefined && student.userId) {
+          const newName = String(payload.personalInfo.fullName || "").trim();
+          if (newName.length > 0) {
+            await tx
+              .update(userModel)
+              .set({ name: newName })
+              .where(eq(userModel.id, student.userId as number));
+            console.info("[CU-REG CORRECTION][UPDATE] Updated user name", {
+              userId: student.userId,
+              name: newName,
+            });
+          }
+        }
+
+        // Parent person name update (father/mother whichever provided)
+        if (student.userId) {
+          const family = await tx
+            .select()
+            .from(familyModel)
+            .where(eq(familyModel.userId, student.userId as number))
+            .then((r) => r[0] || null);
+
+          if (family?.id) {
+            const parentUpdates: Array<{
+              type: "FATHER" | "MOTHER";
+              name?: string;
+            }> = [];
+            if (typeof payload.personalInfo.fatherName !== "undefined") {
+              parentUpdates.push({
+                type: "FATHER",
+                name: payload.personalInfo.fatherName,
+              });
+            }
+            if (typeof payload.personalInfo.motherName !== "undefined") {
+              parentUpdates.push({
+                type: "MOTHER",
+                name: payload.personalInfo.motherName,
+              });
+            }
+            if (
+              parentUpdates.length === 0 &&
+              typeof payload.personalInfo.parentName !== "undefined"
+            ) {
+              // Fallback when a generic parentName is sent
+              parentUpdates.push({
+                type: "FATHER",
+                name: payload.personalInfo.parentName,
+              });
+            }
+
+            for (const pu of parentUpdates) {
+              const newParentName = String(pu.name || "").trim();
+              if (!newParentName) continue;
+              const [person] = await tx
+                .select()
+                .from(personModel)
+                .where(
+                  and(
+                    eq(personModel.familyId, family.id as number),
+                    eq(personModel.type, pu.type as any),
+                  ),
+                );
+              if (person?.id) {
+                await tx
+                  .update(personModel)
+                  .set({ name: newParentName })
+                  .where(eq(personModel.id, person.id as number));
+                console.info(
+                  "[CU-REG CORRECTION][UPDATE] Updated parent person name",
+                  { type: pu.type, personId: person.id, name: newParentName },
+                );
+              }
+            }
+          }
         }
 
         // Student APAAR/ABC update - always process if present in payload
