@@ -75,7 +75,7 @@ export const connectToDatabase = async () => {
     // Clear existing duplicates and load fresh metas (only in development)
 
     loadDefaultSubjectSelectionMetas();
-    sendAdmRegFormToNotSendStudents();
+    // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();
     // loadOldSubjects();
     // loadOldCourses();
