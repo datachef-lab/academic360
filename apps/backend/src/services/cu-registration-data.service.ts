@@ -176,6 +176,7 @@ export class CuRegistrationDataService {
             cuRegistrationCorrectionRequestModel.aadhaarCardNumberCorrectionRequest,
           subjectsCorrectionRequest:
             cuRegistrationCorrectionRequestModel.subjectsCorrectionRequest,
+          status: cuRegistrationCorrectionRequestModel.status,
         })
         .from(cuRegistrationCorrectionRequestModel)
         .where(
@@ -190,12 +191,21 @@ export class CuRegistrationDataService {
       }
 
       // Check if any correction flags are set
+      //   const showRectificationBanner =
+      //     correctionRequest.genderCorrectionRequest ||
+      //     correctionRequest.nationalityCorrectionRequest ||
+      //     correctionRequest.apaarIdCorrectionRequest ||
+      //     correctionRequest.aadhaarCardNumberCorrectionRequest ||
+      //     correctionRequest.subjectsCorrectionRequest;
       const showRectificationBanner =
-        correctionRequest.genderCorrectionRequest ||
-        correctionRequest.nationalityCorrectionRequest ||
-        correctionRequest.apaarIdCorrectionRequest ||
-        correctionRequest.aadhaarCardNumberCorrectionRequest ||
-        correctionRequest.subjectsCorrectionRequest;
+        correctionRequest.status === "ONLINE_REGISTRATION_DONE"
+          ? false
+          : correctionRequest.status === "REQUEST_CORRECTION" ||
+              correctionRequest.status === "RECTIFICATION_DONE"
+            ? true
+            : false;
+      const isRectificationDone =
+        correctionRequest.status === "RECTIFICATION_DONE";
 
       // Fetch personal details with related data
       const [personalDetails] = await db
@@ -344,10 +354,10 @@ export class CuRegistrationDataService {
       const programCourseId = programCourseData?.id || 1; // Fallback
 
       // Fetch dynamic subject details based on stream and program course
-      console.info(
-        "[CU-REG DATA] Fetching dynamic subject details for studentId:",
-        options.studentId,
-      );
+      //   console.info(
+      //     "[CU-REG DATA] Fetching dynamic subject details for studentId:",
+      //     options.studentId,
+      //   );
       const subjectDetails = await this.getDynamicSubjectDetails(
         options.studentId,
         programCourseId,
@@ -355,10 +365,10 @@ export class CuRegistrationDataService {
         studentData.courseName || "",
       );
 
-      console.info("[CU-REG DATA] Dynamic subject details for template:", {
-        count: subjectDetails?.length || 0,
-        data: subjectDetails,
-      });
+      //   console.info("[CU-REG DATA] Dynamic subject details for template:", {
+      //     count: subjectDetails?.length || 0,
+      //     data: subjectDetails,
+      //   });
 
       // Fetch family details for parent name and annual income
       const [familyDetails] = await db
@@ -409,7 +419,7 @@ export class CuRegistrationDataService {
           "Recognised under Section 2(F) & 12 (B) of the UGC Act, 1956",
 
         // Student Basic Information
-        studentName: this.formatStudentName(personalDetails),
+        studentName: studentData.userName!,
         studentUid: studentData.uid || "",
         cuFormNumber:
           options.applicationNumber ||
@@ -426,6 +436,7 @@ export class CuRegistrationDataService {
 
         // Rectification Banner
         showRectificationBanner,
+        isRectificationDone,
 
         // Personal Information
         dateOfBirth: this.formatDate(personalDetails?.dateOfBirth),
@@ -500,17 +511,17 @@ export class CuRegistrationDataService {
         noticeBoardQrUrl: undefined,
       };
 
-      console.info("[CU-REG DATA] Document filtering flags:", {
-        isIndian: formData.isIndian,
-        isSCSTOBC: formData.isSCSTOBC,
-        isPWD: formData.isPWD,
-        isEWS: formData.isEWS,
-        isForeignNational: formData.isForeignNational,
-        hasCURegistration: formData.hasCURegistration,
-        belongsToEWS: studentData.belongsToEWS,
-        handicapped: studentData.handicapped,
-        disability: personalDetails?.disability,
-      });
+      //   console.info("[CU-REG DATA] Document filtering flags:", {
+      //     isIndian: formData.isIndian,
+      //     isSCSTOBC: formData.isSCSTOBC,
+      //     isPWD: formData.isPWD,
+      //     isEWS: formData.isEWS,
+      //     isForeignNational: formData.isForeignNational,
+      //     hasCURegistration: formData.hasCURegistration,
+      //     belongsToEWS: studentData.belongsToEWS,
+      //     handicapped: studentData.handicapped,
+      //     disability: personalDetails?.disability,
+      //   });
 
       // Fetch physical registration time and venue from DB first; fallback to Excel
       try {
@@ -539,9 +550,9 @@ export class CuRegistrationDataService {
             formData.physicalRegistrationVenue = reg.venue || "";
             formData.physicalRegistrationSubmissionDate =
               submissionDateStr || "";
-            console.info(
-              "[CU-REG DATA] Populated schedule from DB model (cu_physical_reg)",
-            );
+            // console.info(
+            //   "[CU-REG DATA] Populated schedule from DB model (cu_physical_reg)",
+            // );
           }
         }
 
@@ -613,6 +624,7 @@ export class CuRegistrationDataService {
           correctionRequest.cuRegistrationApplicationNumber,
         academicDetailsCuReg: academicDetails?.cuRegistrationNumber,
         showRectificationBanner: formData.showRectificationBanner,
+        isRectificationDone: formData.isRectificationDone,
         photoUrl: formData.studentPhotoUrl,
         courseName: studentData.courseName,
         programCourseName: studentData.programCourseName,
@@ -752,7 +764,7 @@ export class CuRegistrationDataService {
       return acc;
     }, {});
 
-    console.info("[CU-REG DATA] Subjects grouped by label:", subjectsByLabel);
+    // console.info("[CU-REG DATA] Subjects grouped by label:", subjectsByLabel);
 
     const subjectDetails = [];
 
@@ -782,18 +794,18 @@ export class CuRegistrationDataService {
       subjectsByLabel["Minor 4 (Semester VII & VIII)"] ||
       [];
 
-    console.info("[CU-REG DATA] Core/Major subjects found:", {
-      coreSubjects: coreSubjects.length,
-      minor1: minor1.length,
-      minor2: minor2.length,
-      minor3: minor3.length,
-      minor4: minor4.length,
-    });
+    // console.info("[CU-REG DATA] Core/Major subjects found:", {
+    //   coreSubjects: coreSubjects.length,
+    //   minor1: minor1.length,
+    //   minor2: minor2.length,
+    //   minor3: minor3.length,
+    //   minor4: minor4.length,
+    // });
 
-    console.info(
-      "[CU-REG DATA] Available labels for matching:",
-      Object.keys(subjectsByLabel),
-    );
+    // console.info(
+    //   "[CU-REG DATA] Available labels for matching:",
+    //   Object.keys(subjectsByLabel),
+    // );
 
     if (
       coreSubjects.length > 0 ||
@@ -829,13 +841,13 @@ export class CuRegistrationDataService {
         ],
       };
       subjectDetails.push(coreMinorTable);
-      console.info("[CU-REG DATA] Added Core/Major table:", coreMinorTable);
-      console.info("[CU-REG DATA] Using for Sem III & IV:", {
-        minor2Available: minor2.length > 0,
-        minor3Available: minor3.length > 0,
-        usingMinor: minor2.length > 0 ? "minor2" : "minor3",
-        subjectName: minorSem3And4[0]?.subjectName || "none",
-      });
+      //   console.info("[CU-REG DATA] Added Core/Major table:", coreMinorTable);
+      //   console.info("[CU-REG DATA] Using for Sem III & IV:", {
+      //     minor2Available: minor2.length > 0,
+      //     minor3Available: minor3.length > 0,
+      //     usingMinor: minor2.length > 0 ? "minor2" : "minor3",
+      //     subjectName: minorSem3And4[0]?.subjectName || "none",
+      //   });
     }
 
     // AEC/IDC subjects table - look for AEC and IDC subjects (or MDC for BCOM)
@@ -942,13 +954,13 @@ export class CuRegistrationDataService {
         ],
       };
       subjectDetails.push(aecIdcTable);
-      console.info("[CU-REG DATA] Added AEC/IDC table:", aecIdcTable);
+      //   console.info("[CU-REG DATA] Added AEC/IDC table:", aecIdcTable);
     }
 
-    console.info("[CU-REG DATA] Final subject details result:", {
-      count: subjectDetails.length,
-      data: subjectDetails,
-    });
+    // console.info("[CU-REG DATA] Final subject details result:", {
+    //   count: subjectDetails.length,
+    //   data: subjectDetails,
+    // });
 
     return subjectDetails;
   }
@@ -1316,16 +1328,16 @@ export class CuRegistrationDataService {
           ),
         );
 
-      console.log("[CU-REG DATA] Found papers:", papers.length);
-      console.log("[CU-REG DATA] Papers details:", papers);
-      console.log("[CU-REG DATA] Subject type IDs used:", [
-        dsccType?.id,
-        mnType?.id,
-        aecType?.id,
-        idcType?.id,
-      ]);
-      console.log("[CU-REG DATA] Program course ID:", programCourseId);
-      console.log("[CU-REG DATA] Academic year ID:", academicYear.id);
+      //   console.log("[CU-REG DATA] Found papers:", papers.length);
+      //   console.log("[CU-REG DATA] Papers details:", papers);
+      //   console.log("[CU-REG DATA] Subject type IDs used:", [
+      //     dsccType?.id,
+      //     mnType?.id,
+      //     aecType?.id,
+      //     idcType?.id,
+      //   ]);
+      //   console.log("[CU-REG DATA] Program course ID:", programCourseId);
+      //   console.log("[CU-REG DATA] Academic year ID:", academicYear.id);
 
       // Organize subjects by type and semester
       const subjectsByType: Record<string, Record<string, string>> = {};
@@ -1345,7 +1357,7 @@ export class CuRegistrationDataService {
         }
       });
 
-      console.log("[CU-REG DATA] Organized subjects by type:", subjectsByType);
+      //   console.log("[CU-REG DATA] Organized subjects by type:", subjectsByType);
 
       // Build Core/Major and Minor table
       const coreMinorTable = {
@@ -1505,7 +1517,7 @@ export class CuRegistrationDataService {
         })
         .from(subjectTypeModel);
 
-      console.log("[CU-REG DATA] All subject types:", subjectTypes);
+      //   console.log("[CU-REG DATA] All subject types:", subjectTypes);
 
       // Look for subject types by exact code first, then by name patterns
       const dsccType =
@@ -1534,13 +1546,13 @@ export class CuRegistrationDataService {
         subjectTypes.find((st) => st.code === "MN") ||
         subjectTypes.find((st) => st.name?.toLowerCase().includes("minor"));
 
-      console.log("[CU-REG DATA] Mapped subject types:", {
-        dscc: dsccType,
-        aec: aecType,
-        idc: idcType,
-        mdc: mdcType,
-        mn: mnType,
-      });
+      //   console.log("[CU-REG DATA] Mapped subject types:", {
+      //     dscc: dsccType,
+      //     aec: aecType,
+      //     idc: idcType,
+      //     mdc: mdcType,
+      //     mn: mnType,
+      //   });
 
       if (!dsccType && !aecType && !idcType && !mdcType && !mnType) {
         console.warn(
@@ -1600,30 +1612,30 @@ export class CuRegistrationDataService {
           ),
         );
 
-      console.log("[CU-REG DATA] Found additional papers:", papers.length);
-      console.log("[CU-REG DATA] Papers details:", papers);
-      console.log(
-        "[CU-REG DATA] Subject type IDs used for papers:",
-        subjectTypeIds,
-      );
-      console.log(
-        "[CU-REG DATA] Program course ID for papers:",
-        programCourseId,
-      );
-      console.log(
-        "[CU-REG DATA] Academic year ID for papers:",
-        academicYear.id,
-      );
+      //   console.log("[CU-REG DATA] Found additional papers:", papers.length);
+      //   console.log("[CU-REG DATA] Papers details:", papers);
+      //   console.log(
+      //     "[CU-REG DATA] Subject type IDs used for papers:",
+      //     subjectTypeIds,
+      //   );
+      //   console.log(
+      //     "[CU-REG DATA] Program course ID for papers:",
+      //     programCourseId,
+      //   );
+      //   console.log(
+      //     "[CU-REG DATA] Academic year ID for papers:",
+      //     academicYear.id,
+      //   );
 
       // Organize subjects by type and semester
       const subjectsByType: Record<string, Record<string, string>> = {};
 
       papers.forEach((paper) => {
-        console.log("[CU-REG DATA] Processing additional paper:", {
-          subjectName: paper.subjectName,
-          subjectTypeCode: paper.subjectTypeCode,
-          className: paper.className,
-        });
+        // console.log("[CU-REG DATA] Processing additional paper:", {
+        //   subjectName: paper.subjectName,
+        //   subjectTypeCode: paper.subjectTypeCode,
+        //   className: paper.className,
+        // });
         if (paper.subjectTypeCode && paper.className) {
           if (!subjectsByType[paper.subjectTypeCode]) {
             subjectsByType[paper.subjectTypeCode] = {};
@@ -1645,12 +1657,12 @@ export class CuRegistrationDataService {
       const idcDataKey = isBcomOrBba && subjectsByType["MDC"] ? "MDC" : "IDC";
       const subjectTypeLabel = isBcomOrBba ? "MDC" : "IDC";
 
-      console.info(
-        "[CU-REG DATA] Creating Core/Major table from papers with courseName:",
-        programCourseName,
-        "Type:",
-        typeof programCourseName,
-      );
+      //   console.info(
+      //     "[CU-REG DATA] Creating Core/Major table from papers with courseName:",
+      //     programCourseName,
+      //     "Type:",
+      //     typeof programCourseName,
+      //   );
 
       // Build Core/Major and Minor table (use Minor from papers when available)
       const coreMinorTable = {
@@ -1692,10 +1704,10 @@ export class CuRegistrationDataService {
         ],
       };
 
-      console.log("[CU-REG DATA] Additional papers subjects built:", {
-        coreMinor: coreMinorTable,
-        aecIdc: aecIdcTable,
-      });
+      //   console.log("[CU-REG DATA] Additional papers subjects built:", {
+      //     coreMinor: coreMinorTable,
+      //     aecIdc: aecIdcTable,
+      //   });
 
       return [coreMinorTable, aecIdcTable];
     } catch (error) {
@@ -1715,15 +1727,15 @@ export class CuRegistrationDataService {
     papersSubjects: Array<{ headers: string[]; subjects: string[] }>,
   ): Array<{ headers: string[]; subjects: string[] }> {
     try {
-      console.log("[CU-REG DATA] Merging subject sources");
-      console.log(
-        "[CU-REG DATA] Student subjects Core/Major:",
-        studentSubjects[0]?.subjects[0],
-      );
-      console.log(
-        "[CU-REG DATA] Papers subjects Core/Major:",
-        papersSubjects[0]?.subjects[0],
-      );
+      //   console.log("[CU-REG DATA] Merging subject sources");
+      //   console.log(
+      //     "[CU-REG DATA] Student subjects Core/Major:",
+      //     studentSubjects[0]?.subjects[0],
+      //   );
+      //   console.log(
+      //     "[CU-REG DATA] Papers subjects Core/Major:",
+      //     papersSubjects[0]?.subjects[0],
+      //   );
 
       if (studentSubjects.length === 0) {
         return papersSubjects;
@@ -1785,14 +1797,14 @@ export class CuRegistrationDataService {
         ],
       };
 
-      console.log("[CU-REG DATA] Merged subjects:", {
-        coreMinor: mergedCoreMinor,
-        aecIdc: mergedAecIdc,
-      });
-      console.log(
-        "[CU-REG DATA] Final Core/Major value:",
-        mergedCoreMinor.subjects[0],
-      );
+      //   console.log("[CU-REG DATA] Merged subjects:", {
+      //     coreMinor: mergedCoreMinor,
+      //     aecIdc: mergedAecIdc,
+      //   });
+      //   console.log(
+      //     "[CU-REG DATA] Final Core/Major value:",
+      //     mergedCoreMinor.subjects[0],
+      //   );
 
       return [mergedCoreMinor, mergedAecIdc];
     } catch (error) {

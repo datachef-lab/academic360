@@ -6,6 +6,8 @@ import { userModel } from "@repo/db/schemas/models/user";
 import {
   personalDetailsModel,
   addressModel,
+  personModel,
+  familyModel,
 } from "@repo/db/schemas/models/user";
 import {
   documentModel,
@@ -58,6 +60,7 @@ import ExcelJS from "exceljs";
 import { getCuRegPdfPathDynamic } from "./cu-registration-document-path.service.js";
 import { getSignedUrlForFile } from "@/services/s3.service.js";
 import axios from "axios";
+import { UserDto } from "@repo/db/index.js";
 
 // Environment detection helpers
 const shouldRedirectToDeveloper = () => {
@@ -424,6 +427,7 @@ export async function markPhysicalRegistrationDone(
 export async function updateCuRegistrationCorrectionRequest(
   id: number,
   updateData: Partial<CuRegistrationCorrectionRequestInsertTypeT>,
+  user: UserDto,
 ): Promise<CuRegistrationCorrectionRequestDto | null> {
   console.info(
     "[CU-REG CORRECTION][UPDATE] Start",
@@ -627,7 +631,10 @@ export async function updateCuRegistrationCorrectionRequest(
     );
 
     // Generate PDF and application number if conditions are met
-    if (shouldGeneratePdf && !existing.cuRegistrationApplicationNumber) {
+    if (
+      (shouldGeneratePdf && !existing.cuRegistrationApplicationNumber) ||
+      user.type !== "STUDENT"
+    ) {
       // All declarations completed AND final submission done AND no application number yet
       const applicationNumber =
         await CuRegistrationNumberService.generateNextApplicationNumber();
@@ -769,7 +776,16 @@ export async function updateCuRegistrationCorrectionRequest(
 
     // 2) If payload provided, persist relevant fields to canonical tables
     const payload: any = (updateData as any)?.payload;
-    console.info("[CU-REG CORRECTION][UPDATE] Processing payload", { payload });
+    console.info("[CU-REG CORRECTION][UPDATE] Processing payload", {
+      payload,
+      hasPersonalInfo: !!payload?.personalInfo,
+      personalInfoKeys: payload?.personalInfo
+        ? Object.keys(payload.personalInfo)
+        : [],
+      hasFullName: !!payload?.personalInfo?.fullName,
+      hasFatherMotherName: !!payload?.personalInfo?.fatherMotherName,
+      fatherMotherNameValue: payload?.personalInfo?.fatherMotherName,
+    });
     if (payload) {
       // personalInfo: gender, nationality, apaar/abc
       if (payload.personalInfo && pd) {
@@ -870,6 +886,136 @@ export async function updateCuRegistrationCorrectionRequest(
           console.info("[CU-REG CORRECTION][UPDATE] Updated EWS status", {
             ews: ewsValue,
           });
+        }
+
+        // Update User.name (fullName) if provided
+        if (payload.personalInfo.fullName && student.userId) {
+          await tx
+            .update(userModel)
+            .set({ name: payload.personalInfo.fullName.trim() })
+            .where(eq(userModel.id, student.userId as number));
+          console.info("[CU-REG CORRECTION][UPDATE] Updated User name", {
+            userId: student.userId,
+            fullName: payload.personalInfo.fullName,
+          });
+        }
+
+        // Update Father/Mother name if provided
+        if (
+          payload.personalInfo.fatherMotherName !== undefined &&
+          payload.personalInfo.fatherMotherName !== null &&
+          payload.personalInfo.fatherMotherName.trim() !== "" &&
+          student.userId
+        ) {
+          // Determine which parent type to update (from frontend or default to FATHER)
+          const parentTypeToUpdate = (
+            payload.personalInfo.parentType === "MOTHER" ? "MOTHER" : "FATHER"
+          ) as "FATHER" | "MOTHER";
+
+          console.info(
+            "[CU-REG CORRECTION][UPDATE] Attempting to update father/mother name",
+            {
+              fatherMotherName: payload.personalInfo.fatherMotherName,
+              parentType: parentTypeToUpdate,
+              requestedParentType: payload.personalInfo.parentType,
+              userId: student.userId,
+            },
+          );
+
+          // Get family details for this user
+          const [family] = await tx
+            .select()
+            .from(familyModel)
+            .where(eq(familyModel.userId, student.userId as number))
+            .limit(1);
+
+          if (family) {
+            console.info(
+              "[CU-REG CORRECTION][UPDATE] Family found, searching for specific parent type",
+              { familyId: family.id, parentTypeToUpdate },
+            );
+
+            // Find the specific parent type (FATHER or MOTHER) person record
+            const [familyMember] = await tx
+              .select()
+              .from(personModel)
+              .where(
+                and(
+                  eq(personModel.familyId, family.id as number),
+                  eq(personModel.type, parentTypeToUpdate as any),
+                ),
+              )
+              .limit(1);
+
+            if (familyMember) {
+              // Update existing parent record
+              const trimmedName = payload.personalInfo.fatherMotherName.trim();
+
+              await tx
+                .update(personModel)
+                .set({ name: trimmedName })
+                .where(eq(personModel.id, familyMember.id as number));
+
+              // Verify the update was successful by querying the updated record
+              const [verifiedMember] = await tx
+                .select()
+                .from(personModel)
+                .where(eq(personModel.id, familyMember.id as number))
+                .limit(1);
+
+              console.info(
+                "[CU-REG CORRECTION][UPDATE] Successfully updated family member name",
+                {
+                  familyId: family.id,
+                  personId: familyMember.id,
+                  type: parentTypeToUpdate,
+                  oldName: familyMember.name,
+                  newName: trimmedName,
+                  verifiedName: verifiedMember?.name,
+                  updateVerified: verifiedMember?.name === trimmedName,
+                },
+              );
+            } else {
+              // If the specific parent type doesn't exist, create it
+              const trimmedName = payload.personalInfo.fatherMotherName.trim();
+              const [newPerson] = await tx
+                .insert(personModel)
+                .values({
+                  familyId: family.id as number,
+                  type: parentTypeToUpdate as any,
+                  name: trimmedName,
+                })
+                .returning();
+
+              console.info(
+                `[CU-REG CORRECTION][UPDATE] Created new ${parentTypeToUpdate} person record`,
+                {
+                  familyId: family.id,
+                  personId: newPerson.id,
+                  type: parentTypeToUpdate,
+                  name: trimmedName,
+                },
+              );
+            }
+          } else {
+            console.warn(
+              "[CU-REG CORRECTION][UPDATE] Family details not found for user",
+              {
+                userId: student.userId,
+                studentId: student.id,
+              },
+            );
+          }
+        } else {
+          console.info(
+            "[CU-REG CORRECTION][UPDATE] Skipping father/mother name update",
+            {
+              hasValue: payload.personalInfo.fatherMotherName !== undefined,
+              value: payload.personalInfo.fatherMotherName,
+              isNotEmpty: payload.personalInfo.fatherMotherName?.trim() !== "",
+              hasUserId: !!student.userId,
+            },
+          );
         }
       }
 
@@ -972,6 +1118,78 @@ export async function updateCuRegistrationCorrectionRequest(
     return [req];
   });
 
+  // Post-transaction verification: Verify father/mother name update persisted
+  if (
+    (updateData as any)?.payload?.personalInfo?.fatherMotherName &&
+    student.userId
+  ) {
+    try {
+      const [family] = await db
+        .select()
+        .from(familyModel)
+        .where(eq(familyModel.userId, student.userId as number))
+        .limit(1);
+
+      if (family) {
+        const parentTypeToUpdate = (
+          (updateData as any)?.payload?.personalInfo?.parentType === "MOTHER"
+            ? "MOTHER"
+            : "FATHER"
+        ) as "FATHER" | "MOTHER";
+
+        const [verifiedMember] = await db
+          .select()
+          .from(personModel)
+          .where(
+            and(
+              eq(personModel.familyId, family.id as number),
+              eq(personModel.type, parentTypeToUpdate as any),
+            ),
+          )
+          .limit(1);
+
+        if (verifiedMember) {
+          const expectedName = (
+            updateData as any
+          )?.payload?.personalInfo?.fatherMotherName.trim();
+          console.info(
+            "[CU-REG CORRECTION][UPDATE] Post-transaction verification",
+            {
+              personId: verifiedMember.id,
+              type: parentTypeToUpdate,
+              expectedName,
+              actualName: verifiedMember.name,
+              match: verifiedMember.name === expectedName,
+            },
+          );
+
+          if (verifiedMember.name !== expectedName) {
+            console.error(
+              "[CU-REG CORRECTION][UPDATE] WARNING: Name mismatch after update!",
+              {
+                expected: expectedName,
+                actual: verifiedMember.name,
+              },
+            );
+          }
+        } else {
+          console.warn(
+            "[CU-REG CORRECTION][UPDATE] Post-transaction: Person record not found",
+            {
+              familyId: family.id,
+              parentType: parentTypeToUpdate,
+            },
+          );
+        }
+      }
+    } catch (verifyError) {
+      console.error(
+        "[CU-REG CORRECTION][UPDATE] Error in post-transaction verification:",
+        verifyError,
+      );
+    }
+  }
+
   if (!updatedRequest) return null;
 
   // Only regenerate PDF when all declarations are completed AND data was actually updated
@@ -995,9 +1213,10 @@ export async function updateCuRegistrationCorrectionRequest(
     isFinalSubmission || allDeclarationsCompletedInDB;
 
   if (
-    shouldGeneratePdfNow &&
-    dataFieldsUpdated &&
-    updatedRequest.cuRegistrationApplicationNumber
+    (shouldGeneratePdfNow &&
+      dataFieldsUpdated &&
+      updatedRequest.cuRegistrationApplicationNumber) ||
+    (user.type !== "STUDENT" && updatedRequest.cuRegistrationApplicationNumber)
   ) {
     try {
       console.info(
@@ -1032,7 +1251,8 @@ export async function updateCuRegistrationCorrectionRequest(
         // Only send notifications if CU application number is not null
         if (
           pdfResult.pdfBuffer &&
-          updatedRequest.cuRegistrationApplicationNumber
+          updatedRequest.cuRegistrationApplicationNumber &&
+          user.type === "STUDENT"
         ) {
           try {
             console.info(
@@ -1163,7 +1383,7 @@ export async function approveCuRegistrationCorrectionRequest(
   const [updatedRequest] = await db
     .update(cuRegistrationCorrectionRequestModel)
     .set({
-      status: "APPROVED",
+      status: "ONLINE_REGISTRATION_DONE",
       approvedBy,
       approvedAt: new Date(),
       approvedRemarks,
@@ -1186,7 +1406,9 @@ export async function rejectCuRegistrationCorrectionRequest(
   const [updatedRequest] = await db
     .update(cuRegistrationCorrectionRequestModel)
     .set({
-      status: "REJECTED",
+      status: "PENDING",
+      onlineRegistrationDone: false,
+      physicalRegistrationDone: false,
       rejectedBy,
       rejectedAt: new Date(),
       rejectedRemarks,

@@ -32,6 +32,7 @@ import {
 } from "@/services/image-conversion.service.js";
 import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
 import { sendAdmissionRegistrationNotification } from "../services/cu-registration-correction-request.service.js";
+import { UserDto } from "@repo/db/index.js";
 
 // Configure multer for handling multiple files
 const upload = multer({
@@ -172,6 +173,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       parseInt(correctionRequestId),
       updatePayload,
+      req.user as UserDto,
     );
 
     console.info(
@@ -627,6 +629,7 @@ export const submitPersonalInfoDeclaration = async (
         aadhaarCardNumberCorrectionRequest: flags?.aadhaarNumber || false,
         apaarIdCorrectionRequest: flags?.apaarId || false,
       },
+      req.user as UserDto,
     );
     console.info("[CU-REG BACKEND] Personal declaration - request updated", {
       id: correctionRequestId,
@@ -726,6 +729,7 @@ export const submitAddressInfoDeclaration = async (
       {
         addressInfoDeclaration: true,
       },
+      req.user as UserDto,
     );
     console.info("[CU-REG BACKEND] Address declaration - request updated", {
       id: correctionRequestId,
@@ -805,6 +809,7 @@ export const submitSubjectsDeclaration = async (
         subjectsDeclaration: true,
         subjectsCorrectionRequest: flags?.subjects || false,
       },
+      req.user as UserDto,
     );
     console.info("[CU-REG BACKEND] Subjects declaration - request updated", {
       id: correctionRequestId,
@@ -864,6 +869,7 @@ export const submitDocumentsDeclaration = async (
       {
         documentsDeclaration: true,
       },
+      req.user as UserDto,
     );
     console.info("[CU-REG BACKEND] Documents declaration - request updated", {
       id: correctionRequestId,

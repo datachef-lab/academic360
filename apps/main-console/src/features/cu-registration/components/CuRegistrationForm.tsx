@@ -27,7 +27,7 @@ import { getStatesByCountry } from "@/services/state.service";
 import { getCitiesByState } from "@/services/city.service";
 import { getDistrictsByState } from "@/services/address.service";
 import { getAllNationalities } from "@/services/nationalities.service";
-import type { StudentDto, ProfileInfo } from "@repo/db/dtos/user";
+import type { StudentDto, ProfileInfo, FamilyDto, PersonalDetailsDto, PersonDto, AddressDto } from "@repo/db/dtos/user";
 import { genderTypeEnum, cuRegistrationCorrectionRequestStatusEnum } from "@repo/db/enums";
 import axiosInstance from "@/utils/api";
 
@@ -78,6 +78,38 @@ interface CorrectionRequestStatus {
   applicationNumber?: string;
 }
 
+type SubjectCategory = "DSCC" | "Minor" | "IDC" | "SEC" | "AEC" | "CVAC";
+type SemesterKey = "sem1" | "sem2" | "sem3" | "sem4";
+
+interface SubjectData {
+  DSCC: { sem1: string[]; sem2: string[]; sem3: string[]; sem4: string[] };
+  Minor: { sem1: string[]; sem2: string[]; sem3: string[]; sem4: string[] };
+  IDC: { sem1: string[]; sem2: string[]; sem3: string[]; sem4: string[] };
+  SEC: { sem1: string[]; sem2: string[]; sem3: string[]; sem4: string[] };
+  AEC: { sem1: string[]; sem2: string[]; sem3: string[]; sem4: string[] };
+  CVAC: { sem1: string[]; sem2: string[]; sem3: string[]; sem4: string[] };
+}
+
+interface StudentSelectionRow {
+  metaLabel?: string;
+  subjectSelectionMeta?: { label?: string; forClasses?: unknown[] };
+  subjectName?: string;
+  subject?: { name?: string; code?: string };
+  forClasses?: unknown[];
+}
+
+interface MandatorySubjectRow {
+  subjectType?: { name?: string };
+  subject?: { name?: string; code?: string };
+  class?: { name?: string; shortName?: string };
+}
+
+interface ClassObject {
+  name?: string;
+  shortName?: string;
+  class?: { name?: string; shortName?: string };
+}
+
 export default function CuRegistrationForm({ studentId, studentData }: CuRegistrationFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
   console.log("test");
@@ -102,6 +134,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   });
 
   const [personalDeclared, setPersonalDeclared] = useState(false);
+
+  // Track which parent type is being displayed (FATHER or MOTHER)
+  const [displayedParentType, setDisplayedParentType] = useState<"FATHER" | "MOTHER" | null>(null);
 
   // New state for editable form data
   const [editableData, setEditableData] = useState<EditableFormData>({
@@ -166,7 +201,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   // Check if all declarations are completed
   const allDeclarationsCompleted = personalDeclared && addressDeclared && subjectsDeclared && documentsConfirmed;
 
-  const [subjectsData, setSubjectsData] = useState({
+  const [subjectsData, setSubjectsData] = useState<SubjectData>({
     DSCC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     Minor: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     IDC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
@@ -174,7 +209,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     AEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     CVAC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
   });
-  const [mandatorySubjects, setMandatorySubjects] = useState({
+  const [mandatorySubjects, setMandatorySubjects] = useState<SubjectData>({
     DSCC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     Minor: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     IDC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
@@ -256,10 +291,12 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     { value: "No", label: "No" },
   ];
 
-  const correctionStatusOptions = cuRegistrationCorrectionRequestStatusEnum.enumValues.map((value: string) => ({
-    value,
-    label: value.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
-  }));
+  const correctionStatusOptions = cuRegistrationCorrectionRequestStatusEnum.enumValues
+    .map((value: string) => ({
+      value,
+      label: value.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+    }))
+    .filter((option) => option.value !== "APPROVED" && option.value !== "REJECTED");
 
   // Document types for file uploads - fetched from API
   const [documentTypes, setDocumentTypes] = useState<Array<{ id: string; name: string; code: string }>>([]);
@@ -315,6 +352,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
         // Prepare the data to save
         const personalInfoData = {
+          fullName: editableData.fullName,
+          fatherMotherName: editableData.fatherMotherName,
+          parentType: displayedParentType || "FATHER", // Send which parent type to update
           gender: editableData.gender,
           nationality: editableData.nationality,
           aadhaarNumber: editableData.aadhaarNumber,
@@ -339,8 +379,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         setPersonalDeclared(true);
         toast.success("Personal information saved successfully!");
 
-        // Refresh correction request status to get updated status from backend
-        if (correctionRequestStatus?.id) {
+        // Refresh correction request status and profile data to get updated values from backend
+        if (correctionRequestStatus?.id && studentData?.userId) {
           try {
             const updatedRequest = await getCuCorrectionRequestById(correctionRequestStatus.id);
             setCorrectionRequestStatus({
@@ -353,6 +393,73 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               "[CU-REG MAIN-CONSOLE] Refreshed correction request status after personal info update:",
               updatedRequest.status,
             );
+
+            // Refresh profile data to get updated father/mother name and full name
+            // Add a small delay to ensure database transaction is fully committed
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            try {
+              const profileInfo = await fetchUserProfile(studentData.userId);
+              console.info(`[CU-REG MAIN-CONSOLE] Refreshed profile info after save:`, profileInfo);
+              console.info(`[CU-REG MAIN-CONSOLE] Family details from refreshed profile:`, profileInfo?.familyDetails);
+              console.info(`[CU-REG MAIN-CONSOLE] Family members:`, profileInfo?.familyDetails?.members);
+
+              const familyDetails: FamilyDto | null = profileInfo?.familyDetails ?? null;
+
+              // Determine which parent name is being displayed (prefer FATHER, fallback to MOTHER)
+              const fatherName = familyDetails?.members?.find((m: PersonDto) => m.type === "FATHER")?.name ?? undefined;
+              const motherName = familyDetails?.members?.find((m: PersonDto) => m.type === "MOTHER")?.name ?? undefined;
+
+              console.info(`[CU-REG MAIN-CONSOLE] Extracted parent names:`, {
+                fatherName,
+                motherName,
+                allMembers: familyDetails?.members?.map((m) => ({ type: m.type, name: m.name })),
+              });
+
+              const displayedParentName = fatherName || motherName;
+              const parentType: "FATHER" | "MOTHER" = fatherName ? "FATHER" : motherName ? "MOTHER" : "FATHER";
+
+              setDisplayedParentType(parentType);
+              console.info(`[CU-REG MAIN-CONSOLE] Refreshed displayed parent type after save:`, {
+                parentType,
+                fatherName,
+                motherName,
+                displayedParentName,
+              });
+
+              // Update editable data with refreshed values
+              const personalDetails: PersonalDetailsDto | null = profileInfo?.personalDetails ?? null;
+
+              setEditableData((prev) => {
+                const updatedFullName =
+                  studentData?.name && studentData.name.trim().length > 0
+                    ? studentData.name
+                    : personalDetails?.firstName || personalDetails?.lastName
+                      ? `${personalDetails?.firstName || ""} ${personalDetails?.middleName || ""} ${personalDetails?.lastName || ""}`.trim()
+                      : prev.fullName;
+
+                // Always use the refreshed value if available, otherwise keep previous
+                const updatedFatherMotherName = displayedParentName || prev.fatherMotherName;
+
+                console.info(`[CU-REG MAIN-CONSOLE] Updating editableData:`, {
+                  previousFatherMotherName: prev.fatherMotherName,
+                  newFatherMotherName: updatedFatherMotherName,
+                  displayedParentName,
+                  willUpdate: displayedParentName !== prev.fatherMotherName,
+                  hasDisplayedParentName: !!displayedParentName,
+                });
+
+                return {
+                  ...prev,
+                  fullName: updatedFullName,
+                  fatherMotherName: displayedParentName || prev.fatherMotherName,
+                };
+              });
+
+              console.info(`[CU-REG MAIN-CONSOLE] Updated form data with refreshed values from database`);
+            } catch (profileError) {
+              console.error(`[CU-REG MAIN-CONSOLE] Error refreshing profile after save:`, profileError);
+            }
           } catch (error) {
             console.error("[CU-REG MAIN-CONSOLE] Error refreshing correction request status:", error);
           }
@@ -929,29 +1036,35 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         }
 
         // Populate personal info from profile data (like student-console does)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const personalDetails = profileInfo?.personalDetails as any;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const familyDetails = profileInfo?.familyDetails as any;
+        const personalDetails: PersonalDetailsDto | null = profileInfo?.personalDetails ?? null;
+        const familyDetails: FamilyDto | null = profileInfo?.studentFamily ?? null;
 
         console.info(`[CU-REG MAIN-CONSOLE] personalDetails from profile:`, personalDetails);
         console.info(`[CU-REG MAIN-CONSOLE] familyDetails from profile:`, familyDetails);
 
         if (personalDetails || studentData) {
+          // Determine which parent name is being displayed (prefer FATHER, fallback to MOTHER)
+          const fatherName = familyDetails?.members?.find((m: PersonDto) => m.type === "FATHER")?.name ?? undefined;
+          const motherName = familyDetails?.members?.find((m: PersonDto) => m.type === "MOTHER")?.name ?? undefined;
+
+          const displayedParentName = fatherName || motherName;
+          const parentType: "FATHER" | "MOTHER" = fatherName ? "FATHER" : motherName ? "MOTHER" : "FATHER"; // Default to FATHER if neither exists
+
+          setDisplayedParentType(parentType);
+          console.info(`[CU-REG MAIN-CONSOLE] Determined displayed parent type:`, {
+            parentType,
+            fatherName,
+            motherName,
+            displayedParentName,
+          });
+
           setEditableData((prev) => ({
             ...prev,
             fullName:
               studentData?.name && studentData.name.trim().length > 0
                 ? studentData.name
                 : `${personalDetails?.firstName || ""} ${personalDetails?.middleName || ""} ${personalDetails?.lastName || ""}`.trim(),
-            fatherMotherName:
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              familyDetails?.members?.find((m: any) => m.type === "FATHER")?.name ||
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              familyDetails?.members?.find((m: any) => m.type === "MOTHER")?.name ||
-              familyDetails?.father?.name ||
-              familyDetails?.mother?.name ||
-              "",
+            fatherMotherName: displayedParentName || "",
             gender: personalDetails?.gender || "",
             nationality: String(personalDetails?.nationality?.id || ""),
             aadhaarNumber: formatAadhaarNumber(personalDetails?.aadhaarCardNumber || "XXXX XXXX XXXX"),
@@ -961,21 +1074,22 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         }
 
         // Populate address data
-        const addresses = (personalDetails?.address as Array<Record<string, unknown>>) || [];
+        const addresses = personalDetails?.address ?? [];
         const resAddr = addresses.find((a) => a?.type === "RESIDENTIAL") || addresses[0] || null;
         const mailAddr = addresses.find((a) => a?.type === "MAILING") || addresses[1] || resAddr || null;
 
         console.info("[CU-REG MAIN-CONSOLE] Address data structure:", { resAddr, mailAddr });
 
-        const getAddressField = (addr: Record<string, unknown> | null, field: string): string => {
+        const getAddressField = (addr: AddressDto | null, field: keyof AddressDto): string => {
           if (!addr) return "";
-          return (addr[field] as string) || "";
+          const value = addr[field];
+          return value ? String(value) : "";
         };
 
-        const getNestedField = (addr: Record<string, unknown> | null, parent: string, field: string): string => {
+        const getNestedField = (addr: AddressDto | null, parent: keyof AddressDto, field: string): string => {
           if (!addr) return "";
-          const parentObj = addr[parent] as Record<string, unknown> | undefined;
-          return (parentObj?.[field] as string) || "";
+          const parentObj = addr[parent] as unknown as Record<string, unknown> | null | undefined;
+          return parentObj ? String(parentObj[field] || "") : "";
         };
 
         if (resAddr || mailAddr) {
@@ -1136,14 +1250,12 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             console.info(`[CU-REG MAIN-CONSOLE] Mandatory subjects:`, mandatoryRows);
             console.info(`[CU-REG MAIN-CONSOLE] Uploaded documents:`, uploadedDocuments);
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const next: any = { ...subjectsData };
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const mandatoryNext: any = { ...mandatorySubjects };
+            const next: SubjectData = { ...subjectsData };
+            const mandatoryNext: SubjectData = { ...mandatorySubjects };
 
             // isBcomProgram is now defined at component level
 
-            const getCategoryKey = (label: string): string | undefined => {
+            const getCategoryKey = (label: string): SubjectCategory | undefined => {
               if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label)) return "DSCC";
               if (/Minor/i.test(label)) return "Minor";
 
@@ -1174,15 +1286,19 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
             const toSemNumsFromClasses = (forClasses?: unknown[]): number[] => {
               if (!Array.isArray(forClasses)) return [];
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const map: any = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6 };
+              const map: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6 };
               const nums: number[] = [];
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              forClasses.forEach((c: any) => {
-                const label = String(c?.name || c?.shortName || c?.class?.name || c?.class?.shortName || "");
+              forClasses.forEach((c: unknown) => {
+                const classObj = c as ClassObject;
+                const label = String(
+                  classObj?.name || classObj?.shortName || classObj?.class?.name || classObj?.class?.shortName || "",
+                );
                 const roman = /\b(I|II|III|IV|V|VI)\b/i.exec(label);
                 if (roman && roman[1]) {
-                  nums.push(map[roman[1].toUpperCase()]);
+                  const num = map[roman[1].toUpperCase()];
+                  if (num !== undefined) {
+                    nums.push(num);
+                  }
                   return;
                 }
                 const digit = /\b([1-6])\b/.exec(label);
@@ -1191,18 +1307,16 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               return Array.from(new Set(nums));
             };
 
-            const toSemNumFromLabel = (label: string) => {
+            const toSemNumFromLabel = (label: string): number | undefined => {
               const m = /\b(I|II|III|IV)\b/i.exec(label || "");
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const map: any = { I: 1, II: 2, III: 3, IV: 4 };
+              const map: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4 };
               return m && m[1] ? map[m[1].toUpperCase()] : undefined;
             };
 
             // Process actualStudentSelections (actual form submissions)
             const actualSelections = studentRows?.actualStudentSelections || [];
             console.log("🔍 CU-REG - Processing actualStudentSelections:", actualSelections);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            actualSelections.forEach((r: any) => {
+            actualSelections.forEach((r: StudentSelectionRow) => {
               // Use the correct field names from the actual data structure
               const label = String(r?.metaLabel || r?.subjectSelectionMeta?.label || "");
               const name = r?.subjectName || r?.subject?.name || r?.subject?.code || "";
@@ -1232,8 +1346,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               }
 
               semesters.forEach((s) => {
-                if (next[key] && next[key][`sem${s}`] !== undefined) {
-                  const currentValue = next[key][`sem${s}`];
+                const semesterKey: SemesterKey = `sem${s}` as SemesterKey;
+                const categoryData = next[key];
+                if (categoryData && categoryData[semesterKey] !== undefined) {
+                  const currentValue = categoryData[semesterKey];
                   if (!currentValue.includes(name)) {
                     currentValue.push(name);
                   }
@@ -1242,8 +1358,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             });
 
             // Process mandatory papers
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            mandatoryRows.forEach((r: any) => {
+            mandatoryRows.forEach((r: MandatorySubjectRow) => {
               const subjectTypeName = String(r?.subjectType?.name || "");
               const subjectName = String(r?.subject?.name || r?.subject?.code || "");
               const className = String(r?.class?.name || r?.class?.shortName || "");
@@ -1258,9 +1373,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               const semMatch = className.match(/\b(I|II|III|IV|1|2|3|4)\b/i);
               if (semMatch && semMatch[1]) {
                 const sem = semMatch[1].toUpperCase();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const semMap: any = { I: 1, II: 2, III: 3, IV: 4, "1": 1, "2": 2, "3": 3, "4": 4 };
-                semesters = [semMap[sem]];
+                const semMap: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, "1": 1, "2": 2, "3": 3, "4": 4 };
+                semesters = semMap[sem] ? [semMap[sem]] : [];
               }
 
               // If no semester found in class name, infer from subject type
@@ -1277,8 +1391,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               }
 
               semesters.forEach((s) => {
-                if (mandatoryNext[key] && mandatoryNext[key][`sem${s}`] !== undefined) {
-                  const currentSubjects = mandatoryNext[key][`sem${s}`] as string[];
+                const semesterKey: SemesterKey = `sem${s}` as SemesterKey;
+                const categoryData = mandatoryNext[key];
+                if (categoryData && categoryData[semesterKey] !== undefined) {
+                  const currentSubjects = categoryData[semesterKey];
                   if (!currentSubjects.includes(subjectName)) {
                     currentSubjects.push(subjectName);
                   }
@@ -1550,8 +1666,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           id="fullName"
                           value={editableData.fullName}
                           onChange={(e) => handleInputChange("fullName", e.target.value)}
-                          className="bg-gray-100 text-gray-700 border-gray-300"
-                          disabled
+                          className="bg-white text-gray-900 border-gray-300"
+                          placeholder="Enter full name"
                         />
                       </div>
 
@@ -1564,8 +1680,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           id="fatherMotherName"
                           value={editableData.fatherMotherName}
                           onChange={(e) => handleInputChange("fatherMotherName", e.target.value)}
-                          className="bg-gray-100 text-gray-700 border-gray-300"
-                          disabled
+                          className="bg-white text-gray-900 border-gray-300"
+                          placeholder="Enter father or mother's name"
                         />
                       </div>
 
@@ -2137,10 +2253,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                   {category === "IDC" && isBcomProgram ? "MDC" : category}
                                 </td>
                                 {Object.entries(semesters).map(([sem, value]) => {
+                                  const categoryKey = category as SubjectCategory;
+                                  const semesterKey = sem as SemesterKey;
                                   const mandatorySubjectsList =
-                                    (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
-                                      sem as keyof typeof semesters
-                                    ] as string[]) || [];
+                                    (mandatorySubjects[categoryKey]?.[semesterKey] as string[]) || [];
                                   const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
 
                                   return (
@@ -2175,15 +2291,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                                 : [];
 
                                             // Add sem3 mandatory subjects
-                                            sem3Mandatory.forEach((subject) => {
+                                            sem3Mandatory.forEach((subject: string) => {
                                               allSubjects.push({ name: subject, isMandatory: true });
                                             });
 
                                             // Add sem3 student subjects (filter out duplicates)
                                             const filteredSem3Subjects = sem3Student.filter(
-                                              (subject) => !sem3Mandatory.includes(subject),
+                                              (subject: string) => !sem3Mandatory.includes(subject),
                                             );
-                                            filteredSem3Subjects.forEach((subject) => {
+                                            filteredSem3Subjects.forEach((subject: string) => {
                                               allSubjects.push({ name: subject, isMandatory: false });
                                             });
                                           }

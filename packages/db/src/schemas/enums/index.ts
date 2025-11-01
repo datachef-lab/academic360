@@ -328,4 +328,5 @@ export const cuRegistrationCorrectionRequestStatusEnum = pgEnum("cu_registration
     "PHYSICAL_REGISTRATION_DONE",
     "APPROVED",
     "REJECTED",
+    "RECTIFICATION_DONE"
 ]);

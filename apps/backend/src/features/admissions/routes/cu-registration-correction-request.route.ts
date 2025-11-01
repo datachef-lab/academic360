@@ -35,6 +35,8 @@ import {
 
 const router = Router();
 
+router.use(verifyJWT);
+
 // Create a new CU registration correction request
 router.post("/", createNewCuRegistrationCorrectionRequest);
 

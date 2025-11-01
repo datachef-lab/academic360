@@ -57,7 +57,7 @@ export interface CuRegistrationFormData {
   collegeAddress: string;
   collegeDetails1: string;
   collegeDetails2: string;
-
+  isRectificationDone?: boolean;
   // Student Basic Information
   studentName: string;
   studentUid: string;

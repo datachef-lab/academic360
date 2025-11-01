@@ -541,23 +541,6 @@ export async function findProfileInfo(
       : undefined;
 
   // Resolve family after additionalInfo is available
-  if (additionalInfo?.id) {
-    family =
-      (
-        await db
-          .select()
-          .from(familyModel)
-          .where(eq(familyModel.admissionAdditionalInfoId, additionalInfo.id))
-      )[0] ?? null;
-  } else {
-    family =
-      (
-        await db
-          .select()
-          .from(familyModel)
-          .where(eq(familyModel.userId, userId))
-      )[0] ?? null;
-  }
 
   let studentFamily =
     (

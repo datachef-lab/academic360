@@ -39,6 +39,7 @@ import {
 } from "@/services/filesystem-storage.service.js";
 import { createCuRegistrationDocumentUpload } from "../services/cu-registration-document-upload.service.js";
 import multer from "multer";
+import { UserDto } from "@repo/db/index.js";
 
 // Create a new CU registration correction request
 export const createNewCuRegistrationCorrectionRequest = async (
@@ -331,6 +332,7 @@ export const updateCuRegistrationCorrectionRequestById = async (
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       id,
       updateData,
+      req.user as UserDto,
     );
 
     if (!updatedRequest) {
@@ -633,6 +635,10 @@ export const updatePersonalInfoByAdmin = async (
       correctionRequestId: id,
       personalInfo,
       flags,
+      hasFullName: !!personalInfo?.fullName,
+      hasFatherMotherName: !!personalInfo?.fatherMotherName,
+      fatherMotherNameValue: personalInfo?.fatherMotherName,
+      fullNameValue: personalInfo?.fullName,
     });
 
     if (!id) {
@@ -672,6 +678,7 @@ export const updatePersonalInfoByAdmin = async (
         // Pass the payload to update personal info and student data
         payload: { personalInfo },
       } as any,
+      req.user as UserDto,
     );
 
     console.info("[CU-REG ADMIN] Personal info update - request updated", {
@@ -736,6 +743,8 @@ export const updateAddressInfoByAdmin = async (
       return;
     }
 
+    const user = req.user as UserDto;
+
     // Update the correction request with admin changes
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       parseInt(id),
@@ -744,6 +753,7 @@ export const updateAddressInfoByAdmin = async (
         // Pass the payload to update address data
         payload: { addressData },
       } as any,
+      user,
     );
 
     console.info("[CU-REG ADMIN] Address info update - request updated", {

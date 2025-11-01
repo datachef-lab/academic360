@@ -676,13 +676,17 @@
                             style="font-weight: bold; text-underline-offset: 4px; font-size: 11px; font-family: 'Calibri', 'Carlito', sans-serif !important;">
                             ADMISSION & REGISTRATION TOP SHEET
                         </h2>
-                        <!-- Rectification Banner (only show if rectification is opted) -->
+                        <!-- Rectification Banner (only show if rectification is opted or done) -->
                         <% if (showRectificationBanner) { %>
                             <div class="text-center mt-2 mb-4">
-                                <span style="font-size: 12pt; font-weight: bold; color: #d32f2f; font-family: 'Calibri', 'Carlito', sans-serif !important;">Rectification
-                                    Opted</span>
+                                <% if (isRectificationDone) { %>
+                                    <span style="font-size: 12pt; font-weight: bold; color: #d32f2f; font-family: 'Calibri', 'Carlito', sans-serif !important;">Rectification Done</span>
+                                <% } else { %>
+                                    <span style="font-size: 12pt; font-weight: bold; color: #d32f2f; font-family: 'Calibri', 'Carlito', sans-serif !important;">Rectification
+                                        Opted</span>
+                                <% } %>
                             </div>
-                            <% } %>
+                        <% } %>
 
                                 <!-- Student Information Section -->
                                 <div class="d-flex justify-content-between align-items-center"
