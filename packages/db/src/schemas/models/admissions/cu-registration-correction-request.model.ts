@@ -29,12 +29,10 @@ export const cuRegistrationCorrectionRequestModel = pgTable("cu_registration_cor
     addressInfoDeclaration: boolean("address_info_declaration").notNull().default(false),
     subjectsDeclaration: boolean("subjects_declaration").notNull().default(false),
     documentsDeclaration: boolean("documents_declaration").notNull().default(false),
-    approvedBy: integer("approved_by_fk").references(() => userModel.id),
-    approvedAt: timestamp("approved_at"),
-    approvedRemarks: text("approved_remarks"),
-    rejectedBy: integer("rejected_by_fk").references(() => userModel.id),
-    rejectedAt: timestamp("rejected_at"),
-    rejectedRemarks: text("rejected_remarks"),
+    physicalRegistrationDoneBy: integer("physical_registration_done_by_fk").references(() => userModel.id),
+    physicalRegistrationDoneAt: timestamp("physical_registration_done_at"),
+    lastUpdatedBy: integer("last_updated_by_fk").references(() => userModel.id),
+
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({

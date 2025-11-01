@@ -83,9 +83,9 @@ export interface CuRegistrationDocumentUploadDto extends Omit<CuRegistrationDocu
     file: File;
 }
 
-export interface CuRegistrationCorrectionRequestDto extends Omit<CuRegistrationCorrectionRequest, "studentId" | "approvedBy" | "rejectedBy"> {
+export interface CuRegistrationCorrectionRequestDto extends Omit<CuRegistrationCorrectionRequest, "studentId" | "physicalRegistrationDoneBy" | "lastUpdatedBy"> {
     student: StudentT;
-    approvedBy: UserT | null;
-    rejectedBy: UserT | null;
+    physicalRegistrationDoneBy: UserT | null;
+    lastUpdatedBy: UserT | null;
     documents: CuRegistrationDocumentUploadDto[];
 }

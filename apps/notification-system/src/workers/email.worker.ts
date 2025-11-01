@@ -154,8 +154,9 @@ async function processBatch() {
         JSON.stringify(contentRows, null, 2),
       );
 
-      // Extract templateData from notification message if present
+      // Extract templateData and subject from notification message if present
       let extractedTemplateData: Record<string, any> = {};
+      let extractedSubject: string | undefined;
       try {
         if (notif?.message) {
           console.log(
@@ -179,6 +180,16 @@ async function processBatch() {
               "[email.worker] ❌ No templateData found in parsed message",
             );
           }
+          // Extract subject from notificationEvent
+          if (parsedMessage?.notificationEvent?.subject) {
+            extractedSubject = parsedMessage.notificationEvent.subject;
+            console.log(
+              "[email.worker] ✅ Extracted subject from notification message:",
+              extractedSubject,
+            );
+          } else {
+            console.log("[email.worker] ❌ No subject found in parsed message");
+          }
         } else {
           console.log("[email.worker] ⚠️ No message field in notification");
         }
@@ -189,6 +200,7 @@ async function processBatch() {
       // Build dto from notification event data (not from content rows)
       const dto: NotificationEventDto = {
         templateData: extractedTemplateData,
+        subject: extractedSubject,
         meta: { devOnly: true },
         emailAttachments: await prepareEmailAttachments(notif.emailAttachments),
       } as NotificationEventDto;
@@ -235,7 +247,12 @@ async function processBatch() {
             .where(eq(notificationQueueModel.id, row.id));
           continue;
         }
-        // Compute subject after templateKey and template data resolution
+        // Set templateKey from master template BEFORE subject resolution
+        if (master?.template)
+          templateKey = master.template as unknown as string;
+
+        // Compute subject after templateKey is set from master
+        // Priority: 1. subjectTemplate (rendered), 2. explicit subject from dto, 3. template defaults, 4. "Notification"
         {
           const subjectFromTemplate = dto?.subjectTemplate
             ? await renderTemplateString(dto.subjectTemplate, {
@@ -245,18 +262,34 @@ async function processBatch() {
             : undefined;
           const defaultSubjectByTemplate: Record<string, string> = {
             otp: "Your OTP Code - The Bhawanipur Education Society College",
-            subjectSelectionConfirmation:
+            "subject-selection-confirmation":
               "Confirmation of Semester-wise Subject Selection",
+            "cu-reg-part2-confirmation":
+              "Confirmation of physical submission of data sheet for Calcutta University Registration",
           };
+          // Use explicit subject from notificationEvent if available (highest priority after template)
+          const explicitSubject = dto?.subject || (dto as any)?.subject;
           subject = asString(
-            subjectFromTemplate || (dto as any)?.subject,
+            subjectFromTemplate || explicitSubject,
             templateKey
               ? defaultSubjectByTemplate[String(templateKey)] || "Notification"
               : "Notification",
           );
+          console.log(
+            "[email.worker] Subject resolution:",
+            JSON.stringify(
+              {
+                subjectFromTemplate,
+                explicitSubject,
+                dtoSubject: dto?.subject,
+                templateKey,
+                resolvedSubject: subject,
+              },
+              null,
+              2,
+            ),
+          );
         }
-        if (master?.template)
-          templateKey = master.template as unknown as string;
 
         // Build template data based on meta sequence and contents captured against field IDs
         const metas = await db

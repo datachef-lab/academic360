@@ -14,8 +14,6 @@ import {
   findCuRegistrationCorrectionRequestsByStudentId,
   findCuRegistrationCorrectionRequestsByStudentUid,
   updateCuRegistrationCorrectionRequest,
-  approveCuRegistrationCorrectionRequest,
-  rejectCuRegistrationCorrectionRequest,
   deleteCuRegistrationCorrectionRequest,
   findCuRegistrationCorrectionRequestsByStatus,
   getNextCuRegistrationApplicationNumber,
@@ -360,108 +358,108 @@ export const updateCuRegistrationCorrectionRequestById = async (
 };
 
 // Approve CU registration correction request
-export const approveCuRegistrationCorrectionRequestById = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const id = parseInt(req.params.id);
-    const { approvedBy, approvedRemarks } = req.body;
+// export const approveCuRegistrationCorrectionRequestById = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ): Promise<void> => {
+//   try {
+//     const id = parseInt(req.params.id);
+//     const { approvedBy, approvedRemarks } = req.body;
 
-    if (isNaN(id)) {
-      res.status(400).json(new ApiError(400, "Invalid request ID"));
-      return;
-    }
+//     if (isNaN(id)) {
+//       res.status(400).json(new ApiError(400, "Invalid request ID"));
+//       return;
+//     }
 
-    if (!approvedBy || typeof approvedBy !== "number") {
-      res
-        .status(400)
-        .json(new ApiError(400, "Approved by user ID is required"));
-      return;
-    }
+//     if (!approvedBy || typeof approvedBy !== "number") {
+//       res
+//         .status(400)
+//         .json(new ApiError(400, "Approved by user ID is required"));
+//       return;
+//     }
 
-    const updatedRequest = await approveCuRegistrationCorrectionRequest(
-      id,
-      approvedBy,
-      approvedRemarks,
-    );
+//     // const updatedRequest = await approveCuRegistrationCorrectionRequest(
+//     //   id,
+//     //   approvedBy,
+//     //   approvedRemarks,
+//     // );
 
-    if (!updatedRequest) {
-      res
-        .status(404)
-        .json(
-          new ApiError(404, "CU registration correction request not found"),
-        );
-      return;
-    }
+//     if (!updatedRequest) {
+//       res
+//         .status(404)
+//         .json(
+//           new ApiError(404, "CU registration correction request not found"),
+//         );
+//       return;
+//     }
 
-    res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          updatedRequest,
-          "CU registration correction request approved successfully!",
-        ),
-      );
-  } catch (error) {
-    handleError(error, res, next);
-  }
-};
+//     res
+//       .status(200)
+//       .json(
+//         new ApiResponse(
+//           200,
+//           "SUCCESS",
+//           updatedRequest,
+//           "CU registration correction request approved successfully!",
+//         ),
+//       );
+//   } catch (error) {
+//     handleError(error, res, next);
+//   }
+// };
 
-// Reject CU registration correction request
-export const rejectCuRegistrationCorrectionRequestById = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const id = parseInt(req.params.id);
-    const { rejectedBy, rejectedRemarks } = req.body;
+// // Reject CU registration correction request
+// export const rejectCuRegistrationCorrectionRequestById = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ): Promise<void> => {
+//   try {
+//     const id = parseInt(req.params.id);
+//     const { rejectedBy, rejectedRemarks } = req.body;
 
-    if (isNaN(id)) {
-      res.status(400).json(new ApiError(400, "Invalid request ID"));
-      return;
-    }
+//     if (isNaN(id)) {
+//       res.status(400).json(new ApiError(400, "Invalid request ID"));
+//       return;
+//     }
 
-    if (!rejectedBy || typeof rejectedBy !== "number") {
-      res
-        .status(400)
-        .json(new ApiError(400, "Rejected by user ID is required"));
-      return;
-    }
+//     if (!rejectedBy || typeof rejectedBy !== "number") {
+//       res
+//         .status(400)
+//         .json(new ApiError(400, "Rejected by user ID is required"));
+//       return;
+//     }
 
-    const updatedRequest = await rejectCuRegistrationCorrectionRequest(
-      id,
-      rejectedBy,
-      rejectedRemarks,
-    );
+//     const updatedRequest = await rejectCuRegistrationCorrectionRequest(
+//       id,
+//       rejectedBy,
+//       rejectedRemarks,
+//     );
 
-    if (!updatedRequest) {
-      res
-        .status(404)
-        .json(
-          new ApiError(404, "CU registration correction request not found"),
-        );
-      return;
-    }
+//     if (!updatedRequest) {
+//       res
+//         .status(404)
+//         .json(
+//           new ApiError(404, "CU registration correction request not found"),
+//         );
+//       return;
+//     }
 
-    res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          updatedRequest,
-          "CU registration correction request rejected successfully!",
-        ),
-      );
-  } catch (error) {
-    handleError(error, res, next);
-  }
-};
+//     res
+//       .status(200)
+//       .json(
+//         new ApiResponse(
+//           200,
+//           "SUCCESS",
+//           updatedRequest,
+//           "CU registration correction request rejected successfully!",
+//         ),
+//       );
+//   } catch (error) {
+//     handleError(error, res, next);
+//   }
+// };
 
 // Delete CU registration correction request
 export const deleteCuRegistrationCorrectionRequestById = async (
@@ -819,14 +817,17 @@ export const markPhysicalRegistrationDoneController = async (
   try {
     const { id } = req.params;
     const correctionRequestId = parseInt(id);
+    const user = req.user as UserDto;
 
     if (isNaN(correctionRequestId)) {
       res.status(400).json(new ApiError(400, "Invalid correction request ID"));
       return;
     }
 
-    const updatedRequest =
-      await markPhysicalRegistrationDone(correctionRequestId);
+    const updatedRequest = await markPhysicalRegistrationDone(
+      correctionRequestId,
+      user?.id,
+    );
 
     if (!updatedRequest) {
       res.status(404).json(new ApiError(404, "Correction request not found"));

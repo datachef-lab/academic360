@@ -105,17 +105,28 @@ export class NotificationsService {
           bodyValues: dto.notificationEvent.bodyValues,
         });
       }
-    } else if (dto.variant === "EMAIL" && dto.notificationEvent?.templateData) {
-      // Store templateData in message field for email worker to access
+    } else if (dto.variant === "EMAIL" && dto.notificationEvent) {
+      // Store templateData and subject in message field for email worker to access
+      const notificationEventData: {
+        templateData?: any;
+        subject?: string;
+      } = {};
+
+      if (dto.notificationEvent.templateData) {
+        notificationEventData.templateData = dto.notificationEvent.templateData;
+      }
+
+      if (dto.notificationEvent.subject) {
+        notificationEventData.subject = dto.notificationEvent.subject;
+      }
+
       message = JSON.stringify({
         originalMessage: dto.message,
-        notificationEvent: {
-          templateData: dto.notificationEvent.templateData,
-        },
+        notificationEvent: notificationEventData,
       });
       console.log(
-        "[notif-sys] Storing templateData in message for EMAIL variant:",
-        JSON.stringify(dto.notificationEvent.templateData, null, 2),
+        "[notif-sys] Storing notificationEvent data in message for EMAIL variant:",
+        JSON.stringify(notificationEventData, null, 2),
       );
     } else {
       console.log(

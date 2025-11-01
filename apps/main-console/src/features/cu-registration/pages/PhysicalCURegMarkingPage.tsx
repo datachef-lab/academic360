@@ -16,6 +16,11 @@ interface CuRegistrationData {
   cuRegistrationApplicationNumber: string;
   status: string;
   physicalRegistrationDone: boolean;
+  physicalRegistrationDoneAt?: string | null;
+  physicalRegistrationDoneBy?: {
+    id: number;
+    name: string;
+  } | null;
   createdAt: string;
   isMAOrMCOM?: boolean;
 }
@@ -59,6 +64,11 @@ export default function PhysicalCURegMarkingPage() {
             cuRegistrationApplicationNumber?: string;
             status?: string;
             physicalRegistrationDone?: boolean;
+            physicalRegistrationDoneAt?: string | null;
+            physicalRegistrationDoneBy?: {
+              id: number;
+              name: string;
+            } | null;
             createdAt?: string;
           };
 
@@ -79,6 +89,8 @@ export default function PhysicalCURegMarkingPage() {
             cuRegistrationApplicationNumber: rec.cuRegistrationApplicationNumber || "N/A",
             status: rec.status || "",
             physicalRegistrationDone: rec.physicalRegistrationDone || false,
+            physicalRegistrationDoneAt: rec.physicalRegistrationDoneAt || null,
+            physicalRegistrationDoneBy: rec.physicalRegistrationDoneBy || null,
             createdAt: rec.createdAt || "",
             isMAOrMCOM, // Add this flag for UI logic
           };
@@ -98,6 +110,23 @@ export default function PhysicalCURegMarkingPage() {
   };
 
   const handleMarkPhysicalDone = async (correctionRequestId: number) => {
+    // Find the record to check its status
+    const record = cuRegistrationData.find((r) => r.id === correctionRequestId);
+
+    // Check if status is REQUEST_CORRECTION - show alert and return early
+    if (record && record.status === "REQUEST_CORRECTION") {
+      setError("Rectification request is still pending. Physical submission will be allowed only after rectification.");
+      return;
+    }
+
+    // Check if status is PENDING - show alert and return early
+    if (record && record.status === "PENDING") {
+      setError(
+        `Cannot mark physical registration as done. Status is "PENDING". Please wait for the registration status to be updated.`,
+      );
+      return;
+    }
+
     setMarkingPhysical(correctionRequestId);
     setError(null);
     setSuccess(null);
@@ -114,7 +143,15 @@ export default function PhysicalCURegMarkingPage() {
         setCuRegistrationData((prevData) =>
           prevData.map((record) =>
             record.id === correctionRequestId
-              ? { ...record, physicalRegistrationDone: true, status: "PHYSICAL_REGISTRATION_DONE" }
+              ? {
+                  ...record,
+                  physicalRegistrationDone: true,
+                  status: "PHYSICAL_REGISTRATION_DONE",
+                  physicalRegistrationDoneAt:
+                    response.data.payload?.correctionRequest?.physicalRegistrationDoneAt || new Date().toISOString(),
+                  physicalRegistrationDoneBy:
+                    response.data.payload?.correctionRequest?.physicalRegistrationDoneBy || null,
+                }
               : record,
           ),
         );
@@ -263,8 +300,7 @@ export default function PhysicalCURegMarkingPage() {
                             <span className="font-medium">Program:</span> {record.programCourseName}
                           </div>
                           <div>
-                            <span className="font-medium">Application No:</span>{" "}
-                            {record.cuRegistrationApplicationNumber}
+                            <span className="font-medium">CU Form No:</span> {record.cuRegistrationApplicationNumber}
                           </div>
                           <div>
                             <span className="font-medium">Status:</span> {record.status}
@@ -281,7 +317,11 @@ export default function PhysicalCURegMarkingPage() {
                           <Button
                             onClick={() => handleMarkPhysicalDone(record.id)}
                             disabled={markingPhysical !== null}
-                            className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                            className={
+                              record.status === "PENDING" || record.status === "REQUEST_CORRECTION"
+                                ? "bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                : "bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            }
                           >
                             {markingPhysical === record.id ? (
                               <>
@@ -296,9 +336,25 @@ export default function PhysicalCURegMarkingPage() {
                             )}
                           </Button>
                         ) : (
-                          <div className="flex items-center text-green-600">
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            <span className="text-sm font-medium">Completed</span>
+                          <div className="flex flex-col items-end text-green-600">
+                            <div className="flex items-center">
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              <span className="text-sm font-medium">Completed</span>
+                            </div>
+                            {record.physicalRegistrationDoneAt && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {new Date(record.physicalRegistrationDoneAt).toLocaleString("en-IN", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </div>
+                            )}
+                            {record.physicalRegistrationDoneBy && (
+                              <div className="text-xs text-gray-500">by {record.physicalRegistrationDoneBy.name}</div>
+                            )}
                           </div>
                         )}
                       </div>

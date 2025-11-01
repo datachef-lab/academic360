@@ -190,9 +190,9 @@ export const sendOtpEmailNotification = async (
       notificationMasterId: emailMaster.id,
       notificationEvent: {
         subject: redirectToDev
-          ? `[DEV MODE] OTP for ${data.email} - The Bhawanipur Education Society College`
+          ? `[DEV MODE] OTP | The Bhawanipur Education Society College`
           : sendToStaffOnly
-            ? `[STAGING] OTP for ${data.email} - The Bhawanipur Education Society College`
+            ? `[STAGING] OTP | The Bhawanipur Education Society College`
             : "Your OTP Code - The Bhawanipur Education Society College",
         emailTemplate: "otp",
         templateData: {

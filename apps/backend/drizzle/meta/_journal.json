@@ -372,6 +372,13 @@
       "when": 1761988108261,
       "tag": "0052_sticky_red_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1762015934581,
+      "tag": "0053_sturdy_steel_serpent",
+      "breakpoints": true
     }
   ]
 }

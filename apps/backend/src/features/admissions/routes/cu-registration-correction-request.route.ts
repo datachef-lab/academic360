@@ -8,8 +8,8 @@ import {
   getCuRegistrationCorrectionRequestsByStudentUid,
   getCuRegistrationCorrectionRequestsByStatus,
   updateCuRegistrationCorrectionRequestById,
-  approveCuRegistrationCorrectionRequestById,
-  rejectCuRegistrationCorrectionRequestById,
+  //   approveCuRegistrationCorrectionRequestById,
+  //   rejectCuRegistrationCorrectionRequestById,
   deleteCuRegistrationCorrectionRequestById,
   getNextCuRegistrationApplicationNumberController,
   validateCuRegistrationApplicationNumberController,
@@ -99,10 +99,10 @@ router.post("/:id/personal-info", updatePersonalInfoByAdmin);
 router.post("/:id/address-info", updateAddressInfoByAdmin);
 
 // Approve CU registration correction request
-router.patch("/:id/approve", approveCuRegistrationCorrectionRequestById);
+// router.patch("/:id/approve", approveCuRegistrationCorrectionRequestById);
 
-// Reject CU registration correction request
-router.patch("/:id/reject", rejectCuRegistrationCorrectionRequestById);
+// // Reject CU registration correction request
+// router.patch("/:id/reject", rejectCuRegistrationCorrectionRequestById);
 
 // Mark physical registration as done
 router.patch("/:id/mark-physical-done", markPhysicalRegistrationDoneController);

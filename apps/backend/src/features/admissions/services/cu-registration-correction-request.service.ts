@@ -405,12 +405,15 @@ export async function findCuRegistrationCorrectionRequestsByStudentUid(
 // UPDATE - Mark physical registration as done
 export async function markPhysicalRegistrationDone(
   id: number,
+  markedByUserId?: number,
 ): Promise<CuRegistrationCorrectionRequestDto | null> {
   const [updated] = await db
     .update(cuRegistrationCorrectionRequestModel)
     .set({
       physicalRegistrationDone: true,
       status: "PHYSICAL_REGISTRATION_DONE",
+      physicalRegistrationDoneBy: markedByUserId ?? null,
+      physicalRegistrationDoneAt: new Date(),
       updatedAt: new Date(),
     })
     .where(eq(cuRegistrationCorrectionRequestModel.id, id))
@@ -555,6 +558,10 @@ export async function markPhysicalRegistrationDone(
         // Prepare notification data
         let notificationData;
 
+        // Define email subject - can be made configurable in the future
+        const emailSubject =
+          "Confirmation of physical submission of data sheet for Calcutta University Registration";
+
         if (shouldSendToStudent) {
           // Production: send to student
           notificationData = {
@@ -566,8 +573,7 @@ export async function markPhysicalRegistrationDone(
             notificationMasterId: emailMaster.id,
             otherUsersEmails: undefined,
             notificationEvent: {
-              subject:
-                "Confirmation of Calcutta University Registration – Part 2 Submission",
+              subject: emailSubject,
               templateData: {
                 studentName: studentData.userName || "Student",
               },
@@ -585,8 +591,8 @@ export async function markPhysicalRegistrationDone(
               otherUsersEmails.length > 0 ? otherUsersEmails : undefined,
             notificationEvent: {
               subject: redirectToDev
-                ? `[DEV MODE] CU Registration Part 2 Confirmation - ${studentData.userEmail}`
-                : `[STAGING] CU Registration Part 2 Confirmation - ${studentData.userEmail}`,
+                ? `[DEV MODE] ${emailSubject}`
+                : `[STAGING] ${emailSubject}`,
               templateData: {
                 studentName: redirectToDev
                   ? `Developer (Original: ${studentData.userName || studentData.userEmail})`
@@ -707,6 +713,7 @@ export async function updateCuRegistrationCorrectionRequest(
     // 1) Update the correction request record itself
     const setData: any = {
       updatedAt: new Date(),
+      lastUpdatedBy: user.id,
     };
     if (typeof (updateData as any).remarks !== "undefined")
       setData.remarks = (updateData as any).remarks;
@@ -1587,52 +1594,51 @@ export async function updateCuRegistrationCorrectionRequest(
 }
 
 // UPDATE - Approve request
-export async function approveCuRegistrationCorrectionRequest(
-  id: number,
-  approvedBy: number,
-  approvedRemarks?: string,
-): Promise<CuRegistrationCorrectionRequestDto | null> {
-  const [updatedRequest] = await db
-    .update(cuRegistrationCorrectionRequestModel)
-    .set({
-      status: "ONLINE_REGISTRATION_DONE",
-      approvedBy,
-      approvedAt: new Date(),
-      approvedRemarks,
-      updatedAt: new Date(),
-    })
-    .where(eq(cuRegistrationCorrectionRequestModel.id, id))
-    .returning();
+// export async function approveCuRegistrationCorrectionRequest(
+//     id: number,
+//     approvedBy: number,
+//     approvedRemarks?: string,
+// ): Promise<CuRegistrationCorrectionRequestDto | null> {
+//     const [updatedRequest] = await db
+//         .update(cuRegistrationCorrectionRequestModel)
+//         .set({
+//             status: "ONLINE_REGISTRATION_DONE",
+//             approvedAt: new Date(),
+//             approvedRemarks,
+//             updatedAt: new Date(),
+//         })
+//         .where(eq(cuRegistrationCorrectionRequestModel.id, id))
+//         .returning();
 
-  if (!updatedRequest) return null;
+//     if (!updatedRequest) return null;
 
-  return await modelToDto(updatedRequest);
-}
+//     return await modelToDto(updatedRequest);
+// }
 
-// UPDATE - Reject request
-export async function rejectCuRegistrationCorrectionRequest(
-  id: number,
-  rejectedBy: number,
-  rejectedRemarks?: string,
-): Promise<CuRegistrationCorrectionRequestDto | null> {
-  const [updatedRequest] = await db
-    .update(cuRegistrationCorrectionRequestModel)
-    .set({
-      status: "PENDING",
-      onlineRegistrationDone: false,
-      physicalRegistrationDone: false,
-      rejectedBy,
-      rejectedAt: new Date(),
-      rejectedRemarks,
-      updatedAt: new Date(),
-    })
-    .where(eq(cuRegistrationCorrectionRequestModel.id, id))
-    .returning();
+// // UPDATE - Reject request
+// export async function rejectCuRegistrationCorrectionRequest(
+//     id: number,
+//     rejectedBy: number,
+//     rejectedRemarks?: string,
+// ): Promise<CuRegistrationCorrectionRequestDto | null> {
+//     const [updatedRequest] = await db
+//         .update(cuRegistrationCorrectionRequestModel)
+//         .set({
+//             status: "PENDING",
+//             onlineRegistrationDone: false,
+//             physicalRegistrationDone: false,
+//             rejectedBy,
+//             rejectedAt: new Date(),
+//             rejectedRemarks,
+//             updatedAt: new Date(),
+//         })
+//         .where(eq(cuRegistrationCorrectionRequestModel.id, id))
+//         .returning();
 
-  if (!updatedRequest) return null;
+//     if (!updatedRequest) return null;
 
-  return await modelToDto(updatedRequest);
-}
+//     return await modelToDto(updatedRequest);
+// }
 
 // DELETE
 export async function deleteCuRegistrationCorrectionRequest(
@@ -2051,24 +2057,24 @@ async function modelToDto(
     )
     .where(eq(studentModel.id, request.studentId));
 
-  // Get approver details
-  let approvedBy = null;
-  if (request.approvedBy) {
-    const [approver] = await db
+  // Get physical registration marked by details
+  let physicalRegistrationDoneBy = null;
+  if (request.physicalRegistrationDoneBy) {
+    const [marker] = await db
       .select()
       .from(userModel)
-      .where(eq(userModel.id, request.approvedBy));
-    approvedBy = approver;
+      .where(eq(userModel.id, request.physicalRegistrationDoneBy));
+    physicalRegistrationDoneBy = marker;
   }
 
-  // Get rejector details
-  let rejectedBy = null;
-  if (request.rejectedBy) {
-    const [rejector] = await db
+  // Get last updated by details
+  let lastUpdatedBy = null;
+  if (request.lastUpdatedBy) {
+    const [updater] = await db
       .select()
       .from(userModel)
-      .where(eq(userModel.id, request.rejectedBy));
-    rejectedBy = rejector;
+      .where(eq(userModel.id, request.lastUpdatedBy));
+    lastUpdatedBy = updater;
   }
 
   // Get documents
@@ -2118,21 +2124,18 @@ async function modelToDto(
     documentsDeclaration: request.documentsDeclaration,
     onlineRegistrationDone: request.onlineRegistrationDone,
     physicalRegistrationDone: request.physicalRegistrationDone,
+    physicalRegistrationDoneAt: request.physicalRegistrationDoneAt,
+    physicalRegistrationDoneBy: physicalRegistrationDoneBy,
+    lastUpdatedBy: lastUpdatedBy,
     genderCorrectionRequest: request.genderCorrectionRequest,
     nationalityCorrectionRequest: request.nationalityCorrectionRequest,
     aadhaarCardNumberCorrectionRequest:
       request.aadhaarCardNumberCorrectionRequest,
     apaarIdCorrectionRequest: request.apaarIdCorrectionRequest,
     subjectsCorrectionRequest: request.subjectsCorrectionRequest,
-    approvedAt: request.approvedAt,
-    approvedRemarks: request.approvedRemarks,
-    rejectedAt: request.rejectedAt,
-    rejectedRemarks: request.rejectedRemarks,
     createdAt: request.createdAt,
     updatedAt: request.updatedAt,
     student: studentData!,
-    approvedBy,
-    rejectedBy,
     documents: documents.map((doc) => ({
       id: doc.id,
       documentUrl: doc.documentUrl,
@@ -2827,10 +2830,10 @@ interface CuRegistrationExportData {
   onlineRegistrationDone: boolean;
   physicalRegistrationDone: boolean;
   remarks: string;
-  approvedRemarks: string;
-  rejectedRemarks: string;
   createdAt: string;
   updatedAt: string;
+  physicalRegistrationDoneAt: string;
+  physicalRegistrationDoneByUserName: string;
   admissionRollNumber: string;
 
   // Personal Info (from UI)
@@ -2918,8 +2921,6 @@ export const exportCuRegistrationCorrectionRequests =
           physicalRegistrationDone:
             cuRegistrationCorrectionRequestModel.physicalRegistrationDone,
           remarks: cuRegistrationCorrectionRequestModel.remarks,
-          approvedRemarks: cuRegistrationCorrectionRequestModel.approvedRemarks,
-          rejectedRemarks: cuRegistrationCorrectionRequestModel.rejectedRemarks,
           createdAt: cuRegistrationCorrectionRequestModel.createdAt,
           updatedAt: cuRegistrationCorrectionRequestModel.updatedAt,
           genderCorrectionRequest:
@@ -2940,8 +2941,10 @@ export const exportCuRegistrationCorrectionRequests =
             cuRegistrationCorrectionRequestModel.subjectsDeclaration,
           documentsDeclaration:
             cuRegistrationCorrectionRequestModel.documentsDeclaration,
-          approvedBy: cuRegistrationCorrectionRequestModel.approvedBy,
-          rejectedBy: cuRegistrationCorrectionRequestModel.rejectedBy,
+          physicalRegistrationDoneBy:
+            cuRegistrationCorrectionRequestModel.physicalRegistrationDoneBy,
+          physicalRegistrationDoneAt:
+            cuRegistrationCorrectionRequestModel.physicalRegistrationDoneAt,
 
           // Student data
           studentUserId: studentModel.userId,
@@ -3054,14 +3057,11 @@ export const exportCuRegistrationCorrectionRequests =
         .leftJoin(cityModel, eq(addressModel.cityId, cityModel.id))
         .where(eq(addressModel.type, "MAILING"));
 
-      // Get user names for approved/rejected by
+      // Get user names for physical marked by
       const userIds = [
         ...new Set([
           ...correctionRequests
-            .map((r) => r.approvedBy)
-            .filter((id): id is number => id !== null),
-          ...correctionRequests
-            .map((r) => r.rejectedBy)
+            .map((r) => r.physicalRegistrationDoneBy)
             .filter((id): id is number => id !== null),
         ]),
       ];
@@ -3165,10 +3165,14 @@ export const exportCuRegistrationCorrectionRequests =
             onlineRegistrationDone: request.onlineRegistrationDone || false,
             physicalRegistrationDone: request.physicalRegistrationDone || false,
             remarks: request.remarks || "",
-            approvedRemarks: request.approvedRemarks || "",
-            rejectedRemarks: request.rejectedRemarks || "",
             createdAt: request.createdAt?.toISOString() || "",
             updatedAt: request.updatedAt?.toISOString() || "",
+            physicalRegistrationDoneAt:
+              request.physicalRegistrationDoneAt?.toISOString() || "",
+            physicalRegistrationDoneByUserName:
+              request.physicalRegistrationDoneBy
+                ? userMap.get(request.physicalRegistrationDoneBy) || ""
+                : "",
             admissionRollNumber: request.admissionRollNumber || "",
 
             // Personal Info
@@ -3235,11 +3239,9 @@ export const exportCuRegistrationCorrectionRequests =
             documentsDeclaration: request.documentsDeclaration || false,
 
             // User info
-            createdByUserName: request.approvedBy
-              ? userMap.get(request.approvedBy) || ""
-              : "",
-            updatedByUserName: request.rejectedBy
-              ? userMap.get(request.rejectedBy) || ""
+            createdByUserName: "", // No longer tracked
+            updatedByUserName: request.physicalRegistrationDoneBy
+              ? userMap.get(request.physicalRegistrationDoneBy) || ""
               : "",
           };
         },
