@@ -1,0 +1,233 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= content && content.subject ? content.subject : "Confirmation of Calcutta University Registration – Part 2 Submission" %></title>
+    <style>
+      /* Reset and base styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f8fafc;
+        padding: 20px 0;
+      }
+
+      /* Container */
+      .email-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+      }
+
+      /* Header */
+      .email-header {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        padding: 24px 32px;
+        text-align: center;
+      }
+
+      .college-logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 16px;
+        border-radius: 8px;
+        background: white;
+        padding: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .college-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .email-header h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.025em;
+      }
+
+      .email-header .subtitle {
+        font-size: 16px;
+        margin-top: 8px;
+        opacity: 0.9;
+      }
+
+      /* Content */
+      .email-content {
+        padding: 32px;
+      }
+
+      .greeting {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 24px;
+      }
+
+      .content-text {
+        font-size: 16px;
+        color: #4b5563;
+        margin-bottom: 16px;
+        line-height: 1.7;
+      }
+
+      .content-text strong {
+        color: #1f2937;
+        font-weight: 600;
+      }
+
+      /* Info box */
+      .info-box {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+      }
+
+      .info-box p {
+        color: #1e40af;
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .info-box p:not(:last-child) {
+        margin-bottom: 12px;
+      }
+
+      /* Footer */
+      .email-footer {
+        background-color: #f8fafc;
+        padding: 24px 32px;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .signature {
+        font-size: 14px;
+        color: #374151;
+        margin-bottom: 16px;
+      }
+
+      .signature strong {
+        color: #1f2937;
+      }
+
+      .disclaimer {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .copyright {
+        text-align: center;
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 16px;
+      }
+
+      /* Responsive */
+      @media (max-width: 600px) {
+        .email-container {
+          margin: 0 16px;
+          border-radius: 8px;
+        }
+
+        .email-header,
+        .email-content,
+        .email-footer {
+          padding: 20px;
+        }
+
+        .email-header h1 {
+          font-size: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <!-- Header -->
+      <div class="email-header">
+        <div class="college-logo">
+          <img
+            src="https://besc.academic360.app/api/api/v1/settings/file/4"
+            alt="The Bhawanipur Education Society College"
+          />
+        </div>
+        <h1>Confirmation of Calcutta University Registration</h1>
+        <div class="subtitle">Part 2 Submission</div>
+      </div>
+
+      <!-- Content -->
+      <div class="email-content">
+        <div class="greeting">
+          <% if (content && (content.studentName || (content.templateData && content.templateData.studentName) || (content.dtoTemplateData && content.dtoTemplateData.studentName))) { %>
+            Dear <%= content.studentName || (content.templateData && content.templateData.studentName) || (content.dtoTemplateData && content.dtoTemplateData.studentName) %>,
+          <% } else if (user && user.name) { %>
+            Dear <%= user.name %>,
+          <% } else { %>
+            Dear Student,
+          <% } %>
+        </div>
+
+        <div class="content-text">
+          Your Calcutta University Registration Datasheet and documents (Part 2
+          of 2) have been successfully received by the College and will be
+          forwarded to the University for scrutiny and approval.
+        </div>
+
+        <div class="info-box">
+          <p>
+            If any additional documents are required, you will be contacted on
+            your registered mobile number or institutional email ID.
+          </p>
+          <p>
+            Please do not enquire about the registration status. You will be
+            informed once the University issues the Registration Certificate.
+          </p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="email-footer">
+        <div class="signature">
+          <strong>Regards,</strong><br />
+          <strong>Admission Department</strong><br />
+          The Bhawanipur Education Society College
+        </div>
+
+        <div class="disclaimer">
+          <strong
+            >*Please do not reply to this email. The mail box of this email
+            address is not monitored.</strong
+          >
+        </div>
+
+        <div class="copyright">
+          &copy; <%= new Date().getFullYear() %> The Bhawanipur Education Society College
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
