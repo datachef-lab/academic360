@@ -416,8 +416,219 @@ export async function markPhysicalRegistrationDone(
     .where(eq(cuRegistrationCorrectionRequestModel.id, id))
     .returning();
 
+  const [promotion] = await db
+    .select({
+      sessionId: promotionModel.sessionId,
+      classId: promotionModel.classId,
+    })
+    .from(promotionModel)
+    .where(eq(promotionModel.studentId, updated.studentId))
+    .orderBy(desc(promotionModel.createdAt))
+    .limit(1);
+
+  const misData = await getMisTableData(
+    promotion?.sessionId,
+    promotion?.classId,
+  );
+  socketService.sendMisTableUpdate(
+    { sessionId: promotion?.sessionId, classId: promotion?.classId },
+    misData.data,
+    {
+      trigger: "cu_reg_request_update",
+      affectedStudents: 1,
+    },
+  );
+  socketService.sendMisTableUpdateToAll(misData.data, {
+    trigger: "cu_reg_request_update",
+    affectedStudents: 1,
+  });
+
   if (!updated) {
     return null;
+  }
+
+  // Send email notification for Part 2 confirmation
+  try {
+    console.log(
+      "📧 [CU-REG-PART2-NOTIF] Sending Part 2 confirmation email notification",
+    );
+
+    // Get student and user details
+    const [studentData] = await db
+      .select({
+        userId: studentModel.userId,
+        userName: userModel.name,
+        userEmail: userModel.email,
+      })
+      .from(studentModel)
+      .innerJoin(userModel, eq(studentModel.userId, userModel.id))
+      .where(eq(studentModel.id, updated.studentId));
+
+    if (!studentData || !studentData.userId) {
+      console.warn(
+        "📧 [CU-REG-PART2-NOTIF] Student or user data not found, skipping notification",
+      );
+    } else {
+      // Get the notification master for CU Registration Part 2 confirmation
+      const [emailMaster] = await db
+        .select()
+        .from(notificationMasterModel)
+        .where(
+          and(
+            eq(
+              notificationMasterModel.name,
+              "CU Registration Part 2 Confirmation",
+            ),
+            eq(notificationMasterModel.template, "cu-reg-part2-confirmation"),
+            eq(notificationMasterModel.variant, "EMAIL"),
+          ),
+        );
+
+      if (!emailMaster) {
+        console.warn(
+          "📧 [CU-REG-PART2-NOTIF] Notification master 'CU Registration Part 2 Confirmation' not found",
+        );
+      } else {
+        console.log(
+          "📧 [CU-REG-PART2-NOTIF] Found notification master:",
+          emailMaster.id,
+        );
+
+        // Check environment-specific logic
+        const redirectToDev = shouldRedirectToDeveloper();
+        const sendToStaffOnly = shouldSendToStaffOnly();
+        const { devEmail } = getDeveloperContact();
+
+        // Determine notification recipients based on environment
+        let otherUsersEmails: string[] = [];
+        let shouldSendToStudent = false;
+
+        if (redirectToDev && devEmail) {
+          // Development: send ONLY to developer, NOT to student
+          otherUsersEmails = [devEmail];
+          shouldSendToStudent = false;
+          console.log(
+            `📧 [CU-REG-PART2-NOTIF] [DEV MODE] Sending ONLY to developer: ${devEmail} (NOT to student)`,
+          );
+        } else if (sendToStaffOnly) {
+          // Staging: send ONLY to staff, NOT to student
+          try {
+            const staffUsers = await db
+              .select({
+                email: userModel.email,
+              })
+              .from(userModel)
+              .where(
+                and(
+                  or(eq(userModel.type, "STAFF"), eq(userModel.type, "ADMIN")),
+                  eq(userModel.sendStagingNotifications, true),
+                  eq(userModel.isActive, true),
+                  eq(userModel.isSuspended, false),
+                ),
+              );
+
+            otherUsersEmails = staffUsers
+              .map((user) => user.email)
+              .filter(
+                (email): email is string =>
+                  email !== null && email !== undefined,
+              );
+
+            shouldSendToStudent = false;
+            console.log(
+              `📧 [CU-REG-PART2-NOTIF] [STAGING] Sending ONLY to staff: ${otherUsersEmails.join(", ")} (NOT to student)`,
+            );
+          } catch (error) {
+            console.error(
+              "❌ [CU-REG-PART2-NOTIF] Error fetching staff users for staging:",
+              error,
+            );
+          }
+        } else {
+          // Production: send to real user
+          shouldSendToStudent = true;
+          console.log(
+            `📧 [CU-REG-PART2-NOTIF] [PRODUCTION] Sending to real user: ${studentData.userEmail}`,
+          );
+        }
+
+        // Prepare notification data
+        let notificationData;
+
+        if (shouldSendToStudent) {
+          // Production: send to student
+          notificationData = {
+            userId: studentData.userId,
+            variant: "EMAIL" as const,
+            type: "ADMISSION" as const,
+            message:
+              "Your Calcutta University Registration Part 2 submission has been confirmed.",
+            notificationMasterId: emailMaster.id,
+            otherUsersEmails: undefined,
+            notificationEvent: {
+              subject:
+                "Confirmation of Calcutta University Registration – Part 2 Submission",
+              templateData: {
+                studentName: studentData.userName || "Student",
+              },
+            },
+          };
+        } else {
+          // Development/Staging: send to other users only
+          notificationData = {
+            userId: studentData.userId,
+            variant: "EMAIL" as const,
+            type: "ADMISSION" as const,
+            message: `CU Registration Part 2 confirmation for testing. Student: ${studentData.userName || studentData.userEmail}`,
+            notificationMasterId: emailMaster.id,
+            otherUsersEmails:
+              otherUsersEmails.length > 0 ? otherUsersEmails : undefined,
+            notificationEvent: {
+              subject: redirectToDev
+                ? `[DEV MODE] CU Registration Part 2 Confirmation - ${studentData.userEmail}`
+                : `[STAGING] CU Registration Part 2 Confirmation - ${studentData.userEmail}`,
+              templateData: {
+                studentName: redirectToDev
+                  ? `Developer (Original: ${studentData.userName || studentData.userEmail})`
+                  : `Staff Member (${studentData.userName || studentData.userEmail})`,
+                ...(redirectToDev && {
+                  originalRecipient: studentData.userEmail,
+                  originalUserName: studentData.userName || "Student",
+                }),
+                ...(sendToStaffOnly && {
+                  environment: "staging",
+                  recipientType: "staff",
+                }),
+              },
+            },
+          };
+        }
+
+        console.log(
+          "📧 [CU-REG-PART2-NOTIF] Enqueuing notification with data:",
+          {
+            userId: notificationData.userId,
+            variant: notificationData.variant,
+            type: notificationData.type,
+            notificationMasterId: notificationData.notificationMasterId,
+            shouldSendToStudent: shouldSendToStudent,
+            hasOtherUsersEmails: otherUsersEmails.length > 0,
+          },
+        );
+
+        // Enqueue the notification
+        const result = await enqueueNotification(notificationData);
+        console.log(
+          "✅ [CU-REG-PART2-NOTIF] Part 2 confirmation email notification enqueued successfully",
+        );
+      }
+    }
+  } catch (error) {
+    console.error(
+      "❌ [CU-REG-PART2-NOTIF] Error sending Part 2 confirmation email notification:",
+      error,
+    );
+    // Don't throw error - notification failure should not block the main operation
   }
 
   return await modelToDto(updated);
