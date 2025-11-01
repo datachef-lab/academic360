@@ -636,8 +636,9 @@ export async function updateCuRegistrationCorrectionRequest(
       user.type !== "STUDENT"
     ) {
       // All declarations completed AND final submission done AND no application number yet
-      const applicationNumber =
-        await CuRegistrationNumberService.generateNextApplicationNumber();
+      const applicationNumber = existing.cuRegistrationApplicationNumber
+        ? existing.cuRegistrationApplicationNumber
+        : await CuRegistrationNumberService.generateNextApplicationNumber();
       setData.cuRegistrationApplicationNumber = applicationNumber;
       console.info(
         "[CU-REG CORRECTION][UPDATE] Generated application number on final submission:",
