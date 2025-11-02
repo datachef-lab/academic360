@@ -1,4 +1,5 @@
 import MasterLayout from "@/components/layouts/MasterLayout";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { BarChart, LayoutDashboard, PlusCircle } from "lucide-react";
 import { Outlet } from "react-router-dom";
 
@@ -21,6 +22,7 @@ const subLinks = [
 ];
 
 export default function BatchMaster() {
+  useRestrictTempUsers();
   return (
     <MasterLayout subLinks={subLinks}>
       <Outlet />

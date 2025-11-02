@@ -46,11 +46,13 @@
 // };
 
 // export default Event;
-import React from 'react';
-import { motion } from 'framer-motion';
-import { CalendarDays } from 'lucide-react';
+import React from "react";
+import { motion } from "framer-motion";
+import { CalendarDays } from "lucide-react";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const EventPage: React.FC = () => {
+  useRestrictTempUsers();
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white items-center justify-center px-2 py-3 sm:px-2 lg:px-2">
       <motion.div
@@ -69,9 +71,7 @@ const EventPage: React.FC = () => {
           </motion.div>
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Events</h2>
-            <p className="text-sm text-purple-600 font-medium">
-              Explore upcoming events and important dates
-            </p>
+            <p className="text-sm text-purple-600 font-medium">Explore upcoming events and important dates</p>
           </div>
         </div>
 

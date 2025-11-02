@@ -30,6 +30,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TEMP_USER_EMAILS } from "@/hooks/use-restrict-temp-users";
 
 // Remove hardcoded academic years - now using Redux state
 
@@ -236,7 +237,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
         </SidebarHeader>
 
-        <SidebarContent className="p-0 border-none bg-purple-800/95">
+        <SidebarContent className="p-0 border-none bg-purple-800/95 py-2">
           {showSkeleton ? (
             <div className="p-3 space-y-3">
               <div className="h-8 w-3/4 bg-purple-700/40 rounded animate-pulse" />
@@ -247,17 +248,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           ) : (
             <div className="h-full flex flex-col justify-between ">
               <div className="">
-                <div className="flex flex-col h-full justify-between">
+                <div className="flex flex-col h-full justify-between ">
                   {/* Academic Year Setup */}
-                  <div className="my-4 mb-6 border mx-2 rounded-l-md">
-                    <NavItem
-                      key={"Academic Year Setup"}
-                      icon={<Plus className="h-5 w-5" />}
-                      href={"/dashboard/academic-year-setup"}
-                    >
-                      <span className="text">New Academic Setup</span>
-                    </NavItem>
-                  </div>
+                  {user?.email && !TEMP_USER_EMAILS.includes(user.email) && (
+                    <div className="my-4 mb-6 border mx-2 rounded-l-md">
+                      <NavItem
+                        key={"Academic Year Setup"}
+                        icon={<Plus className="h-5 w-5" />}
+                        href={"/dashboard/academic-year-setup"}
+                      >
+                        <span className="text">New Academic Setup</span>
+                      </NavItem>
+                    </div>
+                  )}
 
                   {/* Dashboard Link */}
                   <div className="mb-4">
@@ -283,69 +286,82 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       Masters
                     </h3>
                     <div>
-                      {data.navMain.map((item) => (
-                        <NavItem
-                          key={item.title}
-                          icon={item.icon && <item.icon className="h-5 w-5" />}
-                          href={item.url}
-                          isActive={!isSearchActive && isSidebarActive(currentPath, item.url)}
-                        >
-                          <span className="text-[14px]">{item.title}</span>
-                        </NavItem>
-                      ))}
+                      {data.navMain
+                        .filter((item) => {
+                          // For temp users, only show "Physical CUReg Marking"
+                          if (user?.email && TEMP_USER_EMAILS.includes(user.email)) {
+                            return item.title === "Physical CUReg Marking";
+                          }
+                          // For non-temp users, show all items
+                          return true;
+                        })
+                        .map((item) => {
+                          return (
+                            <NavItem
+                              key={item.title}
+                              icon={item.icon && <item.icon className="h-5 w-5" />}
+                              href={item.url}
+                              isActive={!isSearchActive && isSidebarActive(currentPath, item.url)}
+                            >
+                              <span className="text-[14px]">{item.title}</span>
+                            </NavItem>
+                          );
+                        })}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Administration */}
-              <div className="my-14">
-                <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
-                  Administration
-                </h3>
-                <div className="p">
-                  {data.navAdministration.map((item) => {
-                    const url = item.url ?? "";
-                    const isActive = !isSearchActive && isSidebarActive(currentPath, url);
+              {user?.email && !TEMP_USER_EMAILS.includes(user.email) && (
+                <div className="my-14">
+                  <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
+                    Administration
+                  </h3>
+                  <div className="p">
+                    {data.navAdministration.map((item) => {
+                      const url = item.url ?? "";
+                      const isActive = !isSearchActive && isSidebarActive(currentPath, url);
 
-                    //   if (item.isModal) {
-                    //     return (
-                    //       <div
-                    //         key={item.title}
-                    //         onClick={() => {
-                    //           setIsSearchModalOpen(true);
-                    //           setIsSearchActive(true);
-                    //         }}
-                    //         className={cn(
-                    //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
-                    //           isSearchActive
-                    //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
-                    //             : "text-white hover:text-white",
-                    //         )}
-                    //       >
-                    //         <div className="flex items-center gap-3">
-                    //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
-                    //             {item.icon && <item.icon className="h-5 w-5" />}
-                    //           </span>
-                    //           <span className="text-base">{item.title}</span>
-                    //         </div>
-                    //       </div>
-                    //     );
-                    //   }
+                      //   if (item.isModal) {
+                      //     return (
+                      //       <div
+                      //         key={item.title}
+                      //         onClick={() => {
+                      //           setIsSearchModalOpen(true);
+                      //           setIsSearchActive(true);
+                      //         }}
+                      //         className={cn(
+                      //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
+                      //           isSearchActive
+                      //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
+                      //             : "text-white hover:text-white",
+                      //         )}
+                      //       >
+                      //         <div className="flex items-center gap-3">
+                      //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
+                      //             {item.icon && <item.icon className="h-5 w-5" />}
+                      //           </span>
+                      //           <span className="text-base">{item.title}</span>
+                      //         </div>
+                      //       </div>
+                      //     );
+                      //   }
 
-                    return (
-                      <NavItem
-                        key={item.title}
-                        icon={item.icon && <item.icon className="h-5 w-5" />}
-                        href={url}
-                        isActive={isActive}
-                      >
-                        <span className="text-base">{item.title}</span>
-                      </NavItem>
-                    );
-                  })}
+                      return (
+                        <NavItem
+                          key={item.title}
+                          icon={item.icon && <item.icon className="h-5 w-5" />}
+                          href={url}
+                          isActive={isActive}
+                        >
+                          <span className="text-base">{item.title}</span>
+                        </NavItem>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </SidebarContent>

@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { BookOpen, Users, Award, Settings, BarChart3, FileText, Shield, Database, Star } from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 // Remove hardcoded academic years - now using Redux state
 
@@ -83,6 +84,7 @@ const featureCards = [
 ];
 
 export default function AcademicYearSetupPage() {
+  useRestrictTempUsers();
   const navigate = useNavigate();
 
   return (

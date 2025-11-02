@@ -2,6 +2,7 @@ import React from "react";
 import MasterLayout from "@/components/layouts/MasterLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Settings, Lock, Bell } from "lucide-react";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const subLinks = [
   { title: "General", url: "general", icon: Settings },
@@ -10,6 +11,7 @@ const subLinks = [
 ];
 
 export default function BescStudentConsoleSettings() {
+  useRestrictTempUsers();
   const [tab, setTab] = React.useState("general");
   return (
     <MasterLayout subLinks={subLinks}>

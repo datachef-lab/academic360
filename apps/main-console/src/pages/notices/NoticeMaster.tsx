@@ -11,6 +11,7 @@ import { Paperclip, Image as ImageIcon, Link as LinkIcon, Megaphone, Bookmark, C
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { QueryObserverResult } from "@tanstack/react-query";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 // Academic years for dropdown
 const academicYears: string[] = [
@@ -126,6 +127,7 @@ function getStatus(notice: Notice): string {
 const PAGE_SIZE = 4;
 
 export default function NoticeMaster() {
+  useRestrictTempUsers();
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");

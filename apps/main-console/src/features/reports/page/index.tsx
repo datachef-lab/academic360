@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { getRegulationTypes } from "@/services/course-design.api";
 import type { RegulationType } from "@repo/db";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 interface ReportItem {
   id: string;
@@ -24,6 +25,7 @@ interface ReportItem {
 }
 
 export default function ReportsPage() {
+  useRestrictTempUsers();
   const [exportProgressOpen, setExportProgressOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);

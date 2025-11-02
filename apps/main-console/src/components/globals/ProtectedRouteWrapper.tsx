@@ -1,4 +1,5 @@
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import React from "react";
 
 type ProtectedRouteWrapperProps = {
@@ -7,6 +8,7 @@ type ProtectedRouteWrapperProps = {
 
 export default function ProtectedRouteWrapper({ children }: ProtectedRouteWrapperProps) {
   const { accessToken, user, logout } = useAuth();
+  useRestrictTempUsers();
 
   if (!accessToken) return null;
   if (user?.type !== "ADMIN" && user?.type !== "STAFF") {

@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import MasterLayout from "@/components/layouts/MasterLayout";
 import { LayoutDashboard, CalendarCheck2 } from "lucide-react";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const subLinks = [
   {
@@ -16,6 +17,7 @@ const subLinks = [
 ];
 
 export default function AttendanceTimeTableMaster() {
+  useRestrictTempUsers();
   return (
     <MasterLayout subLinks={subLinks}>
       <Outlet />

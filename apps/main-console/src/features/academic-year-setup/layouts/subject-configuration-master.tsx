@@ -1,6 +1,7 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { Outlet, useLocation } from "react-router-dom";
 import { Link, XCircle, Calendar } from "lucide-react";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const configurationLinks = [
   //   {
@@ -61,6 +62,7 @@ const pageNotes = {
 };
 
 export default function SubjectConfigurationMaster() {
+  useRestrictTempUsers();
   const location = useLocation();
   const currentPath = location.pathname;
 

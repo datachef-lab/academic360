@@ -2,6 +2,7 @@ import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { Outlet, useLocation } from "react-router-dom";
 import { GraduationCap, ListChecks, BookText } from "lucide-react";
 import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const nestedHomeLinks = [
   {
@@ -32,6 +33,8 @@ const masterLinks = [
 export default function AdmissionBoardMaster() {
   const location = useLocation();
   const currentPath = location.pathname;
+
+  useRestrictTempUsers();
 
   const rightBarContent = (
     <div className="flex flex-col justify-between gap-4 py-3 h-full">

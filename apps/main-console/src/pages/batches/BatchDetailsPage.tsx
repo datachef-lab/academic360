@@ -9,13 +9,14 @@ import React from "react";
 // import { motion } from "framer-motion";
 import { BookOpenIcon, CalendarDays, CalendarDaysIcon, HomeIcon } from "lucide-react";
 import type { QueryObserverResult } from "@tanstack/react-query";
-import { useParams, } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getBatchDetailsById } from "@/services/batch";
 import { BatchDetails, StudentBatchEntry, StudentBatchSubjectEntry } from "@/types/academics/batch";
 import type { StudentStatus } from "@/types/enums";
 import MasterLayout from "@/components/layouts/MasterLayout";
 import { Badge } from "@/components/ui/badge";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const subLinks = [
   {
@@ -36,6 +37,7 @@ const subLinks = [
 ];
 
 export default function BatchDetailsPage() {
+  useRestrictTempUsers();
   const { batchId } = useParams<{ batchId: string }>();
   // const location = useLocation();
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -125,10 +127,7 @@ export default function BatchDetailsPage() {
       <ul className="space-y-2 mb-4">
         {subLinks.map((link) => (
           <li key={link.title}>
-            <a
-              href={link.url}
-              className="flex items-center gap-2 px-4 py-2 rounded hover:bg-gray-100 transition"
-            >
+            <a href={link.url} className="flex items-center gap-2 px-4 py-2 rounded hover:bg-gray-100 transition">
               <link.icon className="h-5 w-5" />
               <span>{link.title}</span>
             </a>
@@ -153,9 +152,9 @@ export default function BatchDetailsPage() {
 
   // Table columns for StudentBatchSubjectEntry
   const studentSubjectColumns: ColumnDef<StudentBatchSubjectEntry>[] = [
-    { 
-      accessorKey: "studentName", 
-      header: "Name", 
+    {
+      accessorKey: "studentName",
+      header: "Name",
       cell: ({ row }) => {
         const status = row.original.status;
         let statusColor = "bg-gray-200 text-gray-700";
@@ -167,12 +166,14 @@ export default function BatchDetailsPage() {
           <div className="flex flex-col gap-1 min-w-[140px]">
             {/* <span className="inline-block text-sm font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-600 w-fit mb-0.5">{row.original.uid}</span> */}
             <span className="text-md font-bold text-gray-800 leading-tight">{row.original.studentName}</span>
-            <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded ${statusColor} w-fit mt-0.5`}>{status.replace(/_/g, ' ')}</span>
+            <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded ${statusColor} w-fit mt-0.5`}>
+              {status.replace(/_/g, " ")}
+            </span>
           </div>
         );
-      }
+      },
     },
-    { accessorKey: "uid", header: "UID" }, 
+    { accessorKey: "uid", header: "UID" },
     { accessorKey: "roll", header: "Roll" },
     // { accessorKey: "registrationNumber", header: "Registration No." },
     {
@@ -191,10 +192,9 @@ export default function BatchDetailsPage() {
       header: "Type",
       cell: ({ row }) => (
         <div>
-          {
-            row.original.subject.subjectType && row.original.subject.subjectType.name && 
+          {row.original.subject.subjectType && row.original.subject.subjectType.name && (
             <Badge variant={"outline"}>{row.original.subject.subjectType?.name}</Badge>
-          }
+          )}
         </div>
       ),
     },
@@ -249,23 +249,23 @@ export default function BatchDetailsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
                 <div>
                   <span className="text-gray-500 font-medium">Course: </span>
-                  <span className="font-semibold text-gray-800">{batchDetails?.course?.name || '-'}</span>
+                  <span className="font-semibold text-gray-800">{batchDetails?.course?.name || "-"}</span>
                 </div>
                 <div>
                   <span className="text-gray-500 font-medium">Class: </span>
-                  <span className="font-semibold text-gray-800">{batchDetails?.academicClass?.name || '-'}</span>
+                  <span className="font-semibold text-gray-800">{batchDetails?.academicClass?.name || "-"}</span>
                 </div>
                 <div>
                   <span className="text-gray-500 font-medium">Section: </span>
-                  <span className="font-semibold text-gray-800">{batchDetails?.section?.name || '-'}</span>
+                  <span className="font-semibold text-gray-800">{batchDetails?.section?.name || "-"}</span>
                 </div>
                 <div>
                   <span className="text-gray-500 font-medium">Session: </span>
-                  <span className="font-semibold text-gray-800">{batchDetails?.session?.name || '-'}</span>
+                  <span className="font-semibold text-gray-800">{batchDetails?.session?.name || "-"}</span>
                 </div>
                 <div>
                   <span className="text-gray-500 font-medium">Shift: </span>
-                  <span className="font-semibold text-gray-800">{batchDetails?.shift?.name || '-'}</span>
+                  <span className="font-semibold text-gray-800">{batchDetails?.shift?.name || "-"}</span>
                 </div>
               </div>
             </div>
@@ -277,22 +277,26 @@ export default function BatchDetailsPage() {
                 onClick={handleEditOpen}
                 className="w-[180px] flex items-center gap-2 justify-center font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2"
               >
-                <span role="img" aria-label="edit">✏️</span> Edit Batch Details
+                <span role="img" aria-label="edit">
+                  ✏️
+                </span>{" "}
+                Edit Batch Details
               </Button>
 
-              <Button
-                className="w-[180px] flex items-center gap-2 justify-center font-medium bg-green-600 hover:bg-green-700 text-white rounded-md px-4 py-2"
-              >
-                <span role="img" aria-label="add">➕</span> Add Student
+              <Button className="w-[180px] flex items-center gap-2 justify-center font-medium bg-green-600 hover:bg-green-700 text-white rounded-md px-4 py-2">
+                <span role="img" aria-label="add">
+                  ➕
+                </span>{" "}
+                Add Student
               </Button>
 
-              <Button
-                className="w-[180px] flex items-center gap-2 justify-center font-medium bg-yellow-600 hover:bg-yellow-700 text-white rounded-md px-4 py-2"
-              >
-                <span role="img" aria-label="bulk">📁</span> Bulk Upload Students
+              <Button className="w-[180px] flex items-center gap-2 justify-center font-medium bg-yellow-600 hover:bg-yellow-700 text-white rounded-md px-4 py-2">
+                <span role="img" aria-label="bulk">
+                  📁
+                </span>{" "}
+                Bulk Upload Students
               </Button>
             </div>
-
           </div>
           {/* Students Table Card */}
           <div className="w-full bg-white rounded-2xl shadow-md border">
@@ -300,19 +304,25 @@ export default function BatchDetailsPage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                 <div className="flex items-center gap-2 flex-1">
                   <Button variant="outline" className="flex items-center gap-2">
-                    <span role="img" aria-label="view">👁️</span> View
+                    <span role="img" aria-label="view">
+                      👁️
+                    </span>{" "}
+                    View
                   </Button>
                   <Input
                     type="text"
                     placeholder="Search..."
                     value={searchText}
-                    onChange={e => setSearchText(e.target.value)}
+                    onChange={(e) => setSearchText(e.target.value)}
                     className="max-w-xs"
                   />
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" className="flex items-center gap-2">
-                    <span role="img" aria-label="csv">⬇️</span> Export
+                    <span role="img" aria-label="csv">
+                      ⬇️
+                    </span>{" "}
+                    Export
                   </Button>
                 </div>
               </div>
@@ -327,7 +337,7 @@ export default function BatchDetailsPage() {
                 setPagination={setPagination}
                 searchText={searchText}
                 setSearchText={setSearchText}
-                setDataLength={() => { }}
+                setDataLength={() => {}}
                 refetch={async () =>
                   Promise.resolve({} as QueryObserverResult<StudentBatchSubjectEntry[] | undefined, Error>)
                 }

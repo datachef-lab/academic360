@@ -1,5 +1,6 @@
 import MasterLayout, { LinkType } from "@/components/layouts/MasterLayout";
-import { LayoutDashboard, UserCheck, IndianRupee, BarChart, Layers, FileText, } from "lucide-react";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import { LayoutDashboard, UserCheck, IndianRupee, BarChart, Layers, FileText } from "lucide-react";
 import { Outlet } from "react-router-dom";
 
 const subLinks: LinkType[] = [
@@ -33,22 +34,22 @@ const subLinks: LinkType[] = [
         url: "/dashboard/admissions-fees/fees/heads",
         icon: FileText,
       },
-    //   {
-    //     title: "Fee Receipt Types",
-    //     url: "/dashboard/admissions-fees/fees/receipt-types",
-    //     icon: Receipt,
-    //   },
-    //   {
-    //     title: "Add-On",
-    //     url: "/dashboard/admissions-fees/fees/addons",
-    //     icon: Receipt,
-    //   },
-    //   {
-    //     title: "Student Fees",
-    //     url: "/dashboard/admissions-fees/fees/student-fees",
-    //     icon: Users,
-    //   },
-    ]
+      //   {
+      //     title: "Fee Receipt Types",
+      //     url: "/dashboard/admissions-fees/fees/receipt-types",
+      //     icon: Receipt,
+      //   },
+      //   {
+      //     title: "Add-On",
+      //     url: "/dashboard/admissions-fees/fees/addons",
+      //     icon: Receipt,
+      //   },
+      //   {
+      //     title: "Student Fees",
+      //     url: "/dashboard/admissions-fees/fees/student-fees",
+      //     icon: Users,
+      //   },
+    ],
   },
   {
     title: "Reports",
@@ -58,6 +59,7 @@ const subLinks: LinkType[] = [
 ];
 
 export default function AdmissionsFeesMaster() {
+  useRestrictTempUsers();
   return (
     <MasterLayout subLinks={subLinks}>
       <Outlet />

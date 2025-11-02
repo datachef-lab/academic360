@@ -1,4 +1,5 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import {
   LayoutDashboard,
   BookOpen,
@@ -26,6 +27,7 @@ const mastersLinks = [
 ];
 
 export default function ExamManagementMasterLayout() {
+  useRestrictTempUsers();
   const location = useLocation();
   const currentPath = location.pathname;
 

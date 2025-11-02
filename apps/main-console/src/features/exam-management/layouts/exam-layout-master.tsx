@@ -1,8 +1,10 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { Outlet, useLocation, useParams } from "react-router-dom";
 import { LayoutDashboard, Users, UserCheck, UserCircle2, FileDiff, FileInput } from "lucide-react";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 export default function ExamLayoutMaster() {
+  useRestrictTempUsers();
   const { examId } = useParams();
   const location = useLocation();
   const currentPath = location.pathname;

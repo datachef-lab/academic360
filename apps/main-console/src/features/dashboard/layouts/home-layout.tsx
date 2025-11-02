@@ -48,6 +48,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSearchedStudents, StudentSearchItem } from "@/services/student";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 // Match sidebar route paths (without "/dashboard") to icons
 const pathIconMap: Record<string, React.ElementType> = {
@@ -129,6 +130,7 @@ const searchData = [
 ];
 
 export default function HomeLayout() {
+  useRestrictTempUsers();
   const { accessToken, isReady } = useAuth();
   const location = useLocation(); // Get current route location
   const pathSegments = location.pathname.split("/").filter(Boolean); // Split the path into segments

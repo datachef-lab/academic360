@@ -13,8 +13,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useAppSelector } from "@/store/hooks";
 import { selectCurrentAcademicYear } from "@/store/slices/academicYearSlice";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 export default function RealTimeTrackerPage() {
+  useRestrictTempUsers();
   const [filters, setFilters] = useState<MisFilters>({});
   const [currentData, setCurrentData] = useState<MisTableData | null>(null);
   const { user } = useAuth();

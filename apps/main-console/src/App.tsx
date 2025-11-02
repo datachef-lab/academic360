@@ -257,7 +257,11 @@ const router = createBrowserRouter(
         // },
         {
           path: "admissions-fees/admissions/:year",
-          element: <Outlet />,
+          element: (
+            <ProtectedRouteWrapper>
+              <Outlet />
+            </ProtectedRouteWrapper>
+          ),
           children: [
             { path: "", element: <admissionFeesModule.AdmissionDetailsPage /> },
             { path: "pre-admission-queries", element: <PreAdmissionQueriesPage /> },

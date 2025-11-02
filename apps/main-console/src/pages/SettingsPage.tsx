@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import SettingsContent from "@/components/settings/SettingsContent";
 import ResourceSidebar from "@/components/settings/ResourceSidebar";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const settingsCategories = [
   {
@@ -42,6 +43,7 @@ const settingsCategories = [
 ];
 
 export default function Settings() {
+  useRestrictTempUsers();
   const [activeSetting, setActiveSetting] = useState(settingsCategories[0]!.tabs[0]);
   const [activeResourceSection, setActiveResourceSection] = useState("");
 

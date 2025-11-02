@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import MasterLayout from "@/components/layouts/MasterLayout";
 import { LayoutDashboard, Users2, UserPlus, BadgeCheck, FileText, Building2 } from "lucide-react";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const subLinks = [
   {
@@ -36,6 +37,7 @@ const subLinks = [
 ];
 
 export default function FacultyStaffMaster() {
+  useRestrictTempUsers();
   return (
     <MasterLayout subLinks={subLinks}>
       <Outlet />

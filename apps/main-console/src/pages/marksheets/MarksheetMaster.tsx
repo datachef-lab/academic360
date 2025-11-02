@@ -1,4 +1,5 @@
 import MasterLayout, { LinkType } from "@/components/layouts/MasterLayout";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { BarChart2, FilePlus, HomeIcon } from "lucide-react";
 import { Outlet } from "react-router-dom";
 // import React from 'react'
@@ -18,7 +19,11 @@ const subLinks: LinkType[] = [
 ];
 
 export default function MarksheetMaster() {
-  return <MasterLayout subLinks={subLinks}>
-    <Outlet />
-  </MasterLayout>;
+  useRestrictTempUsers();
+
+  return (
+    <MasterLayout subLinks={subLinks}>
+      <Outlet />
+    </MasterLayout>
+  );
 }

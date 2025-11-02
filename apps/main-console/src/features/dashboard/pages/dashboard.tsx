@@ -23,6 +23,7 @@ import {
 } from "../components/charts-demo";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { FaRupeeSign } from "react-icons/fa";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 // import { ChartBarStacked } from './ChartBarStacked';
 
 // Mock academic years and summary data for UI demo
@@ -123,6 +124,7 @@ function RecentActivity({
 }
 
 export default function Dashboard() {
+  useRestrictTempUsers();
   const [tab, setTab] = useState("overview");
   const [year, setYear] = useState(academicYears[0]);
   // In real app, fetch summary data for selected year

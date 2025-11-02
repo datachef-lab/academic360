@@ -14,6 +14,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { Outlet } from "react-router-dom";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const nestedHomeLinks = [
   {
@@ -87,6 +88,7 @@ const masterLinks = [
 ];
 
 const CoursesSubjectsMaster = () => {
+  useRestrictTempUsers();
   const location = useLocation();
   const currentPath = location.pathname;
   const rightBarContent = (

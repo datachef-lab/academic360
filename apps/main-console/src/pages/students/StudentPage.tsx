@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 // import { motion } from "framer-motion";
 import { Tabs } from "@/components/ui/tabs";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
@@ -24,6 +25,7 @@ const studentTabs = [
 ];
 
 export default function StudentPage() {
+  useRestrictTempUsers();
   const { studentId: studentIdOrUid } = useParams();
   const location = useLocation();
   type StudentTab = (typeof studentTabs)[number];

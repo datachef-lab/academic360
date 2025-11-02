@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { Settings, ExternalLink } from "lucide-react";
 import React from "react";
+import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const APPS = [
   {
@@ -54,6 +55,8 @@ const APPS = [
 ];
 
 export default function AppMaster() {
+  useRestrictTempUsers();
+
   const navigate = useNavigate();
   const [apps, setApps] = React.useState(APPS);
 
