@@ -3150,6 +3150,29 @@ export const exportCuRegistrationCorrectionRequests =
         return aadhaar;
       };
 
+      // Helper function to format date/time in AM/PM format
+      const formatDateTimeAMPM = (date: Date | null | undefined): string => {
+        if (!date) return "";
+        try {
+          const dateObj = new Date(date);
+          // Format as MM/DD/YYYY HH:MM:SS AM/PM in IST timezone
+          const formatted = dateObj.toLocaleString("en-US", {
+            timeZone: "Asia/Kolkata",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+          });
+          return formatted;
+        } catch (error) {
+          console.error("Error formatting date:", error);
+          return "";
+        }
+      };
+
       // Process data
       const exportData: CuRegistrationExportData[] = correctionRequests.map(
         (request) => {
@@ -3170,10 +3193,11 @@ export const exportCuRegistrationCorrectionRequests =
             onlineRegistrationDone: request.onlineRegistrationDone || false,
             physicalRegistrationDone: request.physicalRegistrationDone || false,
             remarks: request.remarks || "",
-            createdAt: request.createdAt?.toISOString() || "",
-            updatedAt: request.updatedAt?.toISOString() || "",
-            physicalRegistrationDoneAt:
-              request.physicalRegistrationDoneAt?.toISOString() || "",
+            createdAt: formatDateTimeAMPM(request.createdAt),
+            updatedAt: formatDateTimeAMPM(request.updatedAt),
+            physicalRegistrationDoneAt: formatDateTimeAMPM(
+              request.physicalRegistrationDoneAt,
+            ),
             physicalRegistrationDoneByUserName:
               request.physicalRegistrationDoneBy
                 ? userMap.get(request.physicalRegistrationDoneBy) || ""
