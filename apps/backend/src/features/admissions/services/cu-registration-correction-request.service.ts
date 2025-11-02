@@ -382,7 +382,12 @@ export async function findCuRegistrationCorrectionRequestsByStudentUid(
   const [student] = await db
     .select({ id: studentModel.id })
     .from(studentModel)
-    .where(eq(studentModel.uid, studentUid))
+    .where(
+      or(
+        ilike(studentModel.uid, studentUid),
+        ilike(studentModel.rfidNumber, studentUid),
+      ),
+    )
     .limit(1);
 
   if (!student) {

@@ -6,6 +6,8 @@ export const TEMP_USER_EMAILS: string[] = [
   "sreya.sengupta@thebges.edu.in",
   "suman.pal@thebges.edu.in",
   "arpan.chakraborty@thebges.edu.in",
+  "scrguest1@thebges.edu.in",
+  "scrguest2@thebges.edu.in",
 ];
 
 // This is hooks is created temporary to restrict users (and navigate them to ) from accessing the admin console certain pages
