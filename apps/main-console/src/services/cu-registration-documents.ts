@@ -1,4 +1,5 @@
 import axiosInstance from "@/utils/api";
+import { AxiosError } from "axios";
 
 const BASE = "/api/admissions/cu-registration-document-uploads";
 const PDF_BASE = "/api/admissions/cu-registration-pdf";
@@ -160,8 +161,11 @@ export async function uploadCuRegistrationDocument(args: {
     });
     console.info(`[CU-REG MAIN-CONSOLE] Upload successful:`, res.data);
     return res.data.payload;
-  } catch (error: any) {
-    console.error(`[CU-REG MAIN-CONSOLE] Upload failed:`, error.response?.data || error.message);
+  } catch (error) {
+    console.error(
+      `[CU-REG MAIN-CONSOLE] Upload failed:`,
+      (error as AxiosError<{ message: string }>)?.response?.data?.message || (error as Error).message,
+    );
     throw error;
   }
 }

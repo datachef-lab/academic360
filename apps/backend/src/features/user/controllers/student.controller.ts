@@ -263,6 +263,39 @@ export const getFilteredStudents = async (
   }
 };
 
+// Update student active/leaving info
+export const updateStudentStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const { active, leavingDate, leavingReason } = req.body as {
+      active?: boolean;
+      leavingDate?: string | null;
+      leavingReason?: string | null;
+    };
+
+    const result = await studentService.updateStudentStatusById(Number(id), {
+      active,
+      leavingDate,
+      leavingReason,
+    });
+
+    if (!result) {
+      res.status(404).json(new ApiError(404, `No student exist for id: ${id}`));
+      return;
+    }
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", result, "Student status updated!"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
 // Update family member titles for a student
 export const updateFamilyMemberTitlesController = async (
   req: Request,

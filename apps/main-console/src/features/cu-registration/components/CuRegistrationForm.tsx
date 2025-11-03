@@ -108,6 +108,16 @@ interface ClassObject {
   class?: { name?: string; shortName?: string };
 }
 
+// Minimal shape used from student subject selections API
+type StudentSelectionsResponse = {
+  studentSubjectsSelection: unknown[];
+  selectedMinorSubjects: unknown[];
+  actualStudentSelections: StudentSelectionRow[];
+  subjectSelectionMetas: unknown[];
+  hasFormSubmissions: boolean;
+  session: { id: number };
+};
+
 export default function CuRegistrationForm({ studentId, studentData }: CuRegistrationFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
   console.log("test");
@@ -946,83 +956,120 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         setLoading(true);
         console.info(`[CU-REG MAIN-CONSOLE] Fetching data for student: ${studentId}`);
 
-        // Fetch profile info using userId (like student-console does)
-        let profileInfo: ProfileInfo | null = null;
-        if (studentData.userId) {
-          try {
-            profileInfo = await fetchUserProfile(studentData.userId);
-            console.info(`[CU-REG MAIN-CONSOLE] Profile info fetched:`, profileInfo);
-          } catch (error) {
-            console.error(`[CU-REG MAIN-CONSOLE] Error fetching profile:`, error);
-          }
-        }
+        // Fire core requests in parallel for speed
+        const profilePromise: Promise<ProfileInfo | null> = studentData.userId
+          ? fetchUserProfile(studentData.userId).catch((e) => {
+              console.error(`[CU-REG MAIN-CONSOLE] Error fetching profile:`, e);
+              return null;
+            })
+          : Promise.resolve(null);
 
-        // Fetch correction request
-        const requests = await getStudentCuCorrectionRequests(studentId);
-        const existingRequest = requests?.[0] || null;
+        const correctionReqPromise = getStudentCuCorrectionRequests(studentId).catch((e) => {
+          console.error(`[CU-REG MAIN-CONSOLE] Error fetching correction requests:`, e);
+          return [] as Array<Record<string, unknown>>;
+        });
+
+        const subjectsPromise = Promise.all([
+          fetchStudentSubjectSelections(studentId).catch(() => ({
+            studentSubjectsSelection: [],
+            selectedMinorSubjects: [],
+            actualStudentSelections: [],
+            subjectSelectionMetas: [],
+            hasFormSubmissions: false,
+            session: { id: 1 },
+          })),
+          fetchMandatorySubjects(studentId).catch(() => [] as MandatorySubjectRow[]),
+        ]);
+
+        const [profileInfo, requests, subjectBundles] = await Promise.all([
+          profilePromise,
+          correctionReqPromise,
+          subjectsPromise,
+        ]);
+
+        const existingRequest = (requests as Array<Record<string, unknown>>)?.[0] || null;
 
         if (existingRequest) {
+          const ex = existingRequest as Record<string, unknown>;
+          const getBool = (v: unknown): boolean => Boolean(v);
+          const getNum = (v: unknown): number | undefined =>
+            typeof v === "number" ? v : typeof v === "string" ? Number(v) : undefined;
+          const getStr = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
           console.info(`[CU-REG MAIN-CONSOLE] Found correction request:`, existingRequest);
 
           // Update correction flags
           setCorrectionFlags({
-            gender: existingRequest.genderCorrectionRequest ?? false,
-            nationality: existingRequest.nationalityCorrectionRequest ?? false,
-            aadhaarNumber: existingRequest.aadhaarCardNumberCorrectionRequest ?? false,
-            apaarId: existingRequest.apaarIdCorrectionRequest ?? false,
-            subjects: existingRequest.subjectsCorrectionRequest ?? false,
+            gender: getBool(ex.genderCorrectionRequest),
+            nationality: getBool(ex.nationalityCorrectionRequest),
+            aadhaarNumber: getBool(ex.aadhaarCardNumberCorrectionRequest),
+            apaarId: getBool(ex.apaarIdCorrectionRequest),
+            subjects: getBool(ex.subjectsCorrectionRequest),
           });
 
           // Update declaration states
-          setPersonalDeclared(!!existingRequest.personalInfoDeclaration);
-          setAddressDeclared(!!existingRequest.addressInfoDeclaration);
-          setSubjectsDeclared(!!existingRequest.subjectsDeclaration);
-          setDocumentsConfirmed(!!existingRequest.documentsDeclaration);
+          setPersonalDeclared(getBool(ex.personalInfoDeclaration));
+          setAddressDeclared(getBool(ex.addressInfoDeclaration));
+          setSubjectsDeclared(getBool(ex.subjectsDeclaration));
+          setDocumentsConfirmed(getBool(ex.documentsDeclaration));
 
           // Set correction request status - load existing status from database
-          if (existingRequest.id) {
-            const existingStatus = existingRequest.status || "";
+          const existingRequestId = getNum(ex.id);
+          if (existingRequestId) {
+            const existingStatus = getStr(ex.status) || "";
             console.info(`[CU-REG MAIN-CONSOLE] Found correction request ID:`, existingRequest.id);
             console.info(`[CU-REG MAIN-CONSOLE] Loading existing status:`, existingStatus);
             setCorrectionRequestStatus({
-              id: existingRequest.id,
+              id: existingRequestId,
               status: existingStatus, // Load existing status from database
-              remarks: existingRequest.remarks || undefined,
-              applicationNumber: (existingRequest as unknown as Record<string, unknown>).applicationNumber as
-                | string
-                | undefined,
+              remarks: getStr(ex.remarks),
+              applicationNumber: getStr((ex as Record<string, unknown>).applicationNumber),
             });
-          }
 
-          // Fetch documents STRICTLY by correction request ID to avoid mixing other students' entries
-          let docs: Array<Record<string, unknown>> = [];
-          if (existingRequest.id) {
-            try {
-              const rawDocs: Array<Record<string, unknown>> = await getCuRegistrationDocuments(existingRequest.id);
-              // Defensive filtering: keep only rows linked to this correction request
-              const filtered = (rawDocs || []).filter((d: Record<string, unknown>) => {
-                const reqId = existingRequest.id;
-                const flatId = d?.cuRegistrationCorrectionRequestId as number | undefined;
-                const altFlat = d?.correctionRequestId as number | undefined;
-                const nested = (d?.cuRegistrationCorrectionRequest as Record<string, unknown> | undefined)?.id as
-                  | number
-                  | undefined;
-                const nestedDoc = (d?.document as Record<string, unknown> | undefined)
-                  ?.cuRegistrationCorrectionRequestId as number | undefined;
-                return flatId === reqId || altFlat === reqId || nested === reqId || nestedDoc === reqId;
-              });
-              docs = filtered;
+            // If backend already returned documents inside the request, surface them immediately.
+            const embeddedDocs = (ex.documents as Array<Record<string, unknown>>) || [];
+            const hadEmbeddedDocs = Array.isArray(embeddedDocs) && embeddedDocs.length > 0;
+            if (hadEmbeddedDocs) {
+              const normalized = embeddedDocs.map((d) => ({
+                ...d,
+                // Ensure downstream UI considers these as belonging to the current request
+                cuRegistrationCorrectionRequestId: existingRequestId,
+              }));
+              setUploadedDocuments(normalized);
               console.info(
-                `[CU-REG MAIN-CONSOLE] Loaded ${docs?.length || 0} documents for correction request ${existingRequest.id}`,
+                `[CU-REG MAIN-CONSOLE] Using embedded documents from correction request: ${normalized.length}`,
               );
-            } catch (docError) {
-              console.error(`[CU-REG MAIN-CONSOLE] Error fetching documents by correction request:`, docError);
             }
           }
 
-          setUploadedDocuments(docs || []);
-          console.info(`[CU-REG MAIN-CONSOLE] Total documents loaded: ${docs?.length || 0}`);
-          console.info(`[CU-REG MAIN-CONSOLE] Documents data:`, docs);
+          // Fetch documents STRICTLY by correction request ID to avoid mixing other students' entries
+          // Fetch documents asynchronously without blocking the main loading flow
+          if (existingRequestId) {
+            void (async () => {
+              try {
+                const rawDocs: Array<Record<string, unknown>> = await getCuRegistrationDocuments(existingRequestId);
+                const filtered = (rawDocs || []).filter((d: Record<string, unknown>) => {
+                  const reqId = existingRequestId;
+                  const flatId = d?.cuRegistrationCorrectionRequestId as number | undefined;
+                  const altFlat = d?.correctionRequestId as number | undefined;
+                  const nested = (d?.cuRegistrationCorrectionRequest as Record<string, unknown> | undefined)?.id as
+                    | number
+                    | undefined;
+                  const nestedDoc = (d?.document as Record<string, unknown> | undefined)
+                    ?.cuRegistrationCorrectionRequestId as number | undefined;
+                  return flatId === reqId || altFlat === reqId || nested === reqId || nestedDoc === reqId;
+                });
+                // Only override if we actually received rows; otherwise keep embedded docs shown earlier
+                if (filtered && filtered.length > 0) {
+                  setUploadedDocuments(filtered);
+                }
+                console.info(
+                  `[CU-REG MAIN-CONSOLE] Loaded ${filtered?.length || 0} documents for correction request ${existingRequest.id}`,
+                );
+              } catch (docError) {
+                console.error(`[CU-REG MAIN-CONSOLE] Error fetching documents by correction request:`, docError);
+              }
+            })();
+          }
         }
 
         // Populate personal info from profile data (like student-console does)
@@ -1061,6 +1108,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             apaarId: formatApaarId((studentData?.apaarId && studentData.apaarId.trim()) || ""),
             belongsToEWS: studentData?.belongsToEWS ? "Yes" : "No",
           }));
+
+          // Unblock UI early: remaining loads (address lists, subjects, docs previews) proceed in background
+          if (loading) setLoading(false);
         }
 
         // Populate address data
@@ -1221,20 +1271,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           loadAddressData();
         }
 
-        // Fetch subject selections and mandatory subjects
+        // Fetch subject selections and mandatory subjects (results already awaited above)
         if (studentId) {
           try {
-            const [studentRows, mandatoryRows] = await Promise.all([
-              fetchStudentSubjectSelections(studentId).catch(() => ({
-                studentSubjectsSelection: [],
-                selectedMinorSubjects: [],
-                actualStudentSelections: [],
-                subjectSelectionMetas: [],
-                hasFormSubmissions: false,
-                session: { id: 1 },
-              })),
-              fetchMandatorySubjects(studentId).catch(() => []),
-            ]);
+            const [studentRows, mandatoryRows] = subjectBundles as [StudentSelectionsResponse, MandatorySubjectRow[]];
 
             console.info(`[CU-REG MAIN-CONSOLE] Student selections:`, studentRows);
             console.info(`[CU-REG MAIN-CONSOLE] Mandatory subjects:`, mandatoryRows);
@@ -2389,8 +2429,16 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                               // Use ONLY document ID matching - most reliable method
                               const docId = doc.documentId;
                               const nestedDocId = (doc.document as Record<string, unknown>)?.id;
+                              const nestedDocCode = (doc.document as Record<string, unknown>)?.code as
+                                | string
+                                | undefined;
+                              const nestedDocName = (doc.document as Record<string, unknown>)?.name as
+                                | string
+                                | undefined;
                               const docTypeId = docType.id;
                               const docTypeIdNum = parseInt(docType.id);
+                              const typeCode = (docType.code || "").toString().toUpperCase();
+                              const typeName = (docType.name || "").toString().toUpperCase();
                               // Also ensure this document row belongs to current correction request id
                               const reqId = correctionRequestStatus?.id;
                               const docReqId = (doc as Record<string, unknown>)?.cuRegistrationCorrectionRequestId as
@@ -2417,12 +2465,18 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                 nestedDocId === docTypeId ||
                                 nestedDocId === docTypeIdNum;
 
+                              // Secondary matching: Match by document code or name when IDs differ across sources
+                              const codeMatch =
+                                (nestedDocCode && typeCode && nestedDocCode.toUpperCase() === typeCode) || false;
+                              const nameMatch =
+                                (nestedDocName && typeName && nestedDocName.toUpperCase() === typeName) || false;
+
                               const belongsToCurrent =
                                 !reqId || docReqId === reqId || altDocReqId === reqId || nestedReqId === reqId;
 
                               // Removed excessive logging for performance
 
-                              return idMatch && belongsToCurrent;
+                              return (idMatch || codeMatch || nameMatch) && belongsToCurrent;
                             });
 
                             console.info(`[CU-REG MAIN-CONSOLE] Found existing doc for ${docType.name}:`, existingDoc);

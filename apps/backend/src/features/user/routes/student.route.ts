@@ -10,6 +10,7 @@ import {
   getStudentById,
   getStudentByUid,
   updateStudent,
+  updateStudentStatus,
   updateFamilyMemberTitlesController,
   bulkUpdateFamilyMemberTitlesController,
 } from "../controllers/student.controller.js";
@@ -41,6 +42,7 @@ router.get("/query", (req: Request, res: Response, next: NextFunction) => {
 });
 
 router.put("/", updateStudent);
+router.put("/:id/status", updateStudentStatus);
 
 // POST /api/students/update-apaar-ids
 // Upload Excel file and update APAAR IDs for students

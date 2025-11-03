@@ -7,6 +7,12 @@ import StudentContent from "@/components/student/StudentContent";
 import StudentPanel from "@/components/student/StudentPanel";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import axiosInstance from "@/utils/api";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 // import { motion } from "framer-motion";
 import { Tabs } from "@/components/ui/tabs";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
@@ -285,6 +291,102 @@ export default function StudentPage() {
               <div>{data?.currentPromotion?.shift?.name || "-"}</div>
               <div className="font-semibold text-gray-500">Email:</div>
               <div>{data?.personalEmail || "-"}</div>
+            </div>
+            {/* User status controls */}
+            <div className="w-full mt-4 border-t pt-3 space-y-3">
+              {/* Local state mirrors for conditional UI */}
+              {/* Active */}
+              <div className="flex items-center space-x-2">
+                <Checkbox id="isActive" defaultChecked={Boolean(data?.user?.isActive ?? data?.active)} />
+                <Label htmlFor="isActive">Active</Label>
+              </div>
+              {/* Suspended */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isSuspended"
+                  defaultChecked={Boolean(data?.user?.isSuspended)}
+                  onCheckedChange={(checked) => {
+                    const show = Boolean(checked);
+                    const box = document.getElementById("suspend-extra");
+                    if (box) box.classList.toggle("hidden", !show);
+                  }}
+                />
+                <Label htmlFor="isSuspended">Suspended</Label>
+              </div>
+              <div id="suspend-extra" className={`space-y-2 ${data?.user?.isSuspended ? "" : "hidden"}`}>
+                <div className="space-y-1">
+                  <Label htmlFor="suspendedReason">Suspended Reason</Label>
+                  <Input id="suspendedReason" defaultValue={data?.user?.suspendedReason ?? ""} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="suspendedTill">Suspended Till (IST)</Label>
+                  <Input
+                    id="suspendedTill"
+                    type="datetime-local"
+                    defaultValue={
+                      data?.user?.suspendedTillDate
+                        ? new Date(data.user.suspendedTillDate).toISOString().slice(0, 16)
+                        : ""
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Leaving info (only when Active is checked) */}
+              <div
+                id="leaving-extra"
+                className={`space-y-2 ${Boolean(data?.user?.isActive ?? data?.active) ? "" : "hidden"}`}
+              >
+                <div className="space-y-1">
+                  <Label htmlFor="leavingDate">Leaving Date (IST)</Label>
+                  <Input
+                    id="leavingDate"
+                    type="datetime-local"
+                    defaultValue={data?.leavingDate ? new Date(data.leavingDate).toISOString().slice(0, 16) : ""}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="leavingReason">Leaving Reason</Label>
+                  <Input id="leavingReason" defaultValue={data?.leavingReason ?? ""} />
+                </div>
+              </div>
+
+              <Button
+                className="w-full"
+                onClick={async () => {
+                  const userId = Number(data?.userId ?? data?.user?.id);
+                  const studentId = Number(data?.id);
+                  const isActive = (document.getElementById("isActive") as HTMLInputElement)?.checked;
+                  const isSuspended = (document.getElementById("isSuspended") as HTMLInputElement)?.checked;
+                  const suspendedReason =
+                    (document.getElementById("suspendedReason") as HTMLInputElement)?.value || null;
+                  const suspendedTillRaw = (document.getElementById("suspendedTill") as HTMLInputElement)?.value || "";
+                  const leavingDateRaw = (document.getElementById("leavingDate") as HTMLInputElement)?.value || "";
+                  const leavingReason = (document.getElementById("leavingReason") as HTMLInputElement)?.value || null;
+
+                  try {
+                    await axiosInstance.put(`/api/users/${userId}`, {
+                      isActive,
+                      isSuspended,
+                      suspendedReason: isSuspended ? suspendedReason : null,
+                      suspendedTillDate:
+                        isSuspended && suspendedTillRaw ? new Date(suspendedTillRaw).toISOString() : null,
+                    });
+
+                    await axiosInstance.put(`/api/students/${studentId}/status`, {
+                      active: isActive,
+                      leavingDate: isActive && leavingDateRaw ? new Date(leavingDateRaw).toISOString() : null,
+                      leavingReason: isActive ? leavingReason : null,
+                    });
+
+                    toast.success("Status saved");
+                  } catch (e) {
+                    toast.error("Failed to save status");
+                  }
+                }}
+              >
+                Save
+              </Button>
             </div>
           </div>
         </div>

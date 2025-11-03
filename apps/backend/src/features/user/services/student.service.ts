@@ -261,6 +261,30 @@ export async function findByUid(uid: string): Promise<StudentDto | null> {
   return await modelToDto(foundStudent);
 }
 
+export async function updateStudentStatusById(
+  id: number,
+  data: {
+    active?: boolean;
+    leavingDate?: string | null;
+    leavingReason?: string | null;
+  },
+) {
+  const update: any = {};
+  if (typeof data.active === "boolean") update.active = data.active;
+  if (data.leavingDate !== undefined)
+    update.leavingDate = data.leavingDate ? new Date(data.leavingDate) : null;
+  if (data.leavingReason !== undefined)
+    update.leavingReason = data.leavingReason;
+
+  const [updated] = await db
+    .update(studentModel)
+    .set(update)
+    .where(eq(studentModel.id, id))
+    .returning();
+
+  return updated ?? null;
+}
+
 export async function saveStudent(
   id: number,
   student: StudentType,
