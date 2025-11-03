@@ -246,11 +246,7 @@ export default function StudentPage() {
             </Avatar>
             <div className="text-lg font-bold text-white mb-1 text-center w-full truncate">
               {(() => {
-                const parts = [
-                  data?.personalDetails?.firstName,
-                  data?.personalDetails?.middleName,
-                  data?.personalDetails?.lastName,
-                ].filter(Boolean);
+                const parts = [data?.name].filter(Boolean);
                 return parts.length ? parts.join(" ") : "Student";
               })()}
             </div>

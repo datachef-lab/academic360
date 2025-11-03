@@ -62,7 +62,7 @@ export default function StudentContent({ activeTab, studentId, userId, personalE
         guardian?: PersonDto;
       })
     | null => {
-    const fam = profile?.familyDetails as FamilyDto | undefined;
+    const fam = profile?.studentFamily as FamilyDto | undefined;
     if (!fam) return null;
     const members = (fam.members ?? []).filter(Boolean) as PersonDto[];
     const father = members.find((m) => m.type === "FATHER");
