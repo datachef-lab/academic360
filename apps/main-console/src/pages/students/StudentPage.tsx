@@ -58,6 +58,22 @@ export default function StudentPage() {
     },
   });
 
+  // Fetch linked user meta for status flags
+  const { data: userData } = useQuery({
+    queryKey: ["user-meta", data?.userId],
+    enabled: Boolean(data?.userId),
+    queryFn: async () => {
+      const res = await axiosInstance.get("/api/users/query", { params: { id: String(data?.userId) } });
+      return res.data.payload as {
+        id: number;
+        isActive: boolean;
+        isSuspended: boolean;
+        suspendedReason?: string | null;
+        suspendedTillDate?: string | null;
+      };
+    },
+  });
+
   return (
     <>
       {/* <div className="lg:hidden fixed bottom-4 right-4 z-50">
@@ -297,14 +313,22 @@ export default function StudentPage() {
               {/* Local state mirrors for conditional UI */}
               {/* Active */}
               <div className="flex items-center space-x-2">
-                <Checkbox id="isActive" defaultChecked={Boolean(data?.user?.isActive ?? data?.active)} />
+                <Checkbox
+                  id="isActive"
+                  defaultChecked={!!(userData?.isActive ?? data?.active)}
+                  onCheckedChange={(checked) => {
+                    const show = Boolean(checked);
+                    const box = document.getElementById("leaving-extra");
+                    if (box) box.classList.toggle("hidden", !show);
+                  }}
+                />
                 <Label htmlFor="isActive">Active</Label>
               </div>
               {/* Suspended */}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="isSuspended"
-                  defaultChecked={Boolean(data?.user?.isSuspended)}
+                  defaultChecked={!!userData?.isSuspended}
                   onCheckedChange={(checked) => {
                     const show = Boolean(checked);
                     const box = document.getElementById("suspend-extra");
@@ -313,10 +337,10 @@ export default function StudentPage() {
                 />
                 <Label htmlFor="isSuspended">Suspended</Label>
               </div>
-              <div id="suspend-extra" className={`space-y-2 ${data?.user?.isSuspended ? "" : "hidden"}`}>
+              <div id="suspend-extra" className={`space-y-2 ${userData?.isSuspended ? "" : "hidden"}`}>
                 <div className="space-y-1">
                   <Label htmlFor="suspendedReason">Suspended Reason</Label>
-                  <Input id="suspendedReason" defaultValue={data?.user?.suspendedReason ?? ""} />
+                  <Input id="suspendedReason" defaultValue={userData?.suspendedReason ?? ""} />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="suspendedTill">Suspended Till (IST)</Label>
@@ -324,19 +348,14 @@ export default function StudentPage() {
                     id="suspendedTill"
                     type="datetime-local"
                     defaultValue={
-                      data?.user?.suspendedTillDate
-                        ? new Date(data.user.suspendedTillDate).toISOString().slice(0, 16)
-                        : ""
+                      userData?.suspendedTillDate ? new Date(userData.suspendedTillDate).toISOString().slice(0, 16) : ""
                     }
                   />
                 </div>
               </div>
 
               {/* Leaving info (only when Active is checked) */}
-              <div
-                id="leaving-extra"
-                className={`space-y-2 ${Boolean(data?.user?.isActive ?? data?.active) ? "" : "hidden"}`}
-              >
+              <div id="leaving-extra" className={`space-y-2 ${(userData?.isActive ?? data?.active) ? "" : "hidden"}`}>
                 <div className="space-y-1">
                   <Label htmlFor="leavingDate">Leaving Date (IST)</Label>
                   <Input
@@ -354,7 +373,7 @@ export default function StudentPage() {
               <Button
                 className="w-full"
                 onClick={async () => {
-                  const userId = Number(data?.userId ?? data?.user?.id);
+                  const userId = Number(data?.userId);
                   const studentId = Number(data?.id);
                   const isActive = (document.getElementById("isActive") as HTMLInputElement)?.checked;
                   const isSuspended = (document.getElementById("isSuspended") as HTMLInputElement)?.checked;
@@ -380,7 +399,7 @@ export default function StudentPage() {
                     });
 
                     toast.success("Status saved");
-                  } catch (e) {
+                  } catch {
                     toast.error("Failed to save status");
                   }
                 }}
