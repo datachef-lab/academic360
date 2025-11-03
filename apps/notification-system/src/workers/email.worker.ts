@@ -262,6 +262,10 @@ async function processBatch() {
             : undefined;
           const defaultSubjectByTemplate: Record<string, string> = {
             otp: "Your OTP Code - The Bhawanipur Education Society College",
+            "reset-password":
+              "Reset your password - The Bhawanipur Education Society College",
+            "password-confirmation":
+              "Your password was changed - The Bhawanipur Education Society College",
             "subject-selection-confirmation":
               "Confirmation of Semester-wise Subject Selection",
             "cu-reg-part2-confirmation":

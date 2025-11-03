@@ -392,6 +392,13 @@ const LoginPage = () => {
                   </button>
                 </div>
               </div>
+              <div className="w-full px-6 pb-6 -mt-4">
+                <div className="flex justify-end">
+                  <Link to="/reset-password" className="text-sm text-purple-600 hover:text-purple-700">
+                    Forgot password?
+                  </Link>
+                </div>
+              </div>
 
               {/* Sign In Button */}
               <Button

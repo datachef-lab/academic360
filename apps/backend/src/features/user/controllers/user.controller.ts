@@ -13,6 +13,7 @@ import {
   requestPasswordReset,
   resetPassword,
   validateResetToken,
+  resetPasswordWithEmailOtp,
 } from "@/features/user/services/user.service.js";
 import { generateExport } from "@/features/user/services/student.service.js";
 function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
@@ -69,6 +70,40 @@ export const getAllUsers = async (
           "All users fetched successfully!",
         ),
       );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// Reset password using OTP (email verification)
+export const resetPasswordWithOtpController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email, otp, newPassword } = req.body as {
+      email?: string;
+      otp?: string;
+      newPassword?: string;
+    };
+
+    if (!email || !otp || !newPassword) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Email, OTP and new password are required"));
+      return;
+    }
+
+    const result = await resetPasswordWithEmailOtp(email, otp, newPassword);
+
+    if (result.success) {
+      res
+        .status(200)
+        .json(new ApiResponse(200, "SUCCESS", null, result.message));
+    } else {
+      res.status(400).json(new ApiError(400, result.message));
+    }
   } catch (error) {
     handleError(error, res, next);
   }

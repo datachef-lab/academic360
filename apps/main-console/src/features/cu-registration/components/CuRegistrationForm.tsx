@@ -14,8 +14,6 @@ import { toast } from "sonner";
 import { getStudentCuCorrectionRequests, getCuCorrectionRequestById } from "@/services/cu-registration";
 import {
   getCuRegistrationDocuments,
-  getCuRegistrationDocumentsByStudentUid,
-  getAllStudentDocuments,
   getCuRegistrationDocumentSignedUrl,
   getCuRegistrationPdfUrlByRequestId,
   uploadCuRegistrationDocument,
@@ -996,37 +994,29 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             });
           }
 
-          // Fetch documents - try both methods
+          // Fetch documents STRICTLY by correction request ID to avoid mixing other students' entries
           let docs: Array<Record<string, unknown>> = [];
-
-          // First try: fetch by correction request ID
           if (existingRequest.id) {
             try {
-              docs = await getCuRegistrationDocuments(existingRequest.id);
-              console.info(`[CU-REG MAIN-CONSOLE] Loaded ${docs?.length || 0} documents from correction request`);
+              const rawDocs: Array<Record<string, unknown>> = await getCuRegistrationDocuments(existingRequest.id);
+              // Defensive filtering: keep only rows linked to this correction request
+              const filtered = (rawDocs || []).filter((d: Record<string, unknown>) => {
+                const reqId = existingRequest.id;
+                const flatId = d?.cuRegistrationCorrectionRequestId as number | undefined;
+                const altFlat = d?.correctionRequestId as number | undefined;
+                const nested = (d?.cuRegistrationCorrectionRequest as Record<string, unknown> | undefined)?.id as
+                  | number
+                  | undefined;
+                const nestedDoc = (d?.document as Record<string, unknown> | undefined)
+                  ?.cuRegistrationCorrectionRequestId as number | undefined;
+                return flatId === reqId || altFlat === reqId || nested === reqId || nestedDoc === reqId;
+              });
+              docs = filtered;
+              console.info(
+                `[CU-REG MAIN-CONSOLE] Loaded ${docs?.length || 0} documents for correction request ${existingRequest.id}`,
+              );
             } catch (docError) {
               console.error(`[CU-REG MAIN-CONSOLE] Error fetching documents by correction request:`, docError);
-            }
-          }
-
-          // Second try: fetch by student UID if no documents found
-          if (docs.length === 0 && studentData?.uid) {
-            try {
-              docs = await getCuRegistrationDocumentsByStudentUid(studentData.uid);
-              console.info(`[CU-REG MAIN-CONSOLE] Loaded ${docs?.length || 0} documents from student UID`);
-            } catch (docError) {
-              console.error(`[CU-REG MAIN-CONSOLE] Error fetching documents by student UID:`, docError);
-            }
-          }
-
-          // Third try: if still no documents, try without any filters
-          if (docs.length === 0 && studentData?.uid) {
-            try {
-              console.info(`[CU-REG MAIN-CONSOLE] Trying to fetch all documents for student UID: ${studentData.uid}`);
-              docs = await getAllStudentDocuments(studentData.uid);
-              console.info(`[CU-REG MAIN-CONSOLE] Loaded ${docs?.length || 0} documents from all types`);
-            } catch (docError) {
-              console.error(`[CU-REG MAIN-CONSOLE] Error fetching all documents:`, docError);
             }
           }
 
@@ -2395,12 +2385,28 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           {documentTypes.map((docType) => {
                             // Find existing document for this type
 
-                            const existingDoc = uploadedDocuments.find((doc) => {
+                            const existingDoc = uploadedDocuments.find((doc: Record<string, unknown>) => {
                               // Use ONLY document ID matching - most reliable method
                               const docId = doc.documentId;
                               const nestedDocId = (doc.document as Record<string, unknown>)?.id;
                               const docTypeId = docType.id;
                               const docTypeIdNum = parseInt(docType.id);
+                              // Also ensure this document row belongs to current correction request id
+                              const reqId = correctionRequestStatus?.id;
+                              const docReqId = (doc as Record<string, unknown>)?.cuRegistrationCorrectionRequestId as
+                                | number
+                                | undefined;
+                              const altDocReqId = (doc as Record<string, unknown>)?.correctionRequestId as
+                                | number
+                                | undefined;
+                              const nestedReqId =
+                                (doc as Record<string, unknown>)?.cuRegistrationCorrectionRequest &&
+                                (
+                                  (doc as Record<string, unknown>)?.cuRegistrationCorrectionRequest as Record<
+                                    string,
+                                    unknown
+                                  >
+                                )?.id;
 
                               // Removed excessive logging for performance
 
@@ -2411,9 +2417,12 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                 nestedDocId === docTypeId ||
                                 nestedDocId === docTypeIdNum;
 
+                              const belongsToCurrent =
+                                !reqId || docReqId === reqId || altDocReqId === reqId || nestedReqId === reqId;
+
                               // Removed excessive logging for performance
 
-                              return idMatch;
+                              return idMatch && belongsToCurrent;
                             });
 
                             console.info(`[CU-REG MAIN-CONSOLE] Found existing doc for ${docType.name}:`, existingDoc);

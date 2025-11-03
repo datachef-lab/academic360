@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Search, User, CheckCircle, XCircle, Clock, UserCheck } from "lucide-react";
 import axiosInstance from "@/utils/api";
+import { fetchStudentByUid } from "@/services/student";
+import { getUserById } from "@/services/user";
 
 interface CuRegistrationData {
   id: number;
@@ -32,6 +34,41 @@ export default function PhysicalCURegMarkingPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [markingPhysical, setMarkingPhysical] = useState<number | null>(null);
+  const [studentStatus, setStudentStatus] = useState<{
+    studentInactive: boolean;
+    leavingDate?: string | null;
+    leavingReason?: string | null;
+    userInactive: boolean;
+    userSuspended: boolean;
+    suspendedTillDate?: string | null;
+    suspendedReason?: string | null;
+  } | null>(null);
+
+  const formatDateTime = (d?: string | Date | null) => {
+    if (!d) return "";
+    try {
+      return new Date(d).toLocaleString("en-US", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return String(d);
+    }
+  };
+
+  const isBlocked = Boolean(
+    studentStatus &&
+      (studentStatus.studentInactive ||
+        studentStatus.userInactive ||
+        studentStatus.userSuspended ||
+        !!studentStatus.leavingDate),
+  );
 
   const handleSearch = async () => {
     if (!studentUid.trim()) {
@@ -43,8 +80,43 @@ export default function PhysicalCURegMarkingPage() {
     setError(null);
     setSuccess(null);
     setCuRegistrationData([]);
+    setStudentStatus(null);
 
     try {
+      // 1) Resolve student and linked user status first
+      const student = await fetchStudentByUid(studentUid.trim());
+      if (student) {
+        try {
+          const resp = await getUserById(student.userId as number);
+          type UserStatus = {
+            isActive?: boolean;
+            isSuspended?: boolean;
+            suspendedTillDate?: string | null;
+            suspendedReason?: string | null;
+          };
+          const usr = (resp?.payload ?? null) as UserStatus | null;
+          setStudentStatus({
+            studentInactive: student.active === false,
+            leavingDate: (student.leavingDate as unknown as string) || null,
+            leavingReason: (student.leavingReason as unknown as string) || null,
+            userInactive: usr?.isActive === false,
+            userSuspended: usr?.isSuspended === true,
+            suspendedTillDate: usr?.suspendedTillDate ?? null,
+            suspendedReason: usr?.suspendedReason ?? null,
+          });
+        } catch {
+          // Proceed even if user status fails
+          setStudentStatus({
+            studentInactive: student.active === false,
+            leavingDate: (student.leavingDate as unknown as string) || null,
+            leavingReason: (student.leavingReason as unknown as string) || null,
+            userInactive: false,
+            userSuspended: false,
+          });
+        }
+      }
+
+      // 2) Fetch CU registration records
       const response = await axiosInstance.get(
         `/api/admissions/cu-registration-correction-requests/student-uid/${studentUid.trim()}`,
       );
@@ -110,6 +182,10 @@ export default function PhysicalCURegMarkingPage() {
   };
 
   const handleMarkPhysicalDone = async (correctionRequestId: number) => {
+    if (isBlocked) {
+      setError("This student is not eligible for physical marking due to inactive/suspended/leaving status.");
+      return;
+    }
     // Find the record to check its status
     const record = cuRegistrationData.find((r) => r.id === correctionRequestId);
 
@@ -233,6 +309,31 @@ export default function PhysicalCURegMarkingPage() {
           </Alert>
         )}
 
+        {studentStatus && isBlocked && (
+          <Alert className="mb-6" variant="destructive">
+            <XCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="space-y-1">
+                {studentStatus.userInactive && <div>User status: Inactive</div>}
+                {studentStatus.userSuspended && (
+                  <div>
+                    Suspended
+                    {studentStatus.suspendedTillDate ? ` till ${formatDateTime(studentStatus.suspendedTillDate)}` : ""}
+                    {studentStatus.suspendedReason ? ` — ${studentStatus.suspendedReason}` : ""}
+                  </div>
+                )}
+                {studentStatus.studentInactive && <div>Student record marked as inactive</div>}
+                {!!studentStatus.leavingDate && (
+                  <div>
+                    Leaving date: {formatDateTime(studentStatus.leavingDate)}
+                    {studentStatus.leavingReason ? ` — ${studentStatus.leavingReason}` : ""}
+                  </div>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {success && (
           <Alert className="mb-6">
             <CheckCircle className="h-4 w-4" />
@@ -241,7 +342,7 @@ export default function PhysicalCURegMarkingPage() {
         )}
 
         {/* Results */}
-        {cuRegistrationData.length > 0 && (
+        {cuRegistrationData.length > 0 && !isBlocked && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

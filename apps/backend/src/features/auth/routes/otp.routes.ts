@@ -8,6 +8,7 @@ import {
   testTimeCalculation,
   lookupUserByEmail,
   lookupUsersByUidPrefix,
+  verifyOtpOnly,
 } from "../controllers/otp.controller.js";
 
 const router = Router();
@@ -20,6 +21,8 @@ router.post("/send-whatsapp", sendOtpToWhatsApp);
 
 // Verify OTP and login
 router.post("/verify", verifyOtpAndLogin);
+// Verify OTP only (no login)
+router.post("/verify-only", verifyOtpOnly);
 
 // Resend OTP
 router.post("/resend", resendOtp);

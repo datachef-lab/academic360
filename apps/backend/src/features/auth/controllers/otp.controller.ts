@@ -248,6 +248,48 @@ export const verifyOtpAndLogin = async (
   }
 };
 
+// Verify OTP only (no login, does not issue tokens)
+export const verifyOtpOnly = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      res.status(400).json(new ApiError(400, "Email and OTP are required"));
+      return;
+    }
+
+    const userResult = await findUserForOtp(email);
+    if (!userResult.success) {
+      res.status(400).json(new ApiError(400, userResult.message));
+      return;
+    }
+
+    // Do NOT consume OTP here to allow password reset to use the same OTP
+    const status = await checkOtpStatus(email);
+    if (!status.hasValidOtp) {
+      res.status(400).json(new ApiError(400, "Invalid or expired OTP"));
+      return;
+    }
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { remainingTime: status.remainingTime },
+          "OTP valid",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
 // Resend OTP to both email and WhatsApp
 export const resendOtp = async (
   req: Request,

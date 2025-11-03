@@ -12,6 +12,7 @@ import {
   requestPasswordResetController,
   resetPasswordController,
   validateResetTokenController,
+  resetPasswordWithOtpController,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
@@ -27,6 +28,7 @@ router.get("/stats", getUserStatsHandler);
 router.post("/password-reset/request", requestPasswordResetController);
 router.post("/password-reset/reset", resetPasswordController);
 router.get("/password-reset/validate/:token", validateResetTokenController);
+router.post("/password-reset/reset-with-otp", resetPasswordWithOtpController);
 
 router.use(verifyJWT);
 

@@ -79,6 +79,8 @@ import { userModel as coreUserModel } from "@repo/db/schemas/models/user";
 import * as studentService from "./student.service.js";
 import * as staffService from "./staff.service.js";
 import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model.js";
+import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
+import { verifyOtp } from "@/features/auth/services/otp.service.js";
 
 // Password reset interfaces and storage
 export interface PasswordResetData {
@@ -1132,17 +1134,51 @@ export async function requestPasswordReset(
 
     console.log("[PASSWORD RESET] Token generated for:", email);
 
-    // Send password reset email
-    // const emailSent = await sendPasswordResetEmail(email, token);
+    // Send password reset email via notification system
+    try {
+      const backendBase =
+        process.env.FRONTEND_MAIN_CONSOLE_BASE || "http://localhost:5173";
+      const resetLink = `${backendBase}/reset-password?token=${token}`;
 
-    // if (!emailSent) {
-    //     // Remove token if email failed
-    //     passwordResetTokens.delete(token);
-    //     return {
-    //         success: false,
-    //         message: "Failed to send password reset email. Please try again.",
-    //     };
-    // }
+      // Resolve userId for notification association
+      const [foundUser] = await db
+        .select({ id: userModel.id, name: userModel.name })
+        .from(userModel)
+        .where(eq(userModel.email, email));
+
+      const { enqueueNotification } = await import(
+        "@/services/notificationClient.js"
+      );
+
+      await enqueueNotification({
+        userId: foundUser?.id || 0,
+        variant: "EMAIL",
+        type: "OTP",
+        // Use OTP master; template selects reset-password content
+        notificationMasterId: undefined,
+        message: `Password reset link issued for ${email}`,
+        notificationEvent: {
+          subject:
+            "Reset your password - The Bhawanipur Education Society College",
+          emailTemplate: "reset-password",
+          templateData: {
+            // Respect notification master fields convention: Name, Code
+            Name: foundUser?.name || email,
+            Code: token,
+            // Also pass explicit keys used by template as fallbacks
+            greetingName: foundUser?.name || email,
+            resetLink,
+            token,
+          },
+        } as any,
+      } as any);
+    } catch (notifyErr) {
+      console.error(
+        "[PASSWORD RESET] Failed to enqueue reset email:",
+        notifyErr,
+      );
+      // Do not fail the request solely due to notification issues
+    }
 
     console.log("[PASSWORD RESET] Email sent successfully to:", email);
 
@@ -1230,6 +1266,47 @@ export async function resetPassword(
       tokenData.email,
     );
 
+    try {
+      // Send password change confirmation email (no sensitive data)
+      const { enqueueNotification } = await import(
+        "@/services/notificationClient.js"
+      );
+      const [userRow] = await db
+        .select({ id: userModel.id, name: userModel.name })
+        .from(userModel)
+        .where(eq(userModel.email, tokenData.email));
+      // Resolve notification master by template key
+      const [emailMaster] = await db
+        .select()
+        .from(notificationMasterModel)
+        .where(
+          and(
+            eq(notificationMasterModel.template, "password-confirmation"),
+            eq(notificationMasterModel.variant, "EMAIL" as any),
+          ),
+        );
+      await enqueueNotification({
+        userId: userRow?.id || 0,
+        variant: "EMAIL",
+        type: "INFO",
+        message: `Password changed for ${tokenData.email}`,
+        notificationMasterId: emailMaster?.id,
+        notificationEvent: {
+          emailTemplate: "password-confirmation",
+          subject:
+            "Your password was changed - The Bhawanipur Education Society College",
+          templateData: {
+            Name: userRow?.name || tokenData.email,
+          },
+        } as any,
+      } as any);
+    } catch (e) {
+      console.error(
+        "[PASSWORD RESET] Failed to enqueue password confirmation:",
+        e,
+      );
+    }
+
     return {
       success: true,
       message: "Password has been reset successfully",
@@ -1290,5 +1367,91 @@ export function cleanupExpiredTokens(): void {
     if (now > data.expiresAt) {
       passwordResetTokens.delete(token);
     }
+  }
+}
+
+/**
+ * Reset password using email + OTP (no link)
+ */
+export async function resetPasswordWithEmailOtp(
+  email: string,
+  otp: string,
+  newPassword: string,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    // Verify OTP for email channel
+    const verify = await verifyOtp(email, otp, "FOR_EMAIL");
+    if (!verify.success) {
+      return {
+        success: false,
+        message: verify.message || "Invalid or expired OTP",
+      };
+    }
+
+    if (newPassword.length < 8) {
+      return {
+        success: false,
+        message: "Password must be at least 8 characters long",
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const [updatedUser] = await db
+      .update(userModel)
+      .set({ password: hashedPassword, updatedAt: new Date() })
+      .where(eq(userModel.email, email))
+      .returning();
+
+    if (!updatedUser) {
+      return {
+        success: false,
+        message: "Failed to update password. Please try again",
+      };
+    }
+
+    try {
+      const { enqueueNotification } = await import(
+        "@/services/notificationClient.js"
+      );
+      const [userRow] = await db
+        .select({ id: userModel.id, name: userModel.name })
+        .from(userModel)
+        .where(eq(userModel.email, email));
+      const [emailMaster] = await db
+        .select()
+        .from(notificationMasterModel)
+        .where(
+          and(
+            eq(notificationMasterModel.template, "password-confirmation"),
+            eq(notificationMasterModel.variant, "EMAIL" as any),
+          ),
+        );
+      await enqueueNotification({
+        userId: userRow?.id || 0,
+        variant: "EMAIL",
+        type: "INFO",
+        message: `Password changed for ${email}`,
+        notificationMasterId: emailMaster?.id,
+        notificationEvent: {
+          emailTemplate: "password-confirmation",
+          subject:
+            "Your password was changed - The Bhawanipur Education Society College",
+          templateData: { Name: userRow?.name || email },
+        } as any,
+      } as any);
+    } catch (e) {
+      console.error(
+        "[PASSWORD RESET] Failed to enqueue password confirmation:",
+        e,
+      );
+    }
+
+    return { success: true, message: "Password has been reset successfully" };
+  } catch (e) {
+    console.error("[PASSWORD RESET] resetPasswordWithEmailOtp error:", e);
+    return {
+      success: false,
+      message: "An error occurred while resetting password",
+    };
   }
 }

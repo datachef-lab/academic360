@@ -59,6 +59,7 @@ import FeesSlabMappingPage from "./pages/admissions-fees/admissions/[year]/workf
 import BulkUploadPage from "./pages/BulkUpload";
 import Dashboard from "./features/dashboard/pages/dashboard";
 import LoginPage from "./features/auth/pages/login-page";
+import ResetPasswordPage from "./features/auth/pages/reset-password-page";
 import { NotFoundPage, SettingsPage, UserProfilePage } from "./pages";
 
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
@@ -95,6 +96,10 @@ const router = createBrowserRouter(
           <LoginPage />
         </AuthProvider>
       ),
+    },
+    {
+      path: "/reset-password",
+      element: <ResetPasswordPage />,
     },
     {
       path: "/dashboard",
