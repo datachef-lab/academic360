@@ -29,6 +29,7 @@ import {
   OldShift,
 } from "@repo/db/legacy-system-types/academics";
 import { OldAdmissionStats } from "@repo/db/legacy-system-types/admissions";
+import ExcelJS from "exceljs";
 
 const BATCH_SIZE = 500;
 
@@ -233,6 +234,149 @@ export async function processDataFetching(
       `${stats.course} (${stats.total}) | Done loading batch ${i + 1}/${totalBatches}: ${rows.length} students`,
     );
   }
+}
+
+/**
+ * Process students from an Excel buffer containing a UID column and invoke processStudent for each UID.
+ * - Accepts a Buffer (from uploaded file)
+ * - Detects the UID column by common header names: UID, Student UID, CodeNumber, codeNumber
+ * - Cleans UID values and looks up legacy (old) student by UID (studentpersonaldetails.codeNumber)
+ * - Calls processStudent for each found old student
+ * Returns a summary with counts and per-UID errors
+ */
+export async function processStudentsFromExcelBuffer(
+  file: Buffer | ArrayBuffer | Uint8Array,
+): Promise<{
+  totalRows: number;
+  totalUids: number;
+  processed: number;
+  notFound: number;
+  errors: Array<{ uid: string; error: string }>;
+}> {
+  const workbook = new ExcelJS.Workbook();
+  let dataForExcel: Buffer | Uint8Array | ArrayBuffer;
+  if (Buffer.isBuffer(file)) {
+    dataForExcel = file as Buffer;
+  } else if (file instanceof Uint8Array) {
+    dataForExcel = file as Uint8Array;
+  } else {
+    dataForExcel = Buffer.from(file as ArrayBuffer);
+  }
+  await (workbook.xlsx as any).load(dataForExcel as any);
+  const sheet = workbook.worksheets[0];
+
+  if (!sheet) {
+    return {
+      totalRows: 0,
+      totalUids: 0,
+      processed: 0,
+      notFound: 0,
+      errors: [{ uid: "", error: "No worksheet in Excel" }],
+    };
+  }
+
+  const headerRow = sheet.getRow(1);
+  const rawValues = (
+    Array.isArray(headerRow?.values) ? headerRow.values : []
+  ) as any[];
+  const headerNames: string[] = rawValues
+    .map((v: any) => (typeof v === "string" ? v : String(v ?? "")))
+    .map((s: string) => s.trim().toLowerCase());
+
+  // Find UID column by common header variants
+  const uidHeaderCandidates = [
+    "uid",
+    "student uid",
+    "student_uid",
+    "codenumber",
+    "code",
+    "code number",
+  ];
+  let uidColIndex = -1;
+  for (let ci = 1; ci <= headerNames.length; ci++) {
+    const name = headerNames[ci] || "";
+    if (uidHeaderCandidates.includes(name)) {
+      uidColIndex = ci;
+      break;
+    }
+  }
+
+  if (uidColIndex === -1) {
+    return {
+      totalRows: sheet.rowCount,
+      totalUids: 0,
+      processed: 0,
+      notFound: 0,
+      errors: [
+        {
+          uid: "",
+          error:
+            "UID column not found. Expected headers: UID / Student UID / CodeNumber",
+        },
+      ],
+    };
+  }
+
+  const cleanUid = (raw: unknown): string => {
+    const s = String(raw ?? "").trim();
+    // Remove spaces, slashes, dashes to match legacy normalization
+    return s.replace(/[\s\-\/]/g, "");
+  };
+
+  const uids: string[] = [];
+  for (let r = 2; r <= sheet.rowCount; r++) {
+    const row = sheet.getRow(r);
+    const raw = row.getCell(uidColIndex).value;
+    const uid = cleanUid(raw);
+    if (uid) uids.push(uid);
+  }
+
+  let processed = 0;
+  let notFound = 0;
+  const errors: Array<{ uid: string; error: string }> = [];
+
+  for (const uid of uids) {
+    try {
+      const oldStudent = await getOldStudentByUid(uid);
+      if (!oldStudent) {
+        notFound++;
+        continue;
+      }
+      await processStudent(oldStudent);
+      processed++;
+    } catch (e: any) {
+      errors.push({ uid, error: e?.message || "Unknown error" });
+    }
+  }
+
+  return {
+    totalRows: sheet.rowCount,
+    totalUids: uids.length,
+    processed,
+    notFound,
+    errors,
+  };
+}
+
+/**
+ * Fetch a legacy (old system) student by UID (codeNumber in studentpersonaldetails)
+ */
+export async function getOldStudentByUid(
+  uid: string,
+): Promise<OldStudent | null> {
+  console.log("Getting old student by UID:", uid);
+  const cleaned = uid.replace(/[^A-Za-z0-9]/g, "");
+  const [rows] = (await mysqlConnection.query(
+    `
+      SELECT sp.*
+      FROM studentpersonaldetails sp
+      WHERE sp.codeNumber = '${cleaned}'
+      LIMIT 1;
+    `,
+  )) as [OldStudent[], any];
+
+  if (!rows || rows.length === 0) return null;
+  return rows[0];
 }
 
 export async function getOldAdmissionStatsByOldSessionId(oldSessionId: number) {

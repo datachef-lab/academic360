@@ -13,6 +13,7 @@ import {
   updateStudentStatus,
   updateFamilyMemberTitlesController,
   bulkUpdateFamilyMemberTitlesController,
+  importStudentsFromExcelController,
 } from "../controllers/student.controller.js";
 
 import { uploadMiddleware } from "../controllers/student-apaar-update.controller.js";
@@ -54,6 +55,14 @@ router.post(
   "/bulk-update-family-titles",
   uploadMiddleware,
   bulkUpdateFamilyMemberTitlesController,
+);
+
+// POST /api/students/import-legacy-students
+// Upload Excel file with a UID column and import/process legacy students
+router.post(
+  "/import-legacy-students",
+  uploadMiddleware,
+  importStudentsFromExcelController,
 );
 
 // PUT /api/students/:uid/family-titles

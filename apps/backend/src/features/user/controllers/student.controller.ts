@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { processStudentsFromExcelBuffer } from "../services/refactor-old-migration.service.js";
 // import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber, findFilteredStudents } from "@/features/user/services/student.service.js";
 import { StudentType } from "@/types/user/student.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
@@ -513,6 +514,32 @@ export const bulkUpdateFamilyMemberTitlesController = async (
       );
   } catch (error) {
     console.error("[FAMILY-TITLE-BULK] Error processing bulk update:", error);
+    handleError(error, res, next);
+  }
+};
+
+// Import students from Excel (UID column) and run legacy processStudent
+export const importStudentsFromExcelController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file || !file.buffer) {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "Excel file is required under field name 'file'"),
+        );
+      return;
+    }
+
+    const summary = await processStudentsFromExcelBuffer(file.buffer);
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", summary, "Import completed"));
+  } catch (error) {
     handleError(error, res, next);
   }
 };
