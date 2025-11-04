@@ -778,23 +778,33 @@ export async function updateCuRegistrationCorrectionRequest(
       setData.subjectsCorrectionRequest = (
         updateData as any
       ).subjectsCorrectionRequest;
-    // Protect against updating application number if it already exists
+    // CRITICAL PROTECTION: Prevent updating application number if it already exists
+    // This ensures that once an application number is generated, it can NEVER be changed
     if (
       typeof (updateData as any).cuRegistrationApplicationNumber !== "undefined"
     ) {
       if (existing.cuRegistrationApplicationNumber) {
         console.warn(
-          "[CU-REG CORRECTION][UPDATE] Attempted to update existing application number - ignoring",
+          "[CU-REG CORRECTION][UPDATE] BLOCKED: Attempted to update existing application number - IGNORING",
           {
             existing: existing.cuRegistrationApplicationNumber,
             attempted: (updateData as any).cuRegistrationApplicationNumber,
+            reason: "Application number already exists and cannot be changed",
           },
         );
-        // Don't update the application number if it already exists
+        // CRITICAL: Do NOT update the application number if it already exists
+        // This prevents any accidental or malicious attempts to change it
       } else {
+        // Only allow setting if no existing number exists
         setData.cuRegistrationApplicationNumber = (
           updateData as any
         ).cuRegistrationApplicationNumber;
+        console.info(
+          "[CU-REG CORRECTION][UPDATE] Setting application number from updateData (none existed)",
+          {
+            newNumber: (updateData as any).cuRegistrationApplicationNumber,
+          },
+        );
       }
     }
 
@@ -854,30 +864,57 @@ export async function updateCuRegistrationCorrectionRequest(
     );
 
     // Generate PDF and application number if conditions are met
-    if (
-      (shouldGeneratePdf && !existing.cuRegistrationApplicationNumber) ||
-      user.type !== "STUDENT"
-    ) {
-      // All declarations completed AND final submission done AND no application number yet
-      const applicationNumber = existing.cuRegistrationApplicationNumber
-        ? existing.cuRegistrationApplicationNumber
-        : await CuRegistrationNumberService.generateNextApplicationNumber();
-      setData.cuRegistrationApplicationNumber = applicationNumber;
+    // IMPORTANT: Never regenerate application number if it already exists
+    // Determine which application number to use (existing or generate new)
+    let applicationNumber: string | undefined;
+
+    // CRITICAL: Always check if application number already exists FIRST
+    // If it exists, use it and NEVER generate a new one
+    if (existing.cuRegistrationApplicationNumber) {
+      // Use existing application number - NEVER regenerate, even if conditions suggest otherwise
+      applicationNumber = existing.cuRegistrationApplicationNumber;
       console.info(
-        "[CU-REG CORRECTION][UPDATE] Generated application number on final submission:",
+        "[CU-REG CORRECTION][UPDATE] Application number already exists - using existing (will NOT regenerate):",
         applicationNumber,
       );
+      // Explicitly do NOT set in setData - we're keeping the existing value
+    } else if (shouldGeneratePdf) {
+      // Only generate new application number if:
+      // 1. No existing application number AND
+      // 2. Conditions for PDF generation are met
+      applicationNumber =
+        await CuRegistrationNumberService.generateNextApplicationNumber();
+      setData.cuRegistrationApplicationNumber = applicationNumber;
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] Generated new application number (none existed):",
+        applicationNumber,
+      );
+    } else {
+      // No existing number but conditions not met for generation
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] No application number exists, but conditions not met for generation",
+      );
+    }
 
-      // Generate PDF after application number is assigned
+    // Generate PDF based on user type and conditions:
+    // - For STUDENT: Only generate when final submission conditions are met (shouldGeneratePdf)
+    // - For NON-STUDENT: Can generate anytime if application number exists
+    const shouldGeneratePdfInTransaction =
+      applicationNumber &&
+      ((user.type === "STUDENT" && shouldGeneratePdf) || // Students: only on final submission
+        user.type !== "STUDENT"); // Non-students: anytime if number exists
+
+    if (shouldGeneratePdfInTransaction) {
       try {
-        console.info(
-          "[CU-REG CORRECTION][UPDATE] Generating PDF for final submission",
-          {
-            studentId: existing.studentId,
-            correctionRequestId: id,
-            applicationNumber,
-          },
-        );
+        console.info("[CU-REG CORRECTION][UPDATE] Generating PDF", {
+          userType: user.type,
+          studentId: existing.studentId,
+          correctionRequestId: id,
+          applicationNumber,
+          isNewNumber: !existing.cuRegistrationApplicationNumber,
+          isFinalSubmission: isFinalSubmission,
+          allDeclarationsCompleted: allDeclarationsCompleted,
+        });
 
         // Get student UID for S3 upload
         const [studentRecord] = await tx
@@ -893,11 +930,16 @@ export async function updateCuRegistrationCorrectionRequest(
           throw new Error("Student UID is required for PDF generation");
         }
 
+        // TypeScript guard: applicationNumber is guaranteed to be string here due to shouldGeneratePdfInTransaction check
+        if (!applicationNumber) {
+          throw new Error("Application number is required for PDF generation");
+        }
+
         const pdfResult =
           await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
             existing.studentId,
             id,
-            applicationNumber, // Use the new application number directly
+            applicationNumber, // Use the application number (existing or newly generated)
             studentRecord.uid,
           );
 
@@ -1432,19 +1474,45 @@ export async function updateCuRegistrationCorrectionRequest(
     (updateData as any).payload !== undefined ||
     (updateData as any).flags !== undefined;
 
-  // Check if we should generate PDF: either final submission OR all declarations completed
+  // PDF regeneration logic:
+  // - PDF can be regenerated with updated data when student information changes
+  // - BUT application number MUST remain unchanged - use existing number from DB
+  // - For STUDENT: Only regenerate when final submission conditions are met (all declarations + final submission)
+  // - For NON-STUDENT: Can regenerate anytime if application number exists
   const shouldGeneratePdfNow =
     isFinalSubmission || allDeclarationsCompletedInDB;
 
-  if (
-    (shouldGeneratePdfNow &&
-      dataFieldsUpdated &&
-      updatedRequest.cuRegistrationApplicationNumber) ||
-    (user.type !== "STUDENT" && updatedRequest.cuRegistrationApplicationNumber)
-  ) {
+  const shouldRegeneratePdf =
+    updatedRequest.cuRegistrationApplicationNumber &&
+    // For STUDENT: only when final submission conditions are met AND data was updated
+    ((user.type === "STUDENT" && shouldGeneratePdfNow && dataFieldsUpdated) ||
+      // For NON-STUDENT: anytime if application number exists
+      user.type !== "STUDENT");
+
+  if (shouldRegeneratePdf) {
     try {
+      // CRITICAL: Validate that application number exists before regenerating PDF
+      if (!updatedRequest.cuRegistrationApplicationNumber) {
+        console.error(
+          "[CU-REG CORRECTION][UPDATE] Cannot regenerate PDF - application number is missing",
+        );
+        throw new Error("Application number is required for PDF regeneration");
+      }
+
+      // CRITICAL: Use EXISTING application number - NEVER generate or update it during regeneration
+      const existingApplicationNumber =
+        updatedRequest.cuRegistrationApplicationNumber;
+
       console.info(
-        "[CU-REG CORRECTION][UPDATE] All declarations completed and data updated, regenerating PDF with latest data",
+        "[CU-REG CORRECTION][UPDATE] Regenerating PDF with latest data (application number unchanged)",
+        {
+          userType: user.type,
+          isFinalSubmission,
+          allDeclarationsCompleted: allDeclarationsCompletedInDB,
+          dataFieldsUpdated,
+          applicationNumber: existingApplicationNumber,
+          note: "Using EXISTING application number - NOT generating new",
+        },
       );
 
       // Import the PDF integration service
@@ -1452,30 +1520,33 @@ export async function updateCuRegistrationCorrectionRequest(
         "@/services/cu-registration-pdf-integration.service.js"
       );
 
-      // Regenerate PDF with latest data
+      // Regenerate PDF with latest student data but SAME application number
+      // The PDF will contain updated student information but the form number stays the same
       const pdfResult =
         await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
           existing.studentId,
           id,
-          updatedRequest.cuRegistrationApplicationNumber, // Use the updated application number
+          existingApplicationNumber, // CRITICAL: Use existing number - never change it
           student.uid,
         );
 
       if (pdfResult.success) {
         console.info(
-          "[CU-REG CORRECTION][UPDATE] PDF regenerated successfully",
+          "[CU-REG CORRECTION][UPDATE] PDF regenerated successfully with updated data",
           {
             pdfPath: pdfResult.pdfPath,
             s3Url: pdfResult.s3Url,
-            applicationNumber: updatedRequest.cuRegistrationApplicationNumber,
+            applicationNumber: existingApplicationNumber,
+            note: "Application number unchanged - PDF contains updated student data",
           },
         );
 
         // Send email notification with PDF attachment (same as student console)
         // Only send notifications if CU application number is not null
+        // NOTE: Email is sent only for students on initial final submission, not on every regeneration
         if (
           pdfResult.pdfBuffer &&
-          updatedRequest.cuRegistrationApplicationNumber &&
+          existingApplicationNumber &&
           user.type === "STUDENT"
         ) {
           try {
@@ -1483,17 +1554,17 @@ export async function updateCuRegistrationCorrectionRequest(
               `[CU-REG CORRECTION][UPDATE] Sending admission registration email notification`,
               {
                 studentId: existing.studentId,
-                applicationNumber:
-                  updatedRequest.cuRegistrationApplicationNumber,
+                applicationNumber: existingApplicationNumber,
                 pdfBufferSize: pdfResult.pdfBuffer.length,
                 pdfUrl: pdfResult.s3Url,
+                note: "Using existing application number for email",
               },
             );
 
             const notificationResult =
               await sendAdmissionRegistrationNotification(
                 existing.studentId,
-                updatedRequest.cuRegistrationApplicationNumber,
+                existingApplicationNumber, // Use existing - never generate
                 pdfResult.pdfBuffer,
                 pdfResult.s3Url!,
               );
@@ -1531,7 +1602,8 @@ export async function updateCuRegistrationCorrectionRequest(
       } else {
         console.error("[CU-REG CORRECTION][UPDATE] PDF regeneration failed", {
           error: pdfResult.error,
-          applicationNumber: updatedRequest.cuRegistrationApplicationNumber,
+          applicationNumber: existingApplicationNumber,
+          note: "Application number was not changed during failed regeneration",
         });
       }
     } catch (error) {
@@ -2648,16 +2720,29 @@ export const sendAdmissionRegistrationWhatsAppNotification = async (
 /**
  * Send admission registration notification with PDF attachment
  * This function should be called after successful PDF generation
+ * IMPORTANT: This function NEVER generates application numbers - it only uses the one passed to it
  */
 export const sendAdmissionRegistrationNotification = async (
   studentId: number,
-  applicationNumber: string,
+  applicationNumber: string, // MUST be the existing application number - never generate new
   pdfBuffer: Buffer, // PDF buffer directly from memory
   pdfUrl: string, // S3 URL for reference
 ): Promise<AdmissionRegistrationNotificationResult> => {
   try {
+    // CRITICAL VALIDATION: Ensure application number is provided and not empty
+    if (!applicationNumber || applicationNumber.trim() === "") {
+      throw new Error(
+        "Application number is required for email notification. Cannot send notification without application number.",
+      );
+    }
+
     console.log(
       "📧 [CU-REG-NOTIF] Starting admission registration notification process",
+      {
+        studentId,
+        applicationNumber,
+        note: "Using EXISTING application number - NOT generating new",
+      },
     );
 
     // Get student details with user info, personal details, board, and category (studentId -> student -> user -> personal details -> admission academic info -> board/category/nationality)
@@ -3548,9 +3633,25 @@ async function tmptriggerNotif(
   cuRegReqCorrection: CuRegistrationCorrectionRequestInsertTypeT,
   uid: string,
 ) {
+  // CRITICAL: Validate that application number exists before regenerating PDF
+  if (!cuRegReqCorrection.cuRegistrationApplicationNumber) {
+    console.error(
+      "[CU-REG CORRECTION][UPDATE] Cannot regenerate PDF - application number is missing",
+    );
+    throw new Error("Application number is required for PDF regeneration");
+  }
+
+  // CRITICAL: Use EXISTING application number - NEVER generate or update it during regeneration
+  const existingApplicationNumber =
+    cuRegReqCorrection.cuRegistrationApplicationNumber;
+
   try {
     console.info(
-      "[CU-REG CORRECTION][UPDATE] All declarations completed and data updated, regenerating PDF with latest data",
+      "[CU-REG CORRECTION][UPDATE] All declarations completed and data updated, regenerating PDF with latest data (application number unchanged)",
+      {
+        applicationNumber: existingApplicationNumber,
+        note: "Using EXISTING application number - NOT generating new",
+      },
     );
 
     // Import the PDF integration service
@@ -3558,44 +3659,46 @@ async function tmptriggerNotif(
       "@/services/cu-registration-pdf-integration.service.js"
     );
 
-    // Regenerate PDF with latest data
+    // Regenerate PDF with latest student data but SAME application number
+    // The PDF will contain updated student information but the form number stays the same
     const pdfResult =
       await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
         cuRegReqCorrection.studentId,
         cuRegReqCorrection.id!,
-        cuRegReqCorrection.cuRegistrationApplicationNumber!,
+        existingApplicationNumber, // CRITICAL: Use existing number - never change it
         uid!,
       );
 
     if (pdfResult.success) {
-      console.info("[CU-REG CORRECTION][UPDATE] PDF regenerated successfully", {
-        pdfPath: pdfResult.pdfPath,
-        s3Url: pdfResult.s3Url,
-        applicationNumber: cuRegReqCorrection.cuRegistrationApplicationNumber,
-      });
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] PDF regenerated successfully with updated data",
+        {
+          pdfPath: pdfResult.pdfPath,
+          s3Url: pdfResult.s3Url,
+          applicationNumber: existingApplicationNumber,
+          note: "Application number unchanged - PDF contains updated student data",
+        },
+      );
 
       // Send email notification with PDF attachment (same as student console)
       // Only send notifications if CU application number is not null
-      if (
-        pdfResult.pdfBuffer &&
-        cuRegReqCorrection.cuRegistrationApplicationNumber
-      ) {
+      if (pdfResult.pdfBuffer && existingApplicationNumber) {
         try {
           console.info(
             `[CU-REG CORRECTION][UPDATE] Sending admission registration email notification`,
             {
               studentId: cuRegReqCorrection.studentId,
-              applicationNumber:
-                cuRegReqCorrection.cuRegistrationApplicationNumber,
+              applicationNumber: existingApplicationNumber,
               pdfBufferSize: pdfResult.pdfBuffer.length,
               pdfUrl: pdfResult.s3Url,
+              note: "Using existing application number for email",
             },
           );
 
           const notificationResult =
             await sendAdmissionRegistrationNotification(
               cuRegReqCorrection.studentId,
-              cuRegReqCorrection.cuRegistrationApplicationNumber,
+              existingApplicationNumber, // Use existing - never generate
               pdfResult.pdfBuffer,
               pdfResult.s3Url!,
             );
@@ -3633,7 +3736,8 @@ async function tmptriggerNotif(
     } else {
       console.error("[CU-REG CORRECTION][UPDATE] PDF regeneration failed", {
         error: pdfResult.error,
-        applicationNumber: cuRegReqCorrection.cuRegistrationApplicationNumber,
+        applicationNumber: existingApplicationNumber,
+        note: "Application number was not changed during failed regeneration",
       });
     }
   } catch (error) {

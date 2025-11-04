@@ -161,6 +161,8 @@ export class CuRegistrationDataService {
       });
 
       // Fetch correction request to check for rectification flags and get application number
+      // NOTE: If options.applicationNumber is provided, use that instead of reading from DB
+      // to avoid race conditions during transaction commits
       const [correctionRequest] = await db
         .select({
           id: cuRegistrationCorrectionRequestModel.id,
@@ -188,6 +190,20 @@ export class CuRegistrationDataService {
 
       if (!correctionRequest) {
         throw new Error("Correction request not found");
+      }
+
+      // Override the application number from DB with the explicitly passed one if provided
+      // This ensures we use the correct number even if the DB hasn't been updated yet
+      if (options.applicationNumber) {
+        correctionRequest.cuRegistrationApplicationNumber =
+          options.applicationNumber;
+        console.info(
+          "[CU-REG DATA] Using explicitly passed application number for PDF:",
+          {
+            passedNumber: options.applicationNumber,
+            dbNumber: correctionRequest.cuRegistrationApplicationNumber,
+          },
+        );
       }
 
       // Check if any correction flags are set
@@ -422,8 +438,8 @@ export class CuRegistrationDataService {
         studentName: studentData.userName!,
         studentUid: studentData.uid || "",
         cuFormNumber:
-          options.applicationNumber ||
-          correctionRequest.cuRegistrationApplicationNumber ||
+          options.applicationNumber || // Explicitly passed number takes highest priority
+          correctionRequest.cuRegistrationApplicationNumber || // Then DB value (already overridden above if options.applicationNumber exists)
           studentData.cuFormNumber ||
           academicDetails?.cuRegistrationNumber ||
           "",
