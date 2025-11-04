@@ -379,6 +379,10 @@ export async function findCuRegistrationCorrectionRequestsByStudentUid(
   studentUid: string,
 ): Promise<CuRegistrationCorrectionRequestDto[]> {
   // First get student by UID
+  console.log(
+    "🔍 [CU-REG CORRECTION] Finding correction requests by student search:",
+    studentUid,
+  );
   const [student] = await db
     .select({ id: studentModel.id })
     .from(studentModel)

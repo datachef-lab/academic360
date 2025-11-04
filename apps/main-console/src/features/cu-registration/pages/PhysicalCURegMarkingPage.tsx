@@ -83,7 +83,12 @@ export default function PhysicalCURegMarkingPage() {
     setStudentStatus(null);
 
     try {
-      // 1) Resolve student and linked user status first
+      // 1) Fetch CU registration records
+      const response = await axiosInstance.get(
+        `/api/admissions/cu-registration-correction-requests/student-uid/${studentUid.trim()}`,
+      );
+
+      // 2) Resolve student and linked user status
       const student = await fetchStudentByUid(studentUid.trim());
       if (student) {
         try {
@@ -115,11 +120,6 @@ export default function PhysicalCURegMarkingPage() {
           });
         }
       }
-
-      // 2) Fetch CU registration records
-      const response = await axiosInstance.get(
-        `/api/admissions/cu-registration-correction-requests/student-uid/${studentUid.trim()}`,
-      );
 
       console.log("API Response:", response.data);
 
