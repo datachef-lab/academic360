@@ -18,4 +18,10 @@ export const loginLimiter = rateLimiter({
   },
   standardHeaders: true,
   legacyHeaders: true,
+  // Use a custom key generator that works with or without trust proxy
+  keyGenerator: (req) => {
+    // If trust proxy is enabled, use the real IP from X-Forwarded-For
+    // Otherwise, use req.ip directly
+    return req.ip || req.socket.remoteAddress || "unknown";
+  },
 });

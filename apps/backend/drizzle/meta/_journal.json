@@ -379,6 +379,13 @@
       "when": 1762015934581,
       "tag": "0053_sturdy_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1762360072939,
+      "tag": "0054_mushy_the_stranger",
+      "breakpoints": true
     }
   ]
 }

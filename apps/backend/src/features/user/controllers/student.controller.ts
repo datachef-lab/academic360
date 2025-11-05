@@ -272,16 +272,50 @@ export const updateStudentStatus = async (
 ) => {
   try {
     const { id } = req.params;
-    const { active, leavingDate, leavingReason } = req.body as {
-      active?: boolean;
-      leavingDate?: string | null;
-      leavingReason?: string | null;
-    };
+    const {
+      active,
+      leavingDate,
+      leavingReason,
+      statusOption,
+      takenTransferCertificate,
+      hasCancelledAdmission,
+      cancelledAdmissionReason,
+      cancelledAdmissionAt,
+      cancelledAdmissionByUserId,
+      alumni,
+    } = req.body as any;
+
+    // If cancelled and no explicit user id provided, take from auth context
+    // Ensure we always have a user ID when status is CANCELLED_ADMISSION
+    const effectiveCancelledBy =
+      statusOption === "CANCELLED_ADMISSION"
+        ? typeof cancelledAdmissionByUserId === "number"
+          ? cancelledAdmissionByUserId
+          : (req as any)?.user?.id
+            ? Number((req as any).user.id)
+            : null
+        : cancelledAdmissionByUserId;
+
+    // Log for debugging
+    if (statusOption === "CANCELLED_ADMISSION") {
+      console.log("[UPDATE STUDENT STATUS] Cancelled Admission - User ID:", {
+        provided: cancelledAdmissionByUserId,
+        fromReq: (req as any)?.user?.id,
+        effective: effectiveCancelledBy,
+      });
+    }
 
     const result = await studentService.updateStudentStatusById(Number(id), {
       active,
       leavingDate,
       leavingReason,
+      statusOption,
+      takenTransferCertificate,
+      hasCancelledAdmission,
+      cancelledAdmissionReason,
+      cancelledAdmissionAt,
+      cancelledAdmissionByUserId: effectiveCancelledBy,
+      alumni,
     });
 
     if (!result) {

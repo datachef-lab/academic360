@@ -21,7 +21,7 @@ import { updateApaarIdsFromExcel } from "../controllers/student-apaar-update.con
 
 const router = express.Router();
 
-// router.use(verifyJWT);
+router.use(verifyJWT);
 
 // router.get("/old-data", createOldStudent);
 

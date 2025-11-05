@@ -221,14 +221,83 @@ export async function saveUser(id: number, user: User) {
   if (!foundUser) {
     return null;
   }
+  const updatePayload: Partial<typeof userModel.$inferInsert> = {
+    name: user.name,
+    image: user.image,
+    phone: user.phone,
+    whatsappNumber: user.whatsappNumber,
+  };
+  // Allow status fields to be updated when provided
+  if (typeof (user as any).isActive === "boolean") {
+    (updatePayload as any).isActive = (user as any).isActive;
+  }
+  if (typeof (user as any).isSuspended === "boolean") {
+    (updatePayload as any).isSuspended = (user as any).isSuspended;
+  }
+  if ((user as any).suspendedReason !== undefined) {
+    (updatePayload as any).suspendedReason =
+      (user as any).suspendedReason ?? null;
+  }
+  if ((user as any).suspendedTillDate !== undefined) {
+    // If it's already a formatted string (YYYY-MM-DD HH:mm:ss), use it directly
+    // Otherwise, parse it as a date
+    const suspendedTillValue = (user as any).suspendedTillDate;
+    if (suspendedTillValue === null || suspendedTillValue === undefined) {
+      (updatePayload as any).suspendedTillDate = null;
+    } else if (
+      typeof suspendedTillValue === "string" &&
+      /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(suspendedTillValue)
+    ) {
+      // Already in PostgreSQL timestamp format (YYYY-MM-DD HH:mm:ss), treat as IST
+      // Parse the IST string and create a Date object using UTC methods
+      // Since PostgreSQL timestamp (without timezone) stores values as-is,
+      // we create a Date object where the UTC time components match the IST time
+      // This way, when Drizzle stores it, the time values (hours, minutes, seconds) are preserved
+      const [datePart, timePart] = suspendedTillValue.split(" ");
+      const [year, month, day] = datePart.split("-").map(Number);
+      const [hours, minutes, seconds = 0] = timePart.split(":").map(Number);
+      // Create Date object using UTC methods with the IST time values
+      // This ensures the time components (22:46:00) are stored as-is in PostgreSQL
+      (updatePayload as any).suspendedTillDate = new Date(
+        Date.UTC(year, month - 1, day, hours, minutes, seconds),
+      );
+    } else {
+      // Parse as date and format for PostgreSQL in IST
+      const date = new Date(suspendedTillValue);
+      if (!isNaN(date.getTime())) {
+        // Format as YYYY-MM-DD HH:mm:ss in IST, then convert to Date object
+        const istTime = date.toLocaleString("en-US", {
+          timeZone: "Asia/Kolkata",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        });
+        const [datePart, timePart] = istTime.split(", ");
+        const [month, day, year] = datePart.split("/");
+        const istString = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")} ${timePart}`;
+        // Parse IST string and create Date object using UTC methods
+        // This preserves the IST time values (hours, minutes, seconds) when stored
+        const [dateStr, timeStr] = istString.split(" ");
+        const [y, m, d] = dateStr.split("-").map(Number);
+        const [h, min, sec = 0] = timeStr.split(":").map(Number);
+        // Create Date object using UTC methods with IST time values
+        // PostgreSQL timestamp (without timezone) will store these values as-is
+        (updatePayload as any).suspendedTillDate = new Date(
+          Date.UTC(y, m - 1, d, h, min, sec),
+        );
+      } else {
+        (updatePayload as any).suspendedTillDate = null;
+      }
+    }
+  }
+
   const [updatedUser] = await db
     .update(userModel)
-    .set({
-      name: user.name,
-      image: user.image,
-      phone: user.phone,
-      whatsappNumber: user.whatsappNumber,
-    })
+    .set(updatePayload)
     .where(eq(userModel.id, foundUser.id))
     .returning();
 

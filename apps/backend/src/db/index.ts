@@ -43,6 +43,11 @@ const pool = new pg.Pool({
 // Initialize Drizzle ORM with the pool
 export const db = drizzle(pool, { casing: "snake_case" });
 
+pool.on("connect", async (client) => {
+  await client.query(`SET TIME ZONE 'Asia/Kolkata'`);
+  console.log("[backend] - Set time zone to Asia/Kolkata");
+});
+
 // Test the connection 🔌
 export const connectToDatabase = async () => {
   try {

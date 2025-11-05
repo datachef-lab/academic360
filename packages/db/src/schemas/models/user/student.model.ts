@@ -27,10 +27,6 @@ export const studentModel = pgTable("students", {
     cuFormNumber: varchar({ length: 255 }),
     registrationNumber: varchar({ length: 255 }),
     rollNumber: varchar({ length: 255 }),
-    // sectionId: integer("section_id_fk").references(() => sectionModel.id),
-    // shiftId: integer("shift_id_fk")
-    //     .references(() => shiftModel.id, { onDelete: "cascade", onUpdate: "cascade" })
-    //     .notNull(),
     classRollNumber: varchar({ length: 255 }),
     apaarId: varchar({ length: 255 }),
     belongsToEWS: boolean().default(false),
@@ -43,6 +39,12 @@ export const studentModel = pgTable("students", {
     alumni: boolean(),
     leavingDate: timestamp(),
     leavingReason: text(),
+    takenTransferCertificate: boolean().default(false),
+    hasCancelledAdmission: boolean().default(false),
+    cancelledAdmissionReason: varchar({ length: 1000 }),
+    cancelledAdmissionAt: timestamp(),
+    cancelledAdmissionByUserId: integer("cancelled_admission_by_user_id_fk")
+        .references(() => userModel.id),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

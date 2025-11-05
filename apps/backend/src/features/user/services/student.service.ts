@@ -269,14 +269,249 @@ export async function updateStudentStatusById(
     active?: boolean;
     leavingDate?: string | null;
     leavingReason?: string | null;
+    statusOption?:
+      | "DROPPED_OUT"
+      | "COMPLETED_LEFT"
+      | "REGULAR"
+      | "GRADUATED_WITH_SUPP"
+      | "TC"
+      | "CANCELLED_ADMISSION"
+      | "SUSPENDED";
+    takenTransferCertificate?: boolean;
+    hasCancelledAdmission?: boolean;
+    cancelledAdmissionReason?: string | null;
+    cancelledAdmissionAt?: string | null;
+    cancelledAdmissionByUserId?: number | null;
+    alumni?: boolean;
   },
 ) {
   const update: any = {};
+
+  // If statusOption provided, map to fields per doc
+  switch (data.statusOption) {
+    case "DROPPED_OUT": {
+      update.active = false;
+      update.alumni = false;
+      update.takenTransferCertificate = false;
+      update.hasCancelledAdmission = false;
+      break;
+    }
+    case "COMPLETED_LEFT": {
+      update.alumni = true;
+      update.active = false;
+      update.takenTransferCertificate = false;
+      update.hasCancelledAdmission = false;
+      break;
+    }
+    case "REGULAR": {
+      update.active = true;
+      update.alumni = false;
+      update.takenTransferCertificate = false;
+      update.hasCancelledAdmission = false;
+      update.leavingDate = null;
+      update.leavingReason = null;
+      break;
+    }
+    case "GRADUATED_WITH_SUPP": {
+      update.active = true;
+      update.alumni = true;
+      update.takenTransferCertificate = false;
+      update.hasCancelledAdmission = false;
+      break;
+    }
+    case "TC": {
+      update.takenTransferCertificate = true;
+      // Clear leaving date when switching to TC (TC uses leavingReason but not leavingDate)
+      update.leavingDate = null;
+      // Clear cancelled admission fields
+      update.hasCancelledAdmission = false;
+      update.cancelledAdmissionReason = null;
+      update.cancelledAdmissionAt = null;
+      break;
+    }
+    case "CANCELLED_ADMISSION": {
+      update.hasCancelledAdmission = true;
+      if (data.cancelledAdmissionReason !== undefined)
+        update.cancelledAdmissionReason = data.cancelledAdmissionReason;
+      // Helper to get current IST time as Date object
+      const getCurrentIST = (): Date => {
+        const now = new Date();
+        const istTime = now.toLocaleString("en-US", {
+          timeZone: "Asia/Kolkata",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        });
+        const [datePart, timePart] = istTime.split(", ");
+        const [month, day, year] = datePart.split("/");
+        const istString = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")} ${timePart}`;
+        // Parse IST string and create Date object using UTC methods
+        // This preserves the IST time values (hours, minutes, seconds) when stored
+        const [dateStr, timeStr] = istString.split(" ");
+        const [y, m, d] = dateStr.split("-").map(Number);
+        const [h, min, sec = 0] = timeStr.split(":").map(Number);
+        // Create Date object using UTC methods with IST time values
+        // PostgreSQL timestamp (without timezone) will store these values as-is
+        return new Date(Date.UTC(y, m - 1, d, h, min, sec));
+      };
+      // Handle cancelledAdmissionAt - if it's already in IST format, use it; otherwise convert to IST
+      if (data.cancelledAdmissionAt !== undefined) {
+        if (
+          data.cancelledAdmissionAt &&
+          typeof data.cancelledAdmissionAt === "string" &&
+          /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(
+            data.cancelledAdmissionAt,
+          )
+        ) {
+          // Already in PostgreSQL format (YYYY-MM-DD HH:mm:ss), convert to Date object
+          const [datePart, timePart] = data.cancelledAdmissionAt.split(" ");
+          const [year, month, day] = datePart.split("-").map(Number);
+          const [hours, minutes, seconds = 0] = timePart.split(":").map(Number);
+          // Create Date object using UTC methods with IST time values
+          // PostgreSQL timestamp (without timezone) will store these values as-is
+          update.cancelledAdmissionAt = new Date(
+            Date.UTC(year, month - 1, day, hours, minutes, seconds),
+          );
+        } else if (data.cancelledAdmissionAt) {
+          // Convert to IST format and then to Date object
+          const date = new Date(data.cancelledAdmissionAt);
+          if (!isNaN(date.getTime())) {
+            const istTime = date.toLocaleString("en-US", {
+              timeZone: "Asia/Kolkata",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false,
+            });
+            const [datePart, timePart] = istTime.split(", ");
+            const [month, day, year] = datePart.split("/");
+            const istString = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")} ${timePart}`;
+            // Parse IST string and create Date object using UTC methods
+            // This preserves the IST time values (hours, minutes, seconds) when stored
+            const [dateStr, timeStr] = istString.split(" ");
+            const [y, m, d] = dateStr.split("-").map(Number);
+            const [h, min, sec = 0] = timeStr.split(":").map(Number);
+            // Create Date object using UTC methods with IST time values
+            // PostgreSQL timestamp (without timezone) will store these values as-is
+            update.cancelledAdmissionAt = new Date(
+              Date.UTC(y, m - 1, d, h, min, sec),
+            );
+          } else {
+            update.cancelledAdmissionAt = getCurrentIST();
+          }
+        } else {
+          update.cancelledAdmissionAt = getCurrentIST();
+        }
+      }
+      // Handle cancelledAdmissionByUserId - set it if provided, otherwise it should be set by controller from req.user.id
+      // Always set this field when status is CANCELLED_ADMISSION (even if null, to ensure it's updated)
+      if (data.cancelledAdmissionByUserId !== undefined) {
+        if (
+          data.cancelledAdmissionByUserId !== null &&
+          typeof data.cancelledAdmissionByUserId === "number"
+        ) {
+          update.cancelledAdmissionByUserId = data.cancelledAdmissionByUserId;
+        } else {
+          // Explicitly set to null if not provided or invalid
+          update.cancelledAdmissionByUserId = null;
+        }
+      } else {
+        // If not provided in data, but status is CANCELLED_ADMISSION, set to null
+        // (Controller should have set it from req.user.id, but if not, we set null)
+        update.cancelledAdmissionByUserId = null;
+      }
+      // Clear leaving fields and TC fields
+      update.leavingDate = null;
+      update.leavingReason = null;
+      update.takenTransferCertificate = false;
+      break;
+    }
+    case "SUSPENDED": {
+      // Suspended students remain active in student table, but suspended status is handled in user table
+      // Keep student active but don't modify other flags
+      update.active = true;
+      // Clear all status-specific fields for suspended status
+      update.leavingDate = null;
+      update.leavingReason = null;
+      update.takenTransferCertificate = false;
+      update.hasCancelledAdmission = false;
+      update.cancelledAdmissionReason = null;
+      update.cancelledAdmissionAt = null;
+      break;
+    }
+  }
+
+  // Allow direct overrides too (these take precedence over switch case logic)
   if (typeof data.active === "boolean") update.active = data.active;
+  if (typeof data.alumni === "boolean") update.alumni = data.alumni;
+  if (typeof data.takenTransferCertificate === "boolean")
+    update.takenTransferCertificate = data.takenTransferCertificate;
+  if (typeof data.hasCancelledAdmission === "boolean")
+    update.hasCancelledAdmission = data.hasCancelledAdmission;
+  // Helper to convert timestamp string to Date object representing IST time
+  const convertToISTTimestamp = (
+    value: string | null | undefined,
+  ): Date | null => {
+    if (!value) return null;
+    // If it's already in PostgreSQL format (YYYY-MM-DD HH:mm:ss), parse it as IST
+    if (
+      typeof value === "string" &&
+      /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
+    ) {
+      // Parse the IST string and create a Date object using UTC methods
+      // Since PostgreSQL timestamp (without timezone) stores values as-is,
+      // we create a Date object where the UTC time components match the IST time
+      const [datePart, timePart] = value.split(" ");
+      const [year, month, day] = datePart.split("-").map(Number);
+      const [hours, minutes, seconds = 0] = timePart.split(":").map(Number);
+      // Create Date object using UTC methods with IST time values
+      // This preserves the time components (22:46:00) when stored in PostgreSQL
+      return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+    }
+    // Otherwise, parse the value as a date and convert to IST, then create Date object
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return null;
+    const istTime = date.toLocaleString("en-US", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    const [datePart, timePart] = istTime.split(", ");
+    const [month, day, year] = datePart.split("/");
+    const istString = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")} ${timePart}`;
+    // Parse IST string and create Date object using UTC methods
+    // This preserves the IST time values (hours, minutes, seconds) when stored
+    const [dateStr, timeStr] = istString.split(" ");
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const [h, min, sec = 0] = timeStr.split(":").map(Number);
+    // Create Date object using UTC methods with IST time values
+    // PostgreSQL timestamp (without timezone) will store these values as-is
+    return new Date(Date.UTC(y, m - 1, d, h, min, sec));
+  };
+
   if (data.leavingDate !== undefined)
-    update.leavingDate = data.leavingDate ? new Date(data.leavingDate) : null;
+    update.leavingDate = convertToISTTimestamp(data.leavingDate);
   if (data.leavingReason !== undefined)
     update.leavingReason = data.leavingReason;
+  // Handle cancelled admission fields explicitly
+  if (data.cancelledAdmissionReason !== undefined)
+    update.cancelledAdmissionReason = data.cancelledAdmissionReason;
+  if (data.cancelledAdmissionAt !== undefined)
+    update.cancelledAdmissionAt = convertToISTTimestamp(
+      data.cancelledAdmissionAt,
+    );
 
   const [updated] = await db
     .update(studentModel)
