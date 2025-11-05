@@ -134,8 +134,19 @@ export const updatePersonalDetails = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    // Validate request body (excluding userDetails and address fields which are not in the schema)
-    const { userDetails, address, ...bodyWithoutExtraFields } = req.body;
+    // Validate request body (excluding relation objects which are not in the schema)
+    const {
+      userDetails,
+      address,
+      category,
+      religion,
+      nationality,
+      motherTongue,
+      disabilityCode,
+      residentialAddress,
+      mailingAddress,
+      ...bodyWithoutExtraFields
+    } = req.body;
     const parseResult = createPersonalDetailsSchema.safeParse(
       bodyWithoutExtraFields,
     );
@@ -152,8 +163,19 @@ export const updatePersonalDetails = async (
         );
       return;
     }
-    // Reconstruct the body with userDetails and address preserved
-    const validatedBody = { ...parseResult.data, userDetails, address };
+    // Reconstruct the body with relation objects preserved
+    const validatedBody = {
+      ...parseResult.data,
+      userDetails,
+      address,
+      category,
+      religion,
+      nationality,
+      motherTongue,
+      disabilityCode,
+      residentialAddress,
+      mailingAddress,
+    };
     const updatedDetails = await savePersonalDetails(Number(id), validatedBody);
     if (!updatedDetails) {
       res
@@ -191,8 +213,19 @@ export const updatePersonalDetailsByStudentId = async (
 ): Promise<void> => {
   try {
     const { studentId } = req.params;
-    // Validate request body (excluding userDetails and address fields which are not in the schema)
-    const { userDetails, address, ...bodyWithoutExtraFields } = req.body;
+    // Validate request body (excluding relation objects which are not in the schema)
+    const {
+      userDetails,
+      address,
+      category,
+      religion,
+      nationality,
+      motherTongue,
+      disabilityCode,
+      residentialAddress,
+      mailingAddress,
+      ...bodyWithoutExtraFields
+    } = req.body;
     const parseResult = createPersonalDetailsSchema.safeParse(
       bodyWithoutExtraFields,
     );
@@ -209,8 +242,19 @@ export const updatePersonalDetailsByStudentId = async (
         );
       return;
     }
-    // Reconstruct the body with userDetails and address preserved
-    const validatedBody = { ...parseResult.data, userDetails, address };
+    // Reconstruct the body with relation objects preserved
+    const validatedBody = {
+      ...parseResult.data,
+      userDetails,
+      address,
+      category,
+      religion,
+      nationality,
+      motherTongue,
+      disabilityCode,
+      residentialAddress,
+      mailingAddress,
+    };
     const updatedDetails = await savePersonalDetailsByStudentId(
       Number(studentId),
       validatedBody,
