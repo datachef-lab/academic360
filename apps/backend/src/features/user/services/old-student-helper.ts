@@ -118,13 +118,16 @@ import { userTypeEnum } from "@repo/db/schemas";
 import { staffModel } from "@repo/db/schemas/models/user/staff.model";
 import * as oldAdmPersonalDetailsHelper from "./old-student.service";
 
-export function formatAadhaarCardNumber(aadhaar: string | number): string {
+export function formatAadhaarCardNumber(
+  aadhaar: string | number,
+): string | undefined {
   // Convert to string and remove any non-digit characters (just in case)
   const digits = String(aadhaar).replace(/\D/g, "");
 
   // Validate that it contains exactly 12 digits
   if (digits.length !== 12) {
-    throw new Error("Invalid Aadhaar number: must contain exactly 12 digits.");
+    return undefined;
+    // throw new Error("Invalid Aadhaar number: must contain exactly 12 digits.");
   }
 
   // Return formatted Aadhaar number (4-4-4 pattern)
@@ -603,7 +606,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         //   : oldStudent.apprid
         //     ? String(oldStudent.apprid)
         //     : undefined,
-        apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+        apaarId: oldStudent?.apprid ? String(oldStudent?.apprid) : undefined,
         rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
         registrationNumber: oldStudent.univregno
           ? String(oldStudent.univregno)
@@ -647,7 +650,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
             : oldStudent.communityid === 1
               ? "GUJARATI"
               : "NON-GUJARATI",
-        apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+        apaarId: oldStudent.apprid ? String(oldStudent?.apprid) : undefined,
         rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
         registrationNumber: oldStudent.univregno
           ? String(oldStudent.univregno)
@@ -1894,10 +1897,9 @@ export async function processStudent(
 
   // TODO:Temporarily disabled condition for shouldUpdateStudentData
   //   if (shouldUpdateStudentData && user.isActive && !user.isSuspended) {
+  // Step 1: Upsert the student first
+  student = await upsertStudent(oldStudent, user);
   if (user.isActive && !user.isSuspended) {
-    // Step 1: Upsert the student first
-    student = await upsertStudent(oldStudent, user);
-
     // Check the student cu registration request
     const cuRegistrationRequest =
       await addStudentCuRegistrationRequest(student);
@@ -1932,7 +1934,7 @@ export async function processStudent(
         if (oldStudent.apprid) {
           // Clean APAAR ID (remove any formatting like dashes)
           // const cleanApaarId = String(oldStudent.apprid).replace(/\D/g, "");
-          updateData.apaarId = oldStudent.apprid;
+          updateData.apaarId = oldStudent?.apprid;
         } else if (oldStudent.abcid) {
           // Clean ABC ID (remove any formatting like dashes)
           // const cleanApaarId = String(oldStudent.abcid).replace(/\D/g, "");
@@ -1985,19 +1987,22 @@ export async function processStudent(
     }
   }
 
-  const [updatedStudent] = await db
-    .update(studentModel)
-    .set({
-      oldUid: oldStudent.oldcodeNumber?.trim()?.toUpperCase(),
-      apaarId: student.apaarId
-        ? student.apaarId
-        : oldStudent.apprid
-          ? String(oldStudent.apprid)
-          : undefined,
-    })
-    .where(eq(studentModel.id, student.id!))
-    .returning();
-  console.log("updated student:", updatedStudent);
+  // Guard: only attempt late update when student exists
+  if (student) {
+    const [updatedStudent] = await db
+      .update(studentModel)
+      .set({
+        oldUid: oldStudent.oldcodeNumber?.trim()?.toUpperCase(),
+        apaarId: student?.apaarId
+          ? student.apaarId
+          : oldStudent.apprid
+            ? String(oldStudent.apprid)
+            : undefined,
+      })
+      .where(eq(studentModel.id, student.id as number))
+      .returning();
+    console.log("updated student:", updatedStudent);
+  }
 
   console.log(
     "update personal details names and whatsapp number for student:",
@@ -2037,7 +2042,14 @@ export async function processStudent(
       .from(applicationFormModel)
       .where(eq(applicationFormModel.id, student.applicationId as number));
 
-    const [{ admission_course_details: transferredAdmCourseDetails }] = await db
+    console.log(
+      "applicationForm:",
+      applicationForm.id,
+      "programCourseId:",
+      student.programCourseId,
+    );
+    // Try strict match first: app form + transferred + same programCourseId
+    const strictJoined = await db
       .select()
       .from(admissionCourseDetailsModel)
       .leftJoin(
@@ -2057,6 +2069,48 @@ export async function processStudent(
           ),
         ),
       );
+
+    console.log("temp (strict match):", strictJoined);
+
+    // Normalize to AdmissionCourseDetails[]
+    let acdCandidates: any[] =
+      strictJoined && strictJoined.length > 0
+        ? strictJoined.map((r: any) => r.admission_course_details)
+        : [];
+
+    // Fallback 1: drop programCourseId filter, use any transferred for this application
+    if (acdCandidates.length === 0) {
+      const transferredOnly = await db
+        .select()
+        .from(admissionCourseDetailsModel)
+        .where(
+          and(
+            eq(
+              admissionCourseDetailsModel.applicationFormId,
+              applicationForm.id,
+            ),
+            eq(admissionCourseDetailsModel.isTransferred, true),
+          ),
+        )
+        .limit(1);
+      console.log("temp (fallback transferred only):", transferredOnly);
+      acdCandidates = transferredOnly as any;
+    }
+
+    // Fallback 2: any course details for this application (take latest) if still not found
+    if (acdCandidates.length === 0) {
+      const anyForApp = await db
+        .select()
+        .from(admissionCourseDetailsModel)
+        .where(
+          eq(admissionCourseDetailsModel.applicationFormId, applicationForm.id),
+        )
+        .limit(1);
+      console.log("temp (fallback any ACD for app):", anyForApp);
+      acdCandidates = anyForApp as any;
+    }
+
+    const transferredAdmCourseDetails = acdCandidates[0];
 
     if (applicationForm && transferredAdmCourseDetails) {
       await addPromotion(
@@ -2099,12 +2153,38 @@ async function addStudentCuRegistrationRequest(student: Student) {
       student.id,
     );
 
+    // Only update when we actually have values to set; avoid Drizzle "No values to set"
+    const updateFields: Record<string, number> = {};
+    if (
+      typeof promotionData?.academicYearId === "number" &&
+      promotionData.academicYearId !==
+        existingCuRegistrationRequest.academicYearId
+    ) {
+      console.log(
+        "updating academic year id for cu registration request:",
+        promotionData.academicYearId,
+      );
+      updateFields.academicYearId = promotionData.academicYearId;
+    }
+
+    console.log("update fields:", updateFields);
+    if (Object.keys(updateFields).length === 0) {
+      console.log(
+        "no values to update for cu registration request:",
+        existingCuRegistrationRequest.id,
+      );
+      return existingCuRegistrationRequest;
+    }
+
+    console.log(
+      "updating cu registration request:",
+      existingCuRegistrationRequest.id,
+    );
+
     return (
       await db
         .update(cuRegistrationCorrectionRequestModel)
-        .set({
-          academicYearId: promotionData?.academicYearId,
-        })
+        .set(updateFields)
         .where(
           eq(
             cuRegistrationCorrectionRequestModel.id,

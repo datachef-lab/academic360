@@ -166,6 +166,7 @@ import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-
 import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model";
 import { policeStationModel } from "@repo/db/schemas/models/user/police-station.model";
 import { upsertUser } from "./refactor-old-migration.service";
+import { CLIENT_RENEG_LIMIT } from "tls";
 
 const BATCH_SIZE = 500;
 
@@ -179,13 +180,16 @@ const isAdmStudent = (
   d: OldAdmStudentPersonalDetail | OldStaff,
 ): d is OldAdmStudentPersonalDetail => "applevel" in d;
 
-export function formatAadhaarCardNumber(aadhaar: string | number): string {
+export function formatAadhaarCardNumber(
+  aadhaar: string | number,
+): string | undefined {
   // Convert to string and remove any non-digit characters (just in case)
   const digits = String(aadhaar).replace(/\D/g, "");
-
+  console.log("aadhaar:", aadhaar);
   // Validate that it contains exactly 12 digits
   if (digits.length !== 12) {
-    throw new Error("Invalid Aadhaar number: must contain exactly 12 digits.");
+    return undefined;
+    // throw new Error("Invalid Aadhaar number: must contain exactly 12 digits.");
   }
 
   // Return formatted Aadhaar number (4-4-4 pattern)
@@ -1186,16 +1190,10 @@ export async function processOldStudentApplicationForm(
         eq(applicationFormModel.id, existingAdmGeneralInfo.applicationFormId),
       );
 
-    const [{ admission_course_details: transferredAdmCourseDetails }] = await db
+    // Try to fetch the transferred admission course details for this application
+    const transferredRows = await db
       .select()
       .from(admissionCourseDetailsModel)
-      .leftJoin(
-        admissionProgramCourseModel,
-        eq(
-          admissionCourseDetailsModel.admissionProgramCourseId,
-          admissionProgramCourseModel.id,
-        ),
-      )
       .where(
         and(
           eq(
@@ -1203,12 +1201,46 @@ export async function processOldStudentApplicationForm(
             existingApplicationForm.id,
           ),
           eq(admissionCourseDetailsModel.isTransferred, true),
-          eq(
-            admissionProgramCourseModel.programCourseId,
-            student.programCourseId!,
-          ),
         ),
       );
+
+    let transferredAdmCourseDetails =
+      transferredRows[0] as AdmissionCourseDetails;
+
+    // Fallback: if no transferred row yet, pick the most recent course details for this app and program
+    if (!transferredAdmCourseDetails) {
+      const fallbackRows = await db
+        .select()
+        .from(admissionCourseDetailsModel)
+        .leftJoin(
+          admissionProgramCourseModel,
+          eq(
+            admissionCourseDetailsModel.admissionProgramCourseId,
+            admissionProgramCourseModel.id,
+          ),
+        )
+        .where(
+          and(
+            eq(
+              admissionCourseDetailsModel.applicationFormId,
+              existingApplicationForm.id,
+            ),
+            eq(
+              admissionProgramCourseModel.programCourseId,
+              student.programCourseId!,
+            ),
+            eq(admissionCourseDetailsModel.isTransferred, true),
+          ),
+        )
+        .limit(1);
+      transferredAdmCourseDetails = fallbackRows[0]?.admission_course_details;
+    }
+
+    if (!transferredAdmCourseDetails) {
+      throw new Error(
+        "Admission course details not found for existing application form",
+      );
+    }
 
     return {
       applicationForm: existingApplicationForm,
@@ -2184,6 +2216,7 @@ export async function loadAllCountry() {
 }
 
 export async function addCountry(oldCountry: OldCountry) {
+  console.log("oldCountry:", oldCountry);
   const [existingCountry] = await db
     .select()
     .from(countryModel)
@@ -3281,6 +3314,13 @@ async function upsertPersonalDetailsAddress(
     mailingCityLegacy ||
     mailingDistrictLegacy
   ) {
+    const [[oldMailingCountry]] = (await mysqlConnection.query(
+      `SELECT * FROM countrymaintab WHERE id = ${mailingCountryLegacy}`,
+    )) as [OldCountry[], any];
+
+    const countryResolved = oldMailingCountry
+      ? await addCountry(oldMailingCountry)
+      : null;
     const stateResolved = mailingStateLegacy
       ? await addStateByCityMaintabOrLegacyStateId(
           undefined,
@@ -3307,7 +3347,7 @@ async function upsertPersonalDetailsAddress(
       const [updatedAddress] = await db
         .update(addressModel)
         .set({
-          countryId: mailingCountryLegacy || undefined,
+          countryId: countryResolved?.id || undefined,
           stateId: stateResolved?.id || undefined,
           cityId: cityResolved?.id || undefined,
           districtId: districtResolved?.id || undefined,
@@ -3328,11 +3368,15 @@ async function upsertPersonalDetailsAddress(
         .returning();
       mailingAddress = updatedAddress;
     } else {
+      console.log(
+        "Inserting address with country_id_fk:",
+        mailingCountryLegacy,
+      );
       const [address] = await db
         .insert(addressModel)
         .values({
           personalDetailsId,
-          countryId: mailingCountryLegacy || undefined,
+          countryId: countryResolved?.id || undefined,
           stateId: stateResolved?.id || undefined,
           cityId: cityResolved?.id || undefined,
           districtId: districtResolved?.id || undefined,
@@ -3364,6 +3408,13 @@ async function upsertPersonalDetailsAddress(
     resiCityLegacy ||
     resiDistrictLegacy
   ) {
+    const [[oldResiCountry]] = (await mysqlConnection.query(
+      `SELECT * FROM countrymaintab WHERE id = ${resiCountryLegacy}`,
+    )) as [OldCountry[], any];
+
+    const countryResolved = resiCountryLegacy
+      ? await addCountry(oldResiCountry)
+      : null;
     const stateResolved = resiStateLegacy
       ? await addStateByCityMaintabOrLegacyStateId(undefined, resiStateLegacy)
       : null;
@@ -3385,7 +3436,7 @@ async function upsertPersonalDetailsAddress(
       const [updatedAddress] = await db
         .update(addressModel)
         .set({
-          countryId: resiCountryLegacy || undefined,
+          countryId: countryResolved?.id || undefined,
           stateId: stateResolved?.id || undefined,
           cityId: cityResolved?.id || undefined,
           districtId: districtResolved?.id || undefined,
@@ -3414,7 +3465,7 @@ async function upsertPersonalDetailsAddress(
         .values({
           type: "RESIDENTIAL",
           personalDetailsId,
-          countryId: resiCountryLegacy || undefined,
+          countryId: countryResolved?.id || undefined,
           stateId: stateResolved?.id || undefined,
           cityId: cityResolved?.id || undefined,
           districtId: districtResolved?.id || undefined,

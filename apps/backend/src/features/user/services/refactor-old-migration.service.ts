@@ -345,6 +345,7 @@ export async function processStudentsFromExcelBuffer(
       await processStudent(oldStudent);
       processed++;
     } catch (e: any) {
+      console.log("Error processing student:", e);
       errors.push({ uid, error: e?.message || "Unknown error" });
     }
   }
