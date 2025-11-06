@@ -23,6 +23,7 @@ import {
   checkOtpStatus,
   lookupUser,
   lookupUsersByPrefix,
+  adminBypassOtpLogin,
 } from "@/lib/services/auth.service";
 import { UserDto } from "@repo/db/dtos/user";
 
@@ -42,15 +43,43 @@ export default function SignInPage() {
   const [userPreview, setUserPreview] = useState<{ name: string; email?: string } | null>(null);
   const [lookupPending, setLookupPending] = useState(false);
 
+  // Simulation mode state
+  const [isSimulationMode, setIsSimulationMode] = useState(false);
+  const [adminToken, setAdminToken] = useState<string | null>(null);
+
   // Storage keys for persistence
   const OTP_EXPIRY_KEY = "otp_expiry_timestamp";
   const RESEND_COOLDOWN_KEY = "resend_cooldown_timestamp";
   const OTP_UID_KEY = "otp_uid";
 
+  // Detect simulation mode and request admin token
   useEffect(() => {
     setMounted(true);
-    // Don't restore OTP state on mount - always start with UID input
-    // User can enter UID and we'll check if OTP is still valid
+
+    // Check if in simulation mode (via URL parameter)
+    const urlParams = new URLSearchParams(window.location.search);
+    const simulation = urlParams.get("simulation");
+    if (simulation === "true") {
+      setIsSimulationMode(true);
+
+      // Request admin token from parent (main-console)
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: "REQUEST_ADMIN_TOKEN" }, "*");
+      }
+    }
+
+    // Listen for admin token from parent
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === "ADMIN_TOKEN_RESPONSE" && event.data.token) {
+        setAdminToken(event.data.token);
+        console.log("[SIMULATION] Admin token received");
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
   }, []);
 
   // Periodic sync with backend every 30 seconds when OTP is active
@@ -361,6 +390,34 @@ export default function SignInPage() {
     try {
       const email = `${uid}@thebges.edu.in`;
 
+      // If in simulation mode and admin token is available, bypass OTP
+      if (isSimulationMode && adminToken) {
+        console.log("[SIMULATION] Bypassing OTP with admin token");
+        const response = await adminBypassOtpLogin(uid, adminToken);
+
+        if (response.httpStatusCode === 200 && response.payload) {
+          const payload = response.payload as { accessToken: string; refreshToken: string; user: UserDto };
+          const type = (payload.user as any)?.userType || (payload.user as any)?.type || (payload.user as any)?.role;
+          const isStudent = typeof type === "string" ? type.toUpperCase() === "STUDENT" : false;
+
+          if (!isStudent) {
+            setInvalidMessage("This account does not have access to the Student Console.");
+            setInvalidOpen(true);
+          } else {
+            // Login with student tokens (these are separate from admin tokens)
+            login(payload.accessToken, payload.user);
+            setTimeout(() => {
+              router.push("/dashboard");
+            }, 100);
+          }
+        } else {
+          throw new Error(response.message || "Failed to login");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Normal OTP flow
       // First, check if there's already a valid OTP for this UID
       const otpStatusResponse = await checkOtpStatus(email);
 

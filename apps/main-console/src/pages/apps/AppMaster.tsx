@@ -103,7 +103,7 @@ export default function AppMaster() {
                       size="sm"
                       onClick={() => navigate(app.baseName)}
                       className="flex items-center gap-1"
-                      disabled={true}
+                      disabled={!app.enabled}
                     >
                       <Settings className="h-4 w-4" /> Settings
                     </Button>

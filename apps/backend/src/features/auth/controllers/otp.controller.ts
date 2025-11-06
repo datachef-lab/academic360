@@ -220,15 +220,18 @@ export const verifyOtpAndLogin = async (
 
     const { accessToken, refreshToken, user: userWithPayload } = tokenResult;
 
+    // Use different cookie name for student console to avoid conflict with admin console
+    const cookieName = isStudentConsole ? "student_jwt" : "jwt";
+
     // Create secure cookie with refresh token
-    res.cookie("jwt", refreshToken, {
+    res.cookie(cookieName, refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 
-    console.log("🍪 Refresh token cookie set");
+    console.log(`🍪 Refresh token cookie set (${cookieName})`);
 
     res.status(200).json(
       new ApiResponse(

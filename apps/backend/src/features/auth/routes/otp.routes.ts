@@ -10,6 +10,8 @@ import {
   lookupUsersByUidPrefix,
   verifyOtpOnly,
 } from "../controllers/otp.controller.js";
+import { adminBypassOtpLogin } from "../controllers/auth.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = Router();
 
@@ -38,5 +40,9 @@ router.get("/lookup", lookupUserByEmail);
 
 // Prefix lookup for live typing
 router.get("/lookup-prefix", lookupUsersByUidPrefix);
+
+// Admin bypass OTP login for student console simulation
+// Can be called with admin token in X-Admin-Bypass-Token header OR via JWT middleware
+router.post("/admin-bypass", adminBypassOtpLogin);
 
 export default router;

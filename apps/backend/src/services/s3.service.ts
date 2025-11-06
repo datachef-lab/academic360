@@ -271,6 +271,49 @@ export async function getSignedUrlForFile(
 }
 
 /**
+ * Get file stream from S3 (for proxying with custom headers)
+ */
+export async function getFileFromS3(
+  key: string,
+  s3Config?: Partial<S3Config>,
+): Promise<{ Body: any; ContentType?: string } | null> {
+  try {
+    const s3Client = s3Config ? createS3Client(s3Config) : defaultS3Client;
+
+    if (!s3Client) {
+      throw new ApiError(
+        500,
+        "S3 service is not configured. Please set AWS environment variables.",
+      );
+    }
+
+    const bucket = s3Config?.bucket || defaultBucket;
+
+    // Apply the same root folder logic as upload functions
+    const root = (process.env.AWS_ROOT_FOLDER || "")
+      .trim()
+      .replace(/^\/+|\/+$/g, "");
+
+    // Check if the key already contains the root folder prefix to avoid double prefixing
+    let finalKey = key;
+    if (root && !key.startsWith(`${root}/`)) {
+      finalKey = `${root}/${key}`;
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: bucket,
+      Key: finalKey,
+    });
+
+    const response = await s3Client.send(command);
+    return response;
+  } catch (error) {
+    console.error("Error getting file from S3:", error);
+    throw new ApiError(500, "Failed to get file from S3");
+  }
+}
+
+/**
  * Extract S3 key from URL
  */
 export function extractS3KeyFromUrl(

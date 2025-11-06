@@ -347,6 +347,22 @@ export async function lookupUsersByPrefix(
   return response.data;
 }
 
+export async function adminBypassOtpLogin(
+  uid: string,
+  adminToken: string,
+): Promise<ApiResponse<{ accessToken: string; refreshToken: string; user: UserDto }>> {
+  const response = await axiosInstance.post(
+    "/auth/otp/admin-bypass",
+    { uid },
+    {
+      headers: {
+        "X-Admin-Bypass-Token": adminToken,
+      },
+    },
+  );
+  return response.data;
+}
+
 export async function testTimeCalculation(): Promise<
   ApiResponse<{
     currentTime: string;

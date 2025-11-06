@@ -15,6 +15,8 @@ import { userTypeEnum } from "@repo/db/schemas/enums";
 
 import * as userService from "@/features/user/services/user.service.js";
 import { randomBytes } from "crypto";
+import { generateTokensForUser } from "../services/otp.service.js";
+import { verifyToken } from "@/utils/verifyToken.js";
 
 export const createUser = async (
   req: Request,
@@ -211,7 +213,17 @@ export const refresh = async (
   next: NextFunction,
 ) => {
   try {
-    const refreshToken = req.cookies.jwt;
+    // Check if request is from student console
+    const { app } = req.headers;
+    const origin = req.get("origin") || req.get("referer") || "";
+    const isStudentConsole =
+      app === "student-console" ||
+      origin.includes("localhost:3000") ||
+      origin.includes("student-console");
+
+    // Use appropriate cookie based on console type
+    const cookieName = isStudentConsole ? "student_jwt" : "jwt";
+    const refreshToken = req.cookies[cookieName];
 
     if (!refreshToken) {
       res.status(401).json(new ApiError(401, "Unauthorized"));
@@ -239,12 +251,6 @@ export const refresh = async (
           res.status(401).json(new ApiError(404, "Unauthorized"));
           return;
         }
-
-        // Check if request is from student console
-        const origin = req.get("origin") || req.get("referer") || "";
-        const isStudentConsole =
-          origin.includes("localhost:3000") ||
-          origin.includes("student-console");
 
         let userWithPayload: any = rawUser;
 
@@ -307,15 +313,29 @@ export const logout = async (
   next: NextFunction,
 ) => {
   try {
-    console.log("Fired");
+    // Check if request is from student console
+    const { app } = req.headers;
+    const origin = req.get("origin") || req.get("referer") || "";
+    const isStudentConsole =
+      app === "student-console" ||
+      origin.includes("localhost:3000") ||
+      origin.includes("student-console");
+
+    // Use appropriate cookie based on console type
+    const cookieName = isStudentConsole ? "student_jwt" : "jwt";
     const cookies = req.cookies;
-    console.log(cookies.jwt);
-    if (!cookies.jwt) {
+
+    console.log(`[LOGOUT] Clearing ${cookieName} cookie`);
+
+    if (!cookies[cookieName]) {
       res.status(204).json(new ApiError(204, "No content"));
       return;
     }
+
     console.log("Logging out...");
-    res.clearCookie("jwt", {
+    // Clear ONLY the appropriate cookie (student_jwt for student console, jwt for admin console)
+    // This ensures logout from one console doesn't affect the other
+    res.clearCookie(cookieName, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
@@ -661,6 +681,142 @@ export const simplePasswordReset = async (
       );
   } catch (error) {
     console.error("[SIMPLE PASSWORD RESET] Error resetting password:", error);
+    handleError(error, res, next);
+  }
+};
+
+/**
+ * Admin endpoint to bypass OTP and generate student tokens for simulation
+ * This allows admins to simulate student console login without OTP
+ * Can be called with admin token in header (X-Admin-Bypass-Token) or via JWT middleware
+ */
+export const adminBypassOtpLogin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    let adminUser: User | null = null;
+
+    // Check if admin token is provided in header (for simulation mode)
+    const adminToken = req.headers["x-admin-bypass-token"] as string;
+    if (adminToken) {
+      // Verify admin token
+      try {
+        const decoded = await verifyToken(
+          adminToken,
+          process.env.ACCESS_TOKEN_SECRET!,
+        );
+        const [foundAdmin] = await db
+          .select()
+          .from(userModel)
+          .where(eq(userModel.id, decoded.id));
+
+        if (
+          foundAdmin &&
+          (foundAdmin.type === "ADMIN" || foundAdmin.type === "STAFF")
+        ) {
+          adminUser = foundAdmin;
+        }
+      } catch (err) {
+        console.log("[ADMIN BYPASS OTP] Invalid admin token in header");
+      }
+    } else if (req.user) {
+      // Fallback to JWT middleware verified user
+      adminUser = req.user as User;
+    }
+
+    if (
+      !adminUser ||
+      (adminUser.type !== "ADMIN" && adminUser.type !== "STAFF")
+    ) {
+      res
+        .status(403)
+        .json(
+          new ApiError(403, "Only ADMIN or STAFF can access this endpoint"),
+        );
+      return;
+    }
+
+    const { uid } = req.body;
+
+    if (!uid || typeof uid !== "string") {
+      res.status(400).json(new ApiError(400, "UID is required"));
+      return;
+    }
+
+    // Validate UID format (should be 10 digits)
+    if (uid.length !== 10 || !/^\d+$/.test(uid)) {
+      res.status(400).json(new ApiError(400, "UID must be a 10-digit number"));
+      return;
+    }
+
+    const email = `${uid}@thebges.edu.in`;
+    console.log("[ADMIN BYPASS OTP] Admin bypass login for student:", email);
+
+    // Find user by email
+    const foundUser = await userService.findByEmail(email);
+
+    if (!foundUser) {
+      console.log("[ADMIN BYPASS OTP] Student not found:", email);
+      res
+        .status(404)
+        .json(new ApiError(404, "Student not found with this UID"));
+      return;
+    }
+
+    // Check if user is active and not suspended
+    if (!foundUser.isActive || foundUser.isSuspended) {
+      console.log("[ADMIN BYPASS OTP] Student account is disabled:", email);
+      res
+        .status(403)
+        .json(new ApiError(403, "Student account is disabled or suspended"));
+      return;
+    }
+
+    // Check if user is a STUDENT
+    if (foundUser.type !== "STUDENT") {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "This UID does not belong to a student account"),
+        );
+      return;
+    }
+
+    // Generate tokens for student console (with student data payload)
+    const tokenResult = await generateTokensForUser(foundUser, true);
+    if (!tokenResult.success) {
+      res.status(500).json(new ApiError(500, tokenResult.message));
+      return;
+    }
+
+    const { accessToken, refreshToken, user: userWithPayload } = tokenResult;
+
+    console.log("[ADMIN BYPASS OTP] Tokens generated successfully for:", email);
+
+    // Set student refresh token with different cookie name to avoid conflict with admin session
+    res.cookie("student_jwt", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
+    });
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        "SUCCESS",
+        {
+          accessToken,
+          refreshToken,
+          user: userWithPayload,
+        },
+        "Student tokens generated successfully for simulation",
+      ),
+    );
+  } catch (error) {
+    console.error("[ADMIN BYPASS OTP] Error:", error);
     handleError(error, res, next);
   }
 };

@@ -1,15 +1,17 @@
 import AdmissionCommModulePage from "./AdmissionCommModulePage";
 import AppMaster from "./AppMaster";
 import BescStudentConsoleSettings from "./besc-student-console-settings";
+import StudentConsoleSimulation from "./student-console-simulation";
 import EmsAppPage from "./EmsAppPage";
 import EventGatekeeperPage from "./EventGatekeeperPage";
 import EventManagementPage from "./EventManagementPage";
 
 export {
-    AppMaster,
-    AdmissionCommModulePage,
-    EmsAppPage,
-    EventGatekeeperPage,
-    EventManagementPage,
-    BescStudentConsoleSettings
+  AppMaster,
+  AdmissionCommModulePage,
+  EmsAppPage,
+  EventGatekeeperPage,
+  EventManagementPage,
+  BescStudentConsoleSettings,
+  StudentConsoleSimulation,
 };

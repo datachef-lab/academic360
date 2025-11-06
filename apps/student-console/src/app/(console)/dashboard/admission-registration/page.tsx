@@ -1103,7 +1103,45 @@ export default function CURegistrationPage() {
       try {
         console.info(`[CU-REG FRONTEND] Fetching PDF URL for correction request: ${correctionRequestId}`);
         const response = await getCuRegistrationPdfUrlByRequestId(correctionRequestId);
-        setPdfUrl(response.pdfUrl || null);
+
+        // Construct absolute URL for iframe - if pdfUrl is relative, prepend API base URL
+        let finalPdfUrl = response.pdfUrl || null;
+        if (finalPdfUrl && !finalPdfUrl.startsWith("http://") && !finalPdfUrl.startsWith("https://")) {
+          // Relative URL - prepend API base URL
+          const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+          if (apiBaseUrl) {
+            // Remove trailing slash from base URL and leading slash from path if needed
+            const base = apiBaseUrl.replace(/\/$/, "");
+            const path = finalPdfUrl.startsWith("/") ? finalPdfUrl : `/${finalPdfUrl}`;
+            finalPdfUrl = `${base}${path}`;
+          } else {
+            console.error("[CU-REG FRONTEND] NEXT_PUBLIC_API_URL not configured, cannot construct absolute URL");
+          }
+        }
+
+        console.info(`[CU-REG FRONTEND] PDF URL (final):`, finalPdfUrl);
+
+        // Test if the URL is accessible
+        if (finalPdfUrl) {
+          fetch(finalPdfUrl, {
+            method: "HEAD",
+            credentials: "include",
+          })
+            .then((response) => {
+              console.log("[CU-REG FRONTEND] PDF URL HEAD response:", {
+                status: response.status,
+                statusText: response.statusText,
+                contentType: response.headers.get("content-type"),
+                contentLength: response.headers.get("content-length"),
+                cors: response.headers.get("access-control-allow-origin"),
+              });
+            })
+            .catch((error) => {
+              console.error("[CU-REG FRONTEND] PDF URL HEAD error:", error);
+            });
+        }
+
+        setPdfUrl(finalPdfUrl);
       } catch (error) {
         console.error("[CU-REG FRONTEND] Error fetching PDF URL:", error);
       }
@@ -2784,12 +2822,39 @@ export default function CURegistrationPage() {
                         <h4 className="text-sm font-medium text-gray-800">CU Registration Form Preview</h4>
                       </div>
                       <div className="flex-1" style={{ height: "calc(100vh - 150px)", minHeight: "600px" }}>
-                        <iframe
-                          src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+                        {/* Try both iframe and object tag for better compatibility */}
+                        <object
+                          data={pdfUrl}
+                          type="application/pdf"
                           className="w-full h-full border-0"
-                          title="CU Registration Form Preview"
-                          allow="fullscreen"
-                        />
+                          style={{ border: "none" }}
+                        >
+                          <iframe
+                            src={pdfUrl}
+                            className="w-full h-full border-0"
+                            title="CU Registration Form Preview"
+                            allow="fullscreen"
+                            style={{ border: "none" }}
+                            onLoad={() => {
+                              console.log("[CU-REG FRONTEND] PDF iframe loaded successfully");
+                              console.log("[CU-REG FRONTEND] PDF URL:", pdfUrl);
+                            }}
+                            onError={(e) => {
+                              console.error("[CU-REG FRONTEND] PDF iframe error:", e);
+                            }}
+                          />
+                          <p className="p-4 text-center text-gray-500">
+                            Your browser does not support PDF viewing.{" "}
+                            <a
+                              href={pdfUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              Click here to download the PDF
+                            </a>
+                          </p>
+                        </object>
                       </div>
                     </div>
                   )}
