@@ -1,18 +1,22 @@
-import React, { useRef, useEffect } from "react";
-import MasterLayout from "@/components/layouts/MasterLayout";
-import { ExternalLink } from "lucide-react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
+// import MasterLayout from "@/components/layouts/MasterLayout";
+// import { ExternalLink } from "lucide-react";
+import { Maximize, Minimize } from "lucide-react";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { useAuth } from "@/features/auth/providers/auth-provider";
+import { Button } from "@/components/ui/button";
 
 // Student console base URL - can be configured via env variable
 const STUDENT_CONSOLE_BASE_URL = import.meta.env.VITE_STUDENT_CONSOLE_URL || "http://localhost:3000";
 
-const subLinks = [{ title: "Simulation", url: "simulation", icon: ExternalLink }];
+// const subLinks = [{ title: "Simulation", url: "simulation", icon: ExternalLink }];
 
 export default function StudentConsoleSimulation() {
   useRestrictTempUsers();
   const { accessToken } = useAuth();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Construct student console URL with simulation flag
   const studentConsoleUrl = React.useMemo(() => {
@@ -42,6 +46,12 @@ export default function StudentConsoleSimulation() {
             STUDENT_CONSOLE_BASE_URL,
           );
         }
+      }
+
+      // Handle request to open PDF in new tab (from nested iframe)
+      if (event.data.type === "OPEN_PDF_IN_NEW_TAB" && event.data.url) {
+        // Open the PDF URL in a new tab from the parent window (not blocked by iframe restrictions)
+        window.open(event.data.url, "_blank", "noopener,noreferrer");
       }
     };
 
@@ -77,29 +87,133 @@ export default function StudentConsoleSimulation() {
     };
   }, [accessToken, studentConsoleUrl]);
 
-  return (
-    <MasterLayout subLinks={subLinks}>
-      <div className="p-6 w-full h-full flex flex-col">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">Student Console Simulation</h1>
-          <p className="text-gray-600">
-            Simulate student console login. Enter a student UID in the console below to login without OTP. This feature
-            is only available for admin/staff users.
-          </p>
-        </div>
+  // Fullscreen functionality
+  const toggleFullscreen = useCallback(async () => {
+    if (!containerRef.current) return;
 
-        {/* Student Console Iframe */}
-        <div className="flex-1 bg-white rounded-lg shadow-sm border overflow-hidden min-h-[600px]">
-          <iframe
-            ref={iframeRef}
-            src={studentConsoleUrl}
-            className="w-full h-full border-0"
-            title="Student Console Simulation"
-            allow="camera; microphone; geolocation"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
-          />
-        </div>
+    try {
+      if (!isFullscreen) {
+        // Enter fullscreen
+        const element = containerRef.current as HTMLElement & {
+          webkitRequestFullscreen?: () => Promise<void>;
+          msRequestFullscreen?: () => Promise<void>;
+        };
+        if (element.requestFullscreen) {
+          await element.requestFullscreen();
+        } else if (element.webkitRequestFullscreen) {
+          // Safari
+          await element.webkitRequestFullscreen();
+        } else if (element.msRequestFullscreen) {
+          // IE/Edge
+          await element.msRequestFullscreen();
+        }
+      } else {
+        // Exit fullscreen
+        const doc = document as Document & {
+          webkitExitFullscreen?: () => Promise<void>;
+          msExitFullscreen?: () => Promise<void>;
+        };
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (doc.webkitExitFullscreen) {
+          // Safari
+          await doc.webkitExitFullscreen();
+        } else if (doc.msExitFullscreen) {
+          // IE/Edge
+          await doc.msExitFullscreen();
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling fullscreen:", error);
+    }
+  }, [isFullscreen]);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const doc = document as Document & {
+        webkitFullscreenElement?: Element | null;
+        msFullscreenElement?: Element | null;
+      };
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.msFullscreenElement
+      );
+      setIsFullscreen(isCurrentlyFullscreen);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("msfullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("msfullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  // Handle ESC key to exit fullscreen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullscreen) {
+        toggleFullscreen();
+      }
+    };
+
+    if (isFullscreen) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.removeEventListener("keydown", handleKeyDown);
+      };
+    }
+  }, [isFullscreen, toggleFullscreen]);
+
+  return (
+    // <MasterLayout subLinks={subLinks}>
+    <div
+      ref={containerRef}
+      className={`w-full h-full flex flex-col relative ${isFullscreen ? "fixed inset-0 z-[9999] bg-white p-0" : "p-0"}`}
+    >
+      {/* Fullscreen Button - Fixed at bottom right */}
+      {!isFullscreen && (
+        <Button
+          onClick={toggleFullscreen}
+          variant="outline"
+          size="sm"
+          className="fixed bottom-4 right-4 z-[10000] flex items-center gap-2 bg-white shadow-lg"
+        >
+          <Maximize className="w-4 h-4" />
+          Enter Fullscreen
+        </Button>
+      )}
+
+      {/* Exit Fullscreen Button - Fixed at bottom right */}
+      {isFullscreen && (
+        <Button
+          onClick={toggleFullscreen}
+          variant="outline"
+          size="sm"
+          className="fixed bottom-4 right-4 z-[10000] flex items-center gap-2 bg-white shadow-lg"
+        >
+          <Minimize className="w-4 h-4" />
+          Exit Fullscreen (ESC)
+        </Button>
+      )}
+
+      {/* Student Console Iframe - Full width and height */}
+      <div className="w-full h-full overflow-hidden">
+        <iframe
+          ref={iframeRef}
+          src={studentConsoleUrl}
+          className="w-full h-full border-0"
+          title="Student Console Simulation"
+          allow="camera; microphone; geolocation; fullscreen"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+        />
       </div>
-    </MasterLayout>
+    </div>
+    // </MasterLayout>
   );
 }

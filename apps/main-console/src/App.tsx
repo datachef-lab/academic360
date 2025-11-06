@@ -432,12 +432,15 @@ const router = createBrowserRouter(
           children: [
             { path: "", element: <appModule.AppMaster /> },
             { path: "student-console", element: <appModule.BescStudentConsoleSettings /> },
-            { path: "student-console/simulation", element: <appModule.StudentConsoleSimulation /> },
             { path: "event-gatekeeper", element: <appModule.EventGatekeeperPage /> },
             { path: "ems-app", element: <appModule.EmsAppPage /> },
             { path: "event-management", element: <appModule.EventGatekeeperPage /> },
             { path: "admission-comm-module", element: <appModule.AdmissionCommModulePage /> },
           ],
+        },
+        {
+          path: "apps/student-console/simulation",
+          element: <appModule.StudentConsoleSimulation />,
         },
         {
           path: "faculty-staff",

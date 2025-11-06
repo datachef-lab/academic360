@@ -1472,14 +1472,14 @@ export default function CURegistrationPage() {
 
   // Helper function to get proper styling for read-only fields
   const getReadOnlyFieldStyle = () => {
-    return isFieldEditable() ? "bg-gray-50 text-gray-600 border-gray-300" : "bg-white text-gray-900 border-gray-300";
+    return isFieldEditable() ? "bg-gray-50 text-gray-600 border-gray-300" : "bg-white text-gray-700 border-gray-300";
   };
 
   // Helper function to get proper styling for read-only div fields
   const getReadOnlyDivStyle = () => {
     return isFieldEditable()
       ? "px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600 text-sm"
-      : "px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 text-sm";
+      : "px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700 text-sm";
   };
 
   // Save correction flags when toggled
@@ -2658,7 +2658,7 @@ export default function CURegistrationPage() {
           : "min-h-screen py-4 sm:py-8"
       }`}
     >
-      <h1 className="text-2xl text-center font-bold text-gray-900 mb-2">
+      <h1 className="text-2xl text-center font-bold text-gray-800 mb-2">
         Admission & Registration Online Data Submission (Part 1 of 2)
       </h1>
       {/* Only show form content if subject selection is completed */}
@@ -2674,7 +2674,7 @@ export default function CURegistrationPage() {
           {/* Dynamic heading - Hide for final submission statuses */}
           {/* {!(correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone) && (
             <div className="text-center mb-6 sm:mb-8">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Admission & Registration Data</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Admission & Registration Data</h1>
             </div>
           )} */}
 
@@ -2822,39 +2822,119 @@ export default function CURegistrationPage() {
                         <h4 className="text-sm font-medium text-gray-800">CU Registration Form Preview</h4>
                       </div>
                       <div className="flex-1" style={{ height: "calc(100vh - 150px)", minHeight: "600px" }}>
-                        {/* Try both iframe and object tag for better compatibility */}
-                        <object
-                          data={pdfUrl}
-                          type="application/pdf"
-                          className="w-full h-full border-0"
-                          style={{ border: "none" }}
-                        >
-                          <iframe
-                            src={pdfUrl}
-                            className="w-full h-full border-0"
-                            title="CU Registration Form Preview"
-                            allow="fullscreen"
-                            style={{ border: "none" }}
-                            onLoad={() => {
-                              console.log("[CU-REG FRONTEND] PDF iframe loaded successfully");
-                              console.log("[CU-REG FRONTEND] PDF URL:", pdfUrl);
-                            }}
-                            onError={(e) => {
-                              console.error("[CU-REG FRONTEND] PDF iframe error:", e);
-                            }}
-                          />
-                          <p className="p-4 text-center text-gray-500">
-                            Your browser does not support PDF viewing.{" "}
-                            <a
-                              href={pdfUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
+                        {/* Check if we're in a nested iframe (simulation mode) */}
+                        {(() => {
+                          const isNestedIframe = window.self !== window.top;
+
+                          if (isNestedIframe) {
+                            // In simulation mode (nested iframe), show a button to open in new window
+                            // Chrome blocks nested iframes for PDFs
+                            return (
+                              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
+                                <div className="text-center p-8">
+                                  <svg
+                                    className="w-16 h-16 mx-auto text-gray-400 mb-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                                    PDF Preview Not Available in Simulation Mode
+                                  </h3>
+                                  <p className="text-sm text-gray-500 mb-4">
+                                    Due to browser security restrictions, PDF previews cannot be displayed when the
+                                    student console is embedded in an iframe. Please open the PDF in a new window.
+                                  </p>
+                                  <Button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      if (pdfUrl) {
+                                        // If we're in a nested iframe (simulation mode), ask parent to open the URL
+                                        // This avoids Chrome blocking navigation from nested iframes
+                                        if (window.self !== window.top && window.parent) {
+                                          console.log(
+                                            "[CU-REG FRONTEND] Requesting parent window to open PDF:",
+                                            pdfUrl,
+                                          );
+                                          window.parent.postMessage(
+                                            {
+                                              type: "OPEN_PDF_IN_NEW_TAB",
+                                              url: pdfUrl,
+                                            },
+                                            "*", // In production, should specify exact origin
+                                          );
+                                        } else {
+                                          // Not in iframe, open directly
+                                          window.open(pdfUrl, "_blank", "noopener,noreferrer");
+                                        }
+                                      }
+                                    }}
+                                    className="flex items-center gap-2 mx-auto"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                      />
+                                    </svg>
+                                    Open PDF in New Tab
+                                  </Button>
+                                  {pdfUrl && (
+                                    <p className="text-xs text-gray-500 mt-2 text-center">
+                                      If blocked, copy this URL:{" "}
+                                      <code className="bg-gray-100 px-1 rounded text-xs break-all">{pdfUrl}</code>
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // Normal mode - try both iframe and object tag
+                          return (
+                            <object
+                              data={pdfUrl}
+                              type="application/pdf"
+                              className="w-full h-full border-0"
+                              style={{ border: "none" }}
                             >
-                              Click here to download the PDF
-                            </a>
-                          </p>
-                        </object>
+                              <iframe
+                                src={pdfUrl}
+                                className="w-full h-full border-0"
+                                title="CU Registration Form Preview"
+                                allow="fullscreen"
+                                style={{ border: "none" }}
+                                onLoad={() => {
+                                  console.log("[CU-REG FRONTEND] PDF iframe loaded successfully");
+                                  console.log("[CU-REG FRONTEND] PDF URL:", pdfUrl);
+                                }}
+                                onError={(e) => {
+                                  console.error("[CU-REG FRONTEND] PDF iframe error:", e);
+                                }}
+                              />
+                              <p className="p-4 text-center text-gray-500">
+                                Your browser does not support PDF viewing.{" "}
+                                <a
+                                  href={pdfUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  Click here to download the PDF
+                                </a>
+                              </p>
+                            </object>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
@@ -2951,7 +3031,7 @@ export default function CURegistrationPage() {
                         <div className="space-y-6">
                           {/* Document Preparation */}
                           <div className="bg-white border border-gray-200 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                               <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full mr-3">
                                 1
                               </span>
@@ -3000,7 +3080,7 @@ export default function CURegistrationPage() {
 
                           {/* File Format & Size */}
                           <div className="bg-white border border-gray-200 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                               <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full mr-3">
                                 2
                               </span>
@@ -3025,7 +3105,7 @@ export default function CURegistrationPage() {
 
                           {/* Data Review & Submission */}
                           <div className="bg-white border border-gray-200 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                               <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full mr-3">
                                 3
                               </span>
@@ -3045,7 +3125,7 @@ export default function CURegistrationPage() {
 
                           {/* Technical & Process Guidelines */}
                           <div className="bg-white border border-gray-200 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                               <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full mr-3">
                                 4
                               </span>
@@ -3087,7 +3167,7 @@ export default function CURegistrationPage() {
                               <div className="flex-1">
                                 <label
                                   htmlFor="instructions-confirmation"
-                                  className="text-sm font-medium text-gray-900 cursor-pointer"
+                                  className="text-sm font-medium text-gray-800 cursor-pointer"
                                 >
                                   I have read and understood the above instructions and confirm that I am ready to
                                   proceed with my Admission & Registration Data Submission.
@@ -3145,7 +3225,7 @@ export default function CURegistrationPage() {
                       </div>
 
                       <div>
-                        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Student Name</h2>
+                        <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">Student Name</h2>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                           {/* Full Name */}
@@ -3409,7 +3489,7 @@ export default function CURegistrationPage() {
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
                           {/* Residential Address */}
                           <div className="space-y-4 xl:pr-8 xl:border-r xl:border-gray-200">
-                            <h3 className="text-sm sm:text-base font-medium text-gray-900">Residential Address</h3>
+                            <h3 className="text-sm sm:text-base font-medium text-gray-800">Residential Address</h3>
                             <div className="space-y-3">
                               {/* 1. Address Line */}
                               <div className="space-y-2">
@@ -3538,7 +3618,7 @@ export default function CURegistrationPage() {
 
                           {/* Mailing Address */}
                           <div className="space-y-4 xl:pl-8">
-                            <h3 className="text-sm sm:text-base font-medium text-gray-900">Mailing Address</h3>
+                            <h3 className="text-sm sm:text-base font-medium text-gray-800">Mailing Address</h3>
                             <div className="space-y-3">
                               {/* 1. Address Line */}
                               <div className="space-y-2">
@@ -3740,7 +3820,7 @@ export default function CURegistrationPage() {
 
                       <div>
                         <div className="flex justify-between items-center mb-4">
-                          <h2 className="text-lg font-semibold text-gray-900">3.1 Subjects Overview (Semesters 1-4)</h2>
+                          <h2 className="text-lg font-semibold text-gray-800">3.1 Subjects Overview (Semesters 1-4)</h2>
                           {shouldShowSubjectsCorrectionFlag() && (
                             <div className="flex items-center space-x-2">
                               <span className="text-sm text-gray-600">Request correction</span>
@@ -3799,7 +3879,7 @@ export default function CURegistrationPage() {
 
                                         return (
                                           <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
-                                            <div className="text-sm text-gray-900">
+                                            <div className="text-sm text-gray-800">
                                               {(() => {
                                                 // Combine all subjects (mandatory + optional) into one array
                                                 let allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
@@ -3857,7 +3937,7 @@ export default function CURegistrationPage() {
 
                                                 // Render all subjects as ordered list
                                                 return (
-                                                  <div className="text-sm text-gray-900">
+                                                  <div className="text-sm text-gray-800">
                                                     {allSubjects.map((subject, index) => (
                                                       <span key={`subject-${index}`}>
                                                         {subject.name}
@@ -3944,7 +4024,7 @@ export default function CURegistrationPage() {
                       </div>
 
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">4.1 Document Uploads</h2>
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4">4.1 Document Uploads</h2>
 
                         {/* Uploaded Documents Table */}
                         {uploadedDocuments.length > 0 && (
@@ -4777,7 +4857,7 @@ export default function CURegistrationPage() {
                   />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Subject Selection Required</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Subject Selection Required</h2>
               <p className="text-gray-700 text-lg">
                 Subject Selection process is not completed by you. Click on okay to select your subject first.
               </p>
@@ -4823,7 +4903,7 @@ export default function CURegistrationPage() {
                 <div>
                   {Object.values(correctionFlags).some(Boolean) ? (
                     <>
-                      <h3 className="text-base font-medium text-gray-900 mb-3">
+                      <h3 className="text-base font-medium text-gray-800 mb-3">
                         Correction request registered for the following fields:
                       </h3>
                       <div className="overflow-x-auto">

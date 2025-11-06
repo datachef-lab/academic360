@@ -23,8 +23,8 @@ import {
   checkOtpStatus,
   lookupUser,
   lookupUsersByPrefix,
-  adminBypassOtpLogin,
 } from "@/lib/services/auth.service";
+import { adminBypassOtpLogin } from "@/lib/services/auth.service";
 import { UserDto } from "@repo/db/dtos/user";
 
 export default function SignInPage() {

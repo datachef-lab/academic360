@@ -456,18 +456,30 @@ export const proxyCuRegistrationPdf = async (
 
     // Allow iframe embedding - remove X-Frame-Options and set permissive CSP
     res.removeHeader("X-Frame-Options");
-    res.setHeader("Content-Security-Policy", "frame-ancestors *");
-    res.setHeader("X-Content-Type-Options", "nosniff");
 
     // Set CORS headers to allow iframe loading from student console
     // Extract origin from referer if origin header is not present (iframe requests)
     let requestOrigin = req.get("origin");
+    let mainConsoleOrigin: string | null = null;
+
     if (!requestOrigin) {
       const referer = req.get("referer");
       if (referer) {
         try {
           const refererUrl = new URL(referer);
           requestOrigin = refererUrl.origin;
+
+          // Check if the referer suggests we're in simulation mode (main-console embedding student-console)
+          // Main console is typically on localhost:5173 or similar
+          if (
+            referer.includes("localhost:5173") ||
+            referer.includes("main-console") ||
+            referer.includes("admin-console")
+          ) {
+            mainConsoleOrigin = requestOrigin; // This is the main-console origin
+            // Try to get student console origin from the referer path or use default
+            requestOrigin = "http://localhost:3000"; // Student console origin
+          }
         } catch (e) {
           // Invalid referer URL, default to localhost:3000 for student console
           requestOrigin = "http://localhost:3000";
@@ -477,6 +489,26 @@ export const proxyCuRegistrationPdf = async (
         requestOrigin = "http://localhost:3000";
       }
     }
+
+    // Set CSP to allow both student console and main console (for simulation mode)
+    // frame-ancestors allows embedding in iframes from these origins
+    if (mainConsoleOrigin) {
+      // In simulation mode: allow both main-console and student-console origins
+      res.setHeader(
+        "Content-Security-Policy",
+        `frame-ancestors ${mainConsoleOrigin} ${requestOrigin} *`,
+      );
+      console.log(
+        `[CU-REG PDF PROXY] Simulation mode detected - allowing frame-ancestors: ${mainConsoleOrigin}, ${requestOrigin}`,
+      );
+    } else {
+      // Normal mode: allow student console and any origin
+      res.setHeader(
+        "Content-Security-Policy",
+        `frame-ancestors ${requestOrigin} *`,
+      );
+    }
+    res.setHeader("X-Content-Type-Options", "nosniff");
 
     // IMPORTANT: When using credentials, cannot use wildcard - must specify exact origin
     if (requestOrigin !== "*") {
