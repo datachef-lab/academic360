@@ -18,6 +18,36 @@ import { randomBytes } from "crypto";
 import { generateTokensForUser } from "../services/otp.service.js";
 import { verifyToken } from "@/utils/verifyToken.js";
 
+// Detect if a request is originating from the student console
+function isStudentConsoleRequest(req: Request): boolean {
+  const { app } = req.headers as { app?: string };
+  if (app === "student-console") return true;
+
+  const origin = req.get("origin") || req.get("referer") || "";
+
+  const candidateUrls = [
+    process.env.NEXT_PUBLIC_URL, // student-console public URL (from student app env)
+    process.env.VITE_APP_STUDENT_CONSOLE_URL, // explicitly set for main-console pointing to student console
+  ].filter(Boolean) as string[];
+
+  for (const cand of candidateUrls) {
+    try {
+      const host = new URL(cand).host;
+      if (host && origin.includes(host)) return true;
+    } catch {
+      // If cand is not a full URL, fallback to substring match
+      if (origin.includes(cand)) return true;
+    }
+  }
+
+  // Development localhost fallback
+  if (origin.includes("localhost:3000") || origin.includes("student-console")) {
+    return true;
+  }
+
+  return false;
+}
+
 export const createUser = async (
   req: Request,
   res: Response,
@@ -94,11 +124,7 @@ export const login = async (
     }
 
     // Check if request is from student console
-    const origin = req.get("origin") || req.get("referer") || "";
-    const isStudentConsole =
-      app === "student-console" ||
-      origin.includes("localhost:3000") ||
-      origin.includes("student-console");
+    const isStudentConsole = isStudentConsoleRequest(req);
 
     let userWithPayload: any = foundUser;
 
@@ -214,12 +240,7 @@ export const refresh = async (
 ) => {
   try {
     // Check if request is from student console
-    const { app } = req.headers;
-    const origin = req.get("origin") || req.get("referer") || "";
-    const isStudentConsole =
-      app === "student-console" ||
-      origin.includes("localhost:3000") ||
-      origin.includes("student-console");
+    const isStudentConsole = isStudentConsoleRequest(req);
 
     // Use appropriate cookie based on console type
     const cookieName = isStudentConsole ? "student_jwt" : "jwt";
@@ -314,12 +335,7 @@ export const logout = async (
 ) => {
   try {
     // Check if request is from student console
-    const { app } = req.headers;
-    const origin = req.get("origin") || req.get("referer") || "";
-    const isStudentConsole =
-      app === "student-console" ||
-      origin.includes("localhost:3000") ||
-      origin.includes("student-console");
+    const isStudentConsole = isStudentConsoleRequest(req);
 
     // Use appropriate cookie based on console type
     const cookieName = isStudentConsole ? "student_jwt" : "jwt";

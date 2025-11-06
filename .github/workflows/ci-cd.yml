@@ -193,7 +193,7 @@ jobs:
             echo "  🎨 Frontend build variables..."
             put VITE_APP_BACKEND_URL "$(choose '${{ secrets.PROD_VITE_APP_BACKEND_URL }}' '${{ secrets.VITE_APP_BACKEND_URL }}')"
             put VITE_APP_PREFIX "$(choose '${{ secrets.PROD_VITE_APP_PREFIX }}' '${{ secrets.VITE_APP_PREFIX }}')"
-            put VITE_STUDENT_CONSOLE_URL "$(choose '${{ secrets.PROD_VITE_STUDENT_CONSOLE_URL }}' '${{ secrets.VITE_STUDENT_CONSOLE_URL }}')"
+            put VITE_APP_STUDENT_CONSOLE_URL "$(choose '${{ secrets.PROD_VITE_APP_STUDENT_CONSOLE_URL }}' '${{ secrets.VITE_APP_STUDENT_CONSOLE_URL }}')"
             put VITE_STUDENT_PROFILE_URL "$(choose '${{ secrets.PROD_VITE_STUDENT_PROFILE_URL }}' '${{ secrets.VITE_STUDENT_PROFILE_URL }}')"
             put VITE_GOOGLE_CLIENT_ID "$(choose '${{ secrets.PROD_VITE_GOOGLE_CLIENT_ID }}' '${{ secrets.VITE_GOOGLE_CLIENT_ID }}')"
             put NEXT_PUBLIC_API_URL "$(choose '${{ secrets.PROD_NEXT_PUBLIC_API_URL }}' '${{ secrets.NEXT_PUBLIC_API_URL }}')"
@@ -279,7 +279,7 @@ jobs:
             echo "  🎨 Frontend build variables..."
             put VITE_APP_BACKEND_URL "$(choose '${{ secrets.STAGING_VITE_APP_BACKEND_URL }}' '${{ secrets.VITE_APP_BACKEND_URL }}')"
             put VITE_APP_PREFIX "$(choose '${{ secrets.STAGING_VITE_APP_PREFIX }}' '${{ secrets.VITE_APP_PREFIX }}')"
-            put VITE_STUDENT_CONSOLE_URL "$(choose '${{ secrets.STAGE_VITE_STUDENT_CONSOLE_URL }}' '${{ secrets.VITE_STUDENT_CONSOLE_URL }}')"
+            put VITE_APP_STUDENT_CONSOLE_URL "$(choose '${{ secrets.STAGE_VITE_APP_STUDENT_CONSOLE_URL }}' '${{ secrets.VITE_APP_STUDENT_CONSOLE_URL }}')"
             put VITE_STUDENT_PROFILE_URL "$(choose '${{ secrets.STAGING_VITE_STUDENT_PROFILE_URL }}' '${{ secrets.VITE_STUDENT_PROFILE_URL }}')"
             put VITE_GOOGLE_CLIENT_ID "$(choose '${{ secrets.STAGING_VITE_GOOGLE_CLIENT_ID }}' '${{ secrets.VITE_GOOGLE_CLIENT_ID }}')"
             put NEXT_PUBLIC_API_URL "$(choose '${{ secrets.STAGING_NEXT_PUBLIC_API_URL }}' '${{ secrets.NEXT_PUBLIC_API_URL }}')"
@@ -374,7 +374,7 @@ jobs:
             # Legacy DB
             "OLD_DB_HOST" "OLD_DB_PORT" "OLD_DB_USER" "OLD_DB_PASSWORD" "OLD_DB_NAME"
             # Frontend build
-              "VITE_APP_BACKEND_URL" "VITE_APP_PREFIX" "VITE_STUDENT_CONSOLE_URL" "VITE_STUDENT_PROFILE_URL" "VITE_GOOGLE_CLIENT_ID"
+              "VITE_APP_BACKEND_URL" "VITE_APP_PREFIX" "VITE_APP_STUDENT_CONSOLE_URL" "VITE_STUDENT_PROFILE_URL" "VITE_GOOGLE_CLIENT_ID"
             "NEXT_PUBLIC_API_URL" "NEXT_PUBLIC_APP_BASE_URL" "NEXT_PUBLIC_URL"
             # Student server-only
             "JWT_SECRET" "ZEPTO_URL" "ZEPTO_FROM" "ZEPTO_TOKEN" "INTERAKT_API_KEY" "INTERAKT_BASE_URL"
