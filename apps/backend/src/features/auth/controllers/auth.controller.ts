@@ -19,33 +19,19 @@ import { generateTokensForUser } from "../services/otp.service.js";
 import { verifyToken } from "@/utils/verifyToken.js";
 
 // Detect if a request is originating from the student console
+// IMPORTANT: For auth routes, only trust the explicit header from the student console Axios instance.
+// Do NOT infer from Origin/Referer in production, to avoid misclassification and cookie mixups.
 function isStudentConsoleRequest(req: Request): boolean {
   const { app } = req.headers as { app?: string };
-  if (app === "student-console") return true;
-
   const origin = req.get("origin") || req.get("referer") || "";
-
-  const candidateUrls = [
-    process.env.NEXT_PUBLIC_URL, // student-console public URL (from student app env)
-    process.env.VITE_APP_STUDENT_CONSOLE_URL, // explicitly set for main-console pointing to student console
-  ].filter(Boolean) as string[];
-
-  for (const cand of candidateUrls) {
-    try {
-      const host = new URL(cand).host;
-      if (host && origin.includes(host)) return true;
-    } catch {
-      // If cand is not a full URL, fallback to substring match
-      if (origin.includes(cand)) return true;
-    }
+  const result = app === "student-console";
+  // Debug trace (safe): which path chose which cookie family
+  if (process.env.NODE_ENV !== "production") {
+    console.log(
+      `[AUTH isStudentConsole] app=${app} origin=${origin} -> ${result ? "student" : "admin"}`,
+    );
   }
-
-  // Development localhost fallback
-  if (origin.includes("localhost:3000") || origin.includes("student-console")) {
-    return true;
-  }
-
-  return false;
+  return result;
 }
 
 export const createUser = async (
