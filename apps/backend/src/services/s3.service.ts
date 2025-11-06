@@ -306,7 +306,16 @@ export async function getFileFromS3(
     });
 
     const response = await s3Client.send(command);
-    return response;
+
+    // Check if Body exists (it's optional in GetObjectCommandOutput)
+    if (!response.Body) {
+      return null;
+    }
+
+    return {
+      Body: response.Body,
+      ContentType: response.ContentType,
+    };
   } catch (error) {
     console.error("Error getting file from S3:", error);
     throw new ApiError(500, "Failed to get file from S3");
