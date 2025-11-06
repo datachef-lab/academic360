@@ -143,7 +143,10 @@ const httpServer = createServer(app);
 
 // Enable trust proxy for production (behind reverse proxy like nginx)
 // Only enable in production environment to avoid issues in staging
-if (process.env.NODE_ENV === "production") {
+if (
+  process.env.NODE_ENV === "production" ||
+  process.env.NODE_ENV === "staging"
+) {
   // Trust first proxy (nginx) in production
   app.set("trust proxy", 1);
 } else {
