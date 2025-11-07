@@ -1,5 +1,3 @@
-// Schedule-exam-page.tsx
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +17,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-// Mock data structures
 const examTypes = [
   { value: "CIE", label: "CIE (Continuous Internal Evaluation)" },
   { value: "IA", label: "Internal Assessment" },
