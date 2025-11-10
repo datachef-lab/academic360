@@ -745,6 +745,7 @@ export async function addAdmAcademicInfo(
 export async function addAdmCourseApps(
   oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
   applicationForm: ApplicationForm,
+  oldStudent: OldStudent,
 ) {
   const [oldAdmCourseDetails] = (await mysqlConnection.query(`
         SELECT *
@@ -756,12 +757,23 @@ export async function addAdmCourseApps(
     undefined;
   for (let i = 0; i < oldAdmCourseDetails.length; i++) {
     const oldCourseDetail = oldAdmCourseDetails[i];
-
+    console.log("in addAdmCourseApps(), oldCourseDetail:", oldCourseDetail);
     const admissionCourseDetails = await processOldCourseDetails(
       oldCourseDetail,
       applicationForm,
     );
-    if (admissionCourseDetails?.isTransferred) {
+    console.log(
+      "in addAdmCourseApps(), admissionCourseDetails:",
+      admissionCourseDetails ? admissionCourseDetails.id : "not upserted",
+    );
+    if (!admissionCourseDetails) {
+      throw new Error(
+        "Admission course details not added for old course detail",
+      );
+    }
+    if (
+      admissionCourseDetails?.legacyCourseDetailsId === oldStudent.admissionid
+    ) {
       transferredAdmCourseDetails = admissionCourseDetails;
     }
   }
@@ -803,6 +815,7 @@ export async function processAdmissionApplicationForm(
   const transferredAdmCourseDetails = await addAdmCourseApps(
     oldAdmStudentPersonalDetails,
     applicationForm,
+    oldStudent,
   );
 
   await addAdmAdditionalInfo(oldAdmStudentPersonalDetails, applicationForm);
@@ -1183,6 +1196,10 @@ export async function processOldStudentApplicationForm(
     );
 
   if (existingAdmGeneralInfo) {
+    console.log(
+      "in processOldStudentApplicationForm(), existingAdmGeneralInfo:",
+      existingAdmGeneralInfo,
+    );
     const [existingApplicationForm] = await db
       .select()
       .from(applicationFormModel)
@@ -1191,49 +1208,30 @@ export async function processOldStudentApplicationForm(
       );
 
     // Try to fetch the transferred admission course details for this application
-    const transferredRows = await db
+    const [[oldCourseDetails]] = (await mysqlConnection.query(`
+        SELECT cd.*
+        FROM coursedetails cd
+        JOIN studentpersonaldetails spd ON spd.admissionid = cd.id
+        WHERE spd.id = ${oldStudent.id};
+    `)) as [OldCourseDetails[], any];
+
+    let [transferredAdmCourseDetails] = (await db
       .select()
       .from(admissionCourseDetailsModel)
       .where(
-        and(
-          eq(
-            admissionCourseDetailsModel.applicationFormId,
-            existingApplicationForm.id,
-          ),
-          eq(admissionCourseDetailsModel.isTransferred, true),
+        eq(
+          admissionCourseDetailsModel.legacyCourseDetailsId,
+          oldCourseDetails.id,
         ),
-      );
+      )) as AdmissionCourseDetails[];
 
-    let transferredAdmCourseDetails =
-      transferredRows[0] as AdmissionCourseDetails;
-
-    // Fallback: if no transferred row yet, pick the most recent course details for this app and program
+    // If no transferred row not found, add the admission course details
     if (!transferredAdmCourseDetails) {
-      const fallbackRows = await db
-        .select()
-        .from(admissionCourseDetailsModel)
-        .leftJoin(
-          admissionProgramCourseModel,
-          eq(
-            admissionCourseDetailsModel.admissionProgramCourseId,
-            admissionProgramCourseModel.id,
-          ),
-        )
-        .where(
-          and(
-            eq(
-              admissionCourseDetailsModel.applicationFormId,
-              existingApplicationForm.id,
-            ),
-            eq(
-              admissionProgramCourseModel.programCourseId,
-              student.programCourseId!,
-            ),
-            eq(admissionCourseDetailsModel.isTransferred, true),
-          ),
-        )
-        .limit(1);
-      transferredAdmCourseDetails = fallbackRows[0]?.admission_course_details;
+      transferredAdmCourseDetails = await addAdmCourseApps(
+        oldAdmStudentPersonalDetails,
+        existingApplicationForm,
+        oldStudent,
+      );
     }
 
     if (!transferredAdmCourseDetails) {
@@ -1249,6 +1247,9 @@ export async function processOldStudentApplicationForm(
   }
 
   // Do the admission application form
+  console.log(
+    "in processOldStudentApplicationForm(), step 2: Admission Application Form",
+  );
   const admApp = await processAdmissionApplicationForm(
     oldStudent,
     oldAdmStudentPersonalDetails,

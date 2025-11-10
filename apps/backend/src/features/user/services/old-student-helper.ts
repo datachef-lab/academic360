@@ -167,6 +167,7 @@ import { OldCountry } from "@repo/db/legacy-system-types/resources";
 import { OldPromotionStatus } from "@repo/db/legacy-system-types/batches";
 import { bitToBool } from "./refactor-old-migration.service";
 import { CuRegistrationNumberService } from "@/services/cu-registration-number.service";
+import { CLIENT_RENEG_LIMIT } from "tls";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
@@ -1950,6 +1951,7 @@ export async function processStudent(
 
       // Step 8: Application Form
       if (!student.applicationId) {
+        console.log("in processStudent(), step 8: Application Form");
         const result =
           await oldAdmPersonalDetailsHelper.processOldStudentApplicationForm(
             oldStudent,
@@ -2037,6 +2039,8 @@ export async function processStudent(
   // Step 9: ALWAYS update promotion data regardless of student data changes
   // This is crucial because historicalrecord table doesn't have timestamps
   if (student && student.applicationId) {
+    let transferredAdmCourseDetails: AdmissionCourseDetails | undefined =
+      undefined;
     const [applicationForm] = await db
       .select()
       .from(applicationFormModel)
@@ -2049,7 +2053,7 @@ export async function processStudent(
       student.programCourseId,
     );
     // Try strict match first: app form + transferred + same programCourseId
-    const strictJoined = await db
+    const acd = await db
       .select()
       .from(admissionCourseDetailsModel)
       .leftJoin(
@@ -2061,7 +2065,10 @@ export async function processStudent(
       )
       .where(
         and(
-          eq(admissionCourseDetailsModel.applicationFormId, applicationForm.id),
+          eq(
+            admissionCourseDetailsModel.applicationFormId,
+            student.applicationId as number,
+          ),
           eq(admissionCourseDetailsModel.isTransferred, true),
           eq(
             admissionProgramCourseModel.programCourseId,
@@ -2069,48 +2076,28 @@ export async function processStudent(
           ),
         ),
       );
+    console.log("admission_course_details:", acd);
 
-    console.log("temp (strict match):", strictJoined);
+    if (acd.length === 0) {
+      const [[oldAdmStudentPersonalDetails]] = (await mysqlConnection.query(`
+                SELECT pd.*
+                FROM personaldetails pd
+                JOIN coursedetails cd ON pd.id = cd.parent_id
+                JOIN studentpersonaldetails spd ON spd.admissionid = cd.id
+                WHERE spd.id = ${oldStudent.id};
+            `)) as [OldAdmStudentPersonalDetail[], any];
 
-    // Normalize to AdmissionCourseDetails[]
-    let acdCandidates: any[] =
-      strictJoined && strictJoined.length > 0
-        ? strictJoined.map((r: any) => r.admission_course_details)
-        : [];
-
-    // Fallback 1: drop programCourseId filter, use any transferred for this application
-    if (acdCandidates.length === 0) {
-      const transferredOnly = await db
-        .select()
-        .from(admissionCourseDetailsModel)
-        .where(
-          and(
-            eq(
-              admissionCourseDetailsModel.applicationFormId,
-              applicationForm.id,
-            ),
-            eq(admissionCourseDetailsModel.isTransferred, true),
-          ),
-        )
-        .limit(1);
-      console.log("temp (fallback transferred only):", transferredOnly);
-      acdCandidates = transferredOnly as any;
+      transferredAdmCourseDetails =
+        await oldAdmPersonalDetailsHelper.addAdmCourseApps(
+          oldAdmStudentPersonalDetails,
+          applicationForm,
+          oldStudent,
+        );
+    } else {
+      transferredAdmCourseDetails = acd[0].admission_course_details;
     }
 
-    // Fallback 2: any course details for this application (take latest) if still not found
-    if (acdCandidates.length === 0) {
-      const anyForApp = await db
-        .select()
-        .from(admissionCourseDetailsModel)
-        .where(
-          eq(admissionCourseDetailsModel.applicationFormId, applicationForm.id),
-        )
-        .limit(1);
-      console.log("temp (fallback any ACD for app):", anyForApp);
-      acdCandidates = anyForApp as any;
-    }
-
-    const transferredAdmCourseDetails = acdCandidates[0];
+    console.log("transferredAdmCourseDetails:", transferredAdmCourseDetails);
 
     if (applicationForm && transferredAdmCourseDetails) {
       await addPromotion(
