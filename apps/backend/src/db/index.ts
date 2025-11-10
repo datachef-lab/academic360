@@ -37,6 +37,7 @@ import { sendAdmRegFormToNotSendStudents } from "@/features/admissions/services/
 
 // Create a connection pool
 const pool = new pg.Pool({
+  options: "-c timezone=Asia/Kolkata",
   connectionString: process.env.DATABASE_URL,
 });
 
