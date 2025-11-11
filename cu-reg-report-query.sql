@@ -219,6 +219,7 @@ student_context AS (
         aai.cu_registration_number,
         pc.university_code                              AS university_code,
         pc.duration,
+        pc.name                                         AS program_course_name,
         crs.name                                        AS course_name,
         str.name                                        AS stream_name,
         ps.name                                         AS admission_mode
@@ -280,28 +281,53 @@ combined_subjects AS (
 ),
 marks_base AS (
     SELECT
-        aai.student_id_fk AS student_id,
-        bsn.name          AS subject_name,
-        COALESCE(bs.full_marks_theory, 0) + COALESCE(bs.full_marks_practical, 0) AS full_marks,
+        sc.student_id,
+        -- Get subject name from board_subject_names, use empty string if not available
+        COALESCE(bsn.name, '') AS subject_name,
+        -- Calculate full marks: prefer from board_subjects, fallback to 100 if we have total_marks
+        CASE 
+            WHEN COALESCE(bs.full_marks_theory, 0) + COALESCE(bs.full_marks_practical, 0) > 0 
+            THEN COALESCE(bs.full_marks_theory, 0) + COALESCE(bs.full_marks_practical, 0)
+            -- If board_subjects has 0 for both, but we have total_marks, use 100 as default full marks
+            WHEN sas.total_marks IS NOT NULL AND sas.total_marks > 0
+            THEN 100
+            -- Fallback to calculated from theory+practical if available
+            WHEN COALESCE(sas.theory_marks, 0) + COALESCE(sas.practical_marks, 0) > 0
+            THEN COALESCE(sas.theory_marks, 0) + COALESCE(sas.practical_marks, 0)
+            ELSE NULL
+        END AS full_marks,
         COALESCE(sas.total_marks,
                  COALESCE(sas.theory_marks, 0) + COALESCE(sas.practical_marks, 0)) AS obtained_marks
-    FROM student_academic_subjects AS sas
-    JOIN academic_info_selected AS aai ON aai.id = sas.admission_academic_info_id_fk
+    FROM student_context AS sc
+    INNER JOIN academic_info_selected AS aai ON aai.student_id_fk = sc.student_id
+    INNER JOIN student_academic_subjects AS sas ON sas.admission_academic_info_id_fk = aai.id
     LEFT JOIN board_subjects      AS bs  ON bs.id  = sas.board_subject_id_fk
     LEFT JOIN board_subject_names AS bsn ON bsn.id = bs.board_subject_name_id_fk
+    WHERE (
+        -- Include if we have full marks from board_subjects (even if 0, we'll handle it)
+        -- OR if we have marks data (theory + practical > 0)  
+        COALESCE(sas.theory_marks, 0) + COALESCE(sas.practical_marks, 0) > 0
+        -- OR if we have total_marks
+        OR sas.total_marks IS NOT NULL
+    )
+      AND COALESCE(sas.total_marks, COALESCE(sas.theory_marks, 0) + COALESCE(sas.practical_marks, 0)) IS NOT NULL
+      -- Only include rows where we have a subject name (from board_subject_names)
+      AND bsn.name IS NOT NULL AND bsn.name != ''
 ),
 marks_ranked AS (
     SELECT
         mb.*,
         CASE
-            WHEN mb.full_marks > 0 THEN ROUND(((mb.obtained_marks * 100.0) / mb.full_marks)::numeric, 2)
+            WHEN mb.full_marks > 0 AND mb.obtained_marks IS NOT NULL
+            THEN LEAST(ROUND(((mb.obtained_marks * 100.0) / mb.full_marks)::numeric, 2), 100.00)
             ELSE NULL
         END AS percentage,
         ROW_NUMBER() OVER (
             PARTITION BY mb.student_id
-            ORDER BY mb.obtained_marks DESC, mb.full_marks DESC, mb.subject_name
+            ORDER BY mb.obtained_marks DESC NULLS LAST, mb.full_marks DESC, mb.subject_name
         ) AS seq
     FROM marks_base AS mb
+    WHERE mb.full_marks IS NOT NULL AND mb.obtained_marks IS NOT NULL
 ),
 top_four_pivot AS (
     SELECT
@@ -326,10 +352,10 @@ top_four_pivot AS (
         SUM(obtained_marks)FILTER (WHERE seq <= 4) AS total_obt,
         CASE
             WHEN SUM(full_marks) FILTER (WHERE seq <= 4) > 0
-            THEN ROUND(
+            THEN LEAST(ROUND(
                 ((SUM(obtained_marks) FILTER (WHERE seq <= 4) * 100.0) /
                 NULLIF(SUM(full_marks) FILTER (WHERE seq <= 4), 0))::numeric, 2
-            )
+            ), 100.00)
             ELSE NULL
         END AS total_pct
     FROM marks_ranked
@@ -415,89 +441,88 @@ SELECT
     mail.pincode                                      AS "Permanent_Pin",
     mail.state_name                                   AS "Permanent_State",
     mail.country_name                                 AS "Permanent_Country",
-    COALESCE(cs.core_major, sc.course_name)           AS "BA_BSC_BMUS_CVOC_Hons_Core_Major_Subject",
-    cs.minor1                                         AS "BA_BSC_BMUS_CVOC_Hons_1st_Minor_Subject",
-    cs.minor2                                         AS "BA_BSC_BMUS_CVOC_Hons_2nd_Minor_Subject",
-    cs.cvac                                           AS "BA_BSC_BMUS_CVOC_Hons_CVAC",
-    cs.aec1                                           AS "BA_BSC_BMUS_CVOC_Hons_AEC",
-    cs.idc1                                           AS "BA_BSC_BMUS_CVOC_Hons_IDC_1",
-    cs.idc2                                           AS "BA_BSC_BMUS_CVOC_Hons_IDC_2",
-    cs.idc3                                           AS "BA_BSC_BMUS_CVOC_Hons_IDC_3",
-    NULL                                              AS "BA_BSC_MDC_Core_Subject_1",
-    NULL                                              AS "BA_BSC_MDC_Core_Subject_2",
-    NULL                                              AS "BA_BSC_MDC_Minor_Subject",
-    NULL                                              AS "BA_BSC_MDC_SEC_1",
-    NULL                                              AS "BA_BSC_MDC_SEC_2",
-    NULL                                              AS "BA_BSC_MDC_CVAC",
-    NULL                                              AS "BA_BSC_MDC_AEC",
-    NULL                                              AS "BA_BSC_MDC_IDC_1",
-    NULL                                              AS "BA_BSC_MDC_IDC_2",
-    NULL                                              AS "BA_BSC_MDC_IDC_3",
-    CASE WHEN sc.stream_name ILIKE 'Commerce%' AND sc.course_name ILIKE '%Hon%' THEN COALESCE(cs.minor1, cs.mdc1) END AS "BCOM_Hons_Minor",
-    CASE WHEN sc.stream_name ILIKE 'Commerce%' AND sc.course_name ILIKE '%Hon%' THEN cs.cvac END                  AS "BCOM_Hons_CVAC",
-    CASE WHEN sc.stream_name ILIKE 'Commerce%' AND sc.course_name ILIKE '%Hon%' THEN cs.aec1 END                  AS "BCOM_Hons_AEC",
-    CASE WHEN sc.stream_name ILIKE 'Commerce%' AND sc.duration = 3 THEN COALESCE(cs.minor1, cs.mdc1) END         AS "BCOM_3_Year_Minor",
-    CASE WHEN sc.stream_name ILIKE 'Commerce%' AND sc.duration = 3 THEN cs.cvac END                              AS "BCOM_3_Year_CVAC",
-    CASE WHEN sc.stream_name ILIKE 'Commerce%' AND sc.duration = 3 THEN COALESCE(cs.aec1, cs.aec2) END           AS "BCOM_3_Year_AEC",
-    CASE
-        WHEN sc.board_code IN ('WBCHSE','ICSE','CBSE','NIOS')
-            THEN COALESCE(sc.board_name, sc.other_board)
-        ELSE NULL
-    END                                               AS "Non_Migrating_Board",
-    CASE
-        WHEN sc.board_code IS NULL THEN sc.other_board
-        WHEN sc.board_code NOT IN ('WBCHSE','ICSE','CBSE','NIOS') THEN sc.board_name
-        ELSE NULL
-    END                                               AS "Migrating_Board",
-    COALESCE(sc.subject_studied, sc.board_name)        AS "Last_Exam_Name",
-    COALESCE(sc.board_name, sc.other_board)            AS "Last_Exam_Board",
-    sc.board_roll_number                               AS "Last_Exam_Roll",
-    sc.year_of_passing                                 AS "Last_Exam_YOP",
-    tf.subject_1                                       AS "Top_Four_Subject_1",
-    tf.subject_2                                       AS "Top_Four_Subject_2",
-    tf.subject_3                                       AS "Top_Four_Subject_3",
-    tf.subject_4                                       AS "Top_Four_Subject_4",
-    tf.full_marks_1                                    AS "Top_Four_Full_Marks_1",
-    tf.full_marks_2                                    AS "Top_Four_Full_Marks_2",
-    tf.full_marks_3                                    AS "Top_Four_Full_Marks_3",
-    tf.full_marks_4                                    AS "Top_Four_Full_Marks_4",
-    tf.marks_obt_1                                     AS "Top_Four_Marks_Obt_1",
-    tf.marks_obt_2                                     AS "Top_Four_Marks_Obt_2",
-    tf.marks_obt_3                                     AS "Top_Four_Marks_Obt_3",
-    tf.marks_obt_4                                     AS "Top_Four_Marks_Obt_4",
-    tf.pct_1                                           AS "Top_Four_Marks_Prcntg_1",
-    tf.pct_2                                           AS "Top_Four_Marks_Prcntg_2",
-    tf.pct_3                                           AS "Top_Four_Marks_Prcntg_3",
-    tf.pct_4                                           AS "Top_Four_Marks_Prcntg_4",
-    tf.total_full                                      AS "Total_of_Top_Four_Full_Marks",
-    tf.total_obt                                       AS "Total_of_Top_Four_Marks_Obtained",
-    tf.total_pct                                       AS "Total_of_Top_Four_Marks_Percentage",
-    ot.subject_1                                       AS "Others_Subject_1",
-    ot.subject_2                                       AS "Others_Subject_2",
-    ot.subject_3                                       AS "Others_Subject_3",
-    ot.subject_4                                       AS "Others_Subject_4",
-    ot.full_marks_1                                    AS "Others_Full_Marks_1",
-    ot.full_marks_2                                    AS "Others_Full_Marks_2",
-    ot.full_marks_3                                    AS "Others_Full_Marks_3",
-    ot.full_marks_4                                    AS "Others_Full_Marks_4",
-    ot.marks_obt_1                                     AS "Others_Marks_Obt_1",
-    ot.marks_obt_2                                     AS "Others_Marks_Obt_2",
-    ot.marks_obt_3                                     AS "Others_Marks_Obt_3",
-    ot.marks_obt_4                                     AS "Others_Marks_Obt_4",
-    ot.pct_1                                           AS "Others_Marks_Prcntg_1",
-    ot.pct_2                                           AS "Others_Marks_Prcntg_2",
-    ot.pct_3                                           AS "Others_Marks_Prcntg_3",
-    ot.pct_4                                           AS "Others_Marks_Prcntg_4",
-    COALESCE(sc.admission_mode, 'REGULAR')             AS "Admission_Mode",
-    sc.apaar_id                                        AS "ABC_Id",
-    sc.uid                                             AS "UID",
-    NULL                                               AS "Unnamed: 102",
-    NULL                                               AS "Unnamed: 103",
-    NULL                                               AS "Unnamed: 104",
-    NULL                                               AS "Unnamed: 105",
-    NULL                                               AS "Unnamed: 106",
-    NULL                                               AS "Unnamed: 107",
-    NULL                                               AS "Unnamed: 108"
+    COALESCE(cs.core_major, sc.course_name, '')       AS "BA_BSC_BMUS_CVOC_Hons_Core_Major_Subject",
+    COALESCE(cs.minor1, '')                           AS "BA_BSC_BMUS_CVOC_Hons_1st_Minor_Subject",
+    COALESCE(cs.minor2, '')                           AS "BA_BSC_BMUS_CVOC_Hons_2nd_Minor_Subject",
+    COALESCE(cs.cvac, '')                             AS "BA_BSC_BMUS_CVOC_Hons_CVAC",
+    COALESCE(cs.aec1, '')                             AS "BA_BSC_BMUS_CVOC_Hons_AEC",
+    COALESCE(cs.idc1, '')                             AS "BA_BSC_BMUS_CVOC_Hons_IDC_1",
+    COALESCE(cs.idc2, '')                             AS "BA_BSC_BMUS_CVOC_Hons_IDC_2",
+    COALESCE(cs.idc3, '')                             AS "BA_BSC_BMUS_CVOC_Hons_IDC_3",
+    ''                                                AS "BA_BSC_MDC_Core_Subject_1",
+    ''                                                AS "BA_BSC_MDC_Core_Subject_2",
+    ''                                                AS "BA_BSC_MDC_Minor_Subject",
+    ''                                                AS "BA_BSC_MDC_SEC_1",
+    ''                                                AS "BA_BSC_MDC_SEC_2",
+    ''                                                AS "BA_BSC_MDC_CVAC",
+    ''                                                AS "BA_BSC_MDC_AEC",
+    ''                                                AS "BA_BSC_MDC_IDC_1",
+    ''                                                AS "BA_BSC_MDC_IDC_2",
+    ''                                                AS "BA_BSC_MDC_IDC_3",
+    -- BCOM fields: Minor from minor3, others empty
+    -- B.Com (H) -> BCOM_Hons_Minor, B.Com (G) -> BCOM_3_Year_Minor
+    COALESCE(CASE WHEN sc.program_course_name ILIKE '%B.Com (H)%' OR sc.program_course_name ILIKE '%B.Com(H)%' OR sc.program_course_name ILIKE '%BCOM (H)%' OR sc.program_course_name ILIKE '%BCOM(H)%' THEN cs.minor3 END, '') AS "BCOM_Hons_Minor",
+    ''                                                AS "BCOM_Hons_CVAC",
+    ''                                                AS "BCOM_Hons_AEC",
+    COALESCE(CASE WHEN sc.program_course_name ILIKE '%B.Com (G)%' OR sc.program_course_name ILIKE '%B.Com(G)%' OR sc.program_course_name ILIKE '%BCOM (G)%' OR sc.program_course_name ILIKE '%BCOM(G)%' THEN cs.minor3 END, '') AS "BCOM_3_Year_Minor",
+    ''                                                AS "BCOM_3_Year_CVAC",
+    ''                                                AS "BCOM_3_Year_AEC",
+    COALESCE(
+        CASE
+            WHEN sc.board_code IN ('WBCHSE','ICSE','CBSE','NIOS')
+                THEN COALESCE(sc.board_name, sc.other_board)
+            ELSE NULL
+        END, ''
+    )                                                  AS "Non_Migrating_Board",
+    COALESCE(
+        CASE
+            WHEN sc.board_code IS NULL THEN sc.other_board
+            WHEN sc.board_code NOT IN ('WBCHSE','ICSE','CBSE','NIOS') THEN sc.board_name
+            ELSE NULL
+        END, ''
+    )                                                  AS "Migrating_Board",
+    'Class XII'                                         AS "Last_Exam_Name",
+    COALESCE(sc.board_code, sc.other_board, '')        AS "Last_Exam_Board",
+    COALESCE(sc.board_roll_number, '')                 AS "Last_Exam_Roll",
+    COALESCE(sc.year_of_passing::text, '')             AS "Last_Exam_YOP",
+    COALESCE(tf.subject_1, '')                        AS "Top_Four_Subject_1",
+    COALESCE(tf.subject_2, '')                        AS "Top_Four_Subject_2",
+    COALESCE(tf.subject_3, '')                        AS "Top_Four_Subject_3",
+    COALESCE(tf.subject_4, '')                        AS "Top_Four_Subject_4",
+    COALESCE(tf.full_marks_1::text, '')                AS "Top_Four_Full_Marks_1",
+    COALESCE(tf.full_marks_2::text, '')                AS "Top_Four_Full_Marks_2",
+    COALESCE(tf.full_marks_3::text, '')                AS "Top_Four_Full_Marks_3",
+    COALESCE(tf.full_marks_4::text, '')                AS "Top_Four_Full_Marks_4",
+    COALESCE(tf.marks_obt_1::text, '')                 AS "Top_Four_Marks_Obt_1",
+    COALESCE(tf.marks_obt_2::text, '')                 AS "Top_Four_Marks_Obt_2",
+    COALESCE(tf.marks_obt_3::text, '')                 AS "Top_Four_Marks_Obt_3",
+    COALESCE(tf.marks_obt_4::text, '')                 AS "Top_Four_Marks_Obt_4",
+    COALESCE(tf.pct_1::text, '')                       AS "Top_Four_Marks_Prcntg_1",
+    COALESCE(tf.pct_2::text, '')                       AS "Top_Four_Marks_Prcntg_2",
+    COALESCE(tf.pct_3::text, '')                       AS "Top_Four_Marks_Prcntg_3",
+    COALESCE(tf.pct_4::text, '')                       AS "Top_Four_Marks_Prcntg_4",
+    COALESCE(tf.total_full::text, '')                  AS "Total_of_Top_Four_Full_Marks",
+    COALESCE(tf.total_obt::text, '')                   AS "Total_of_Top_Four_Marks_Obtained",
+    COALESCE(tf.total_pct::text, '')                  AS "Total_of_Top_Four_Marks_Percentage",
+    COALESCE(ot.subject_1, '')                        AS "Others_Subject_1",
+    COALESCE(ot.subject_2, '')                        AS "Others_Subject_2",
+    COALESCE(ot.subject_3, '')                        AS "Others_Subject_3",
+    COALESCE(ot.subject_4, '')                        AS "Others_Subject_4",
+    COALESCE(ot.full_marks_1::text, '')                AS "Others_Full_Marks_1",
+    COALESCE(ot.full_marks_2::text, '')                AS "Others_Full_Marks_2",
+    COALESCE(ot.full_marks_3::text, '')                AS "Others_Full_Marks_3",
+    COALESCE(ot.full_marks_4::text, '')                AS "Others_Full_Marks_4",
+    COALESCE(ot.marks_obt_1::text, '')                 AS "Others_Marks_Obt_1",
+    COALESCE(ot.marks_obt_2::text, '')                 AS "Others_Marks_Obt_2",
+    COALESCE(ot.marks_obt_3::text, '')                 AS "Others_Marks_Obt_3",
+    COALESCE(ot.marks_obt_4::text, '')                 AS "Others_Marks_Obt_4",
+    COALESCE(ot.pct_1::text, '')                       AS "Others_Marks_Prcntg_1",
+    COALESCE(ot.pct_2::text, '')                       AS "Others_Marks_Prcntg_2",
+    COALESCE(ot.pct_3::text, '')                       AS "Others_Marks_Prcntg_3",
+    COALESCE(ot.pct_4::text, '')                       AS "Others_Marks_Prcntg_4",
+    'CLP'                                               AS "Admission_Mode",
+    COALESCE(sc.apaar_id, '')                          AS "ABC_Id",
+    COALESCE(sc.uid::text, '')                         AS "UID"
 FROM student_context          AS sc
 LEFT JOIN family_with_names   AS fam  ON fam.user_id          = sc.user_id
 LEFT JOIN annual_incomes      AS ai   ON ai.id                = fam.annual_income_id
@@ -507,4 +532,5 @@ LEFT JOIN combined_subjects   AS cs   ON cs.student_id        = sc.student_id
 LEFT JOIN top_four_pivot      AS tf   ON tf.student_id        = sc.student_id
 LEFT JOIN others_pivot        AS ot   ON ot.student_id        = sc.student_id
 ORDER BY sc.form_number;
+
 
