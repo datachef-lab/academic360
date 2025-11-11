@@ -106,7 +106,7 @@ export interface FamilyDetailDto extends Omit<Family, "fatherDetailsPersonId" | 
 export interface ProfileInfo {
     applicationFormDto?: ApplicationFormDto | null; // Only for student
     admissionCourseDetailsDto: AdmissionCourseDetailsDto | null; // Only for student
-    academicInfo: AdmissionAcademicInfoDto;
+    academicInfo: AdmissionAcademicInfoDto | null;
     familyDetails: FamilyDto | null;
     personalDetails: PersonalDetailsDto | null;
     healthDetails: HealthDto | null;
