@@ -181,6 +181,7 @@ export async function getCuRegistrationPdfUrlByRequestId(correctionRequestId: nu
       payload: {
         pdfUrl: string;
         pdfPath: string;
+        originalPdfUrl: string;
         applicationNumber: string;
         studentUid: string;
         year: number;
@@ -191,9 +192,25 @@ export async function getCuRegistrationPdfUrlByRequestId(correctionRequestId: nu
     }>(`${PDF_BASE}/url/request/${correctionRequestId}`);
 
     console.info(`[CU-REG MAIN-CONSOLE] PDF URL response:`, res.data);
-    return res.data.payload.pdfUrl;
+    return res.data.payload.originalPdfUrl;
   } catch (error) {
     console.error(`[CU-REG MAIN-CONSOLE] Error fetching PDF URL:`, error);
     throw error;
   }
+}
+
+/**
+ * Explicit helper to fetch a pre-signed URL for the CU-REG request form PDF.
+ * Same backend as above but named clearly for call sites that require an
+ * explicit “signed-url” semantic.
+ */
+export async function getCuRegRequestFormSignedUrl(correctionRequestId: number): Promise<string> {
+  console.info(
+    `[CU-REG MAIN-CONSOLE] Fetching signed URL (request form) for correction request: ${correctionRequestId}`,
+  );
+  const url = await getCuRegistrationPdfUrlByRequestId(correctionRequestId);
+  if (!url || url === "undefined" || url === "null") {
+    throw new Error(`Signed URL not available for correction request: ${correctionRequestId}`);
+  }
+  return url;
 }

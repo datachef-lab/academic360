@@ -652,10 +652,13 @@ export async function findProfileInfo(
     isEWS: personalDetailsDto!.isEWS,
   });
 
-  const result: ProfileInfo = {
+  const result = {
     applicationFormDto,
     admissionCourseDetailsDto,
-    academicInfo: (await mapAcademicInfoToDto(studentAcademicInfo))!,
+    // academicInfo can be null when the student hasn't provided information yet
+    academicInfo: studentAcademicInfo
+      ? await mapAcademicInfoToDto(studentAcademicInfo)
+      : null,
     familyDetails: family ? await mapFamilyToDto(family) : null,
     studentFamily: studentFamily ? await mapFamilyToDto(studentFamily) : null,
     personalDetails: personalDetailsDto,
@@ -665,7 +668,7 @@ export async function findProfileInfo(
     accommodationDetails: accommodationDto,
   };
 
-  return result;
+  return result as unknown as ProfileInfo;
 }
 
 // DTO mappers (keep simple, enrich later when relations needed)
