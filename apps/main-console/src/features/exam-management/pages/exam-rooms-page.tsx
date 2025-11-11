@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -66,15 +65,17 @@ export default function ExamRoomsPage() {
     setIsFormOpen(false);
   };
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
-          <div>
-            <CardTitle className="flex items-center">
-              <DoorOpen className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
-              Rooms
-            </CardTitle>
-            <div className="text-muted-foreground">A list of all the Rooms.</div>
+    <div className="space-y-4 p-8">
+      <div className="mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-purple-500 flex items-center justify-center shadow-md">
+              <DoorOpen className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold leading-none tracking-tight text-gray-900">Rooms</h1>
+              <p className="text-muted-foreground text-sm">List of all the Rooms.</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline">
@@ -108,82 +109,75 @@ export default function ExamRoomsPage() {
               </AlertDialogContent>
             </AlertDialog>
           </div>
-        </CardHeader>
-        <CardContent className="px-0">
-          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input
-              placeholder="Search..."
-              className="w-64"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="h-4 w-4" /> Download
-            </Button>
-          </div>
-          <div className="relative" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
+        </div>
+      </div>
+      <div className="border rounded-md flex flex-col gap-2">
+        <div className="p-4 flex items-center gap-2 mb-0 justify-between">
+          <Input
+            placeholder="Search..."
+            className="w-64"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+          <Button variant="outline" className="flex items-center gap-2">
+            <Download className="h-4 w-4" /> Download
+          </Button>
+        </div>
+        <div>
+          <div className="overflow-y-auto overflow-x-auto h-full">
+            <Table className="border rounded-md min-w-[900px]">
+              <TableHeader className="sticky top-0 z-10 bg-gray-100">
+                <TableRow>
+                  <TableHead className="w-[60px] bg-gray-100 text-gray-700">ID</TableHead>
+                  <TableHead className="w-[180px] bg-gray-100 text-gray-700">Room No</TableHead>
+                  <TableHead className="w-[160px] bg-gray-100 text-gray-700">Short Name</TableHead>
+                  <TableHead className="w-[140px] bg-gray-100 text-gray-700">Strength</TableHead>
+                  <TableHead className="w-[160px] bg-gray-100 text-gray-700">Exam Capacity</TableHead>
+                  <TableHead className="w-[160px] bg-gray-100 text-gray-700">No. of Benches</TableHead>
+                  <TableHead className="w-[160px] bg-gray-100 text-gray-700">Allocate Room</TableHead>
+                  <TableHead className="w-[120px] bg-gray-100 text-gray-700">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRooms.length === 0 ? (
                   <TableRow>
-                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
-                    <TableHead style={{ width: 180, background: "#f3f4f6", color: "#374151" }}>Room No</TableHead>
-                    <TableHead style={{ width: 160, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
-                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Strength</TableHead>
-                    <TableHead style={{ width: 160, background: "#f3f4f6", color: "#374151" }}>Exam Capacity</TableHead>
-                    <TableHead style={{ width: 160, background: "#f3f4f6", color: "#374151" }}>
-                      No. of Benches
-                    </TableHead>
-                    <TableHead style={{ width: 160, background: "#f3f4f6", color: "#374151" }}>Allocate Room</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      No data
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRooms.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        No data
+                ) : (
+                  filteredRooms.map((room) => (
+                    <TableRow key={room.id} className="group">
+                      <TableCell className="w-[60px]">{room.id}</TableCell>
+                      <TableCell className="w-[180px]">{room.roomNo}</TableCell>
+                      <TableCell className="w-[160px]">{room.shortName}</TableCell>
+                      <TableCell className="w-[140px]">{room.strength}</TableCell>
+                      <TableCell className="w-[160px]">{room.examCapacity}</TableCell>
+                      <TableCell className="w-[160px]">{room.benches}</TableCell>
+                      <TableCell className="w-[160px]">{room.allocateRoom ? "Yes" : "No"}</TableCell>
+                      <TableCell className="w-[120px]">
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(room)} className="h-5 w-5 p-0">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(room.id)}
+                            className="h-5 w-5 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    filteredRooms.map((room) => (
-                      <TableRow key={room.id} className="group">
-                        <TableCell style={{ width: 60 }}>{room.id}</TableCell>
-                        <TableCell style={{ width: 180 }}>{room.roomNo}</TableCell>
-                        <TableCell style={{ width: 160 }}>{room.shortName}</TableCell>
-                        <TableCell style={{ width: 140 }}>{room.strength}</TableCell>
-                        <TableCell style={{ width: 160 }}>{room.examCapacity}</TableCell>
-                        <TableCell style={{ width: 160 }}>{room.benches}</TableCell>
-                        <TableCell style={{ width: 160 }}>{room.allocateRoom ? "Yes" : "No"}</TableCell>
-                        <TableCell style={{ width: 120 }}>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(room)}
-                              className="h-5 w-5 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDelete(room.id)}
-                              className="h-5 w-5 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
