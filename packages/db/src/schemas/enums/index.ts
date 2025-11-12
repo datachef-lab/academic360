@@ -330,3 +330,9 @@ export const cuRegistrationCorrectionRequestStatusEnum = pgEnum("cu_registration
     "REJECTED",
     "RECTIFICATION_DONE"
 ]);
+
+
+export const examOrderTypeEnum = pgEnum("exam_order_type", [
+    "CU_ROLL_NUMBER",
+    "UID",
+]);

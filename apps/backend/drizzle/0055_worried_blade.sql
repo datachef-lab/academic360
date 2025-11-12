@@ -1,0 +1,1 @@
+CREATE TYPE "public"."exam_order_type" AS ENUM('CU_ROLL_NUMBER', 'UID');
