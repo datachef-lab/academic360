@@ -59,9 +59,9 @@ export default function ExamFloorsPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
+    <div className="p-4">
+      <Card className="border-none">
+        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 bg-background">
           <div>
             <CardTitle className="flex items-center">
               <DoorOpen className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
@@ -103,7 +103,7 @@ export default function ExamFloorsPage() {
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
+          <div className="bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
             <Input
               placeholder="Search..."
               className="w-64"
@@ -117,11 +117,11 @@ export default function ExamFloorsPage() {
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
               <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
+                <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
-                    <TableHead style={{ width: 180, background: "#f3f4f6", color: "#374151" }}>Floor Name</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
+                    <TableHead style={{ width: 60 }}>ID</TableHead>
+                    <TableHead style={{ width: 180 }}>Floor Name</TableHead>
+                    <TableHead style={{ width: 120 }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
