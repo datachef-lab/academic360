@@ -441,14 +441,62 @@ SELECT
     mail.pincode                                      AS "Permanent_Pin",
     mail.state_name                                   AS "Permanent_State",
     mail.country_name                                 AS "Permanent_Country",
-    COALESCE(cs.core_major, sc.course_name, '')       AS "BA_BSC_BMUS_CVOC_Hons_Core_Major_Subject",
-    COALESCE(cs.minor1, '')                           AS "BA_BSC_BMUS_CVOC_Hons_1st_Minor_Subject",
-    COALESCE(cs.minor2, '')                           AS "BA_BSC_BMUS_CVOC_Hons_2nd_Minor_Subject",
-    COALESCE(cs.cvac, '')                             AS "BA_BSC_BMUS_CVOC_Hons_CVAC",
-    COALESCE(cs.aec1, '')                             AS "BA_BSC_BMUS_CVOC_Hons_AEC",
-    COALESCE(cs.idc1, '')                             AS "BA_BSC_BMUS_CVOC_Hons_IDC_1",
-    COALESCE(cs.idc2, '')                             AS "BA_BSC_BMUS_CVOC_Hons_IDC_2",
-    COALESCE(cs.idc3, '')                             AS "BA_BSC_BMUS_CVOC_Hons_IDC_3",
+    CASE 
+        WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+          OR sc.program_course_name ILIKE 'BBA (H)%'
+          OR sc.program_course_name ILIKE 'B.Com (G)%'
+        THEN ''
+        ELSE COALESCE(cs.core_major, sc.course_name, '')
+    END                                               AS "BA_BSC_BMUS_CVOC_Hons_Core_Major_Subject",
+    CASE 
+        WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+          OR sc.program_course_name ILIKE 'BBA (H)%'
+          OR sc.program_course_name ILIKE 'B.Com (G)%'
+        THEN ''
+        ELSE COALESCE(cs.minor1, '')
+    END                                               AS "BA_BSC_BMUS_CVOC_Hons_1st_Minor_Subject",
+    CASE 
+        WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+          OR sc.program_course_name ILIKE 'BBA (H)%'
+          OR sc.program_course_name ILIKE 'B.Com (G)%'
+        THEN ''
+        ELSE COALESCE(cs.minor2, '')
+    END                                               AS "BA_BSC_BMUS_CVOC_Hons_2nd_Minor_Subject",
+    CASE 
+        WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+          OR sc.program_course_name ILIKE 'BBA (H)%'
+          OR sc.program_course_name ILIKE 'B.Com (G)%'
+        THEN ''
+        ELSE COALESCE(cs.cvac, '')
+    END                                               AS "BA_BSC_BMUS_CVOC_Hons_CVAC",
+    CASE 
+        WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+          OR sc.program_course_name ILIKE 'BBA (H)%'
+          OR sc.program_course_name ILIKE 'B.Com (G)%'
+        THEN ''
+        ELSE COALESCE(cs.aec1, '')
+    END                                               AS "BA_BSC_BMUS_CVOC_Hons_AEC",
+    CASE 
+        WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+          OR sc.program_course_name ILIKE 'BBA (H)%'
+          OR sc.program_course_name ILIKE 'B.Com (G)%'
+        THEN ''
+        ELSE COALESCE(cs.idc1, '')
+    END                                               AS "BA_BSC_BMUS_CVOC_Hons_IDC_1",
+    CASE 
+        WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+          OR sc.program_course_name ILIKE 'BBA (H)%'
+          OR sc.program_course_name ILIKE 'B.Com (G)%'
+        THEN ''
+        ELSE COALESCE(cs.idc2, '')
+    END                                               AS "BA_BSC_BMUS_CVOC_Hons_IDC_2",
+    CASE 
+        WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+          OR sc.program_course_name ILIKE 'BBA (H)%'
+          OR sc.program_course_name ILIKE 'B.Com (G)%'
+        THEN ''
+        ELSE COALESCE(cs.idc3, '')
+    END                                               AS "BA_BSC_BMUS_CVOC_Hons_IDC_3",
     ''                                                AS "BA_BSC_MDC_Core_Subject_1",
     ''                                                AS "BA_BSC_MDC_Core_Subject_2",
     ''                                                AS "BA_BSC_MDC_Minor_Subject",
