@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Download, Upload, PlusCircle, DoorOpen, Edit, Trash2, Loader2 } from "lucide-react";
@@ -12,8 +11,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { getAllFloors, createFloor, updateFloor, deleteFloor, type FloorT } from "@/services/floor.service";
+
+type FloorFormValues = {
+  name: string;
+  shortName?: string;
+  sequence?: number;
+  isActive: boolean;
+};
 
 export default function ExamFloorsPage() {
   const [floors, setFloors] = React.useState<FloorT[]>([]);
@@ -50,9 +57,11 @@ export default function ExamFloorsPage() {
     fetchFloors();
   }, []);
 
-  const filteredFloors = floors.filter((f) =>
-    [f.id?.toString() || "", f.name || ""].some((v) => v.toLowerCase().includes(searchText.toLowerCase())),
-  );
+  const filteredFloors = floors.filter((f) => {
+    const query = searchText.trim().toLowerCase();
+    if (!query) return true;
+    return [f.id?.toString() || "", f.name || "", f.shortName || ""].some((v) => v.toLowerCase().includes(query));
+  });
 
   const handleAddNew = () => {
     setSelectedFloor(null);
@@ -89,13 +98,7 @@ export default function ExamFloorsPage() {
     }
   };
 
-  const handleSubmit = async (form: {
-    id: number;
-    name: string;
-    shortName?: string;
-    sequence?: number;
-    isActive?: boolean;
-  }) => {
+  const handleSubmit = async (form: FloorFormValues) => {
     try {
       setIsSubmitting(true);
 
@@ -105,7 +108,7 @@ export default function ExamFloorsPage() {
           name: form.name,
           shortName: form.shortName,
           sequence: form.sequence,
-          isActive: form.isActive ?? true,
+          isActive: form.isActive,
         });
 
         if (response.httpStatus === "UPDATED" || response.httpStatus === "SUCCESS") {
@@ -127,7 +130,7 @@ export default function ExamFloorsPage() {
           name: form.name,
           shortName: form.shortName,
           sequence: form.sequence,
-          isActive: form.isActive ?? true,
+          isActive: form.isActive,
         });
 
         if (response.httpStatus === "SUCCESS") {
@@ -211,68 +214,97 @@ export default function ExamFloorsPage() {
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
-          <div className="relative" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
-                <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
-                  <TableRow>
-                    <TableHead style={{ width: 60 }}>ID</TableHead>
-                    <TableHead style={{ width: 180 }}>Floor Name</TableHead>
-                    <TableHead style={{ width: 120 }}>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading floors...
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredFloors.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
-                        No data
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredFloors.map((floor) => (
-                      <TableRow key={floor.id} className="group">
-                        <TableCell style={{ width: 60 }}>{floor.id}</TableCell>
-                        <TableCell style={{ width: 180 }}>{floor.name}</TableCell>
-                        <TableCell style={{ width: 120 }}>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(floor)}
-                              className="h-5 w-5 p-0"
-                              disabled={deletingId === floor.id}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDelete(floor.id!)}
-                              className="h-5 w-5 p-0"
-                              disabled={deletingId === floor.id}
-                            >
-                              {deletingId === floor.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+          <div className="overflow-x-auto flex-1" style={{ minHeight: "420px" }}>
+            <div className="rounded-md border border-slate-300 h-full max-h-[480px] overflow-y-auto min-w-full">
+              <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
+                <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300 min-w-full">
+                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
+                    #
+                  </div>
+                  <div className="flex-shrink-0 basis-[32%] px-3 py-2 border-r border-slate-300 flex items-center">
+                    Name
+                  </div>
+                  <div className="flex-shrink-0 basis-[20%] px-3 py-2 border-r border-slate-300 flex items-center">
+                    Short Name
+                  </div>
+                  <div className="flex-shrink-0 basis-[16%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
+                    Sequence
+                  </div>
+                  <div className="flex-shrink-0 basis-[12%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
+                    Status
+                  </div>
+                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 flex items-center justify-center">Actions</div>
+                </div>
+              </div>
+
+              <div className="bg-white min-w-full">
+                {loading ? (
+                  <div className="flex items-center justify-center h-48 text-muted-foreground border-b border-slate-200 gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading floors...
+                  </div>
+                ) : filteredFloors.length === 0 ? (
+                  <div className="flex items-center justify-center h-48 text-muted-foreground border-b border-slate-200">
+                    No floors match your search.
+                  </div>
+                ) : (
+                  filteredFloors.map((floor, index) => (
+                    <div
+                      key={floor.id ?? `${floor.name}-${index}`}
+                      className="flex border-b border-slate-200 hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="flex-shrink-0 basis-[10%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
+                        {index + 1}
+                      </div>
+                      <div className="flex-shrink-0 basis-[32%] px-3 py-3 border-r border-slate-200 flex flex-col">
+                        <span className="font-medium text-slate-800 truncate" title={floor.name ?? undefined}>
+                          {floor.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">ID: {floor.id ?? "—"}</span>
+                      </div>
+                      <div className="flex-shrink-0 basis-[20%] px-3 py-3 border-r border-slate-200 flex items-center">
+                        {floor.shortName ?? <span className="text-slate-400">—</span>}
+                      </div>
+                      <div className="flex-shrink-0 basis-[16%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
+                        {floor.sequence ?? <span className="text-slate-400">—</span>}
+                      </div>
+                      <div className="flex-shrink-0 basis-[12%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            floor.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {floor.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                      <div className="flex-shrink-0 basis-[10%] px-3 py-3 flex items-center justify-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
+                          onClick={() => handleEdit(floor)}
+                          disabled={deletingId === floor.id}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="shadow-none"
+                          onClick={() => handleDelete(floor.id!)}
+                          disabled={deletingId === floor.id}
+                        >
+                          {deletingId === floor.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -283,7 +315,7 @@ export default function ExamFloorsPage() {
 
 type FloorFormProps = {
   initialData?: FloorT;
-  onSubmit: (data: { id: number; name: string; shortName?: string; sequence?: number; isActive?: boolean }) => void;
+  onSubmit: (data: FloorFormValues) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 };
@@ -314,17 +346,16 @@ function FloorForm({ initialData, onSubmit, onCancel, isSubmitting = false }: Fl
       return;
     }
     onSubmit({
-      id: initialData?.id ?? 0,
       name: name.trim(),
       shortName: shortName.trim() || undefined,
-      sequence: sequence,
+      sequence,
       isActive,
     });
   };
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="floor-name">Floor Name *</Label>
           <Input
@@ -345,7 +376,7 @@ function FloorForm({ initialData, onSubmit, onCancel, isSubmitting = false }: Fl
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="floor-sequence">Sequence</Label>
           <Input
@@ -356,20 +387,9 @@ function FloorForm({ initialData, onSubmit, onCancel, isSubmitting = false }: Fl
             placeholder="Enter sequence (optional)"
           />
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 mt-2">
+          <Switch id="floor-active" checked={isActive} onCheckedChange={setIsActive} />
           <Label htmlFor="floor-active">Active</Label>
-          <div className="flex items-center space-x-2 pt-2">
-            <input
-              type="checkbox"
-              id="floor-active"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4 w-4"
-            />
-            <Label htmlFor="floor-active" className="cursor-pointer">
-              {isActive ? "Active" : "Inactive"}
-            </Label>
-          </div>
         </div>
       </div>
       <div className="flex justify-end gap-2">
@@ -378,7 +398,7 @@ function FloorForm({ initialData, onSubmit, onCancel, isSubmitting = false }: Fl
         </Button>
         <Button
           onClick={handleSubmit}
-          className="bg-purple-600 hover:bg-purple-700 text-white"
+          className="bg-purple-600 hover:bg-purple-700 text-white shadow-none"
           disabled={isSubmitting || !name.trim()}
         >
           {isSubmitting ? (

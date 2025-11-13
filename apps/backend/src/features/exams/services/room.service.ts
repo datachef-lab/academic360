@@ -5,7 +5,7 @@ import {
   roomModel,
   floorModel,
 } from "@repo/db/schemas/models/exams";
-import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
+import { and, eq, ilike, ne } from "drizzle-orm";
 
 function normaliseRoomPayload<T extends Partial<Room | RoomT>>(data: T) {
   const clone = { ...data };
@@ -36,19 +36,6 @@ async function ensureUniqueName(
   return Boolean(existing);
 }
 
-async function ensureUniqueSequence(
-  sequence: number | null | undefined,
-  excludeId?: number,
-): Promise<boolean> {
-  if (sequence === undefined || sequence === null) return false;
-  const whereClause =
-    excludeId !== undefined
-      ? and(eq(roomModel.sequence, sequence), ne(roomModel.id, excludeId))
-      : eq(roomModel.sequence, sequence);
-  const [existing] = await db.select().from(roomModel).where(whereClause);
-  return Boolean(existing);
-}
-
 async function validateFloorExists(
   floorId: number | null | undefined,
 ): Promise<boolean> {
@@ -70,10 +57,6 @@ export async function createRoom(data: Room) {
 
   if (await ensureUniqueName(payload.name)) {
     throw new Error("Room name already exists.");
-  }
-
-  if (await ensureUniqueSequence(payload.sequence ?? null)) {
-    throw new Error("Sequence must be unique.");
   }
 
   if (payload.floorId !== undefined && payload.floorId !== null) {
@@ -106,13 +89,6 @@ export async function updateRoom(
     throw new Error("Room name already exists.");
   }
 
-  if (
-    payload.sequence !== undefined &&
-    (await ensureUniqueSequence(payload.sequence, id))
-  ) {
-    throw new Error("Sequence must be unique.");
-  }
-
   if (payload.floorId !== undefined && payload.floorId !== null) {
     if (!(await validateFloorExists(payload.floorId))) {
       throw new Error("Floor with the provided ID does not exist.");
@@ -138,9 +114,6 @@ export async function deleteRoom(id: number) {
 export async function deleteRoomSafe(id: number) {
   const [found] = await db.select().from(roomModel).where(eq(roomModel.id, id));
   if (!found) return null;
-
-  // Check for dependencies - you can add more checks here if rooms have dependencies
-  // For now, rooms can be deleted if they exist
 
   const [deleted] = await db
     .delete(roomModel)
