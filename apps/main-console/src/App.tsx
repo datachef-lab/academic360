@@ -38,7 +38,7 @@ import * as studentModule from "@/pages/students";
 import * as attendanceModule from "@/pages/attendance-timetable";
 import * as libraryModule from "@/pages/library";
 import * as appModule from "./pages/apps";
-import * as facultiesStaffsModule from "./pages/faculties-staffs";
+// import * as facultiesStaffsModule from "./pages/faculties-staffs";
 import * as marksheetModule from "@/pages/marksheets";
 import * as settingsModule from "./features/settings";
 import { NoticeMaster } from "./pages/notices";
@@ -84,7 +84,7 @@ import * as examManagementModule from "@/features/exam-management";
 import RealTimeTrackerPage from "./features/realtime-tracker/pages";
 import ReportsPage from "./features/reports/page";
 import PhysicalCURegMarkingPage from "./features/cu-registration/pages/PhysicalCURegMarkingPage";
-
+import * as administrationModule from "./features/administration";
 // import * as resourceModule from "@/pages/resources";
 
 const router = createBrowserRouter(
@@ -444,12 +444,13 @@ const router = createBrowserRouter(
         },
         {
           path: "faculty-staff",
-          element: <facultiesStaffsModule.FacultyStaffMaster />,
+          element: <administrationModule.AdministrationLayout />,
           children: [
             { path: "", element: <div>TODO: Faculty/Staff Home</div> },
             { path: "faculties", element: <div>TODO: Faculty List</div> },
             { path: "create", element: <div>TODO: Create Page</div> },
-            { path: "departments", element: <div>TODO: Departments Page</div> },
+            { path: "departments", element: <administrationModule.DepartmentPage /> },
+            { path: "designations", element: <administrationModule.DesignationPage /> },
             { path: "roles", element: <div>TODO: Roles & Permission Page</div> },
             { path: "reports", element: <div>TODO: Roles & Reports Page</div> },
           ],

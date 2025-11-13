@@ -3,7 +3,7 @@ import { annualIncomeModel } from "@/features/resources/models/annualIncome.mode
 import { bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js";
 import { categoryModel } from "@/features/resources/models/category.model.js";
 import { religionModel } from "@/features/resources/models/religion.model.js";
-import { departmentModel } from "@repo/db/schemas/models/user";
+import { departmentModel } from "@repo/db/schemas/models/administration";
 import { disabilityTypeEnum, personTitleType } from "@repo/db/schemas/enums";
 import {
   boolean,

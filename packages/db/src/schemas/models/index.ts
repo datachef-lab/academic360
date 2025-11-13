@@ -12,3 +12,4 @@ export * from "./resources";
 export * from "./subject-selection";
 export * from "./user";
 export * from "./exams"
+export * from "./administration"
