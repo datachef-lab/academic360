@@ -16,13 +16,15 @@ import { Label } from "@/components/ui/label";
 type Floor = {
   id: number;
   floorName: string;
+  shortName: string; // <-- Add shortName to Floor type
+  isActive: boolean; // <-- Add isActive to Floor type
 };
 
 export default function ExamFloorsPage() {
   const initialFloors: Floor[] = [
-    { id: 1, floorName: "First Floor" },
-    { id: 2, floorName: "Second Floor" },
-    { id: 3, floorName: "Third Floor" },
+    { id: 1, floorName: "First Floor", shortName: "1F", isActive: true },
+    { id: 2, floorName: "Second Floor", shortName: "2F", isActive: false },
+    { id: 3, floorName: "Third Floor", shortName: "3F", isActive: true },
   ];
   const [floors, setFloors] = React.useState<Floor[]>(initialFloors);
   const [searchText, setSearchText] = React.useState("");
@@ -30,7 +32,7 @@ export default function ExamFloorsPage() {
   const [selectedFloor, setSelectedFloor] = React.useState<Floor | null>(null);
 
   const filteredFloors = floors.filter((f) =>
-    [f.id.toString(), f.floorName].some((v) => v.toLowerCase().includes(searchText.toLowerCase())),
+    [f.id.toString(), f.floorName, f.shortName].some((v) => v.toLowerCase().includes(searchText.toLowerCase())),
   );
 
   const handleAddNew = () => {
@@ -121,13 +123,15 @@ export default function ExamFloorsPage() {
                   <TableRow>
                     <TableHead style={{ width: 60 }}>ID</TableHead>
                     <TableHead style={{ width: 180 }}>Floor Name</TableHead>
+                    <TableHead style={{ width: 120 }}>Short Name</TableHead> {/* New column */}
+                    <TableHead style={{ width: 120 }}>Status</TableHead> {/* New column */}
                     <TableHead style={{ width: 120 }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredFloors.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">
                         No data
                       </TableCell>
                     </TableRow>
@@ -136,6 +140,9 @@ export default function ExamFloorsPage() {
                       <TableRow key={floor.id} className="group">
                         <TableCell style={{ width: 60 }}>{floor.id}</TableCell>
                         <TableCell style={{ width: 180 }}>{floor.floorName}</TableCell>
+                        <TableCell style={{ width: 120 }}>{floor.shortName}</TableCell> {/* New data cell */}
+                        <TableCell style={{ width: 120 }}>{floor.isActive ? "Active" : "Inactive"}</TableCell>{" "}
+                        {/* New data cell */}
                         <TableCell style={{ width: 120 }}>
                           <div className="flex space-x-2">
                             <Button
@@ -178,6 +185,8 @@ type FloorFormProps = {
 function FloorForm({ initialData, onSubmit, onCancel }: FloorFormProps) {
   const [id, setId] = React.useState<number>(initialData?.id ?? 0);
   const [floorName, setFloorName] = React.useState(initialData?.floorName ?? "");
+  const [shortName, setShortName] = React.useState(initialData?.shortName ?? ""); // <-- Add shortName state
+  const [isActive, setIsActive] = React.useState(initialData?.isActive ?? true); // <-- Add isActive state
 
   return (
     <div className="space-y-4">
@@ -190,12 +199,32 @@ function FloorForm({ initialData, onSubmit, onCancel }: FloorFormProps) {
           <Label htmlFor="floor-name">Floor Name</Label>
           <Input id="floor-name" value={floorName} onChange={(e) => setFloorName(e.target.value)} />
         </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="short-name">Short Name</Label> {/* New label for short name */}
+          <Input id="short-name" value={shortName} onChange={(e) => setShortName(e.target.value)} />{" "}
+          {/* New input for short name */}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="status">Status</Label>
+          <select
+            id="status"
+            value={isActive ? "Active" : "Inactive"}
+            onChange={(e) => setIsActive(e.target.value === "Active")}
+            className="border rounded-md p-2"
+          >
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
       </div>
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => onSubmit({ id, floorName })} className="bg-purple-600 hover:bg-purple-700 text-white">
+        <Button
+          onClick={() => onSubmit({ id, floorName, shortName, isActive })}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+        >
           Save
         </Button>
       </div>

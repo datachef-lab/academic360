@@ -287,6 +287,17 @@ const router = createBrowserRouter(
           element: <RealTimeTrackerPage />,
         },
         {
+          path: "fees",
+          element: <admissionFeesModule.feesModule.FeesMasterLayout />,
+          children: [
+            { path: "", element: <admissionFeesModule.feesModule.FeesHomePage /> },
+            { path: "reports", element: <admissionFeesModule.feesModule.FeesReportsPage /> },
+            { path: "structure", element: <admissionFeesModule.feesModule.FeesStructurePage /> },
+            { path: "slabs", element: <admissionFeesModule.feesModule.FeesSlabPage /> },
+            { path: "heads", element: <admissionFeesModule.feesModule.FeeHeadsPage /> },
+          ],
+        },
+        {
           path: "admissions-fees",
           element: <admissionFeesModule.AdmissionsFeesMaster />,
           children: [

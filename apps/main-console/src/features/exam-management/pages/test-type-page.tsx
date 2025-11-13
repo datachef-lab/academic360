@@ -326,7 +326,7 @@ export default function TestTypePage() {
           <div>
             <CardTitle className="flex items-center">
               <ClipboardList className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
-              Test Types
+              Exam Types
             </CardTitle>
             <div className="text-muted-foreground">A list of all the Test Types.</div>
           </div>

@@ -13,9 +13,12 @@ import {
   Plus,
   ChevronDown,
   Calendar,
-  FileText,
+  Users,
   GraduationCap,
   ClipboardList,
+  IndianRupee,
+  CheckSquare,
+  Activity,
 } from "lucide-react";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -68,11 +71,12 @@ const data = {
   navMain: [
     // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
     { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
-    { title: "CU Registration", url: "/dashboard/cu-registration", icon: FileText },
-    { title: "Physical CUReg Marking", url: "/dashboard/cu-reg/physical-marking", icon: ClipboardList },
+    { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },
+    { title: "Physical CUReg Marking", url: "/dashboard/cu-reg/physical-marking", icon: CheckSquare },
     { title: "Exam Management", url: "/dashboard/exam-management", icon: GraduationCap },
-    { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: ClipboardList },
-    { title: "Reports", url: "/dashboard/reports", icon: FileText },
+    { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: Activity },
+    { title: "Reports", url: "/dashboard/reports", icon: ClipboardList },
+    { title: "Fees", url: "/dashboard/fees", icon: IndianRupee },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
     // { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
@@ -263,7 +267,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   )}
 
                   {/* Dashboard Link */}
-                  <div className="mb-4">
+                  <div className="mb-2">
                     {data.navDash.map((item) => (
                       <NavItem
                         key={item.title}
@@ -281,11 +285,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     ))}
                   </div>
                   {/* Masters Section */}
-                  <div className="mb-4 ">
+                  <div className=" ">
                     <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
                       Masters
                     </h3>
-                    <div>
+                    <div className="space-y-1">
                       {data.navMain
                         .filter((item) => {
                           // For temp users, only show "Physical CUReg Marking"
