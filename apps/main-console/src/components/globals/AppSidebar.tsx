@@ -76,7 +76,7 @@ const data = {
     { title: "Exam Management", url: "/dashboard/exam-management", icon: GraduationCap },
     { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: Activity },
     { title: "Reports", url: "/dashboard/reports", icon: ClipboardList },
-    { title: "Fees", url: "/dashboard/fees", icon: IndianRupee },
+    { title: "Fees Module", url: "/dashboard/fees", icon: IndianRupee },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
     // { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
