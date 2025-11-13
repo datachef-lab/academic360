@@ -20,20 +20,6 @@ function normaliseExamTypePayload<T extends Partial<ExamType | ExamTypeT>>(
   ) {
     clone.shortName = clone.shortName.trim() as T["shortName"];
   }
-  if (
-    clone.description !== undefined &&
-    typeof clone.description === "string" &&
-    clone.description !== null
-  ) {
-    clone.description = clone.description.trim() as T["description"];
-  }
-  if (
-    clone.carry !== undefined &&
-    typeof clone.carry === "string" &&
-    clone.carry !== null
-  ) {
-    clone.carry = clone.carry.trim() as T["carry"];
-  }
   return clone;
 }
 
@@ -54,22 +40,6 @@ async function ensureUniqueName(
   return Boolean(existing);
 }
 
-async function ensureUniqueSequence(
-  sequence: number | null | undefined,
-  excludeId?: number,
-): Promise<boolean> {
-  if (sequence === undefined || sequence === null) return false;
-  const whereClause =
-    excludeId !== undefined
-      ? and(
-          eq(examTypeModel.sequence, sequence),
-          ne(examTypeModel.id, excludeId),
-        )
-      : eq(examTypeModel.sequence, sequence);
-  const [existing] = await db.select().from(examTypeModel).where(whereClause);
-  return Boolean(existing);
-}
-
 export async function createExamType(data: ExamType) {
   const { id, createdAt, updatedAt, ...rest } = data as ExamTypeT;
   const payload = normaliseExamTypePayload(rest);
@@ -80,10 +50,6 @@ export async function createExamType(data: ExamType) {
 
   if (await ensureUniqueName(payload.name)) {
     throw new Error("Exam type name already exists.");
-  }
-
-  if (await ensureUniqueSequence(payload.sequence ?? null)) {
-    throw new Error("Sequence must be unique.");
   }
 
   const [created] = await db.insert(examTypeModel).values(payload).returning();
@@ -113,13 +79,6 @@ export async function updateExamType(
     throw new Error("Exam type name already exists.");
   }
 
-  if (
-    payload.sequence !== undefined &&
-    (await ensureUniqueSequence(payload.sequence, id))
-  ) {
-    throw new Error("Sequence must be unique.");
-  }
-
   const [updated] = await db
     .update(examTypeModel)
     .set(payload)
@@ -142,9 +101,6 @@ export async function deleteExamTypeSafe(id: number) {
     .from(examTypeModel)
     .where(eq(examTypeModel.id, id));
   if (!found) return null;
-
-  // Check for dependencies - you can add more checks here if exam types have dependencies
-  // For now, exam types can be deleted if they exist
 
   const [deleted] = await db
     .delete(examTypeModel)

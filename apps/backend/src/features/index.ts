@@ -73,6 +73,10 @@ import {
   roomRouter,
   examTypeRouter,
 } from "./exams/routes/index.js";
+import {
+  departmentRouter,
+  designationRouter,
+} from "./administration/routes/index.js";
 
 export {
   documentRouter,
@@ -136,4 +140,6 @@ export {
   floorRouter,
   roomRouter,
   examTypeRouter,
+  departmentRouter,
+  designationRouter,
 };

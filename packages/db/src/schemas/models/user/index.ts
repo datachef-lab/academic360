@@ -2,7 +2,6 @@ export * from "./user.model";
 export * from "./student.model";
 export * from "./accommodation.model";
 export * from "./address.model";
-export * from "./department.model";
 export * from "./disabilityCode.model";
 export * from "./emergencyContact.model";
 export * from "./family.model";

@@ -74,7 +74,10 @@ import {
   floorRouter,
   roomRouter,
   examTypeRouter,
+  departmentRouter,
+  designationRouter,
 } from "@/features/index.js";
+
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 import { shiftRouter } from "@/features/academics/routes/index.js";
@@ -378,6 +381,10 @@ app.use("/api/board-universities", boardUniversityRouter);
 app.use("/api/institutions", institutionRouter);
 
 app.use("/api/qualifications", qualificationRouter);
+
+app.use("/api/administration/departments", departmentRouter);
+
+app.use("/api/administration/designations", designationRouter);
 
 app.use("/api/address", addressRouter);
 

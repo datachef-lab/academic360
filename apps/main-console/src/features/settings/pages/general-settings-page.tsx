@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Library } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { findAllSettings, updateSetting } from "@/features/settings/services/settings-service";
 import { useSettings } from "../hooks/use-settings";
+import { Settings } from "@/features/settings/types/settings.type";
 // import { useSettings } from "@/features/settings/providers/settings-provider";
 
 export default function GeneralSettingsPage() {
@@ -14,21 +15,21 @@ export default function GeneralSettingsPage() {
   const [updatedSettings, setUpdatedSettings] = useState<Record<number, string | File>>({});
   const [previewImages, setPreviewImages] = useState<Record<number, string>>({});
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    findAllSettings().then((data) => {
-      const payload = data.payload || [];
-      setSettings(payload);
-
+    // Initialize preview images from existing settings (only once when settings are loaded)
+    if (settings.length > 0 && !initializedRef.current) {
       const filePreviews: Record<number, string> = {};
-      payload.forEach((setting: any) => {
+      settings.forEach((setting: Settings) => {
         if (setting.type === "FILE") {
           filePreviews[setting.id!] = `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${setting.id}`;
         }
       });
       setPreviewImages(filePreviews);
-    });
-  }, [setSettings]);
+      initializedRef.current = true;
+    }
+  }, [settings]);
 
   const handleInputChange = (settingId: number, value: string | File) => {
     setUpdatedSettings((prev) => ({ ...prev, [settingId]: value }));
@@ -54,7 +55,7 @@ export default function GeneralSettingsPage() {
         setSettings(payload);
 
         const filePreviews: Record<number, string> = {};
-        payload.forEach((setting: any) => {
+        payload.forEach((setting: Settings) => {
           if (setting.type === "FILE") {
             filePreviews[setting.id!] = `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${setting.id}`;
           }
