@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, PlusCircle, DoorOpen, Edit, Trash2 } from "lucide-react";
+import { Download, Upload, PlusCircle, DoorOpen, Edit, Trash2, Loader2 } from "lucide-react";
 import React from "react";
 import {
   AlertDialog,
@@ -13,57 +13,167 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-
-type Room = {
-  id: number;
-  roomNo: string;
-  shortName: string;
-  strength: number;
-  examCapacity: number;
-  benches: number;
-  allocateRoom: boolean;
-};
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { getAllRooms, createRoom, updateRoom, deleteRoom, type RoomT } from "@/services/room.service";
+import { getAllFloors, type FloorT } from "@/services/floor.service";
 
 export default function ExamRoomsPage() {
-  const initialRooms: Room[] = [
-    { id: 1, roomNo: "101", shortName: "R101", strength: 40, examCapacity: 36, benches: 18, allocateRoom: true },
-    { id: 2, roomNo: "102", shortName: "R102", strength: 30, examCapacity: 28, benches: 14, allocateRoom: false },
-    { id: 3, roomNo: "201", shortName: "R201", strength: 50, examCapacity: 45, benches: 25, allocateRoom: true },
-    { id: 4, roomNo: "202", shortName: "R202", strength: 24, examCapacity: 22, benches: 12, allocateRoom: true },
-    { id: 5, roomNo: "Lab-1", shortName: "LAB1", strength: 60, examCapacity: 40, benches: 20, allocateRoom: false },
-  ];
-  const [rooms, setRooms] = React.useState<Room[]>(initialRooms);
+  const [rooms, setRooms] = React.useState<RoomT[]>([]);
+  const [floors, setFloors] = React.useState<FloorT[]>([]);
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedRoom, setSelectedRoom] = React.useState<Room | null>(null);
+  const [selectedRoom, setSelectedRoom] = React.useState<RoomT | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<number | null>(null);
+
+  // Fetch rooms and floors on component mount
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [roomsResponse, floorsResponse] = await Promise.all([getAllRooms(), getAllFloors()]);
+
+        if (roomsResponse.httpStatus === "SUCCESS" && roomsResponse.payload) {
+          setRooms(roomsResponse.payload);
+        } else {
+          toast.error("Failed to load rooms", {
+            description: roomsResponse.message || "An error occurred",
+          });
+        }
+
+        if (floorsResponse.httpStatus === "SUCCESS" && floorsResponse.payload) {
+          setFloors(floorsResponse.payload);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Failed to load data", {
+          description: error instanceof Error ? error.message : "An error occurred",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const filteredRooms = rooms.filter((r) =>
-    [r.id.toString(), r.roomNo, r.shortName].some((v) => v.toLowerCase().includes(searchText.toLowerCase())),
+    [r.id?.toString() || "", r.name || "", r.shortName || ""].some((v) =>
+      v.toLowerCase().includes(searchText.toLowerCase()),
+    ),
   );
 
   const handleAddNew = () => {
     setSelectedRoom(null);
   };
 
-  const handleEdit = (room: Room) => {
+  const handleEdit = (room: RoomT) => {
     setSelectedRoom(room);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    setRooms((prev) => prev.filter((r) => r.id !== id));
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this room?")) {
+      return;
+    }
+
+    try {
+      setDeletingId(id);
+      const response = await deleteRoom(id);
+      if (response.httpStatus === "DELETED" || response.httpStatus === "SUCCESS") {
+        toast.success("Room deleted successfully");
+        setRooms((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        toast.error("Failed to delete room", {
+          description: response.message || "An error occurred",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting room:", error);
+      toast.error("Failed to delete room", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
-  const handleSubmit = (form: Room) => {
-    const providedId = Number(form.id);
-    if (selectedRoom) {
-      setRooms((prev) => prev.map((r) => (r.id === selectedRoom.id ? { ...form, id: providedId } : r)));
-    } else {
-      const nextId = rooms.length ? Math.max(...rooms.map((r) => r.id)) + 1 : 1;
-      const finalId = providedId && !Number.isNaN(providedId) ? providedId : nextId;
-      setRooms((prev) => [...prev, { ...form, id: finalId }]);
+  const handleSubmit = async (form: {
+    name: string;
+    shortName?: string;
+    strength: number;
+    examCapacity: number;
+    benches: number;
+    floorId?: number;
+    sequence?: number;
+    isActive: boolean;
+  }) => {
+    try {
+      setIsSubmitting(true);
+
+      if (selectedRoom) {
+        // Update existing room
+        const response = await updateRoom(selectedRoom.id!, {
+          name: form.name,
+          shortName: form.shortName,
+          strength: form.strength,
+          examCapacity: form.examCapacity,
+          benches: form.benches,
+          floorId: form.floorId,
+          sequence: form.sequence,
+          isActive: form.isActive,
+        });
+
+        if (response.httpStatus === "UPDATED" || response.httpStatus === "SUCCESS") {
+          toast.success("Room updated successfully");
+          // Refresh rooms list
+          const refreshResponse = await getAllRooms();
+          if (refreshResponse.httpStatus === "SUCCESS" && refreshResponse.payload) {
+            setRooms(refreshResponse.payload);
+          }
+          setIsFormOpen(false);
+        } else {
+          toast.error("Failed to update room", {
+            description: response.message || "An error occurred",
+          });
+        }
+      } else {
+        // Create new room
+        const response = await createRoom({
+          name: form.name,
+          shortName: form.shortName,
+          strength: form.strength,
+          examCapacity: form.examCapacity,
+          benches: form.benches,
+          floorId: form.floorId,
+          sequence: form.sequence,
+          isActive: form.isActive,
+        });
+
+        if (response.httpStatus === "SUCCESS") {
+          toast.success("Room created successfully");
+          // Refresh rooms list
+          const refreshResponse = await getAllRooms();
+          if (refreshResponse.httpStatus === "SUCCESS" && refreshResponse.payload) {
+            setRooms(refreshResponse.payload);
+          }
+          setIsFormOpen(false);
+        } else {
+          toast.error("Failed to create room", {
+            description: response.message || "An error occurred",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error saving room:", error);
+      toast.error(selectedRoom ? "Failed to update room" : "Failed to create room", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsFormOpen(false);
   };
   return (
     <div className="p-4">
@@ -104,6 +214,8 @@ export default function ExamRoomsPage() {
                   initialData={selectedRoom ?? undefined}
                   onSubmit={(data) => handleSubmit(data)}
                   onCancel={() => setIsFormOpen(false)}
+                  isSubmitting={isSubmitting}
+                  floors={floors}
                 />
               </AlertDialogContent>
             </AlertDialog>
@@ -127,17 +239,26 @@ export default function ExamRoomsPage() {
                 <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
                   <TableRow>
                     <TableHead style={{ width: 60 }}>ID</TableHead>
-                    <TableHead style={{ width: 180 }}>Room No</TableHead>
+                    <TableHead style={{ width: 180 }}>Room Name</TableHead>
                     <TableHead style={{ width: 160 }}>Short Name</TableHead>
                     <TableHead style={{ width: 140 }}>Strength</TableHead>
                     <TableHead style={{ width: 160 }}>Exam Capacity</TableHead>
                     <TableHead style={{ width: 160 }}>No. of Benches</TableHead>
-                    <TableHead style={{ width: 160 }}>Allocate Room</TableHead>
+                    <TableHead style={{ width: 160 }}>Active</TableHead>
                     <TableHead style={{ width: 120 }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRooms.length === 0 ? (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading rooms...
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredRooms.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground">
                         No data
@@ -147,12 +268,12 @@ export default function ExamRoomsPage() {
                     filteredRooms.map((room) => (
                       <TableRow key={room.id} className="group">
                         <TableCell style={{ width: 60 }}>{room.id}</TableCell>
-                        <TableCell style={{ width: 180 }}>{room.roomNo}</TableCell>
-                        <TableCell style={{ width: 160 }}>{room.shortName}</TableCell>
+                        <TableCell style={{ width: 180 }}>{room.name}</TableCell>
+                        <TableCell style={{ width: 160 }}>{room.shortName || "-"}</TableCell>
                         <TableCell style={{ width: 140 }}>{room.strength}</TableCell>
                         <TableCell style={{ width: 160 }}>{room.examCapacity}</TableCell>
                         <TableCell style={{ width: 160 }}>{room.benches}</TableCell>
-                        <TableCell style={{ width: 160 }}>{room.allocateRoom ? "Yes" : "No"}</TableCell>
+                        <TableCell style={{ width: 160 }}>{room.isActive ? "Yes" : "No"}</TableCell>
                         <TableCell style={{ width: 120 }}>
                           <div className="flex space-x-2">
                             <Button
@@ -160,16 +281,22 @@ export default function ExamRoomsPage() {
                               size="sm"
                               onClick={() => handleEdit(room)}
                               className="h-5 w-5 p-0"
+                              disabled={deletingId === room.id}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDelete(room.id)}
+                              onClick={() => handleDelete(room.id!)}
                               className="h-5 w-5 p-0"
+                              disabled={deletingId === room.id}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {deletingId === room.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </TableCell>
@@ -187,38 +314,102 @@ export default function ExamRoomsPage() {
 }
 
 type RoomFormProps = {
-  initialData?: Room;
-  onSubmit: (data: Room) => void;
+  initialData?: RoomT;
+  onSubmit: (data: {
+    name: string;
+    shortName?: string;
+    strength: number;
+    examCapacity: number;
+    benches: number;
+    floorId?: number;
+    sequence?: number;
+    isActive: boolean;
+  }) => void;
   onCancel: () => void;
+  isSubmitting?: boolean;
+  floors: FloorT[];
 };
 
-function RoomForm({ initialData, onSubmit, onCancel }: RoomFormProps) {
-  const [id, setId] = React.useState<number>(initialData?.id ?? 0);
-  const [roomNo, setRoomNo] = React.useState(initialData?.roomNo ?? "");
+function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floors }: RoomFormProps) {
+  const [name, setName] = React.useState(initialData?.name ?? "");
   const [shortName, setShortName] = React.useState(initialData?.shortName ?? "");
   const [strength, setStrength] = React.useState<number>(initialData?.strength ?? 0);
   const [examCapacity, setExamCapacity] = React.useState<number>(initialData?.examCapacity ?? 0);
   const [benches, setBenches] = React.useState<number>(initialData?.benches ?? 0);
-  const [allocateRoom, setAllocateRoom] = React.useState<boolean>(initialData?.allocateRoom ?? false);
+  const [floorId, setFloorId] = React.useState<number | undefined>(initialData?.floorId ?? undefined);
+  const [sequence, setSequence] = React.useState<number | undefined>(initialData?.sequence ?? undefined);
+  const [isActive, setIsActive] = React.useState<boolean>(initialData?.isActive ?? true);
+
+  React.useEffect(() => {
+    if (initialData) {
+      setName(initialData.name ?? "");
+      setShortName(initialData.shortName ?? "");
+      setStrength(initialData.strength ?? 0);
+      setExamCapacity(initialData.examCapacity ?? 0);
+      setBenches(initialData.benches ?? 0);
+      setFloorId(initialData.floorId ?? undefined);
+      setSequence(initialData.sequence ?? undefined);
+      setIsActive(initialData.isActive ?? true);
+    } else {
+      setName("");
+      setShortName("");
+      setStrength(0);
+      setExamCapacity(0);
+      setBenches(0);
+      setFloorId(undefined);
+      setSequence(undefined);
+      setIsActive(true);
+    }
+  }, [initialData]);
+
+  const handleSubmit = () => {
+    if (!name.trim()) {
+      toast.error("Room name is required");
+      return;
+    }
+    onSubmit({
+      name: name.trim(),
+      shortName: shortName.trim() || undefined,
+      strength,
+      examCapacity,
+      benches,
+      floorId,
+      sequence,
+      isActive,
+    });
+  };
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="room-id">ID</Label>
-          <Input id="room-id" type="number" value={id} onChange={(e) => setId(Number(e.target.value))} />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="room-no">Room No</Label>
-          <Input id="room-no" value={roomNo} onChange={(e) => setRoomNo(e.target.value)} />
+          <Label htmlFor="room-name">Room Name *</Label>
+          <Input
+            id="room-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter room name"
+            required
+          />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="short-name">Short Name</Label>
-          <Input id="short-name" value={shortName} onChange={(e) => setShortName(e.target.value)} />
+          <Input
+            id="short-name"
+            value={shortName}
+            onChange={(e) => setShortName(e.target.value)}
+            placeholder="Enter short name (optional)"
+          />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="strength">Strength</Label>
-          <Input id="strength" type="number" value={strength} onChange={(e) => setStrength(Number(e.target.value))} />
+          <Input
+            id="strength"
+            type="number"
+            value={strength}
+            onChange={(e) => setStrength(Number(e.target.value))}
+            min="0"
+          />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="exam-capacity">Exam Capacity</Label>
@@ -227,26 +418,70 @@ function RoomForm({ initialData, onSubmit, onCancel }: RoomFormProps) {
             type="number"
             value={examCapacity}
             onChange={(e) => setExamCapacity(Number(e.target.value))}
+            min="0"
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="benches">No. of Benches in Room</Label>
-          <Input id="benches" type="number" value={benches} onChange={(e) => setBenches(Number(e.target.value))} />
+          <Label htmlFor="benches">No. of Benches</Label>
+          <Input
+            id="benches"
+            type="number"
+            value={benches}
+            onChange={(e) => setBenches(Number(e.target.value))}
+            min="0"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="floor">Floor</Label>
+          <Select
+            value={floorId?.toString() || "none"}
+            onValueChange={(value) => setFloorId(value === "none" ? undefined : Number(value))}
+          >
+            <SelectTrigger id="floor">
+              <SelectValue placeholder="Select floor (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              {floors.map((floor) => (
+                <SelectItem key={floor.id} value={floor.id ? floor.id.toString() : "none"}>
+                  {floor.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="sequence">Sequence</Label>
+          <Input
+            id="sequence"
+            type="number"
+            value={sequence ?? ""}
+            onChange={(e) => setSequence(e.target.value ? Number(e.target.value) : undefined)}
+            placeholder="Enter sequence (optional)"
+          />
         </div>
         <div className="flex items-center gap-2 mt-6">
-          <Switch id="allocate-room" checked={allocateRoom} onCheckedChange={setAllocateRoom} />
-          <Label htmlFor="allocate-room">Allocate Room</Label>
+          <Switch id="is-active" checked={isActive} onCheckedChange={setIsActive} />
+          <Label htmlFor="is-active">Active</Label>
         </div>
       </div>
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button
-          onClick={() => onSubmit({ id, roomNo, shortName, strength, examCapacity, benches, allocateRoom })}
+          onClick={handleSubmit}
           className="bg-purple-600 hover:bg-purple-700 text-white"
+          disabled={isSubmitting || !name.trim()}
         >
-          Save
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save"
+          )}
         </Button>
       </div>
     </div>

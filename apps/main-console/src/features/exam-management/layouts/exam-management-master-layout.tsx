@@ -22,7 +22,7 @@ const mastersLinks = [
   { title: "Exam Components", url: "/dashboard/exam-management/components", icon: Boxes },
   { title: "Floors", url: "/dashboard/exam-management/floors", icon: Layers },
   { title: "Rooms", url: "/dashboard/exam-management/rooms", icon: DoorOpen },
-  { title: "Test Types", url: "/dashboard/exam-management/test-types", icon: ClipboardList },
+  { title: "Exam Types", url: "/dashboard/exam-management/test-types", icon: ClipboardList },
   { title: "Evaluation Types", url: "/dashboard/exam-management/evaluation-types", icon: CheckSquare },
 ];
 

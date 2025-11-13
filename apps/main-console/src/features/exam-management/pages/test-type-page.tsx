@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, PlusCircle, ClipboardList, Edit, Trash2 } from "lucide-react";
+import { Download, Upload, PlusCircle, ClipboardList, Edit, Trash2, Loader2 } from "lucide-react";
 import React from "react";
 import {
   AlertDialog,
@@ -13,310 +13,210 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import {
+  getAllExamTypes,
+  createExamType,
+  updateExamType,
+  deleteExamType,
+  type ExamTypeT,
+} from "@/services/exam-type.service";
 
-type TestType = {
-  id: number;
-  shortName: string;
-  testName: string;
-  description: string;
-  carry: boolean;
-  isboardexam: boolean;
-  passmarks: number;
-  fullmarks: number;
+type ExamTypeFormValues = {
+  name: string;
+  shortName?: string;
+  description?: string;
+  carry?: string;
+  isBoardExam: boolean;
+  passingMarks: number;
+  fullMarks: number;
   weightage: number;
-  evaluationType: string;
-  writtenfullmarks: number;
-  writtenpassmarks: number;
-  oralfullmarks: number;
-  oralmarks: number;
+  writtenPassingMarks: number;
+  writtenFullMarks: number;
+  oralPassingMarks: number;
+  oralFullMarks: number;
   review: boolean;
-  formativetest1: number;
-  formativetest2: number;
-  formativetest3: number;
-  formativetest4: number;
-  summativeassesment1: number;
-  summativeassesment2: number;
-  examtypename: string;
+  isFormatativeTest1: boolean;
+  isFormatativeTest2: boolean;
+  isFormatativeTest3: boolean;
+  isFormatativeTest4: boolean;
+  isSummativeAssessment1: boolean;
+  isSummativeAssessment2: boolean;
+  sequence?: number;
+  isActive: boolean;
 };
 
 export default function TestTypePage() {
-  const initialData: TestType[] = [
-    {
-      id: 1,
-      shortName: "IA1",
-      testName: "Internal Assessment 1",
-      description: "First internal assessment for the semester (college)",
-      carry: false,
-      isboardexam: false,
-      passmarks: 12,
-      fullmarks: 30,
-      weightage: 15,
-      evaluationType: "Written",
-      writtenfullmarks: 30,
-      writtenpassmarks: 12,
-      oralfullmarks: 0,
-      oralmarks: 0,
-      review: false,
-      formativetest1: 0,
-      formativetest2: 0,
-      formativetest3: 0,
-      formativetest4: 0,
-      summativeassesment1: 0,
-      summativeassesment2: 0,
-      examtypename: "Internal",
-    },
-    {
-      id: 2,
-      shortName: "IA2",
-      testName: "Internal Assessment 2",
-      description: "Second internal assessment for the semester (college)",
-      carry: false,
-      isboardexam: false,
-      passmarks: 12,
-      fullmarks: 30,
-      weightage: 15,
-      evaluationType: "Written",
-      writtenfullmarks: 30,
-      writtenpassmarks: 12,
-      oralfullmarks: 0,
-      oralmarks: 0,
-      review: false,
-      formativetest1: 0,
-      formativetest2: 0,
-      formativetest3: 0,
-      formativetest4: 0,
-      summativeassesment1: 0,
-      summativeassesment2: 0,
-      examtypename: "Internal",
-    },
-    {
-      id: 3,
-      shortName: "MID",
-      testName: "Mid-Semester Exam",
-      description: "Mid-semester department examination",
-      carry: true,
-      isboardexam: false,
-      passmarks: 20,
-      fullmarks: 50,
-      weightage: 25,
-      evaluationType: "Written",
-      writtenfullmarks: 50,
-      writtenpassmarks: 20,
-      oralfullmarks: 0,
-      oralmarks: 0,
-      review: true,
-      formativetest1: 0,
-      formativetest2: 0,
-      formativetest3: 0,
-      formativetest4: 0,
-      summativeassesment1: 0,
-      summativeassesment2: 0,
-      examtypename: "Mid-Sem",
-    },
-    {
-      id: 4,
-      shortName: "END",
-      testName: "End-Semester Exam",
-      description: "End-semester examination conducted by the college",
-      carry: true,
-      isboardexam: false,
-      passmarks: 40,
-      fullmarks: 100,
-      weightage: 40,
-      evaluationType: "Written",
-      writtenfullmarks: 100,
-      writtenpassmarks: 40,
-      oralfullmarks: 0,
-      oralmarks: 0,
-      review: true,
-      formativetest1: 0,
-      formativetest2: 0,
-      formativetest3: 0,
-      formativetest4: 0,
-      summativeassesment1: 0,
-      summativeassesment2: 100,
-      examtypename: "End-Sem",
-    },
-    {
-      id: 5,
-      shortName: "LAB",
-      testName: "Laboratory Exam",
-      description: "Practical laboratory examination",
-      carry: true,
-      isboardexam: false,
-      passmarks: 10,
-      fullmarks: 25,
-      weightage: 10,
-      evaluationType: "Oral",
-      writtenfullmarks: 0,
-      writtenpassmarks: 0,
-      oralfullmarks: 25,
-      oralmarks: 10,
-      review: true,
-      formativetest1: 0,
-      formativetest2: 0,
-      formativetest3: 0,
-      formativetest4: 0,
-      summativeassesment1: 0,
-      summativeassesment2: 0,
-      examtypename: "Practical",
-    },
-    {
-      id: 6,
-      shortName: "VIVA",
-      testName: "Viva Voce",
-      description: "Oral exam to assess understanding",
-      carry: false,
-      isboardexam: false,
-      passmarks: 5,
-      fullmarks: 15,
-      weightage: 5,
-      evaluationType: "Oral",
-      writtenfullmarks: 0,
-      writtenpassmarks: 0,
-      oralfullmarks: 15,
-      oralmarks: 5,
-      review: false,
-      formativetest1: 0,
-      formativetest2: 0,
-      formativetest3: 0,
-      formativetest4: 0,
-      summativeassesment1: 0,
-      summativeassesment2: 0,
-      examtypename: "Departmental",
-    },
-    {
-      id: 7,
-      shortName: "ASSGN",
-      testName: "Assignment Evaluation",
-      description: "Coursework assignment submission and evaluation",
-      carry: false,
-      isboardexam: false,
-      passmarks: 8,
-      fullmarks: 20,
-      weightage: 5,
-      evaluationType: "Written",
-      writtenfullmarks: 20,
-      writtenpassmarks: 8,
-      oralfullmarks: 0,
-      oralmarks: 0,
-      review: false,
-      formativetest1: 0,
-      formativetest2: 0,
-      formativetest3: 0,
-      formativetest4: 0,
-      summativeassesment1: 0,
-      summativeassesment2: 0,
-      examtypename: "Internal",
-    },
-    {
-      id: 8,
-      shortName: "PRJ",
-      testName: "Project Evaluation",
-      description: "Term project presentation and report evaluation",
-      carry: true,
-      isboardexam: false,
-      passmarks: 15,
-      fullmarks: 30,
-      weightage: 10,
-      evaluationType: "Written+Oral",
-      writtenfullmarks: 10,
-      writtenpassmarks: 5,
-      oralfullmarks: 20,
-      oralmarks: 10,
-      review: true,
-      formativetest1: 0,
-      formativetest2: 0,
-      formativetest3: 0,
-      formativetest4: 0,
-      summativeassesment1: 0,
-      summativeassesment2: 0,
-      examtypename: "Departmental",
-    },
-    {
-      id: 9,
-      shortName: "PRES",
-      testName: "Presentation",
-      description: "Seminar/technical presentation evaluation",
-      carry: false,
-      isboardexam: false,
-      passmarks: 10,
-      fullmarks: 25,
-      weightage: 5,
-      evaluationType: "Oral",
-      writtenfullmarks: 0,
-      writtenpassmarks: 0,
-      oralfullmarks: 25,
-      oralmarks: 10,
-      review: true,
-      formativetest1: 0,
-      formativetest2: 0,
-      formativetest3: 0,
-      formativetest4: 0,
-      summativeassesment1: 0,
-      summativeassesment2: 0,
-      examtypename: "Departmental",
-    },
-    {
-      id: 10,
-      shortName: "QUIZ",
-      testName: "Departmental Quiz",
-      description: "Timed quiz conducted by the department",
-      carry: false,
-      isboardexam: false,
-      passmarks: 8,
-      fullmarks: 20,
-      weightage: 5,
-      evaluationType: "Written",
-      writtenfullmarks: 20,
-      writtenpassmarks: 8,
-      oralfullmarks: 0,
-      oralmarks: 0,
-      review: false,
-      formativetest1: 0,
-      formativetest2: 0,
-      formativetest3: 0,
-      formativetest4: 0,
-      summativeassesment1: 0,
-      summativeassesment2: 0,
-      examtypename: "Departmental",
-    },
-  ];
-
-  const [rows, setRows] = React.useState<TestType[]>(initialData);
+  const [examTypes, setExamTypes] = React.useState<ExamTypeT[]>([]);
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedRow, setSelectedRow] = React.useState<TestType | null>(null);
+  const [selectedExamType, setSelectedExamType] = React.useState<ExamTypeT | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<number | null>(null);
 
-  const filteredRows = rows.filter((r) =>
-    [r.id.toString(), r.shortName, r.testName, r.description, r.evaluationType, r.examtypename]
+  React.useEffect(() => {
+    const fetchExamTypes = async () => {
+      try {
+        setLoading(true);
+        const response = await getAllExamTypes();
+        if (response.httpStatus === "SUCCESS" && response.payload) {
+          setExamTypes(response.payload);
+        } else {
+          toast.error("Failed to load exam types", {
+            description: response.message || "An error occurred",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching exam types:", error);
+        toast.error("Failed to load exam types", {
+          description: error instanceof Error ? error.message : "An error occurred",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExamTypes();
+  }, []);
+
+  const filteredExamTypes = examTypes.filter((examType) =>
+    [
+      examType.id?.toString() ?? "",
+      examType.name ?? "",
+      examType.shortName ?? "",
+      examType.description ?? "",
+      examType.carry ?? "",
+      examType.sequence?.toString() ?? "",
+    ]
       .filter(Boolean)
-      .some((v) => v.toLowerCase().includes(searchText.toLowerCase())),
+      .some((value) => value.toLowerCase().includes(searchText.toLowerCase())),
   );
 
   const handleAddNew = () => {
-    setSelectedRow(null);
+    setSelectedExamType(null);
   };
 
-  const handleEdit = (row: TestType) => {
-    setSelectedRow(row);
+  const handleEdit = (examType: ExamTypeT) => {
+    setSelectedExamType(examType);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    setRows((prev) => prev.filter((r) => r.id !== id));
+  const handleDelete = async (id: number) => {
+    const confirmed = window.confirm("Are you sure you want to delete this exam type?");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingId(id);
+      const response = await deleteExamType(id);
+      if (response.httpStatus === "DELETED" || response.httpStatus === "SUCCESS") {
+        toast.success("Exam type deleted successfully");
+        setExamTypes((prev) => prev.filter((examType) => examType.id !== id));
+      } else {
+        toast.error("Failed to delete exam type", {
+          description: response.message || "An error occurred",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting exam type:", error);
+      toast.error("Failed to delete exam type", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
-  const handleSubmit = (form: TestType) => {
-    const providedId = Number(form.id);
-    if (selectedRow) {
-      setRows((prev) => prev.map((r) => (r.id === selectedRow.id ? { ...form, id: providedId } : r)));
-    } else {
-      const nextId = rows.length ? Math.max(...rows.map((r) => r.id)) + 1 : 1;
-      const finalId = providedId && !Number.isNaN(providedId) ? providedId : nextId;
-      setRows((prev) => [...prev, { ...form, id: finalId }]);
+  const handleSubmit = async (form: ExamTypeFormValues) => {
+    try {
+      setIsSubmitting(true);
+
+      if (selectedExamType) {
+        const response = await updateExamType(selectedExamType.id!, {
+          name: form.name,
+          shortName: form.shortName,
+          description: form.description,
+          carry: form.carry,
+          isBoardExam: form.isBoardExam,
+          passingMarks: form.passingMarks,
+          fullMarks: form.fullMarks,
+          weightage: form.weightage,
+          writtenPassingMarks: form.writtenPassingMarks,
+          writtenFullMarks: form.writtenFullMarks,
+          oralPassingMarks: form.oralPassingMarks,
+          oralFullMarks: form.oralFullMarks,
+          review: form.review,
+          isFormatativeTest1: form.isFormatativeTest1,
+          isFormatativeTest2: form.isFormatativeTest2,
+          isFormatativeTest3: form.isFormatativeTest3,
+          isFormatativeTest4: form.isFormatativeTest4,
+          isSummativeAssessment1: form.isSummativeAssessment1,
+          isSummativeAssessment2: form.isSummativeAssessment2,
+          sequence: form.sequence,
+          isActive: form.isActive,
+        });
+
+        if (response.httpStatus === "UPDATED" || response.httpStatus === "SUCCESS") {
+          toast.success("Exam type updated successfully");
+          const refreshResponse = await getAllExamTypes();
+          if (refreshResponse.httpStatus === "SUCCESS" && refreshResponse.payload) {
+            setExamTypes(refreshResponse.payload);
+          }
+          setIsFormOpen(false);
+          setSelectedExamType(null);
+        } else {
+          toast.error("Failed to update exam type", {
+            description: response.message || "An error occurred",
+          });
+        }
+      } else {
+        const response = await createExamType({
+          name: form.name,
+          shortName: form.shortName,
+          description: form.description,
+          carry: form.carry,
+          isBoardExam: form.isBoardExam,
+          passingMarks: form.passingMarks,
+          fullMarks: form.fullMarks,
+          weightage: form.weightage,
+          writtenPassingMarks: form.writtenPassingMarks,
+          writtenFullMarks: form.writtenFullMarks,
+          oralPassingMarks: form.oralPassingMarks,
+          oralFullMarks: form.oralFullMarks,
+          review: form.review,
+          isFormatativeTest1: form.isFormatativeTest1,
+          isFormatativeTest2: form.isFormatativeTest2,
+          isFormatativeTest3: form.isFormatativeTest3,
+          isFormatativeTest4: form.isFormatativeTest4,
+          isSummativeAssessment1: form.isSummativeAssessment1,
+          isSummativeAssessment2: form.isSummativeAssessment2,
+          sequence: form.sequence,
+          isActive: form.isActive,
+        });
+
+        if (response.httpStatus === "SUCCESS") {
+          toast.success("Exam type created successfully");
+          const refreshResponse = await getAllExamTypes();
+          if (refreshResponse.httpStatus === "SUCCESS" && refreshResponse.payload) {
+            setExamTypes(refreshResponse.payload);
+          }
+          setIsFormOpen(false);
+        } else {
+          toast.error("Failed to create exam type", {
+            description: response.message || "An error occurred",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error saving exam type:", error);
+      toast.error(selectedExamType ? "Failed to update exam type" : "Failed to create exam type", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsFormOpen(false);
   };
 
   return (
@@ -326,9 +226,9 @@ export default function TestTypePage() {
           <div>
             <CardTitle className="flex items-center">
               <ClipboardList className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
-              Test Types
+              Exam Types
             </CardTitle>
-            <div className="text-muted-foreground">A list of all the Test Types.</div>
+            <div className="text-muted-foreground">A list of all the exam types.</div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline">
@@ -352,12 +252,16 @@ export default function TestTypePage() {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedRow ? "Edit Test Type" : "Add New Test Type"}</AlertDialogTitle>
+                  <AlertDialogTitle>{selectedExamType ? "Edit Exam Type" : "Add New Exam Type"}</AlertDialogTitle>
                 </AlertDialogHeader>
-                <TestTypeForm
-                  initialData={selectedRow ?? undefined}
-                  onSubmit={(data) => handleSubmit(data)}
-                  onCancel={() => setIsFormOpen(false)}
+                <ExamTypeForm
+                  initialData={selectedExamType ?? undefined}
+                  onSubmit={handleSubmit}
+                  onCancel={() => {
+                    setIsFormOpen(false);
+                    setSelectedExamType(null);
+                  }}
+                  isSubmitting={isSubmitting}
                 />
               </AlertDialogContent>
             </AlertDialog>
@@ -381,74 +285,94 @@ export default function TestTypePage() {
                 <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
                   <TableRow>
                     <TableHead style={{ width: 80 }}>ID</TableHead>
+                    <TableHead style={{ width: 200 }}>Name</TableHead>
                     <TableHead style={{ width: 140 }}>Short Name</TableHead>
-                    <TableHead style={{ width: 200 }}>Test Name</TableHead>
                     <TableHead style={{ width: 240 }}>Description</TableHead>
-                    <TableHead style={{ width: 120 }}>Carry</TableHead>
-                    <TableHead style={{ width: 140 }}>Is Board Exam</TableHead>
+                    <TableHead style={{ width: 160 }}>Carry</TableHead>
+                    <TableHead style={{ width: 140 }}>Board Exam</TableHead>
                     <TableHead style={{ width: 120 }}>Pass Marks</TableHead>
                     <TableHead style={{ width: 120 }}>Full Marks</TableHead>
                     <TableHead style={{ width: 120 }}>Weightage</TableHead>
-                    <TableHead style={{ width: 160 }}>Evaluation Type</TableHead>
-                    <TableHead style={{ width: 140 }}>Written FM</TableHead>
-                    <TableHead style={{ width: 140 }}>Written PM</TableHead>
-                    <TableHead style={{ width: 140 }}>Oral FM</TableHead>
-                    <TableHead style={{ width: 140 }}>Oral Marks</TableHead>
+                    <TableHead style={{ width: 160 }}>Written Pass</TableHead>
+                    <TableHead style={{ width: 160 }}>Written Full</TableHead>
+                    <TableHead style={{ width: 160 }}>Oral Pass</TableHead>
+                    <TableHead style={{ width: 160 }}>Oral Full</TableHead>
                     <TableHead style={{ width: 120 }}>Review</TableHead>
-                    <TableHead style={{ width: 160 }}>FT1</TableHead>
-                    <TableHead style={{ width: 160 }}>FT2</TableHead>
-                    <TableHead style={{ width: 160 }}>FT3</TableHead>
-                    <TableHead style={{ width: 160 }}>FT4</TableHead>
-                    <TableHead style={{ width: 200 }}>SA1</TableHead>
-                    <TableHead style={{ width: 200 }}>SA2</TableHead>
-                    <TableHead style={{ width: 200 }}>Exam Type Name</TableHead>
+                    <TableHead style={{ width: 140 }}>FT1</TableHead>
+                    <TableHead style={{ width: 140 }}>FT2</TableHead>
+                    <TableHead style={{ width: 140 }}>FT3</TableHead>
+                    <TableHead style={{ width: 140 }}>FT4</TableHead>
+                    <TableHead style={{ width: 160 }}>SA1</TableHead>
+                    <TableHead style={{ width: 160 }}>SA2</TableHead>
+                    <TableHead style={{ width: 120 }}>Sequence</TableHead>
+                    <TableHead style={{ width: 120 }}>Active</TableHead>
                     <TableHead style={{ width: 120 }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRows.length === 0 ? (
+                  {loading ? (
                     <TableRow>
-                      <TableCell colSpan={23} className="text-center text-muted-foreground">
+                      <TableCell colSpan={22} className="text-center text-muted-foreground">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading exam types...
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredExamTypes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={22} className="text-center text-muted-foreground">
                         No data
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredRows.map((row) => (
-                      <TableRow key={row.id} className="group">
-                        <TableCell style={{ width: 80 }}>{row.id}</TableCell>
-                        <TableCell style={{ width: 140 }}>{row.shortName}</TableCell>
-                        <TableCell style={{ width: 200 }}>{row.testName}</TableCell>
-                        <TableCell style={{ width: 240 }}>{row.description}</TableCell>
-                        <TableCell style={{ width: 120 }}>{row.carry ? "Yes" : "No"}</TableCell>
-                        <TableCell style={{ width: 140 }}>{row.isboardexam ? "Yes" : "No"}</TableCell>
-                        <TableCell style={{ width: 120 }}>{row.passmarks}</TableCell>
-                        <TableCell style={{ width: 120 }}>{row.fullmarks}</TableCell>
-                        <TableCell style={{ width: 120 }}>{row.weightage}</TableCell>
-                        <TableCell style={{ width: 160 }}>{row.evaluationType}</TableCell>
-                        <TableCell style={{ width: 140 }}>{row.writtenfullmarks}</TableCell>
-                        <TableCell style={{ width: 140 }}>{row.writtenpassmarks}</TableCell>
-                        <TableCell style={{ width: 140 }}>{row.oralfullmarks}</TableCell>
-                        <TableCell style={{ width: 140 }}>{row.oralmarks}</TableCell>
-                        <TableCell style={{ width: 120 }}>{row.review ? "Yes" : "No"}</TableCell>
-                        <TableCell style={{ width: 160 }}>{row.formativetest1}</TableCell>
-                        <TableCell style={{ width: 160 }}>{row.formativetest2}</TableCell>
-                        <TableCell style={{ width: 160 }}>{row.formativetest3}</TableCell>
-                        <TableCell style={{ width: 160 }}>{row.formativetest4}</TableCell>
-                        <TableCell style={{ width: 200 }}>{row.summativeassesment1}</TableCell>
-                        <TableCell style={{ width: 200 }}>{row.summativeassesment2}</TableCell>
-                        <TableCell style={{ width: 200 }}>{row.examtypename}</TableCell>
+                    filteredExamTypes.map((examType) => (
+                      <TableRow key={examType.id} className="group">
+                        <TableCell style={{ width: 80 }}>{examType.id}</TableCell>
+                        <TableCell style={{ width: 200 }}>{examType.name}</TableCell>
+                        <TableCell style={{ width: 140 }}>{examType.shortName ?? "-"}</TableCell>
+                        <TableCell style={{ width: 240 }}>{examType.description ?? "-"}</TableCell>
+                        <TableCell style={{ width: 160 }}>{examType.carry ?? "-"}</TableCell>
+                        <TableCell style={{ width: 140 }}>{examType.isBoardExam ? "Yes" : "No"}</TableCell>
+                        <TableCell style={{ width: 120 }}>{examType.passingMarks}</TableCell>
+                        <TableCell style={{ width: 120 }}>{examType.fullMarks}</TableCell>
+                        <TableCell style={{ width: 120 }}>{examType.weightage}</TableCell>
+                        <TableCell style={{ width: 160 }}>{examType.writtenPassingMarks}</TableCell>
+                        <TableCell style={{ width: 160 }}>{examType.writtenFullMarks}</TableCell>
+                        <TableCell style={{ width: 160 }}>{examType.oralPassingMarks}</TableCell>
+                        <TableCell style={{ width: 160 }}>{examType.oralFullMarks}</TableCell>
+                        <TableCell style={{ width: 120 }}>{examType.review ? "Yes" : "No"}</TableCell>
+                        <TableCell style={{ width: 140 }}>{examType.isFormatativeTest1 ? "Yes" : "No"}</TableCell>
+                        <TableCell style={{ width: 140 }}>{examType.isFormatativeTest2 ? "Yes" : "No"}</TableCell>
+                        <TableCell style={{ width: 140 }}>{examType.isFormatativeTest3 ? "Yes" : "No"}</TableCell>
+                        <TableCell style={{ width: 140 }}>{examType.isFormatativeTest4 ? "Yes" : "No"}</TableCell>
+                        <TableCell style={{ width: 160 }}>{examType.isSummativeAssessment1 ? "Yes" : "No"}</TableCell>
+                        <TableCell style={{ width: 160 }}>{examType.isSummativeAssessment2 ? "Yes" : "No"}</TableCell>
+                        <TableCell style={{ width: 120 }}>{examType.sequence ?? "-"}</TableCell>
+                        <TableCell style={{ width: 120 }}>{examType.isActive ? "Yes" : "No"}</TableCell>
                         <TableCell style={{ width: 120 }}>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(examType)}
+                              className="h-5 w-5 p-0"
+                              disabled={deletingId === examType.id}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDelete(row.id)}
+                              onClick={() => handleDelete(examType.id!)}
                               className="h-5 w-5 p-0"
+                              disabled={deletingId === examType.id}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {deletingId === examType.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </TableCell>
@@ -465,81 +389,147 @@ export default function TestTypePage() {
   );
 }
 
-type TestTypeFormProps = {
-  initialData?: TestType;
-  onSubmit: (data: TestType) => void;
+type ExamTypeFormProps = {
+  initialData?: ExamTypeT;
+  onSubmit: (data: ExamTypeFormValues) => void;
   onCancel: () => void;
+  isSubmitting?: boolean;
 };
 
-function TestTypeForm({ initialData, onSubmit, onCancel }: TestTypeFormProps) {
-  const [id, setId] = React.useState<number>(initialData?.id ?? 0);
+function ExamTypeForm({ initialData, onSubmit, onCancel, isSubmitting = false }: ExamTypeFormProps) {
+  const [name, setName] = React.useState(initialData?.name ?? "");
   const [shortName, setShortName] = React.useState(initialData?.shortName ?? "");
-  const [testName, setTestName] = React.useState(initialData?.testName ?? "");
   const [description, setDescription] = React.useState(initialData?.description ?? "");
-  const [carry, setCarry] = React.useState<boolean>(initialData?.carry ?? false);
-  const [isboardexam, setIsBoardExam] = React.useState<boolean>(initialData?.isboardexam ?? false);
-  const [passmarks, setPassmarks] = React.useState<number>(initialData?.passmarks ?? 0);
-  const [fullmarks, setFullmarks] = React.useState<number>(initialData?.fullmarks ?? 0);
+  const [carry, setCarry] = React.useState(initialData?.carry ?? "");
+  const [isBoardExam, setIsBoardExam] = React.useState(initialData?.isBoardExam ?? false);
+  const [passingMarks, setPassingMarks] = React.useState<number>(initialData?.passingMarks ?? 0);
+  const [fullMarks, setFullMarks] = React.useState<number>(initialData?.fullMarks ?? 0);
   const [weightage, setWeightage] = React.useState<number>(initialData?.weightage ?? 0);
-  const [evaluationType, setEvaluationType] = React.useState(initialData?.evaluationType ?? "");
-  const [writtenfullmarks, setWrittenFullmarks] = React.useState<number>(initialData?.writtenfullmarks ?? 0);
-  const [writtenpassmarks, setWrittenPassmarks] = React.useState<number>(initialData?.writtenpassmarks ?? 0);
-  const [oralfullmarks, setOralFullmarks] = React.useState<number>(initialData?.oralfullmarks ?? 0);
-  const [oralmarks, setOralMarks] = React.useState<number>(initialData?.oralmarks ?? 0);
-  const [review, setReview] = React.useState<boolean>(initialData?.review ?? false);
-  const [formativetest1, setFormativeTest1] = React.useState<number>(initialData?.formativetest1 ?? 0);
-  const [formativetest2, setFormativeTest2] = React.useState<number>(initialData?.formativetest2 ?? 0);
-  const [formativetest3, setFormativeTest3] = React.useState<number>(initialData?.formativetest3 ?? 0);
-  const [formativetest4, setFormativeTest4] = React.useState<number>(initialData?.formativetest4 ?? 0);
-  const [summativeassesment1, setSummativeAssessment1] = React.useState<number>(initialData?.summativeassesment1 ?? 0);
-  const [summativeassesment2, setSummativeAssessment2] = React.useState<number>(initialData?.summativeassesment2 ?? 0);
-  const [examtypename, setExamTypeName] = React.useState(initialData?.examtypename ?? "");
+  const [writtenPassingMarks, setWrittenPassingMarks] = React.useState<number>(initialData?.writtenPassingMarks ?? 0);
+  const [writtenFullMarks, setWrittenFullMarks] = React.useState<number>(initialData?.writtenFullMarks ?? 0);
+  const [oralPassingMarks, setOralPassingMarks] = React.useState<number>(initialData?.oralPassingMarks ?? 0);
+  const [oralFullMarks, setOralFullMarks] = React.useState<number>(initialData?.oralFullMarks ?? 0);
+  const [review, setReview] = React.useState(initialData?.review ?? false);
+  const [isFormatativeTest1, setIsFormatativeTest1] = React.useState(initialData?.isFormatativeTest1 ?? false);
+  const [isFormatativeTest2, setIsFormatativeTest2] = React.useState(initialData?.isFormatativeTest2 ?? false);
+  const [isFormatativeTest3, setIsFormatativeTest3] = React.useState(initialData?.isFormatativeTest3 ?? false);
+  const [isFormatativeTest4, setIsFormatativeTest4] = React.useState(initialData?.isFormatativeTest4 ?? false);
+  const [isSummativeAssessment1, setIsSummativeAssessment1] = React.useState(
+    initialData?.isSummativeAssessment1 ?? false,
+  );
+  const [isSummativeAssessment2, setIsSummativeAssessment2] = React.useState(
+    initialData?.isSummativeAssessment2 ?? false,
+  );
+  const [sequence, setSequence] = React.useState<number | undefined>(initialData?.sequence ?? undefined);
+  const [isActive, setIsActive] = React.useState(initialData?.isActive ?? true);
+
+  React.useEffect(() => {
+    if (initialData) {
+      setName(initialData.name ?? "");
+      setShortName(initialData.shortName ?? "");
+      setDescription(initialData.description ?? "");
+      setCarry(initialData.carry ?? "");
+      setIsBoardExam(initialData.isBoardExam ?? false);
+      setPassingMarks(initialData.passingMarks ?? 0);
+      setFullMarks(initialData.fullMarks ?? 0);
+      setWeightage(initialData.weightage ?? 0);
+      setWrittenPassingMarks(initialData.writtenPassingMarks ?? 0);
+      setWrittenFullMarks(initialData.writtenFullMarks ?? 0);
+      setOralPassingMarks(initialData.oralPassingMarks ?? 0);
+      setOralFullMarks(initialData.oralFullMarks ?? 0);
+      setReview(initialData.review ?? false);
+      setIsFormatativeTest1(initialData.isFormatativeTest1 ?? false);
+      setIsFormatativeTest2(initialData.isFormatativeTest2 ?? false);
+      setIsFormatativeTest3(initialData.isFormatativeTest3 ?? false);
+      setIsFormatativeTest4(initialData.isFormatativeTest4 ?? false);
+      setIsSummativeAssessment1(initialData.isSummativeAssessment1 ?? false);
+      setIsSummativeAssessment2(initialData.isSummativeAssessment2 ?? false);
+      setSequence(initialData.sequence ?? undefined);
+      setIsActive(initialData.isActive ?? true);
+    } else {
+      setName("");
+      setShortName("");
+      setDescription("");
+      setCarry("");
+      setIsBoardExam(false);
+      setPassingMarks(0);
+      setFullMarks(0);
+      setWeightage(0);
+      setWrittenPassingMarks(0);
+      setWrittenFullMarks(0);
+      setOralPassingMarks(0);
+      setOralFullMarks(0);
+      setReview(false);
+      setIsFormatativeTest1(false);
+      setIsFormatativeTest2(false);
+      setIsFormatativeTest3(false);
+      setIsFormatativeTest4(false);
+      setIsSummativeAssessment1(false);
+      setIsSummativeAssessment2(false);
+      setSequence(undefined);
+      setIsActive(true);
+    }
+  }, [initialData]);
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4 max-h-[60vh] pr-2 overflow-y-auto">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="tt-id">ID</Label>
-          <Input id="tt-id" type="number" value={id} onChange={(e) => setId(Number(e.target.value))} />
+          <Label htmlFor="exam-name">Name *</Label>
+          <Input
+            id="exam-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter exam type name"
+            required
+          />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="short-name">Short Name</Label>
           <Input id="short-name" value={shortName} onChange={(e) => setShortName(e.target.value)} />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="test-name">Test Name</Label>
-          <Input id="test-name" value={testName} onChange={(e) => setTestName(e.target.value)} />
-        </div>
-        <div className="flex flex-col gap-2">
           <Label htmlFor="description">Description</Label>
           <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="carry">Carry</Label>
+          <Input id="carry" value={carry} onChange={(e) => setCarry(e.target.value)} />
+        </div>
 
         <div className="flex items-center gap-2 mt-6">
-          <Switch id="carry" checked={carry} onCheckedChange={setCarry} />
-          <Label htmlFor="carry">Carry</Label>
+          <Switch id="is-board-exam" checked={isBoardExam} onCheckedChange={setIsBoardExam} />
+          <Label htmlFor="is-board-exam">Board Exam</Label>
         </div>
         <div className="flex items-center gap-2 mt-6">
-          <Switch id="isboardexam" checked={isboardexam} onCheckedChange={setIsBoardExam} />
-          <Label htmlFor="isboardexam">Is Board Exam</Label>
+          <Switch id="is-review" checked={review} onCheckedChange={setReview} />
+          <Label htmlFor="is-review">Review</Label>
+        </div>
+        <div className="flex items-center gap-2 mt-6">
+          <Switch id="is-active" checked={isActive} onCheckedChange={setIsActive} />
+          <Label htmlFor="is-active">Active</Label>
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="passmarks">Pass Marks</Label>
+          <Label htmlFor="passing-marks">Passing Marks</Label>
           <Input
-            id="passmarks"
+            id="passing-marks"
             type="number"
-            value={passmarks}
-            onChange={(e) => setPassmarks(Number(e.target.value))}
+            value={passingMarks}
+            onChange={(e) => setPassingMarks(Number(e.target.value))}
+            min="0"
+            step="0.01"
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="fullmarks">Full Marks</Label>
+          <Label htmlFor="full-marks">Full Marks</Label>
           <Input
-            id="fullmarks"
+            id="full-marks"
             type="number"
-            value={fullmarks}
-            onChange={(e) => setFullmarks(Number(e.target.value))}
+            value={fullMarks}
+            onChange={(e) => setFullMarks(Number(e.target.value))}
+            min="0"
+            step="0.01"
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -549,150 +539,134 @@ function TestTypeForm({ initialData, onSubmit, onCancel }: TestTypeFormProps) {
             type="number"
             value={weightage}
             onChange={(e) => setWeightage(Number(e.target.value))}
+            min="0"
+            step="0.01"
           />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="evaluation-type">Evaluation Type</Label>
-          <Input id="evaluation-type" value={evaluationType} onChange={(e) => setEvaluationType(e.target.value)} />
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="written-fullmarks">Written Full Marks</Label>
+          <Label htmlFor="written-pass">Written Passing Marks</Label>
           <Input
-            id="written-fullmarks"
+            id="written-pass"
             type="number"
-            value={writtenfullmarks}
-            onChange={(e) => setWrittenFullmarks(Number(e.target.value))}
+            value={writtenPassingMarks}
+            onChange={(e) => setWrittenPassingMarks(Number(e.target.value))}
+            min="0"
+            step="0.01"
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="written-passmarks">Written Pass Marks</Label>
+          <Label htmlFor="written-full">Written Full Marks</Label>
           <Input
-            id="written-passmarks"
+            id="written-full"
             type="number"
-            value={writtenpassmarks}
-            onChange={(e) => setWrittenPassmarks(Number(e.target.value))}
+            value={writtenFullMarks}
+            onChange={(e) => setWrittenFullMarks(Number(e.target.value))}
+            min="0"
+            step="0.01"
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="oral-fullmarks">Oral Full Marks</Label>
+          <Label htmlFor="oral-pass">Oral Passing Marks</Label>
           <Input
-            id="oral-fullmarks"
+            id="oral-pass"
             type="number"
-            value={oralfullmarks}
-            onChange={(e) => setOralFullmarks(Number(e.target.value))}
+            value={oralPassingMarks}
+            onChange={(e) => setOralPassingMarks(Number(e.target.value))}
+            min="0"
+            step="0.01"
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="oral-marks">Oral Marks</Label>
+          <Label htmlFor="oral-full">Oral Full Marks</Label>
           <Input
-            id="oral-marks"
+            id="oral-full"
             type="number"
-            value={oralmarks}
-            onChange={(e) => setOralMarks(Number(e.target.value))}
+            value={oralFullMarks}
+            onChange={(e) => setOralFullMarks(Number(e.target.value))}
+            min="0"
+            step="0.01"
           />
         </div>
 
         <div className="flex items-center gap-2 mt-6">
-          <Switch id="review" checked={review} onCheckedChange={setReview} />
-          <Label htmlFor="review">Review</Label>
+          <Switch id="ft1" checked={isFormatativeTest1} onCheckedChange={setIsFormatativeTest1} />
+          <Label htmlFor="ft1">Formatative Test 1</Label>
+        </div>
+        <div className="flex items-center gap-2 mt-6">
+          <Switch id="ft2" checked={isFormatativeTest2} onCheckedChange={setIsFormatativeTest2} />
+          <Label htmlFor="ft2">Formatative Test 2</Label>
+        </div>
+        <div className="flex items-center gap-2 mt-6">
+          <Switch id="ft3" checked={isFormatativeTest3} onCheckedChange={setIsFormatativeTest3} />
+          <Label htmlFor="ft3">Formatative Test 3</Label>
+        </div>
+        <div className="flex items-center gap-2 mt-6">
+          <Switch id="ft4" checked={isFormatativeTest4} onCheckedChange={setIsFormatativeTest4} />
+          <Label htmlFor="ft4">Formatative Test 4</Label>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="ft1">Formative Test 1</Label>
-          <Input
-            id="ft1"
-            type="number"
-            value={formativetest1}
-            onChange={(e) => setFormativeTest1(Number(e.target.value))}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="ft2">Formative Test 2</Label>
-          <Input
-            id="ft2"
-            type="number"
-            value={formativetest2}
-            onChange={(e) => setFormativeTest2(Number(e.target.value))}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="ft3">Formative Test 3</Label>
-          <Input
-            id="ft3"
-            type="number"
-            value={formativetest3}
-            onChange={(e) => setFormativeTest3(Number(e.target.value))}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="ft4">Formative Test 4</Label>
-          <Input
-            id="ft4"
-            type="number"
-            value={formativetest4}
-            onChange={(e) => setFormativeTest4(Number(e.target.value))}
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 mt-6">
+          <Switch id="sa1" checked={isSummativeAssessment1} onCheckedChange={setIsSummativeAssessment1} />
           <Label htmlFor="sa1">Summative Assessment 1</Label>
-          <Input
-            id="sa1"
-            type="number"
-            value={summativeassesment1}
-            onChange={(e) => setSummativeAssessment1(Number(e.target.value))}
-          />
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 mt-6">
+          <Switch id="sa2" checked={isSummativeAssessment2} onCheckedChange={setIsSummativeAssessment2} />
           <Label htmlFor="sa2">Summative Assessment 2</Label>
-          <Input
-            id="sa2"
-            type="number"
-            value={summativeassesment2}
-            onChange={(e) => setSummativeAssessment2(Number(e.target.value))}
-          />
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="exam-type-name">Exam Type Name</Label>
-          <Input id="exam-type-name" value={examtypename} onChange={(e) => setExamTypeName(e.target.value)} />
+          <Label htmlFor="sequence">Sequence</Label>
+          <Input
+            id="sequence"
+            type="number"
+            value={sequence ?? ""}
+            onChange={(e) => setSequence(e.target.value ? Number(e.target.value) : undefined)}
+            placeholder="Enter sequence (optional)"
+          />
         </div>
       </div>
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button
           onClick={() =>
             onSubmit({
-              id,
-              shortName,
-              testName,
-              description,
-              carry,
-              isboardexam,
-              passmarks,
-              fullmarks,
+              name,
+              shortName: shortName || undefined,
+              description: description || undefined,
+              carry: carry || undefined,
+              isBoardExam,
+              passingMarks,
+              fullMarks,
               weightage,
-              evaluationType,
-              writtenfullmarks,
-              writtenpassmarks,
-              oralfullmarks,
-              oralmarks,
+              writtenPassingMarks,
+              writtenFullMarks,
+              oralPassingMarks,
+              oralFullMarks,
               review,
-              formativetest1,
-              formativetest2,
-              formativetest3,
-              formativetest4,
-              summativeassesment1,
-              summativeassesment2,
-              examtypename,
+              isFormatativeTest1,
+              isFormatativeTest2,
+              isFormatativeTest3,
+              isFormatativeTest4,
+              isSummativeAssessment1,
+              isSummativeAssessment2,
+              sequence,
+              isActive,
             })
           }
           className="bg-purple-600 hover:bg-purple-700 text-white"
+          disabled={isSubmitting || !name.trim()}
         >
-          Save
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save"
+          )}
         </Button>
       </div>
     </div>

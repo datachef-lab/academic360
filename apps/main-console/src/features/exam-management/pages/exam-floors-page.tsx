@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, PlusCircle, DoorOpen, Edit, Trash2 } from "lucide-react";
+import { Download, Upload, PlusCircle, DoorOpen, Edit, Trash2, Loader2 } from "lucide-react";
 import React from "react";
 import {
   AlertDialog,
@@ -12,50 +12,146 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-
-type Floor = {
-  id: number;
-  floorName: string;
-};
+import { toast } from "sonner";
+import { getAllFloors, createFloor, updateFloor, deleteFloor, type FloorT } from "@/services/floor.service";
 
 export default function ExamFloorsPage() {
-  const initialFloors: Floor[] = [
-    { id: 1, floorName: "First Floor" },
-    { id: 2, floorName: "Second Floor" },
-    { id: 3, floorName: "Third Floor" },
-  ];
-  const [floors, setFloors] = React.useState<Floor[]>(initialFloors);
+  const [floors, setFloors] = React.useState<FloorT[]>([]);
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedFloor, setSelectedFloor] = React.useState<Floor | null>(null);
+  const [selectedFloor, setSelectedFloor] = React.useState<FloorT | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<number | null>(null);
+
+  // Fetch floors on component mount
+  React.useEffect(() => {
+    const fetchFloors = async () => {
+      try {
+        setLoading(true);
+        const response = await getAllFloors();
+        if (response.httpStatus === "SUCCESS" && response.payload) {
+          setFloors(response.payload);
+        } else {
+          toast.error("Failed to load floors", {
+            description: response.message || "An error occurred",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching floors:", error);
+        toast.error("Failed to load floors", {
+          description: error instanceof Error ? error.message : "An error occurred",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFloors();
+  }, []);
 
   const filteredFloors = floors.filter((f) =>
-    [f.id.toString(), f.floorName].some((v) => v.toLowerCase().includes(searchText.toLowerCase())),
+    [f.id?.toString() || "", f.name || ""].some((v) => v.toLowerCase().includes(searchText.toLowerCase())),
   );
 
   const handleAddNew = () => {
     setSelectedFloor(null);
   };
 
-  const handleEdit = (floor: Floor) => {
+  const handleEdit = (floor: FloorT) => {
     setSelectedFloor(floor);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    setFloors((prev) => prev.filter((f) => f.id !== id));
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this floor?")) {
+      return;
+    }
+
+    try {
+      setDeletingId(id);
+      const response = await deleteFloor(id);
+      if (response.httpStatus === "DELETED" || response.httpStatus === "SUCCESS") {
+        toast.success("Floor deleted successfully");
+        setFloors((prev) => prev.filter((f) => f.id !== id));
+      } else {
+        toast.error("Failed to delete floor", {
+          description: response.message || "An error occurred",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting floor:", error);
+      toast.error("Failed to delete floor", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
-  const handleSubmit = (form: Floor) => {
-    const providedId = Number(form.id);
-    if (selectedFloor) {
-      setFloors((prev) => prev.map((f) => (f.id === selectedFloor.id ? { ...form, id: providedId } : f)));
-    } else {
-      const nextId = floors.length ? Math.max(...floors.map((f) => f.id)) + 1 : 1;
-      const finalId = providedId && !Number.isNaN(providedId) ? providedId : nextId;
-      setFloors((prev) => [...prev, { ...form, id: finalId }]);
+  const handleSubmit = async (form: {
+    id: number;
+    name: string;
+    shortName?: string;
+    sequence?: number;
+    isActive?: boolean;
+  }) => {
+    try {
+      setIsSubmitting(true);
+
+      if (selectedFloor) {
+        // Update existing floor
+        const response = await updateFloor(selectedFloor.id!, {
+          name: form.name,
+          shortName: form.shortName,
+          sequence: form.sequence,
+          isActive: form.isActive ?? true,
+        });
+
+        if (response.httpStatus === "UPDATED" || response.httpStatus === "SUCCESS") {
+          toast.success("Floor updated successfully");
+          // Refresh floors list
+          const refreshResponse = await getAllFloors();
+          if (refreshResponse.httpStatus === "SUCCESS" && refreshResponse.payload) {
+            setFloors(refreshResponse.payload);
+          }
+          setIsFormOpen(false);
+        } else {
+          toast.error("Failed to update floor", {
+            description: response.message || "An error occurred",
+          });
+        }
+      } else {
+        // Create new floor
+        const response = await createFloor({
+          name: form.name,
+          shortName: form.shortName,
+          sequence: form.sequence,
+          isActive: form.isActive ?? true,
+        });
+
+        if (response.httpStatus === "SUCCESS") {
+          toast.success("Floor created successfully");
+          // Refresh floors list
+          const refreshResponse = await getAllFloors();
+          if (refreshResponse.httpStatus === "SUCCESS" && refreshResponse.payload) {
+            setFloors(refreshResponse.payload);
+          }
+          setIsFormOpen(false);
+        } else {
+          toast.error("Failed to create floor", {
+            description: response.message || "An error occurred",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error saving floor:", error);
+      toast.error(selectedFloor ? "Failed to update floor" : "Failed to create floor", {
+        description: error instanceof Error ? error.message : "An error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsFormOpen(false);
   };
 
   return (
@@ -97,6 +193,7 @@ export default function ExamFloorsPage() {
                   initialData={selectedFloor ?? undefined}
                   onSubmit={(data) => handleSubmit(data)}
                   onCancel={() => setIsFormOpen(false)}
+                  isSubmitting={isSubmitting}
                 />
               </AlertDialogContent>
             </AlertDialog>
@@ -125,7 +222,16 @@ export default function ExamFloorsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredFloors.length === 0 ? (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading floors...
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredFloors.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={3} className="text-center text-muted-foreground">
                         No data
@@ -135,7 +241,7 @@ export default function ExamFloorsPage() {
                     filteredFloors.map((floor) => (
                       <TableRow key={floor.id} className="group">
                         <TableCell style={{ width: 60 }}>{floor.id}</TableCell>
-                        <TableCell style={{ width: 180 }}>{floor.floorName}</TableCell>
+                        <TableCell style={{ width: 180 }}>{floor.name}</TableCell>
                         <TableCell style={{ width: 120 }}>
                           <div className="flex space-x-2">
                             <Button
@@ -143,16 +249,22 @@ export default function ExamFloorsPage() {
                               size="sm"
                               onClick={() => handleEdit(floor)}
                               className="h-5 w-5 p-0"
+                              disabled={deletingId === floor.id}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDelete(floor.id)}
+                              onClick={() => handleDelete(floor.id!)}
                               className="h-5 w-5 p-0"
+                              disabled={deletingId === floor.id}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {deletingId === floor.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </TableCell>
@@ -170,33 +282,113 @@ export default function ExamFloorsPage() {
 }
 
 type FloorFormProps = {
-  initialData?: Floor;
-  onSubmit: (data: Floor) => void;
+  initialData?: FloorT;
+  onSubmit: (data: { id: number; name: string; shortName?: string; sequence?: number; isActive?: boolean }) => void;
   onCancel: () => void;
+  isSubmitting?: boolean;
 };
 
-function FloorForm({ initialData, onSubmit, onCancel }: FloorFormProps) {
-  const [id, setId] = React.useState<number>(initialData?.id ?? 0);
-  const [floorName, setFloorName] = React.useState(initialData?.floorName ?? "");
+function FloorForm({ initialData, onSubmit, onCancel, isSubmitting = false }: FloorFormProps) {
+  const [name, setName] = React.useState(initialData?.name ?? "");
+  const [shortName, setShortName] = React.useState(initialData?.shortName ?? "");
+  const [sequence, setSequence] = React.useState<number | undefined>(initialData?.sequence ?? undefined);
+  const [isActive, setIsActive] = React.useState(initialData?.isActive ?? true);
+
+  React.useEffect(() => {
+    if (initialData) {
+      setName(initialData.name ?? "");
+      setShortName(initialData.shortName ?? "");
+      setSequence(initialData.sequence ?? undefined);
+      setIsActive(initialData.isActive ?? true);
+    } else {
+      setName("");
+      setShortName("");
+      setSequence(undefined);
+      setIsActive(true);
+    }
+  }, [initialData]);
+
+  const handleSubmit = () => {
+    if (!name.trim()) {
+      toast.error("Floor name is required");
+      return;
+    }
+    onSubmit({
+      id: initialData?.id ?? 0,
+      name: name.trim(),
+      shortName: shortName.trim() || undefined,
+      sequence: sequence,
+      isActive,
+    });
+  };
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="floor-id">ID</Label>
-          <Input id="floor-id" type="number" value={id} onChange={(e) => setId(Number(e.target.value))} />
+          <Label htmlFor="floor-name">Floor Name *</Label>
+          <Input
+            id="floor-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter floor name"
+            required
+          />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="floor-name">Floor Name</Label>
-          <Input id="floor-name" value={floorName} onChange={(e) => setFloorName(e.target.value)} />
+          <Label htmlFor="floor-short-name">Short Name</Label>
+          <Input
+            id="floor-short-name"
+            value={shortName}
+            onChange={(e) => setShortName(e.target.value)}
+            placeholder="Enter short name (optional)"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="floor-sequence">Sequence</Label>
+          <Input
+            id="floor-sequence"
+            type="number"
+            value={sequence ?? ""}
+            onChange={(e) => setSequence(e.target.value ? Number(e.target.value) : undefined)}
+            placeholder="Enter sequence (optional)"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="floor-active">Active</Label>
+          <div className="flex items-center space-x-2 pt-2">
+            <input
+              type="checkbox"
+              id="floor-active"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="floor-active" className="cursor-pointer">
+              {isActive ? "Active" : "Inactive"}
+            </Label>
+          </div>
         </div>
       </div>
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button onClick={() => onSubmit({ id, floorName })} className="bg-purple-600 hover:bg-purple-700 text-white">
-          Save
+        <Button
+          onClick={handleSubmit}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+          disabled={isSubmitting || !name.trim()}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save"
+          )}
         </Button>
       </div>
     </div>
