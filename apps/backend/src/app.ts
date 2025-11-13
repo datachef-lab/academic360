@@ -71,6 +71,9 @@ import {
   feesReceiptTypeRouter,
   feesSlabYearMappingRouter,
   personRouter,
+  floorRouter,
+  roomRouter,
+  examTypeRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
@@ -406,6 +409,9 @@ app.use("/api/v1/fees/components", feesComponentRouter);
 app.use("/api/v1/fees/addons", addonRouter);
 app.use("/api/v1/fees/heads", feesHeadRouter);
 app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
+app.use("/api/exams/floors", floorRouter);
+app.use("/api/exams/rooms", roomRouter);
+app.use("/api/exams/exam-types", examTypeRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 app.use("/api/admissions/application-forms", applicationFormRouter);
