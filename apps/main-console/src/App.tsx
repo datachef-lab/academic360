@@ -174,11 +174,11 @@ const router = createBrowserRouter(
             { path: "", element: <examManagementModule.HomePage /> },
             { path: "exams", element: <examManagementModule.ExamsPage /> },
             { path: "schedule", element: <examManagementModule.ScheduleExamPage /> },
-            { path: "components", element: <examManagementModule.ExamComponentsPage /> },
+            // { path: "components", element: <examManagementModule.ExamComponentsPage /> },
             { path: "floors", element: <examManagementModule.ExamFloorsPage /> },
             { path: "rooms", element: <examManagementModule.ExamRoomsPage /> },
             { path: "test-types", element: <examManagementModule.TestTypePage /> },
-            { path: "evaluation-types", element: <examManagementModule.EvaluationTypePage /> },
+            // { path: "evaluation-types", element: <examManagementModule.EvaluationTypePage /> },
           ],
         },
         {
