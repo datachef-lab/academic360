@@ -3,8 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { KeyRound } from "lucide-react";
-import { useEffect, useState } from "react";
-import { findAllSettings } from "@/features/settings/services/settings-service";
+import { useMemo, useState } from "react";
+import { useSettings } from "@/features/settings/hooks/use-settings";
 import { Settings } from "@/features/settings/types/settings.type";
 
 export default function ApiConfigurationPage() {
@@ -17,13 +17,10 @@ export default function ApiConfigurationPage() {
     ZEPTO_FROM: "",
     ZEPTO_TOKEN: "",
   });
-  const [settings, setSettings] = useState<Settings[]>([]);
+  const { settings } = useSettings();
 
-  useEffect(() => {
-    findAllSettings().then((data) => {
-      setSettings(data.payload.filter((ele: any) => ele.variant === "API_CONFIG"));
-    });
-  }, []);
+  // Filter API config settings from context (no need to fetch again)
+  const apiConfigSettings = useMemo(() => settings.filter((ele: Settings) => ele.variant === "API_CONFIG"), [settings]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -68,7 +65,7 @@ export default function ApiConfigurationPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {settings.map((settingItem) => (
+              {apiConfigSettings.map((settingItem) => (
                 <div key={settingItem.id} className="flex flex-col space-y-1.5">
                   <Label htmlFor={settingItem.name}>{settingItem.name}</Label>
                   <Input
