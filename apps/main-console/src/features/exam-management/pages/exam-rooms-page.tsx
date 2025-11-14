@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { toast } from "sonner";
 import { getAllRooms, createRoom, updateRoom, deleteRoom, type RoomT } from "@/services/room.service";
 import { getAllFloors, type FloorT } from "@/services/floor.service";
@@ -21,6 +21,7 @@ type RoomFormValues = {
   name: string;
   shortName?: string;
   numberOfBenches: number;
+  maxStudentsPerBench: number;
   floorId?: number;
   isActive: boolean;
 };
@@ -37,6 +38,7 @@ function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floor
   const [name, setName] = useState(initialData?.name ?? "");
   const [shortName, setShortName] = useState(initialData?.shortName ?? "");
   const [numberOfBenches, setNumberOfBenches] = useState<number>(initialData?.numberOfBenches ?? 0);
+  const [maxStudentsPerBench, setMaxStudentsPerBench] = useState<number>(initialData?.maxStudentsPerBench ?? 0);
   const [floorId, setFloorId] = useState<number | undefined>(initialData?.floorId ?? undefined);
   const [isActive, setIsActive] = useState<boolean>(initialData?.isActive ?? true);
 
@@ -45,12 +47,14 @@ function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floor
       setName(initialData.name ?? "");
       setShortName(initialData.shortName ?? "");
       setNumberOfBenches(initialData.numberOfBenches ?? 0);
+      setMaxStudentsPerBench(initialData.maxStudentsPerBench ?? 0);
       setFloorId(initialData.floorId ?? undefined);
       setIsActive(initialData.isActive ?? true);
     } else {
       setName("");
       setShortName("");
       setNumberOfBenches(0);
+      setMaxStudentsPerBench(0);
       setFloorId(undefined);
       setIsActive(true);
     }
@@ -66,6 +70,7 @@ function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floor
       name: name.trim(),
       shortName: shortName.trim() || undefined,
       numberOfBenches,
+      maxStudentsPerBench,
       floorId,
       isActive,
     });
@@ -104,23 +109,28 @@ function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floor
           />
         </div>
         <div className="flex flex-col gap-2">
+          <Label htmlFor="max-students">Max Students Per Bench</Label>
+          <Input
+            id="max-students"
+            type="number"
+            value={Number.isNaN(maxStudentsPerBench) ? "" : maxStudentsPerBench}
+            onChange={(e) => setMaxStudentsPerBench(e.target.value ? Number(e.target.value) : 0)}
+            min="0"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
           <Label htmlFor="floor">Floor</Label>
-          <Select
-            value={floorId?.toString() ?? "none"}
-            onValueChange={(value) => setFloorId(value === "none" ? undefined : Number(value))}
-          >
-            <SelectTrigger id="floor">
-              <SelectValue placeholder="Select floor (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              {floors.map((floor) => (
-                <SelectItem key={floor.id} value={floor.id ? floor.id.toString() : "none"}>
-                  {floor.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Combobox
+            dataArr={floors
+              .filter((floor) => floor.id != null)
+              .map((floor) => ({
+                value: floor.id!.toString(),
+                label: floor.name ?? "Unnamed Floor",
+              }))}
+            value={floorId?.toString() ?? ""}
+            onChange={(value) => setFloorId(value === "" ? undefined : Number(value))}
+            placeholder="Select floor"
+          />
         </div>
         <div className="flex items-center gap-2 mt-2">
           <Switch id="is-active" checked={isActive} onCheckedChange={setIsActive} />
@@ -256,6 +266,7 @@ export default function ExamRoomsPage() {
         name: form.name,
         shortName: form.shortName,
         numberOfBenches: form.numberOfBenches,
+        maxStudentsPerBench: form.maxStudentsPerBench,
         floorId: form.floorId,
         isActive: form.isActive,
       };
@@ -360,25 +371,28 @@ export default function ExamRoomsPage() {
             <div className="rounded-md border border-slate-300 h-full max-h-[520px] overflow-y-auto min-w-full">
               <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
                 <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300 min-w-full">
-                  <div className="flex-shrink-0 basis-[6%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
+                  <div className="flex-shrink-0 basis-[5%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     #
                   </div>
-                  <div className="flex-shrink-0 basis-[24%] px-3 py-2 border-r border-slate-300 flex items-center">
+                  <div className="flex-shrink-0 basis-[20%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     Name
                   </div>
-                  <div className="flex-shrink-0 basis-[16%] px-3 py-2 border-r border-slate-300 flex items-center">
+                  <div className="flex-shrink-0 basis-[14%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     Short Name
                   </div>
-                  <div className="flex-shrink-0 basis-[16%] px-3 py-2 border-r border-slate-300 flex items-center">
+                  <div className="flex-shrink-0 basis-[14%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     Floor
                   </div>
-                  <div className="flex-shrink-0 basis-[14%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
+                  <div className="flex-shrink-0 basis-[12%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     Benches
                   </div>
                   <div className="flex-shrink-0 basis-[12%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
+                    Max Students Per Bench
+                  </div>
+                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     Status
                   </div>
-                  <div className="flex-shrink-0 basis-[12%] px-3 py-2 flex items-center justify-center">Actions</div>
+                  <div className="flex-shrink-0 basis-[13%] px-3 py-2 flex items-center justify-center">Actions</div>
                 </div>
               </div>
 
@@ -400,10 +414,10 @@ export default function ExamRoomsPage() {
                         key={room.id ?? `${room.name}-${index}`}
                         className="flex border-b border-slate-200 hover:bg-muted/40 transition-colors"
                       >
-                        <div className="flex-shrink-0 basis-[6%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
+                        <div className="flex-shrink-0 basis-[5%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
                           {index + 1}
                         </div>
-                        <div className="flex-shrink-0 basis-[24%] px-3 py-3 border-r border-slate-200 flex items-center">
+                        <div className="flex-shrink-0 basis-[20%] px-3 py-3 border-r border-slate-200 flex items-center">
                           <div className="flex flex-col">
                             <span className="font-medium text-slate-800 truncate" title={room.name ?? undefined}>
                               {room.name}
@@ -413,16 +427,19 @@ export default function ExamRoomsPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex-shrink-0 basis-[16%] px-3 py-3 border-r border-slate-200 flex items-center">
+                        <div className="flex-shrink-0 basis-[14%] px-3 py-3 border-r border-slate-200 flex items-center">
                           {room.shortName ?? <span className="text-slate-400">—</span>}
                         </div>
-                        <div className="flex-shrink-0 basis-[16%] px-3 py-3 border-r border-slate-200 flex items-center">
+                        <div className="flex-shrink-0 basis-[14%] px-3 py-3 border-r border-slate-200 flex items-center">
                           {floorName}
                         </div>
-                        <div className="flex-shrink-0 basis-[14%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
+                        <div className="flex-shrink-0 basis-[12%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
                           {room.numberOfBenches ?? 0}
                         </div>
                         <div className="flex-shrink-0 basis-[12%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
+                          {room.maxStudentsPerBench ?? 0}
+                        </div>
+                        <div className="flex-shrink-0 basis-[10%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-semibold ${
                               room.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"

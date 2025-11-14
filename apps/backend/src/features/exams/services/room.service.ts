@@ -65,6 +65,18 @@ export async function createRoom(data: Room) {
     }
   }
 
+  // Validate numeric fields are non-negative
+  if (payload.numberOfBenches !== undefined && payload.numberOfBenches < 0) {
+    throw new Error("Number of benches must be non-negative.");
+  }
+
+  if (
+    payload.maxStudentsPerBench !== undefined &&
+    payload.maxStudentsPerBench < 0
+  ) {
+    throw new Error("Max students per bench must be non-negative.");
+  }
+
   const [created] = await db.insert(roomModel).values(payload).returning();
   return created;
 }
@@ -93,6 +105,18 @@ export async function updateRoom(
     if (!(await validateFloorExists(payload.floorId))) {
       throw new Error("Floor with the provided ID does not exist.");
     }
+  }
+
+  // Validate numeric fields are non-negative
+  if (payload.numberOfBenches !== undefined && payload.numberOfBenches < 0) {
+    throw new Error("Number of benches must be non-negative.");
+  }
+
+  if (
+    payload.maxStudentsPerBench !== undefined &&
+    payload.maxStudentsPerBench < 0
+  ) {
+    throw new Error("Max students per bench must be non-negative.");
   }
 
   const [updated] = await db
