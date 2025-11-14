@@ -414,6 +414,20 @@
       "when": 1763030959644,
       "tag": "0058_curvy_the_phantom",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1763094787681,
+      "tag": "0059_tranquil_quentin_quire",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1763094863674,
+      "tag": "0060_small_infant_terrible",
+      "breakpoints": true
     }
   ]
 }

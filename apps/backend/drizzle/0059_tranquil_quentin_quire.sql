@@ -1,0 +1,1 @@
+ALTER TABLE "rooms" ADD COLUMN "students_per_bench" integer DEFAULT 0 NOT NULL;
