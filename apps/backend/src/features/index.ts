@@ -72,6 +72,7 @@ import {
   floorRouter,
   roomRouter,
   examTypeRouter,
+  examScheduleRouter,
 } from "./exams/routes/index.js";
 import {
   departmentRouter,
@@ -140,6 +141,7 @@ export {
   floorRouter,
   roomRouter,
   examTypeRouter,
+  examScheduleRouter,
   departmentRouter,
   designationRouter,
 };

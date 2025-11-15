@@ -74,6 +74,7 @@ import {
   floorRouter,
   roomRouter,
   examTypeRouter,
+  examScheduleRouter,
   departmentRouter,
   designationRouter,
 } from "@/features/index.js";
@@ -419,6 +420,7 @@ app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 app.use("/api/exams/floors", floorRouter);
 app.use("/api/exams/rooms", roomRouter);
 app.use("/api/exams/exam-types", examTypeRouter);
+app.use("/api/exams/schedule", examScheduleRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 app.use("/api/admissions/application-forms", applicationFormRouter);
