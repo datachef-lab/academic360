@@ -422,7 +422,7 @@ export default function ScheduleExamPage() {
   }, [selectedProgramCourses, selectedShifts, semester, selectedPaper, classes, currentAcademicYear]);
 
   const getAvailablePapers = (): PaperDto[] => {
-    return papers;
+    return papers.filter((paper) => paper.isActive !== false);
   };
 
   useEffect(() => {
@@ -791,7 +791,10 @@ export default function ScheduleExamPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {programCourses
-                      .filter((course) => course.id && !selectedProgramCourses.includes(course.id))
+                      .filter(
+                        (course) =>
+                          course.id && !selectedProgramCourses.includes(course.id) && course.isActive !== false,
+                      )
                       .map((course) => (
                         <SelectItem key={course.id} value={course.id?.toString() || ""}>
                           {course.name}
@@ -856,24 +859,26 @@ export default function ScheduleExamPage() {
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {subjectTypes.map((category) => (
-                      <Badge
-                        key={category.id}
-                        variant={
-                          category.id !== undefined && selectedSubjectCategories.includes(category.id)
-                            ? "default"
-                            : "outline"
-                        }
-                        className={`cursor-pointer transition-colors ${
-                          category.id !== undefined && selectedSubjectCategories.includes(category.id)
-                            ? "bg-purple-500 text-white border-transparent hover:bg-purple-600"
-                            : "border-purple-300 text-purple-700 hover:bg-purple-50"
-                        }`}
-                        onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
-                      >
-                        {category.name}
-                      </Badge>
-                    ))}
+                    {subjectTypes
+                      .filter((category) => category.isActive !== false)
+                      .map((category) => (
+                        <Badge
+                          key={category.id}
+                          variant={
+                            category.id !== undefined && selectedSubjectCategories.includes(category.id)
+                              ? "default"
+                              : "outline"
+                          }
+                          className={`cursor-pointer transition-colors ${
+                            category.id !== undefined && selectedSubjectCategories.includes(category.id)
+                              ? "bg-purple-500 text-white border-transparent hover:bg-purple-600"
+                              : "border-purple-300 text-purple-700 hover:bg-purple-50"
+                          }`}
+                          onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
+                        >
+                          {category.code && category.code.trim() ? category.code : category.name}
+                        </Badge>
+                      ))}
                   </div>
                 )}
               </div>

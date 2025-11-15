@@ -126,7 +126,7 @@ export const SubjectCategoryForm: React.FC<SubjectCategoryFormProps> = ({
               <FormControl>
                 <Checkbox checked={field.value} onCheckedChange={field.onChange} id="disabled" disabled={isLoading} />
               </FormControl>
-              <FormLabel htmlFor="disabled">Disabled</FormLabel>
+              <FormLabel htmlFor="disabled">Active</FormLabel>
             </FormItem>
           )}
         />
