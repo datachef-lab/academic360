@@ -30,7 +30,7 @@ import { getAllExamTypes, type ExamTypeT } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
 import { getProgramCourses } from "@/services/course-design.api";
 import { getAllShifts } from "@/services/academic";
-import { getSubjectTypes } from "@/services/course-design.api";
+import { getSubjectTypes, getExamComponents } from "@/services/course-design.api";
 import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
 import { getAllRooms, type RoomT } from "@/services/room.service";
@@ -41,6 +41,7 @@ import type { Class } from "@/types/academics/class";
 import type { ProgramCourse, SubjectType, PaperDto } from "@repo/db";
 import type { Shift } from "@/types/academics/shift";
 import type { Subject } from "@repo/db";
+import type { ExamComponent } from "@/types/course-design";
 
 interface SelectedRoom extends RoomT {
   capacity: number;
@@ -89,6 +90,7 @@ export default function ScheduleExamPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [rooms, setRooms] = useState<RoomT[]>([]);
   const [floors, setFloors] = useState<FloorT[]>([]);
+  const [examComponents, setExamComponents] = useState<ExamComponent[]>([]);
   const [loading, setLoading] = useState({
     examTypes: true,
     classes: true,
@@ -99,6 +101,7 @@ export default function ScheduleExamPage() {
     subjects: false,
     rooms: false,
     floors: false,
+    examComponents: false,
   });
 
   // Step 1: Exam Information
@@ -108,6 +111,7 @@ export default function ScheduleExamPage() {
   const [selectedShifts, setSelectedShifts] = useState<number[]>([]);
   const [selectedSubjectCategories, setSelectedSubjectCategories] = useState<number[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<number | null>(null);
+  const [selectedExamComponent, setSelectedExamComponent] = useState<number | null>(null);
   const [totalStudents, setTotalStudents] = useState(0);
   const [studentsWithSeats, setStudentsWithSeats] = useState<StudentWithSeat[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -221,6 +225,30 @@ export default function ScheduleExamPage() {
         toast.error("Failed to load floors");
       } finally {
         setLoading((prev) => ({ ...prev, floors: false }));
+      }
+
+      try {
+        setLoading((prev) => ({ ...prev, examComponents: true }));
+        const examComponentsData = await getExamComponents();
+        // Map API response to match ExamComponent type (API returns isActive, type expects disabled)
+        const mappedComponents: ExamComponent[] = Array.isArray(examComponentsData)
+          ? examComponentsData.map((comp) => ({
+              id: comp.id,
+              name: comp.name,
+              shortName: comp.shortName ?? null,
+              code: comp.code ?? null,
+              sequence: comp.sequence ?? null,
+              disabled: (comp as { isActive?: boolean | null }).isActive === false,
+              createdAt: comp.createdAt,
+              updatedAt: comp.updatedAt,
+            }))
+          : [];
+        setExamComponents(mappedComponents);
+      } catch (error) {
+        console.error("Error fetching exam components:", error);
+        toast.error("Failed to load exam components");
+      } finally {
+        setLoading((prev) => ({ ...prev, examComponents: false }));
       }
 
       // Load academic years using the hook (to get current academic year)
@@ -422,7 +450,21 @@ export default function ScheduleExamPage() {
   }, [selectedProgramCourses, selectedShifts, semester, selectedPaper, classes, currentAcademicYear]);
 
   const getAvailablePapers = (): PaperDto[] => {
-    return papers.filter((paper) => paper.isActive !== false);
+    let filtered = papers.filter((paper) => paper.isActive !== false);
+
+    // Filter by selected exam component if one is selected
+    if (selectedExamComponent !== null) {
+      filtered = filtered.filter((paper) => {
+        // Check if paper has components array and if any component has the selected exam component
+        return (
+          paper.components &&
+          Array.isArray(paper.components) &&
+          paper.components.some((component) => component.examComponent?.id === selectedExamComponent)
+        );
+      });
+    }
+
+    return filtered;
   };
 
   useEffect(() => {
@@ -884,7 +926,30 @@ export default function ScheduleExamPage() {
               </div>
 
               <div className="space-y-3">
-                <Label className="text-sm font-semibold">Papers</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">Subjects</Label>
+                  <Select
+                    value={selectedExamComponent?.toString() || "all"}
+                    onValueChange={(value) => {
+                      setSelectedExamComponent(value === "all" ? null : Number(value));
+                    }}
+                    disabled={loading.examComponents}
+                  >
+                    <SelectTrigger className="w-[200px] h-8 text-xs focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                      <SelectValue placeholder={loading.examComponents ? "Loading..." : "Filter by Component"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Components</SelectItem>
+                      {examComponents
+                        .filter((comp) => !comp.disabled)
+                        .map((comp) => (
+                          <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
+                            {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="max-h-[240px] overflow-y-auto border-2 rounded-xl p-3 space-y-2 bg-gray-100/50 scrollbar-hide">
                   {loading.papers ? (
                     <div className="flex items-center justify-center py-8">
@@ -987,7 +1052,7 @@ export default function ScheduleExamPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="UID">UID (University ID)</SelectItem>
+                    <SelectItem value="UID">UID</SelectItem>
                     <SelectItem value="CU Reg. No.">CU Registration Number</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1015,105 +1080,142 @@ export default function ScheduleExamPage() {
                         </DialogDescription>
                       </DialogHeader>
 
-                      <div className="flex-1 overflow-y-auto px-6 py-4 scrollbar-hide">
+                      <div className="flex-1 overflow-hidden px-6 py-4 flex flex-col">
                         {loading.rooms ? (
                           <div className="flex items-center justify-center py-12">
                             <Loader2 className="h-6 w-6 animate-spin" />
                             <span className="ml-2 text-sm text-gray-500">Loading rooms...</span>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {rooms
-                              .filter((room) => room.isActive !== false)
-                              .map((room) => {
-                                const isSelected = selectedRooms.some((r) => r.id === room.id);
-                                const selectedRoom = selectedRooms.find((r) => r.id === room.id);
-                                const currentMaxStudentsPerBench =
-                                  selectedRoom?.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-                                const calculatedCapacity = (room.numberOfBenches || 0) * currentMaxStudentsPerBench;
-                                const floorName = room.floorId
-                                  ? floors.find((f) => f.id === room.floorId)?.name
-                                  : undefined;
+                          <div className="flex-1 overflow-hidden border border-gray-300 rounded-lg">
+                            <div className="h-full overflow-y-auto">
+                              <table className="w-full border-collapse table-fixed">
+                                <thead className="sticky top-0 z-10 bg-gray-100">
+                                  <tr>
+                                    <th className="w-20 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Select
+                                    </th>
+                                    <th className="w-20 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Sr. No.
+                                    </th>
+                                    <th className="w-32 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Floor
+                                    </th>
+                                    <th className="w-32 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Room
+                                    </th>
+                                    <th className="w-24 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Benches
+                                    </th>
+                                    <th className="w-24 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Capacity
+                                    </th>
+                                    <th className="w-40 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Max Students per Bench
+                                    </th>
+                                    <th className="w-40 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Override
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {rooms
+                                    .filter((room) => room.isActive !== false)
+                                    .map((room, index) => {
+                                      const isSelected = selectedRooms.some((r) => r.id === room.id);
+                                      const selectedRoom = selectedRooms.find((r) => r.id === room.id);
+                                      const currentMaxStudentsPerBench =
+                                        selectedRoom?.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                                      const calculatedCapacity =
+                                        (room.numberOfBenches || 0) * currentMaxStudentsPerBench;
+                                      const floorName = room.floorId
+                                        ? floors.find((f) => f.id === room.floorId)?.name
+                                        : "N/A";
 
-                                return (
-                                  <div
-                                    key={room.id}
-                                    className={`p-3 border-2 rounded-lg transition-all cursor-pointer ${
-                                      isSelected ? "border-purple-500 bg-purple-50" : "hover:border-purple-400/50"
-                                    }`}
-                                    onClick={() => handleRoomSelection(room, !isSelected)}
-                                  >
-                                    <div className="flex items-start gap-2 mb-3">
-                                      <Checkbox
-                                        checked={isSelected}
-                                        onCheckedChange={(checked) => handleRoomSelection(room, !!checked)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 text-white focus:ring-2 focus:ring-purple-500"
-                                      />
-                                      <div className="flex-1">
-                                        <div className="font-bold text-base">Room {room.name}</div>
-                                        {floorName && <div className="text-xs text-gray-500">{floorName}</div>}
-                                      </div>
-                                    </div>
+                                      return (
+                                        <tr
+                                          key={room.id}
+                                          className={`border-b hover:bg-gray-50 transition-colors ${
+                                            isSelected ? "bg-purple-50" : ""
+                                          }`}
+                                        >
+                                          <td className="px-4 py-3 border border-gray-300">
+                                            <div className="flex justify-center">
+                                              <Checkbox
+                                                checked={isSelected}
+                                                onCheckedChange={(checked) => handleRoomSelection(room, !!checked)}
+                                                className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 text-white focus:ring-2 focus:ring-purple-500"
+                                              />
+                                            </div>
+                                          </td>
+                                          <td className="px-4 py-3 text-sm font-medium text-gray-900 border border-gray-300">
+                                            {index + 1}
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-700 border border-gray-300">
+                                            {floorName}
+                                          </td>
+                                          <td className="px-4 py-3 text-sm font-medium text-gray-900 border border-gray-300">
+                                            {room.name}
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-700 border border-gray-300">
+                                            {room.numberOfBenches || 0}
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-700 border border-gray-300">
+                                            {calculatedCapacity}
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-700 border border-gray-300">
+                                            {currentMaxStudentsPerBench}
+                                          </td>
+                                          <td className="px-4 py-3 border border-gray-300 min-h-[80px]">
+                                            <div className="space-y-1 min-h-[60px]">
+                                              {isSelected ? (
+                                                <>
+                                                  <Input
+                                                    type="number"
+                                                    min="1"
+                                                    max={room.maxStudentsPerBench || 2}
+                                                    placeholder={room.maxStudentsPerBench?.toString() || "2"}
+                                                    value={selectedRoom?.maxStudentsPerBenchOverride || ""}
+                                                    onChange={(e) => {
+                                                      const inputValue = e.target.value.trim();
+                                                      if (!inputValue) {
+                                                        handleMaxStudentsPerBenchOverride(room.id!, null);
+                                                        return;
+                                                      }
 
-                                    <div className="grid grid-cols-2 gap-2 mb-2">
-                                      <div className="bg-gray-100/50 p-2 rounded">
-                                        <div className="text-gray-500 text-xs">Benches</div>
-                                        <div className="font-semibold text-sm">{room.numberOfBenches || 0}</div>
-                                      </div>
-                                      <div className="bg-gray-100/50 p-2 rounded">
-                                        <div className="text-gray-500 text-xs">Capacity</div>
-                                        <div className="font-semibold text-sm">{calculatedCapacity}</div>
-                                      </div>
-                                    </div>
-                                    <div className="bg-gray-100/50 p-2 rounded mb-2">
-                                      <div className="text-gray-500 text-xs">Max Students per Bench</div>
-                                      <div className="font-semibold text-sm">{currentMaxStudentsPerBench}</div>
-                                    </div>
+                                                      // Check if input is a valid positive integer (no decimals, no negative)
+                                                      const isPositiveInteger = /^\d+$/.test(inputValue);
+                                                      if (!isPositiveInteger) {
+                                                        return; // Don't update if not a valid positive integer
+                                                      }
 
-                                    {isSelected && (
-                                      <div className="bg-purple-50 p-2 rounded">
-                                        <div className="text-gray-500 text-xs mb-1">
-                                          Override Max Students per Bench
-                                        </div>
-                                        <Input
-                                          type="number"
-                                          min="1"
-                                          max={room.maxStudentsPerBench || 2}
-                                          placeholder={room.maxStudentsPerBench?.toString() || "2"}
-                                          value={selectedRoom?.maxStudentsPerBenchOverride || ""}
-                                          onChange={(e) => {
-                                            const inputValue = e.target.value.trim();
-                                            if (!inputValue) {
-                                              handleMaxStudentsPerBenchOverride(room.id!, null);
-                                              return;
-                                            }
+                                                      const val = parseInt(inputValue, 10);
+                                                      const maxAllowed = room.maxStudentsPerBench || 2;
 
-                                            // Check if input is a valid positive integer (no decimals, no negative)
-                                            const isPositiveInteger = /^\d+$/.test(inputValue);
-                                            if (!isPositiveInteger) {
-                                              return; // Don't update if not a valid positive integer
-                                            }
-
-                                            const val = parseInt(inputValue, 10);
-                                            const maxAllowed = room.maxStudentsPerBench || 2;
-
-                                            // Only allow positive integers that don't exceed the room's maxStudentsPerBench
-                                            if (val > 0 && val <= maxAllowed) {
-                                              handleMaxStudentsPerBenchOverride(room.id!, val);
-                                            }
-                                          }}
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="h-8 text-sm"
-                                        />
-                                        <div className="text-xs text-gray-400 mt-1">
-                                          Max: {room.maxStudentsPerBench || 2}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                                                      // Only allow positive integers that don't exceed the room's maxStudentsPerBench
+                                                      if (val > 0 && val <= maxAllowed) {
+                                                        handleMaxStudentsPerBenchOverride(room.id!, val);
+                                                      }
+                                                    }}
+                                                    className="h-8 text-sm w-full max-w-[80px]"
+                                                  />
+                                                  <div className="text-xs text-gray-400">
+                                                    Max: {room.maxStudentsPerBench || 2}
+                                                  </div>
+                                                </>
+                                              ) : (
+                                                <div className="h-8 flex items-center">
+                                                  <span className="text-sm text-gray-400">-</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
                         )}
                       </div>
