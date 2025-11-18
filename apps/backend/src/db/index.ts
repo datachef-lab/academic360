@@ -34,6 +34,8 @@ import { loadDefaultOtpNotificationMasters } from "@/features/auth/services/otp.
 // import { loadDefaultOtpNotificationMaster } from "@/features/auth/services/otp.service";
 import { CuRegistrationExcelService } from "@/services/cu-registration-excel.service.js";
 import { sendAdmRegFormToNotSendStudents } from "@/features/admissions/services/cu-registration-correction-request.service";
+import { exportStaffDataToExcel } from "@/features/user/services/tmp-service";
+import { loadAllStaff } from "@/features/user/services/staff.service";
 
 // Create a connection pool
 const pool = new pg.Pool({
@@ -81,6 +83,7 @@ export const connectToDatabase = async () => {
     // Clear existing duplicates and load fresh metas (only in development)
 
     loadDefaultSubjectSelectionMetas();
+    loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();
     // loadOldSubjects();
@@ -155,6 +158,7 @@ export const connectToMySQL = async () => {
       "SELECT COUNT(*) AS totalRows FROM community",
     ); // Simple query to test the connection
     console.log(rows);
+    // exportStaffDataToExcel();
     console.log("[MySQL] - Connected successfully. 🎉");
   } catch (error) {
     console.error("[MySQL] - Connection failed: ⚠", error);

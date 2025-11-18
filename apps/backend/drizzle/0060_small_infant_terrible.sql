@@ -1,0 +1,1 @@
+ALTER TABLE "rooms" RENAME COLUMN "students_per_bench" TO "max_students_per_bench";

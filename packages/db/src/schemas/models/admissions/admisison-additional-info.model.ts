@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-import { departmentModel } from "@/schemas/models/user";
+import { departmentModel } from "@/schemas/models/administration";
 import { disabilityTypeEnum } from "@/schemas/enums";
 import { applicationFormModel } from "@/schemas/models/admissions";
 import { annualIncomeModel } from "@/schemas/models/resources";

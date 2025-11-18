@@ -6,14 +6,20 @@ import FeesReceiptTypePage from "./FeesReceiptTypePage";
 import FeesSlabPage from "./FeesSlabPage";
 import FeesStructurePage from "./FeesStructurePage";
 import StudentFees from "./StudentFeesPage";
+import FeesMasterLayout from "./FeesMasterLayout";
+import FeesHomePage from "./FeesHomePage";
+import FeesReportsPage from "./FeesReportsPage";
 
 export {
-    AcademicYearPage,
-    AddonPage,
-    FeeHeadsPage,
-    FeesReceiptTypePage,
-    FeesSlabPage,
-    FeesStructurePage,
-    FeeStructureForm,
-    StudentFees,
-}
+  AcademicYearPage,
+  AddonPage,
+  FeeHeadsPage,
+  FeesReceiptTypePage,
+  FeesSlabPage,
+  FeesStructurePage,
+  FeeStructureForm,
+  StudentFees,
+  FeesMasterLayout,
+  FeesHomePage,
+  FeesReportsPage,
+};

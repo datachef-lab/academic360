@@ -1,4 +1,4 @@
-import React, { useState, ReactNode, createContext, useEffect } from "react";
+import React, { useState, ReactNode, createContext, useEffect, useMemo, useCallback } from "react";
 import { Settings } from "@/features/settings/types/settings.type";
 import { findAllSettings } from "@/features/settings/services/settings-service";
 
@@ -17,21 +17,28 @@ interface SettingsProviderProps {
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) => {
   const [settings, setSettings] = useState<Settings[]>([]);
 
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     findAllSettings()
       .then((data) => setSettings(data.payload))
       .catch((err) => console.log("Error fetching settings...", err));
-  };
+  }, []);
 
   useEffect(() => {
     fetchSettings();
+  }, [fetchSettings]);
+
+  const handleSetSettings = useCallback((givenSettings: Settings[]) => {
+    setSettings(givenSettings);
   }, []);
 
-  const contextValue: SettingsContextType = {
-    settings,
-    fetchSettings,
-    setSettings: (givenSettings) => setSettings(givenSettings),
-  };
+  const contextValue: SettingsContextType = useMemo(
+    () => ({
+      settings,
+      fetchSettings,
+      setSettings: handleSetSettings,
+    }),
+    [settings, fetchSettings, handleSetSettings],
+  );
 
   return (
     <SettingsContext.Provider value={contextValue}>

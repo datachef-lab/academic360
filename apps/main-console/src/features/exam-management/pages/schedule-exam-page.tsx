@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Download, AlertCircle, CheckCircle2, GraduationCap, Building2, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  Download,
+  AlertCircle,
+  CheckCircle2,
+  GraduationCap,
+  Building2,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -16,68 +26,27 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { getAllExamTypes, type ExamTypeT } from "@/services/exam-type.service";
+import { getAllClasses } from "@/services/classes.service";
+import { getProgramCourses } from "@/services/course-design.api";
+import { getAllShifts } from "@/services/academic";
+import { getSubjectTypes, getExamComponents } from "@/services/course-design.api";
+import { getPapersPaginated } from "@/services/course-design.api";
+import { getAllSubjects } from "@/services/subject.api";
+import { getAllRooms, type RoomT } from "@/services/room.service";
+import { getAllFloors, type FloorT } from "@/services/floor.service";
+import { countStudentsForExam, getStudentsForExam, type StudentWithSeat } from "@/services/exam-schedule.service";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
+import type { Class } from "@/types/academics/class";
+import type { ProgramCourse, SubjectType, PaperDto } from "@repo/db";
+import type { Shift } from "@/types/academics/shift";
+import type { Subject } from "@repo/db";
+import type { ExamComponent } from "@/types/course-design";
 
-const examTypes = [
-  { value: "CIE", label: "CIE (Continuous Internal Evaluation)" },
-  { value: "IA", label: "Internal Assessment" },
-  { value: "UE", label: "University Examination" },
-];
-
-const semesters = ["Semester I", "Semester II", "Semester III", "Semester IV", "Semester V", "Semester VI"];
-
-const programCourses = ["B.Com (H)", "B.Com (P)", "BBA", "B.A. (H)", "B.A. (P)", "B.Sc. (H)", "B.Sc. (P)", "B.C.A."];
-
-const shifts = ["Morning", "Day", "Afternoon", "Evening"];
-
-const subjectCategories = ["ALL", "Major", "Minor", "Core", "Elective", "Skill Enhancement"];
-
-interface Subject {
-  id: string;
-  name: string;
-  category: string;
-  programCourse: string;
+interface SelectedRoom extends RoomT {
+  capacity: number;
+  maxStudentsPerBenchOverride?: number;
 }
-
-const mockSubjects: Subject[] = [
-  { id: "s1", name: "Financial Accounting", category: "Major", programCourse: "B.Com (H)" },
-  { id: "s2", name: "Business Mathematics", category: "Core", programCourse: "B.Com (H)" },
-  { id: "s3", name: "Economics", category: "Minor", programCourse: "B.Com (H)" },
-  { id: "s4", name: "Management Principles", category: "Major", programCourse: "BBA" },
-  { id: "s5", name: "Business Communication", category: "Core", programCourse: "BBA" },
-  { id: "s6", name: "Marketing", category: "Minor", programCourse: "BBA" },
-];
-
-interface Paper {
-  id: string;
-  name: string;
-  type: "Theory" | "Practical" | "Tutorial";
-  subjectId: string;
-}
-
-const mockPapers: Paper[] = [
-  { id: "p1", name: "Financial Accounting - Theory", type: "Theory", subjectId: "s1" },
-  { id: "p2", name: "Financial Accounting - Practical", type: "Practical", subjectId: "s1" },
-  { id: "p3", name: "Business Mathematics - Theory", type: "Theory", subjectId: "s2" },
-  { id: "p4", name: "Economics - Theory", type: "Theory", subjectId: "s3" },
-  { id: "p5", name: "Management Principles - Theory", type: "Theory", subjectId: "s4" },
-  { id: "p6", name: "Business Communication - Theory", type: "Theory", subjectId: "s5" },
-];
-
-interface Room {
-  id: string;
-  number: string;
-  benches: number;
-  building?: string;
-}
-
-const mockRooms: Room[] = [
-  { id: "r1", number: "101", benches: 15, building: "Main Block" },
-  { id: "r2", number: "102", benches: 20, building: "Main Block" },
-  { id: "r3", number: "103", benches: 18, building: "Main Block" },
-  { id: "r4", number: "201", benches: 25, building: "Science Block" },
-  { id: "r5", number: "202", benches: 22, building: "Science Block" },
-  { id: "r6", number: "301", benches: 30, building: "Arts Block" },
-];
 
 interface Student {
   uid: string;
@@ -107,26 +76,49 @@ interface Assignment {
   seatNo: string;
 }
 
-interface SelectedRoom extends Room {
-  capacity: number;
-  capacityOverride?: number;
-}
-
 export default function ScheduleExamPage() {
+  // Academic Year hook - get current academic year from Redux slice
+  const { currentAcademicYear, loadAcademicYears } = useAcademicYear();
+
+  // API Data States
+  const [examTypes, setExamTypes] = useState<ExamTypeT[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [programCourses, setProgramCourses] = useState<ProgramCourse[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [subjectTypes, setSubjectTypes] = useState<SubjectType[]>([]);
+  const [papers, setPapers] = useState<PaperDto[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [rooms, setRooms] = useState<RoomT[]>([]);
+  const [floors, setFloors] = useState<FloorT[]>([]);
+  const [examComponents, setExamComponents] = useState<ExamComponent[]>([]);
+  const [loading, setLoading] = useState({
+    examTypes: true,
+    classes: true,
+    programCourses: true,
+    shifts: true,
+    subjectTypes: true,
+    papers: false,
+    subjects: false,
+    rooms: false,
+    floors: false,
+    examComponents: false,
+  });
+
   // Step 1: Exam Information
-  const [examType, setExamType] = useState("");
-  const [semester, setSemester] = useState("");
-  const [selectedProgramCourses, setSelectedProgramCourses] = useState<string[]>([]);
-  const [selectedShifts, setSelectedShifts] = useState<string[]>([]);
-  const [selectedSubjectCategories, setSelectedSubjectCategories] = useState<string[]>(["ALL"]);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(["ALL"]);
-  const [selectedPapers, setSelectedPapers] = useState<string[]>([]);
+  const [examType, setExamType] = useState<string>("");
+  const [semester, setSemester] = useState<string>("");
+  const [selectedProgramCourses, setSelectedProgramCourses] = useState<number[]>([]);
+  const [selectedShifts, setSelectedShifts] = useState<number[]>([]);
+  const [selectedSubjectCategories, setSelectedSubjectCategories] = useState<number[]>([]);
+  const [selectedPaper, setSelectedPaper] = useState<number | null>(null);
+  const [selectedExamComponent, setSelectedExamComponent] = useState<number | null>(null);
   const [totalStudents, setTotalStudents] = useState(0);
+  const [studentsWithSeats, setStudentsWithSeats] = useState<StudentWithSeat[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
 
   // Step 2: Room Selection
-  const [gender, setGender] = useState("All");
-  const [assignBy, setAssignBy] = useState("CU Roll No.");
-  const [studentsPerBench, setStudentsPerBench] = useState(2);
+  const [gender, setGender] = useState<"ALL" | "MALE" | "FEMALE" | "OTHER">("ALL");
+  const [assignBy, setAssignBy] = useState<"UID" | "CU Reg. No.">("UID");
   const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
   const [totalCapacity, setTotalCapacity] = useState(0);
   const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
@@ -138,14 +130,238 @@ export default function ScheduleExamPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isAssigned, setIsAssigned] = useState(false);
 
-  // Generate mock students based on selections
-  const generateMockStudents = (): Student[] => {
+  // Fetch initial data
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        setLoading((prev) => ({ ...prev, examTypes: true }));
+        const examTypesRes = await getAllExamTypes();
+        if (examTypesRes.httpStatus === "SUCCESS" && examTypesRes.payload) {
+          setExamTypes(examTypesRes.payload);
+        }
+      } catch (error) {
+        console.error("Error fetching exam types:", error);
+        toast.error("Failed to load exam types");
+      } finally {
+        setLoading((prev) => ({ ...prev, examTypes: false }));
+      }
+
+      try {
+        setLoading((prev) => ({ ...prev, classes: true }));
+        const classesData = await getAllClasses();
+        setClasses(Array.isArray(classesData) ? classesData : []);
+      } catch (error) {
+        console.error("Error fetching classes:", error);
+        toast.error("Failed to load classes");
+      } finally {
+        setLoading((prev) => ({ ...prev, classes: false }));
+      }
+
+      try {
+        setLoading((prev) => ({ ...prev, programCourses: true }));
+        const programCoursesData = await getProgramCourses();
+        setProgramCourses(Array.isArray(programCoursesData) ? programCoursesData : []);
+      } catch (error) {
+        console.error("Error fetching program courses:", error);
+        toast.error("Failed to load program courses");
+      } finally {
+        setLoading((prev) => ({ ...prev, programCourses: false }));
+      }
+
+      try {
+        setLoading((prev) => ({ ...prev, shifts: true }));
+        const shiftsData = await getAllShifts();
+        setShifts(Array.isArray(shiftsData) ? shiftsData : []);
+      } catch (error) {
+        console.error("Error fetching shifts:", error);
+        toast.error("Failed to load shifts");
+      } finally {
+        setLoading((prev) => ({ ...prev, shifts: false }));
+      }
+
+      try {
+        setLoading((prev) => ({ ...prev, subjectTypes: true }));
+        const subjectTypesData = await getSubjectTypes();
+        setSubjectTypes(Array.isArray(subjectTypesData) ? subjectTypesData : []);
+      } catch (error) {
+        console.error("Error fetching subject types:", error);
+        toast.error("Failed to load subject types");
+      } finally {
+        setLoading((prev) => ({ ...prev, subjectTypes: false }));
+      }
+
+      try {
+        setLoading((prev) => ({ ...prev, subjects: true }));
+        const subjectsData = await getAllSubjects();
+        setSubjects(Array.isArray(subjectsData) ? subjectsData : []);
+      } catch (error) {
+        console.error("Error fetching subjects:", error);
+        toast.error("Failed to load subjects");
+      } finally {
+        setLoading((prev) => ({ ...prev, subjects: false }));
+      }
+
+      try {
+        setLoading((prev) => ({ ...prev, rooms: true }));
+        const roomsRes = await getAllRooms();
+        if (roomsRes.httpStatus === "SUCCESS" && roomsRes.payload) {
+          setRooms(roomsRes.payload);
+        }
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+        toast.error("Failed to load rooms");
+      } finally {
+        setLoading((prev) => ({ ...prev, rooms: false }));
+      }
+
+      try {
+        setLoading((prev) => ({ ...prev, floors: true }));
+        const floorsRes = await getAllFloors();
+        if (floorsRes.httpStatus === "SUCCESS" && floorsRes.payload) {
+          setFloors(floorsRes.payload);
+        }
+      } catch (error) {
+        console.error("Error fetching floors:", error);
+        toast.error("Failed to load floors");
+      } finally {
+        setLoading((prev) => ({ ...prev, floors: false }));
+      }
+
+      try {
+        setLoading((prev) => ({ ...prev, examComponents: true }));
+        const examComponentsData = await getExamComponents();
+        // Map API response to match ExamComponent type (API returns isActive, type expects disabled)
+        const mappedComponents: ExamComponent[] = Array.isArray(examComponentsData)
+          ? examComponentsData.map((comp) => ({
+              id: comp.id,
+              name: comp.name,
+              shortName: comp.shortName ?? null,
+              code: comp.code ?? null,
+              sequence: comp.sequence ?? null,
+              disabled: (comp as { isActive?: boolean | null }).isActive === false,
+              createdAt: comp.createdAt,
+              updatedAt: comp.updatedAt,
+            }))
+          : [];
+        setExamComponents(mappedComponents);
+      } catch (error) {
+        console.error("Error fetching exam components:", error);
+        toast.error("Failed to load exam components");
+      } finally {
+        setLoading((prev) => ({ ...prev, examComponents: false }));
+      }
+
+      // Load academic years using the hook (to get current academic year)
+      try {
+        await loadAcademicYears();
+      } catch (error) {
+        console.error("Error fetching academic years:", error);
+        toast.error("Failed to load academic years");
+      }
+    };
+
+    void fetchInitialData();
+  }, [loadAcademicYears]);
+
+  // Fetch papers when filters change
+  const fetchPapers = useCallback(async () => {
+    if (selectedProgramCourses.length === 0 || !semester) {
+      setPapers([]);
+      return;
+    }
+
+    try {
+      setLoading((prev) => ({ ...prev, papers: true }));
+      const classObj = classes.find((c) => c.id?.toString() === semester);
+      const classId = classObj?.id;
+
+      // Since API only accepts single values, we need to make multiple calls
+      // for each combination of program course and subject type
+      const allPapers: PaperDto[] = [];
+      const seenPaperIds = new Set<number>();
+
+      // If no subject categories selected, fetch for all program courses
+      const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
+
+      // If no subject types selected, fetch papers for all program courses with class filter
+      if (subjectTypesToUse.length === 0) {
+        for (const programCourseId of selectedProgramCourses) {
+          try {
+            const papersData = await getPapersPaginated(1, 1000, {
+              programCourseId: programCourseId,
+              classId: classId ?? null,
+              subjectTypeId: null,
+            });
+
+            if (papersData?.content) {
+              for (const paper of papersData.content) {
+                if (paper.id && !seenPaperIds.has(paper.id)) {
+                  seenPaperIds.add(paper.id);
+                  allPapers.push(paper);
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching papers for program course ${programCourseId}:`, error);
+          }
+        }
+      } else {
+        // Fetch papers for each combination of program course and subject type
+        for (const programCourseId of selectedProgramCourses) {
+          for (const subjectTypeId of subjectTypesToUse) {
+            try {
+              const papersData = await getPapersPaginated(1, 1000, {
+                programCourseId: programCourseId,
+                classId: classId ?? null,
+                subjectTypeId: subjectTypeId,
+              });
+
+              if (papersData?.content) {
+                for (const paper of papersData.content) {
+                  if (paper.id && !seenPaperIds.has(paper.id)) {
+                    seenPaperIds.add(paper.id);
+                    allPapers.push(paper);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error(
+                `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
+                error,
+              );
+            }
+          }
+        }
+      }
+
+      setPapers(allPapers);
+    } catch (error) {
+      console.error("Error fetching papers:", error);
+      toast.error("Failed to load papers");
+      setPapers([]);
+    } finally {
+      setLoading((prev) => ({ ...prev, papers: false }));
+    }
+  }, [selectedProgramCourses, semester, selectedSubjectCategories, classes]);
+
+  useEffect(() => {
+    void fetchPapers();
+  }, [fetchPapers]);
+
+  const generateMockStudents = useCallback((): Student[] => {
     const students: Student[] = [];
     let counter = 1;
 
-    selectedProgramCourses.forEach((course) => {
-      const shiftsToUse = selectedShifts.length > 0 ? selectedShifts : shifts;
-      shiftsToUse.forEach((shift) => {
+    selectedProgramCourses.forEach((courseId) => {
+      const course = programCourses.find((c) => c.id === courseId);
+      const courseName = course?.name || `Course ${courseId}`;
+      const shiftsToUse =
+        selectedShifts.length > 0
+          ? selectedShifts
+          : shifts.map((s) => s.id).filter((id): id is number => id !== undefined);
+      shiftsToUse.forEach((shiftId) => {
+        const shift = shifts.find((s) => s.id === shiftId);
+        const shiftName = shift?.name || `Shift ${shiftId}`;
         const studentsPerGroup = 15;
         for (let i = 0; i < studentsPerGroup; i++) {
           students.push({
@@ -153,9 +369,9 @@ export default function ScheduleExamPage() {
             name: `Student ${counter}`,
             cuRollNo: `CUR${String(counter).padStart(6, "0")}`,
             cuRegNo: `REG${String(counter).padStart(6, "0")}`,
-            programCourse: course,
+            programCourse: courseName,
             semester: semester,
-            shift: shift,
+            shift: shiftName,
             gender: i % 2 === 0 ? "Male" : "Female",
           });
           counter++;
@@ -164,92 +380,224 @@ export default function ScheduleExamPage() {
     });
 
     return students;
-  };
+  }, [selectedProgramCourses, selectedShifts, semester, programCourses, shifts]);
 
-  const getFilteredStudents = (): Student[] => {
+  const getFilteredStudents = useCallback((): Student[] => {
     const allStudents = generateMockStudents();
-    if (gender === "All") return allStudents;
-    return allStudents.filter((s) => s.gender === gender);
-  };
+    if (gender === "ALL") return allStudents;
+    // Map enum values to student gender format
+    const genderMap: Record<string, "Male" | "Female"> = {
+      MALE: "Male",
+      FEMALE: "Female",
+    };
+    const filterGender = genderMap[gender] || gender;
+    return allStudents.filter((s) => s.gender === filterGender);
+  }, [gender, generateMockStudents]);
 
+  // Fetch student count from API based on selected papers
   useEffect(() => {
-    if (selectedProgramCourses.length > 0 && semester) {
-      const filtered = getFilteredStudents();
-      setTotalStudents(filtered.length);
-    } else {
-      setTotalStudents(0);
-    }
-  }, [selectedProgramCourses, selectedShifts, semester, gender]);
+    const fetchStudentCount = async () => {
+      // Check if currentAcademicYear is available
+      if (!currentAcademicYear?.id) {
+        console.log("[SCHEDULE-EXAM] Waiting for academic year to be loaded...");
+        setTotalStudents(0);
+        return;
+      }
 
-  const getAvailableSubjects = (): Subject[] => {
-    if (selectedSubjectCategories.includes("ALL")) {
-      return mockSubjects.filter((s) => selectedProgramCourses.includes(s.programCourse));
+      if (selectedProgramCourses.length === 0 || !semester || !selectedPaper) {
+        setTotalStudents(0);
+        return;
+      }
+
+      try {
+        const classObj = classes.find((c) => c.id?.toString() === semester);
+        if (!classObj?.id) {
+          setTotalStudents(0);
+          return;
+        }
+
+        console.log("[SCHEDULE-EXAM] Fetching student count with params:", {
+          classId: classObj.id,
+          programCourseIds: selectedProgramCourses,
+          paperIds: [selectedPaper],
+          academicYearIds: [currentAcademicYear.id],
+          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+        });
+
+        const response = await countStudentsForExam({
+          classId: classObj.id,
+          programCourseIds: selectedProgramCourses,
+          paperIds: [selectedPaper],
+          academicYearIds: [currentAcademicYear.id],
+          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+        });
+
+        console.log("[SCHEDULE-EXAM] Student count response:", response);
+
+        if (response.httpStatus === "SUCCESS" && response.payload) {
+          setTotalStudents(response.payload.count);
+        } else {
+          console.warn("[SCHEDULE-EXAM] Unexpected response:", response);
+          setTotalStudents(0);
+        }
+      } catch (error) {
+        console.error("[SCHEDULE-EXAM] Error fetching student count:", error);
+        setTotalStudents(0);
+      }
+    };
+
+    void fetchStudentCount();
+  }, [selectedProgramCourses, selectedShifts, semester, selectedPaper, classes, currentAcademicYear]);
+
+  const getAvailablePapers = (): PaperDto[] => {
+    let filtered = papers.filter((paper) => paper.isActive !== false);
+
+    // Filter by selected exam component if one is selected
+    if (selectedExamComponent !== null) {
+      filtered = filtered.filter((paper) => {
+        // Check if paper has components array and if any component has the selected exam component
+        return (
+          paper.components &&
+          Array.isArray(paper.components) &&
+          paper.components.some((component) => component.examComponent?.id === selectedExamComponent)
+        );
+      });
     }
-    return mockSubjects.filter(
-      (s) => selectedProgramCourses.includes(s.programCourse) && selectedSubjectCategories.includes(s.category),
-    );
+
+    return filtered;
   };
-
-  const getAvailablePapers = (): Paper[] => {
-    if (selectedSubjects.includes("ALL")) {
-      const subjects = getAvailableSubjects();
-      return mockPapers.filter((p) => subjects.some((s) => s.id === p.subjectId));
-    }
-    return mockPapers.filter((p) => selectedSubjects.includes(p.subjectId));
-  };
-
-  useEffect(() => {
-    if (selectedSubjectCategories.includes("ALL")) {
-      setSelectedSubjects(["ALL"]);
-    }
-  }, [selectedSubjectCategories]);
 
   useEffect(() => {
     const capacity = selectedRooms.reduce((total, room) => {
-      return total + (room.capacityOverride || room.capacity);
+      const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+      const numberOfBenches = room.numberOfBenches || 0;
+      return total + numberOfBenches * maxStudentsPerBench;
     }, 0);
     setTotalCapacity(capacity);
-  }, [selectedRooms, studentsPerBench]);
+  }, [selectedRooms]);
 
-  const handleProgramCourseToggle = (course: string) => {
-    setSelectedProgramCourses((prev) => (prev.includes(course) ? prev.filter((c) => c !== course) : [...prev, course]));
+  // Fetch students with seat assignments when rooms are selected
+  useEffect(() => {
+    const fetchStudentsWithSeats = async () => {
+      if (
+        selectedRooms.length === 0 ||
+        selectedProgramCourses.length === 0 ||
+        !semester ||
+        !selectedPaper ||
+        !currentAcademicYear?.id
+      ) {
+        setStudentsWithSeats([]);
+        return;
+      }
+
+      try {
+        setLoadingStudents(true);
+        const classObj = classes.find((c) => c.id?.toString() === semester);
+        if (!classObj?.id) {
+          setStudentsWithSeats([]);
+          return;
+        }
+
+        // Prepare room assignments
+        const roomAssignments = selectedRooms.map((room) => {
+          const floor = floors.find((f) => f.id === room.floorId);
+          const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+          return {
+            roomId: room.id!,
+            floorId: room.floorId,
+            floorName: floor?.name || null,
+            roomName: room.name || `Room ${room.id}`,
+            maxStudentsPerBench,
+            numberOfBenches: room.numberOfBenches || 0,
+          };
+        });
+
+        const response = await getStudentsForExam({
+          classId: classObj.id,
+          programCourseIds: selectedProgramCourses,
+          paperIds: [selectedPaper],
+          academicYearIds: [currentAcademicYear.id],
+          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+          assignBy,
+          roomAssignments,
+        });
+
+        if (response.httpStatus === "SUCCESS" && response.payload) {
+          setStudentsWithSeats(response.payload.students);
+        } else {
+          setStudentsWithSeats([]);
+        }
+      } catch (error) {
+        console.error("[SCHEDULE-EXAM] Error fetching students with seats:", error);
+        setStudentsWithSeats([]);
+      } finally {
+        setLoadingStudents(false);
+      }
+    };
+
+    void fetchStudentsWithSeats();
+  }, [
+    selectedRooms,
+    selectedProgramCourses,
+    selectedShifts,
+    semester,
+    selectedPaper,
+    classes,
+    currentAcademicYear,
+    assignBy,
+    floors,
+  ]);
+
+  const handleProgramCourseToggle = (courseId: number) => {
+    setSelectedProgramCourses((prev) =>
+      prev.includes(courseId) ? prev.filter((c) => c !== courseId) : [...prev, courseId],
+    );
   };
 
-  const handleShiftToggle = (shift: string) => {
-    setSelectedShifts((prev) => (prev.includes(shift) ? prev.filter((s) => s !== shift) : [...prev, shift]));
+  const handleShiftToggle = (shiftId: number) => {
+    setSelectedShifts((prev) => (prev.includes(shiftId) ? prev.filter((s) => s !== shiftId) : [...prev, shiftId]));
   };
 
-  const handleSubjectCategoryToggle = (category: string) => {
-    if (category === "ALL") {
-      setSelectedSubjectCategories(["ALL"]);
-    } else {
-      setSelectedSubjectCategories((prev) => {
-        const newCategories = prev.includes(category)
-          ? prev.filter((c) => c !== category && c !== "ALL")
-          : [...prev.filter((c) => c !== "ALL"), category];
-        return newCategories.length === 0 ? ["ALL"] : newCategories;
-      });
-    }
+  const handleSubjectCategoryToggle = (categoryId: number) => {
+    setSelectedSubjectCategories((prev) =>
+      prev.includes(categoryId) ? prev.filter((c) => c !== categoryId) : [...prev, categoryId],
+    );
   };
 
-  const handleRoomSelection = (room: Room, selected: boolean) => {
+  const handleRoomSelection = (room: RoomT, selected: boolean) => {
     if (selected) {
-      const capacity = room.benches * studentsPerBench;
+      const maxStudentsPerBench = room.maxStudentsPerBench || 2;
+      const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
       setSelectedRooms((prev) => [...prev, { ...room, capacity }]);
     } else {
       setSelectedRooms((prev) => prev.filter((r) => r.id !== room.id));
     }
   };
 
-  const handleCapacityOverride = (roomId: string, override: number) => {
-    setSelectedRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, capacityOverride: override } : r)));
+  const handleMaxStudentsPerBenchOverride = (roomId: number, override: number | null) => {
+    setSelectedRooms((prev) =>
+      prev.map((r) => {
+        if (r.id === roomId) {
+          const maxStudentsPerBench = override || r.maxStudentsPerBench || 2;
+          const numberOfBenches = r.numberOfBenches || 0;
+          const capacity = numberOfBenches * maxStudentsPerBench;
+          return {
+            ...r,
+            maxStudentsPerBenchOverride: override || undefined,
+            capacity,
+          };
+        }
+        return r;
+      }),
+    );
   };
 
-  const handleScheduleChange = (paperId: string, field: keyof Schedule, value: string) => {
+  const handleScheduleChange = (paperId: number | string, field: keyof Schedule, value: string) => {
+    const id = typeof paperId === "number" ? paperId.toString() : paperId;
     setPaperSchedules((prev) => ({
       ...prev,
-      [paperId]: {
-        ...prev[paperId],
+      [id]: {
+        ...prev[id],
         [field]: value,
       } as Schedule,
     }));
@@ -264,8 +612,8 @@ export default function ScheduleExamPage() {
     return `${hour12}:${minutes} ${ampm}`;
   };
 
-  const generateSeatNumber = (benchNumber: number, positionOnBench: number): string => {
-    const letters = studentsPerBench === 2 ? ["A", "C"] : ["A", "B", "C"];
+  const generateSeatNumber = (benchNumber: number, positionOnBench: number, maxStudentsPerBench: number): string => {
+    const letters = maxStudentsPerBench === 2 ? ["A", "C"] : ["A", "B", "C"];
     return `${benchNumber}${letters[positionOnBench - 1]}`;
   };
 
@@ -274,7 +622,6 @@ export default function ScheduleExamPage() {
 
     students.sort((a, b) => {
       if (assignBy === "UID") return a.uid.localeCompare(b.uid);
-      if (assignBy === "CU Roll No.") return a.cuRollNo.localeCompare(b.cuRollNo);
       return a.cuRegNo.localeCompare(b.cuRegNo);
     });
 
@@ -287,20 +634,21 @@ export default function ScheduleExamPage() {
       if (currentRoomIndex >= selectedRooms.length) return;
 
       const currentRoom = selectedRooms[currentRoomIndex]!;
-      const roomCapacity = currentRoom.capacityOverride || currentRoom.capacity;
+      const maxStudentsPerBench = currentRoom.maxStudentsPerBenchOverride || currentRoom.maxStudentsPerBench || 2;
+      const roomCapacity = (currentRoom.numberOfBenches || 0) * maxStudentsPerBench;
 
       const studentPapers = getAvailablePapers()
-        .filter((p) => selectedPapers.includes(p.id))
+        .filter((p) => p.id === selectedPaper)
         .map((paper) => ({
-          paperId: paper.id,
-          name: paper.name,
-          date: paperSchedules[paper.id]?.date || "TBD",
-          time: paperSchedules[paper.id]?.startTime
-            ? `${formatTime(paperSchedules[paper.id]?.startTime)} - ${formatTime(paperSchedules[paper.id]?.endTime)}`
+          paperId: paper.id?.toString() || "",
+          name: paper.name || "Unnamed Paper",
+          date: paperSchedules[paper.id?.toString() || ""]?.date || "TBD",
+          time: paperSchedules[paper.id?.toString() || ""]?.startTime
+            ? `${formatTime(paperSchedules[paper.id?.toString() || ""]?.startTime)} - ${formatTime(paperSchedules[paper.id?.toString() || ""]?.endTime)}`
             : "TBD",
         }));
 
-      const seatNo = generateSeatNumber(currentBench, currentPosition);
+      const seatNo = generateSeatNumber(currentBench, currentPosition, maxStudentsPerBench);
 
       newAssignments.push({
         uid: student.uid,
@@ -309,17 +657,19 @@ export default function ScheduleExamPage() {
         cuRegNo: student.cuRegNo,
         programCourse: student.programCourse,
         papers: studentPapers,
-        room: currentRoom.number,
+        room: currentRoom.name || `Room ${currentRoom.id}`,
         seatNo,
       });
 
       currentPosition++;
-      if (currentPosition > studentsPerBench) {
+      if (currentPosition > maxStudentsPerBench) {
         currentPosition = 1;
         currentBench++;
       }
 
-      const studentsInRoom = newAssignments.filter((a) => a.room === currentRoom.number).length;
+      const studentsInRoom = newAssignments.filter(
+        (a) => a.room === (currentRoom.name || `Room ${currentRoom.id}`),
+      ).length;
       if (studentsInRoom >= roomCapacity) {
         currentRoomIndex++;
         currentBench = 1;
@@ -426,14 +776,14 @@ export default function ScheduleExamPage() {
                 <Label htmlFor="examType" className="text-sm font-semibold">
                   Exam Type
                 </Label>
-                <Select value={examType} onValueChange={setExamType}>
+                <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
                   <SelectTrigger id="examType" className="focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                    <SelectValue placeholder="Select type" />
+                    <SelectValue placeholder={loading.examTypes ? "Loading..." : "Select type"} />
                   </SelectTrigger>
                   <SelectContent>
                     {examTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
+                      <SelectItem key={type.id} value={type.id?.toString() || ""}>
+                        {type.name} {type.shortName ? `(${type.shortName})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -444,14 +794,14 @@ export default function ScheduleExamPage() {
                 <Label htmlFor="semester" className="text-sm font-semibold">
                   Class / Semester
                 </Label>
-                <Select value={semester} onValueChange={setSemester}>
+                <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
                   <SelectTrigger id="semester" className="focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                    <SelectValue placeholder="Select semester" />
+                    <SelectValue placeholder={loading.classes ? "Loading..." : "Select semester"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {semesters.map((sem) => (
-                      <SelectItem key={sem} value={sem}>
-                        {sem}
+                    {classes.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id?.toString() || ""}>
+                        {cls.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -461,118 +811,187 @@ export default function ScheduleExamPage() {
               <div className="space-y-3">
                 <Label className="text-sm font-semibold">Program Course</Label>
                 <Select
-                  value={selectedProgramCourses.length > 0 ? selectedProgramCourses[0] : ""}
+                  value=""
                   onValueChange={(value) => {
-                    if (!selectedProgramCourses.includes(value)) {
-                      setSelectedProgramCourses([...selectedProgramCourses, value]);
+                    const courseId = Number(value);
+                    if (!selectedProgramCourses.includes(courseId)) {
+                      setSelectedProgramCourses([...selectedProgramCourses, courseId]);
                     }
                   }}
+                  disabled={loading.programCourses}
                 >
                   <SelectTrigger className="focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                    <SelectValue>
-                      {selectedProgramCourses.length === 0
-                        ? "Select courses..."
-                        : `${selectedProgramCourses.length} course${selectedProgramCourses.length > 1 ? "s" : ""} selected`}
-                    </SelectValue>
+                    <SelectValue
+                      placeholder={
+                        loading.programCourses
+                          ? "Loading..."
+                          : selectedProgramCourses.length === 0
+                            ? "Select courses..."
+                            : `Add more courses...`
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {programCourses.map((course) => (
-                      <SelectItem key={course} value={course} disabled={selectedProgramCourses.includes(course)}>
-                        {course}
-                      </SelectItem>
-                    ))}
+                    {programCourses
+                      .filter(
+                        (course) =>
+                          course.id && !selectedProgramCourses.includes(course.id) && course.isActive !== false,
+                      )
+                      .map((course) => (
+                        <SelectItem key={course.id} value={course.id?.toString() || ""}>
+                          {course.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {selectedProgramCourses.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {selectedProgramCourses.map((course) => (
-                      <Badge
-                        key={course}
-                        variant="secondary"
-                        className="cursor-pointer hover:opacity-70 transition-opacity"
-                        onClick={() => handleProgramCourseToggle(course)}
-                      >
-                        {course} ×
-                      </Badge>
-                    ))}
+                    {selectedProgramCourses.map((courseId) => {
+                      const course = programCourses.find((c) => c.id === courseId);
+                      return (
+                        <Badge
+                          key={courseId}
+                          variant="secondary"
+                          className="cursor-pointer hover:opacity-70 transition-opacity"
+                          onClick={() => handleProgramCourseToggle(courseId)}
+                        >
+                          {course?.name || `Course ${courseId}`} ×
+                        </Badge>
+                      );
+                    })}
                   </div>
                 )}
               </div>
 
               <div className="space-y-3">
                 <Label className="text-sm font-semibold">Shift</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {shifts.map((shift) => (
-                    <div
-                      key={shift}
-                      className="flex items-center space-x-2 bg-gray-100/50 p-2 rounded-lg hover:bg-gray-100/80 transition-colors"
-                    >
-                      <Checkbox
-                        id={`shift-${shift}`}
-                        checked={selectedShifts.includes(shift)}
-                        onCheckedChange={() => handleShiftToggle(shift)}
-                        className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 text-white focus:ring-2 focus:ring-purple-500"
-                      />
-                      <Label htmlFor={`shift-${shift}`} className="cursor-pointer text-sm font-medium">
-                        {shift}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+                {loading.shifts ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="ml-2 text-sm text-gray-500">Loading shifts...</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {shifts.map((shift) => (
+                      <div
+                        key={shift.id}
+                        className="flex items-center space-x-2 bg-gray-100/50 p-2 rounded-lg hover:bg-gray-100/80 transition-colors"
+                      >
+                        <Checkbox
+                          id={`shift-${shift.id}`}
+                          checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
+                          onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
+                          className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 text-white focus:ring-2 focus:ring-purple-500"
+                        />
+                        <Label htmlFor={`shift-${shift.id}`} className="cursor-pointer text-sm font-medium">
+                          {shift.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">
                 <Label className="text-sm font-semibold">Subject Category</Label>
-                <div className="flex flex-wrap gap-2">
-                  {subjectCategories.map((category) => (
-                    <Badge
-                      key={category}
-                      variant={selectedSubjectCategories.includes(category) ? "default" : "outline"}
-                      className={`cursor-pointer transition-colors ${
-                        selectedSubjectCategories.includes(category)
-                          ? "bg-purple-500 text-white border-transparent hover:bg-purple-600"
-                          : "border-purple-300 text-purple-700 hover:bg-purple-50"
-                      }`}
-                      onClick={() => handleSubjectCategoryToggle(category)}
-                    >
-                      {category}
-                    </Badge>
-                  ))}
-                </div>
+                {loading.subjectTypes ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="ml-2 text-sm text-gray-500">Loading categories...</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {subjectTypes
+                      .filter((category) => category.isActive !== false)
+                      .map((category) => (
+                        <Badge
+                          key={category.id}
+                          variant={
+                            category.id !== undefined && selectedSubjectCategories.includes(category.id)
+                              ? "default"
+                              : "outline"
+                          }
+                          className={`cursor-pointer transition-colors ${
+                            category.id !== undefined && selectedSubjectCategories.includes(category.id)
+                              ? "bg-purple-500 text-white border-transparent hover:bg-purple-600"
+                              : "border-purple-300 text-purple-700 hover:bg-purple-50"
+                          }`}
+                          onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
+                        >
+                          {category.code && category.code.trim() ? category.code : category.name}
+                        </Badge>
+                      ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">
-                <Label className="text-sm font-semibold">Papers</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">Subjects</Label>
+                  <Select
+                    value={selectedExamComponent?.toString() || "all"}
+                    onValueChange={(value) => {
+                      setSelectedExamComponent(value === "all" ? null : Number(value));
+                    }}
+                    disabled={loading.examComponents}
+                  >
+                    <SelectTrigger className="w-[200px] h-8 text-xs focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                      <SelectValue placeholder={loading.examComponents ? "Loading..." : "Filter by Component"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Components</SelectItem>
+                      {examComponents
+                        .filter((comp) => !comp.disabled)
+                        .map((comp) => (
+                          <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
+                            {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="max-h-[240px] overflow-y-auto border-2 rounded-xl p-3 space-y-2 bg-gray-100/50 scrollbar-hide">
-                  {availablePapers.length === 0 ? (
+                  {loading.papers ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="ml-2 text-sm text-gray-500">Loading papers...</span>
+                    </div>
+                  ) : availablePapers.length === 0 ? (
                     <p className="text-sm text-gray-500 text-center py-8">
                       Select courses and categories to see papers
                     </p>
                   ) : (
                     availablePapers.map((paper) => {
-                      const subject = mockSubjects.find((s) => s.id === paper.subjectId);
+                      const isSelected = paper.id !== undefined && paper.id === selectedPaper;
                       return (
                         <div
                           key={paper.id}
-                          className="flex items-start space-x-3 p-3 bg-white rounded-lg border-2 hover:border-purple-400/50 transition-colors"
+                          className={`flex items-start space-x-3 p-3 bg-white rounded-lg border-2 transition-colors cursor-pointer ${
+                            isSelected ? "border-purple-500 bg-purple-50" : "hover:border-purple-400/50"
+                          }`}
+                          onClick={() => {
+                            if (paper.id !== undefined) {
+                              setSelectedPaper(paper.id);
+                            }
+                          }}
                         >
-                          <Checkbox
-                            id={`paper-${paper.id}`}
-                            checked={selectedPapers.includes(paper.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedPapers((prev) => [...prev, paper.id]);
-                              } else {
-                                setSelectedPapers((prev) => prev.filter((p) => p !== paper.id));
-                              }
-                            }}
-                            className="mt-1 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 text-white focus:ring-2 focus:ring-purple-500"
-                          />
-                          <Label htmlFor={`paper-${paper.id}`} className="cursor-pointer flex-1">
-                            <div className="font-semibold text-sm">{paper.name}</div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {subject?.name} • {subject?.programCourse}
+                          <div className="mt-1 flex items-center justify-center">
+                            <div
+                              className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                                isSelected ? "border-purple-600 bg-purple-600" : "border-gray-300"
+                              }`}
+                            >
+                              {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
                             </div>
+                          </div>
+                          <Label className="cursor-pointer flex-1">
+                            <div className="font-semibold text-sm">
+                              {paper.subjectId
+                                ? subjects.find((s) => s.id === paper.subjectId)?.name ||
+                                  `Subject ID: ${paper.subjectId}`
+                                : "Unknown Subject"}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">Paper: {paper.name || "Unnamed Paper"}</div>
                           </Label>
                         </div>
                       );
@@ -611,14 +1030,15 @@ export default function ScheduleExamPage() {
                 <Label htmlFor="gender" className="text-sm font-semibold">
                   Gender Filter
                 </Label>
-                <Select value={gender} onValueChange={setGender}>
+                <Select value={gender} onValueChange={(value) => setGender(value as typeof gender)}>
                   <SelectTrigger id="gender" className="focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="All">All Students</SelectItem>
-                    <SelectItem value="Male">Male Only</SelectItem>
-                    <SelectItem value="Female">Female Only</SelectItem>
+                    <SelectItem value="ALL">All Students</SelectItem>
+                    <SelectItem value="MALE">Male Only</SelectItem>
+                    <SelectItem value="FEMALE">Female Only</SelectItem>
+                    <SelectItem value="OTHER">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -627,33 +1047,15 @@ export default function ScheduleExamPage() {
                 <Label htmlFor="assignBy" className="text-sm font-semibold">
                   Assign By
                 </Label>
-                <Select value={assignBy} onValueChange={setAssignBy}>
+                <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
                   <SelectTrigger id="assignBy" className="focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="UID">UID (University ID)</SelectItem>
-                    <SelectItem value="CU Roll No.">CU Roll Number</SelectItem>
+                    <SelectItem value="UID">UID</SelectItem>
                     <SelectItem value="CU Reg. No.">CU Registration Number</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="studentsPerBench" className="text-sm font-semibold">
-                  Max Students per Bench
-                </Label>
-                <Input
-                  id="studentsPerBench"
-                  type="number"
-                  min="2"
-                  max="3"
-                  value={studentsPerBench}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    if (val >= 2 && val <= 3) setStudentsPerBench(val);
-                  }}
-                />
               </div>
 
               <div className="space-y-3">
@@ -673,74 +1075,149 @@ export default function ScheduleExamPage() {
                     <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0">
                       <DialogHeader className="px-6 py-4 border-b bg-gray-100/50 shrink-0">
                         <DialogTitle className="text-xl">Select Rooms</DialogTitle>
-                        <DialogDescription>Choose rooms and optionally override capacity</DialogDescription>
+                        <DialogDescription>
+                          Choose rooms and optionally override max students per bench
+                        </DialogDescription>
                       </DialogHeader>
 
-                      <div className="flex-1 overflow-y-auto px-6 py-4 scrollbar-hide">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {mockRooms.map((room) => {
-                            const isSelected = selectedRooms.some((r) => r.id === room.id);
-                            const selectedRoom = selectedRooms.find((r) => r.id === room.id);
-                            const calculatedCapacity = room.benches * studentsPerBench;
+                      <div className="flex-1 overflow-hidden px-6 py-4 flex flex-col">
+                        {loading.rooms ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                            <span className="ml-2 text-sm text-gray-500">Loading rooms...</span>
+                          </div>
+                        ) : (
+                          <div className="flex-1 overflow-hidden border border-gray-300 rounded-lg">
+                            <div className="h-full overflow-y-auto">
+                              <table className="w-full border-collapse table-fixed">
+                                <thead className="sticky top-0 z-10 bg-gray-100">
+                                  <tr>
+                                    <th className="w-20 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Select
+                                    </th>
+                                    <th className="w-20 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Sr. No.
+                                    </th>
+                                    <th className="w-32 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Floor
+                                    </th>
+                                    <th className="w-32 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Room
+                                    </th>
+                                    <th className="w-24 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Benches
+                                    </th>
+                                    <th className="w-24 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Capacity
+                                    </th>
+                                    <th className="w-40 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Max Students per Bench
+                                    </th>
+                                    <th className="w-40 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                      Override
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {rooms
+                                    .filter((room) => room.isActive !== false)
+                                    .map((room, index) => {
+                                      const isSelected = selectedRooms.some((r) => r.id === room.id);
+                                      const selectedRoom = selectedRooms.find((r) => r.id === room.id);
+                                      const currentMaxStudentsPerBench =
+                                        selectedRoom?.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                                      const calculatedCapacity =
+                                        (room.numberOfBenches || 0) * currentMaxStudentsPerBench;
+                                      const floorName = room.floorId
+                                        ? floors.find((f) => f.id === room.floorId)?.name
+                                        : "N/A";
 
-                            return (
-                              <div
-                                key={room.id}
-                                className={`p-3 border-2 rounded-lg transition-all cursor-pointer ${
-                                  isSelected ? "border-purple-500 bg-purple-50" : "hover:border-purple-400/50"
-                                }`}
-                                onClick={() => handleRoomSelection(room, !isSelected)}
-                              >
-                                <div className="flex items-start gap-2 mb-3">
-                                  <Checkbox
-                                    checked={isSelected}
-                                    onCheckedChange={(checked) => handleRoomSelection(room, !!checked)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 text-white focus:ring-2 focus:ring-purple-500"
-                                  />
-                                  <div className="flex-1">
-                                    <div className="font-bold text-base">Room {room.number}</div>
-                                    <div className="text-xs text-gray-500">{room.building}</div>
-                                  </div>
-                                </div>
+                                      return (
+                                        <tr
+                                          key={room.id}
+                                          className={`border-b hover:bg-gray-50 transition-colors ${
+                                            isSelected ? "bg-purple-50" : ""
+                                          }`}
+                                        >
+                                          <td className="px-4 py-3 border border-gray-300">
+                                            <div className="flex justify-center">
+                                              <Checkbox
+                                                checked={isSelected}
+                                                onCheckedChange={(checked) => handleRoomSelection(room, !!checked)}
+                                                className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 text-white focus:ring-2 focus:ring-purple-500"
+                                              />
+                                            </div>
+                                          </td>
+                                          <td className="px-4 py-3 text-sm font-medium text-gray-900 border border-gray-300">
+                                            {index + 1}
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-700 border border-gray-300">
+                                            {floorName}
+                                          </td>
+                                          <td className="px-4 py-3 text-sm font-medium text-gray-900 border border-gray-300">
+                                            {room.name}
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-700 border border-gray-300">
+                                            {room.numberOfBenches || 0}
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-700 border border-gray-300">
+                                            {calculatedCapacity}
+                                          </td>
+                                          <td className="px-4 py-3 text-sm text-gray-700 border border-gray-300">
+                                            {currentMaxStudentsPerBench}
+                                          </td>
+                                          <td className="px-4 py-3 border border-gray-300 min-h-[80px]">
+                                            <div className="space-y-1 min-h-[60px]">
+                                              {isSelected ? (
+                                                <>
+                                                  <Input
+                                                    type="number"
+                                                    min="1"
+                                                    max={room.maxStudentsPerBench || 2}
+                                                    placeholder={room.maxStudentsPerBench?.toString() || "2"}
+                                                    value={selectedRoom?.maxStudentsPerBenchOverride || ""}
+                                                    onChange={(e) => {
+                                                      const inputValue = e.target.value.trim();
+                                                      if (!inputValue) {
+                                                        handleMaxStudentsPerBenchOverride(room.id!, null);
+                                                        return;
+                                                      }
 
-                                <div className="grid grid-cols-2 gap-2 mb-2">
-                                  <div className="bg-gray-100/50 p-2 rounded">
-                                    <div className="text-gray-500 text-xs">Benches</div>
-                                    <div className="font-semibold text-sm">{room.benches}</div>
-                                  </div>
-                                  <div className="bg-gray-100/50 p-2 rounded">
-                                    <div className="text-gray-500 text-xs">Capacity</div>
-                                    <div className="font-semibold text-sm">{calculatedCapacity}</div>
-                                  </div>
-                                </div>
+                                                      // Check if input is a valid positive integer (no decimals, no negative)
+                                                      const isPositiveInteger = /^\d+$/.test(inputValue);
+                                                      if (!isPositiveInteger) {
+                                                        return; // Don't update if not a valid positive integer
+                                                      }
 
-                                {isSelected && (
-                                  <div className="bg-purple-50 p-2 rounded">
-                                    <div className="text-gray-500 text-xs mb-1">Override Capacity</div>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max={calculatedCapacity}
-                                      placeholder={calculatedCapacity.toString()}
-                                      value={selectedRoom?.capacityOverride || ""}
-                                      onChange={(e) => {
-                                        const val = parseInt(e.target.value);
-                                        if (val && val <= calculatedCapacity) {
-                                          handleCapacityOverride(room.id, val);
-                                        } else if (!e.target.value) {
-                                          handleCapacityOverride(room.id, 0);
-                                        }
-                                      }}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="h-8 text-sm"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                                                      const val = parseInt(inputValue, 10);
+                                                      const maxAllowed = room.maxStudentsPerBench || 2;
+
+                                                      // Only allow positive integers that don't exceed the room's maxStudentsPerBench
+                                                      if (val > 0 && val <= maxAllowed) {
+                                                        handleMaxStudentsPerBenchOverride(room.id!, val);
+                                                      }
+                                                    }}
+                                                    className="h-8 text-sm w-full max-w-[80px]"
+                                                  />
+                                                  <div className="text-xs text-gray-400">
+                                                    Max: {room.maxStudentsPerBench || 2}
+                                                  </div>
+                                                </>
+                                              ) : (
+                                                <div className="h-8 flex items-center">
+                                                  <span className="text-sm text-gray-400">-</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="px-6 py-4 border-t bg-gray-100/50 flex items-center justify-between shrink-0">
@@ -768,16 +1245,17 @@ export default function ScheduleExamPage() {
                     <p className="text-sm text-gray-500 text-center py-8">No rooms selected</p>
                   ) : (
                     selectedRooms.map((room) => {
-                      const capacity = room.capacityOverride || room.capacity;
+                      const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                      const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
                       return (
                         <div
                           key={room.id}
                           className="p-3 bg-white rounded-lg border-2 flex items-center justify-between hover:border-purple-400/50 transition-colors"
                         >
                           <div>
-                            <div className="font-semibold">Room {room.number}</div>
+                            <div className="font-semibold">Room {room.name}</div>
                             <div className="text-xs text-gray-500">
-                              {room.benches} benches • Capacity: {capacity}
+                              {room.numberOfBenches || 0} benches • Capacity: {capacity}
                             </div>
                           </div>
                           <Button
@@ -844,18 +1322,19 @@ export default function ScheduleExamPage() {
               </div>
             </CardHeader>
             <CardContent className="p-6 overflow-y-auto max-h-[calc(100vh-280px)] scrollbar-hide">
-              {availablePapers.filter((p) => selectedPapers.includes(p.id)).length === 0 ? (
+              {!selectedPaper || !availablePapers.find((p) => p.id === selectedPaper) ? (
                 <div className="text-center py-12">
                   <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                  <p className="font-semibold text-gray-600">No Papers Selected</p>
-                  <p className="text-sm text-gray-400 mt-1">Select papers in Section 1</p>
+                  <p className="font-semibold text-gray-600">No Paper Selected</p>
+                  <p className="text-sm text-gray-400 mt-1">Select a paper in Section 1</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {availablePapers
-                    .filter((paper) => selectedPapers.includes(paper.id))
+                    .filter((paper) => paper.id === selectedPaper)
                     .map((paper) => {
-                      const subject = mockSubjects.find((s) => s.id === paper.subjectId);
+                      if (!paper.id) return null;
+                      const paperId = paper.id.toString();
                       return (
                         <div
                           key={paper.id}
@@ -863,18 +1342,21 @@ export default function ScheduleExamPage() {
                         >
                           <div className="space-y-4">
                             <div>
-                              <Label className="font-semibold">{paper.name}</Label>
-                              <div className="text-xs text-gray-500 mt-1">
-                                {subject?.name} • {subject?.programCourse}
-                              </div>
+                              <Label className="font-semibold">
+                                {paper.subjectId
+                                  ? subjects.find((s) => s.id === paper.subjectId)?.name ||
+                                    `Subject ID: ${paper.subjectId}`
+                                  : "Unknown Subject"}
+                              </Label>
+                              <div className="text-xs text-gray-500 mt-1">Paper: {paper.name || "Unnamed Paper"}</div>
                             </div>
                             <div className="space-y-3">
                               <div>
                                 <Label className="text-xs font-semibold mb-1.5 block">Exam Date</Label>
                                 <Input
                                   type="date"
-                                  value={paperSchedules[paper.id]?.date || ""}
-                                  onChange={(e) => handleScheduleChange(paper.id, "date", e.target.value)}
+                                  value={paperSchedules[paperId]?.date || ""}
+                                  onChange={(e) => handleScheduleChange(paperId, "date", e.target.value)}
                                   className="h-9"
                                 />
                               </div>
@@ -883,8 +1365,8 @@ export default function ScheduleExamPage() {
                                   <Label className="text-xs font-semibold mb-1.5 block">Start Time</Label>
                                   <Input
                                     type="time"
-                                    value={paperSchedules[paper.id]?.startTime || ""}
-                                    onChange={(e) => handleScheduleChange(paper.id, "startTime", e.target.value)}
+                                    value={paperSchedules[paperId]?.startTime || ""}
+                                    onChange={(e) => handleScheduleChange(paperId, "startTime", e.target.value)}
                                     className="h-9"
                                   />
                                 </div>
@@ -892,8 +1374,8 @@ export default function ScheduleExamPage() {
                                   <Label className="text-xs font-semibold mb-1.5 block">End Time</Label>
                                   <Input
                                     type="time"
-                                    value={paperSchedules[paper.id]?.endTime || ""}
-                                    onChange={(e) => handleScheduleChange(paper.id, "endTime", e.target.value)}
+                                    value={paperSchedules[paperId]?.endTime || ""}
+                                    onChange={(e) => handleScheduleChange(paperId, "endTime", e.target.value)}
                                     className="h-9"
                                   />
                                 </div>
@@ -902,7 +1384,8 @@ export default function ScheduleExamPage() {
                           </div>
                         </div>
                       );
-                    })}
+                    })
+                    .filter(Boolean)}
                 </div>
               )}
             </CardContent>
@@ -986,6 +1469,111 @@ export default function ScheduleExamPage() {
                   </tbody>
                 </table>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Students Table - Display when rooms are selected */}
+        {selectedRooms.length > 0 && (
+          <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow mt-6">
+            <CardHeader className="bg-gray-100/50 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Student Assignments</CardTitle>
+                  <CardDescription>List of students with their assigned seats</CardDescription>
+                </div>
+                <Badge variant="secondary" className="text-sm">
+                  {studentsWithSeats.length} {studentsWithSeats.length === 1 ? "Student" : "Students"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {loadingStudents ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                  <span className="ml-2 text-sm text-gray-500">Loading students...</span>
+                </div>
+              ) : studentsWithSeats.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <p className="font-semibold text-gray-600">No Students Assigned</p>
+                  <p className="text-sm text-gray-400 mt-1">Select rooms to see student assignments</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <div className="relative max-h-[600px] overflow-y-auto border border-gray-300 rounded-lg">
+                    <table className="w-full border-collapse">
+                      <thead className="sticky top-0 z-10 bg-gray-100">
+                        <tr className="border-b-2 border-gray-300">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
+                            Sr. No.
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
+                            Name
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
+                            {assignBy === "UID" ? "UID" : "CU Reg. No."}
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
+                            Email
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
+                            WhatsApp Phone
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
+                            Floor
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
+                            Room
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider bg-gray-100">
+                            Seat Number
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {studentsWithSeats.map((student, idx) => (
+                          <tr
+                            key={student.studentId}
+                            className={`border-b hover:bg-gray-100/60 transition-colors ${
+                              idx % 2 === 0 ? "bg-gray-50" : ""
+                            }`}
+                          >
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-300">
+                              {idx + 1}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-300">
+                              {student.name}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-mono text-gray-700 border-r border-gray-300">
+                              {assignBy === "UID" ? student.uid : student.cuRegistrationApplicationNumber || "N/A"}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 border-r border-gray-300">
+                              {student.email || "N/A"}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 border-r border-gray-300">
+                              {student.whatsappPhone || "N/A"}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700 border-r border-gray-300">
+                              {student.floorName || "N/A"}
+                            </td>
+                            <td className="px-4 py-3 border-r border-gray-300">
+                              <Badge className="font-mono text-xs bg-purple-500 hover:bg-purple-600 text-white">
+                                {student.roomName}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge variant="outline" className="font-mono font-bold border-2 text-xs">
+                                {student.seatNumber}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

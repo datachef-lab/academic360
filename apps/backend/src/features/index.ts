@@ -68,6 +68,16 @@ import {
   cuRegistrationCorrectionRequestRouter,
   cuRegistrationDocumentUploadRouter,
 } from "./admissions/index.js";
+import {
+  floorRouter,
+  roomRouter,
+  examTypeRouter,
+  examScheduleRouter,
+} from "./exams/routes/index.js";
+import {
+  departmentRouter,
+  designationRouter,
+} from "./administration/routes/index.js";
 
 export {
   documentRouter,
@@ -128,4 +138,10 @@ export {
   boardSubjectRouter,
   cuRegistrationCorrectionRequestRouter,
   cuRegistrationDocumentUploadRouter,
+  floorRouter,
+  roomRouter,
+  examTypeRouter,
+  examScheduleRouter,
+  departmentRouter,
+  designationRouter,
 };
