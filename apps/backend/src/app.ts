@@ -122,6 +122,7 @@ import {
   programCourseRouter,
   examComponentRouter,
   cascadingDropdownsRouter,
+  academicsetupStatsRouter,
 } from "@/features/course-design/routes/index.js";
 import {
   relatedSubjectMainRoutes,
@@ -470,6 +471,7 @@ app.use("/api/v1/course-design/course-levels", courseLevelRouter);
 // app.use("/api/v1/course-design/affiliation-types", affiliationTypeRouter);
 app.use("/api/v1/course-design/regulation-types", regulationTypeRouter);
 app.use("/api/v1/course-design/program-courses", programCourseRouter);
+app.use("/api/v1/course-design/academic-setup", academicsetupStatsRouter);
 
 app.use(errorHandler);
 
@@ -489,6 +491,7 @@ app.use("/api/course-design/course-levels", courseLevelRouter);
 app.use("/api/course-design/exam-components", examComponentRouter);
 app.use("/api/course-design/specializations", specializationRouter);
 app.use("/api/course-design/cascading-dropdowns", cascadingDropdownsRouter);
+app.use("/api/course-design/academic-setup", academicsetupStatsRouter);
 
 // Subject Selection routes
 app.use(
@@ -838,6 +841,7 @@ app.use("/api/v1/course-design/course-levels", courseLevelRouter);
 app.use("/api/v1/course-design/regulation-types", regulationTypeRouter);
 
 app.use("/api/v1/course-design/program-courses", programCourseRouter);
+app.use("/api/v1/course-design/academic-setup", academicsetupStatsRouter);
 
 app.use(errorHandler);
 
@@ -872,6 +876,7 @@ app.use("/api/course-design/exam-components", examComponentRouter);
 app.use("/api/course-design/specializations", specializationRouter);
 
 app.use("/api/course-design/cascading-dropdowns", cascadingDropdownsRouter);
+app.use("/api/course-design/academic-setup", academicsetupStatsRouter);
 
 // Subject Selection routes
 

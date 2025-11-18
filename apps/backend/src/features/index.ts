@@ -51,6 +51,7 @@ import {
   subjectRouter,
   topicRouter,
   cascadingDropdownsRouter,
+  academicsetupStatsRouter,
 } from "./course-design/routes/index.js";
 import {
   relatedSubjectMainRoutes,
@@ -126,6 +127,7 @@ export {
   subjectRouter,
   topicRouter,
   cascadingDropdownsRouter,
+  academicsetupStatsRouter,
   relatedSubjectMainRoutes,
   relatedSubjectSubRoutes,
   restrictedGroupingMainRoutes,
