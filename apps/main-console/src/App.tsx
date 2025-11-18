@@ -33,6 +33,7 @@ import GradeCard from "./components/GradeMarks/GradeCard";
 
 import * as courseSubjectModule from "@/pages/courses-subjects-design";
 import * as admissionFeesModule from "@/pages/admissions-fees";
+import * as documentIssuanceModule from "@/features/document-issuance";
 import * as batchModule from "@/pages/batches";
 import * as studentModule from "@/pages/students";
 import * as attendanceModule from "@/pages/attendance-timetable";
@@ -295,6 +296,17 @@ const router = createBrowserRouter(
             { path: "structure", element: <admissionFeesModule.feesModule.FeesStructurePage /> },
             { path: "slabs", element: <admissionFeesModule.feesModule.FeesSlabPage /> },
             { path: "heads", element: <admissionFeesModule.feesModule.FeeHeadsPage /> },
+          ],
+        },
+        {
+          path: "document-issuance",
+          element: <documentIssuanceModule.DocumentIssuanceMasterLayout />,
+          children: [
+            { path: "", element: <documentIssuanceModule.DocumentIssuanceHomePage /> },
+            { path: "reports", element: <documentIssuanceModule.DocumentIssuanceReportsPage /> },
+            { path: "types", element: <documentIssuanceModule.DocumentTypesPage /> },
+            { path: "templates", element: <documentIssuanceModule.DocumentTemplatesPage /> },
+            { path: "logs", element: <documentIssuanceModule.DocumentIssuanceLogsPage /> },
           ],
         },
         {

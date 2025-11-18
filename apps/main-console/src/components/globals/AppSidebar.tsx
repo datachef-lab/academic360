@@ -19,6 +19,7 @@ import {
   IndianRupee,
   CheckSquare,
   Activity,
+  FileText,
 } from "lucide-react";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -77,6 +78,7 @@ const data = {
     { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: Activity },
     { title: "Reports", url: "/dashboard/reports", icon: ClipboardList },
     { title: "Fees Module", url: "/dashboard/fees", icon: IndianRupee },
+    { title: "Document Issuance", url: "/dashboard/document-issuance", icon: FileText },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
     // { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
