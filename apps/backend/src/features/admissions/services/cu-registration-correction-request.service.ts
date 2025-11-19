@@ -1,5 +1,8 @@
 import { db, pool } from "@/db/index.js";
-import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
+import {
+  CuRegistrationCorrectionRequest,
+  cuRegistrationCorrectionRequestModel,
+} from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { cuRegistrationDocumentUploadModel } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
 import { studentModel } from "@repo/db/schemas/models/user";
 import { userModel } from "@repo/db/schemas/models/user";
@@ -2081,7 +2084,7 @@ async function isSubjectSelectionRequired(studentId: number): Promise<boolean> {
 
 // Helper function to convert model to DTO
 async function modelToDto(
-  request: any,
+  request: CuRegistrationCorrectionRequest,
 ): Promise<CuRegistrationCorrectionRequestDto> {
   // Get student details with user info and program course
   const [studentData] = await db
@@ -2189,7 +2192,7 @@ async function modelToDto(
     .where(
       eq(
         cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
-        request.id,
+        request.id!,
       ),
     );
 
