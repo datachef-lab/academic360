@@ -38,7 +38,7 @@ import { exportStaffDataToExcel } from "@/features/user/services/tmp-service";
 import { loadAllStaff } from "@/features/user/services/staff.service";
 
 // Create a connection pool
-const pool = new pg.Pool({
+export const pool = new pg.Pool({
   options: "-c timezone=Asia/Kolkata",
   connectionString: process.env.DATABASE_URL,
 });
@@ -83,7 +83,7 @@ export const connectToDatabase = async () => {
     // Clear existing duplicates and load fresh metas (only in development)
 
     loadDefaultSubjectSelectionMetas();
-    loadAllStaff();
+    // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();
     // loadOldSubjects();
