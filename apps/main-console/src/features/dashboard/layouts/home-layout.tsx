@@ -34,6 +34,7 @@ import {
   FileText,
 } from "lucide-react";
 import { NavUser } from "../../../components/globals/NavUser";
+import { ActiveUsersAvatars } from "../../../components/globals/ActiveUsersAvatars";
 import { Button } from "@/components/ui/button";
 import {
   CommandDialog,
@@ -245,6 +246,7 @@ export default function HomeLayout() {
                   </Breadcrumb>
                 </div>
                 <div className="flex items-center mr-2 gap-2">
+                  <ActiveUsersAvatars />
                   {/* Search Button */}
                   <Button
                     variant="outline"
@@ -258,6 +260,7 @@ export default function HomeLayout() {
                       <span className="text-xs">⌘</span>K
                     </kbd>
                   </Button>
+
                   <div>
                     <NavUser />
                   </div>

@@ -591,8 +591,23 @@ export const exportCuRegistrationCorrectionRequestsController = async (
   try {
     console.log("🔍 [CU-REG-EXPORT-CONTROLLER] Starting export request");
 
+    const { academicYearId } = req.query;
+    if (!academicYearId) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "academicYearId query parameter is required"));
+    }
+
+    const academicYearIdNumber = Number(academicYearId);
+    if (Number.isNaN(academicYearIdNumber)) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "Invalid academicYearId parameter"));
+    }
+
     // Generate Excel buffer
-    const excelBuffer = await exportCuRegistrationCorrectionRequests();
+    const excelBuffer =
+      await exportCuRegistrationCorrectionRequests(academicYearIdNumber);
 
     // Set response headers for Excel download
     const filename = `cu-registration-corrections-${new Date().toISOString().split("T")[0]}.xlsx`;

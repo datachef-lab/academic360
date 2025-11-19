@@ -1,5 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
+import * as userService from "@/features/user/services/user.service";
 
 // Define notification types
 export interface Notification {
@@ -44,6 +45,14 @@ export interface MisTableUpdate {
   meta?: Record<string, unknown>;
 }
 
+// Active user info interface
+interface ActiveUserInfo {
+  id: number;
+  name: string;
+  image: string | null;
+  type: "ADMIN" | "STAFF";
+}
+
 // Socket service class
 class SocketService {
   private io: Server<
@@ -53,6 +62,7 @@ class SocketService {
     any
   > | null = null;
   private activeConnections: Map<string, Set<string>> = new Map(); // userId -> set of socket IDs
+  private userInfoCache: Map<string, ActiveUserInfo> = new Map(); // userId -> user info
 
   // Add this method
   public getIO() {
@@ -81,18 +91,30 @@ class SocketService {
       console.log(`[SocketService] Client connected: ${socket.id}`);
 
       // Handle user authentication and mapping
-      socket.on("authenticate", (userId: string) => {
+      socket.on("authenticate", async (userId: string) => {
         try {
-          this.registerUser(userId, socket.id);
+          await this.registerUser(userId, socket.id);
           socket.join(`user:${userId}`); // Join a room specific to this user
           console.log(
             `[SocketService] User ${userId} authenticated with socket ${socket.id}`,
           );
+          // Emit active users update after registration
+          this.broadcastActiveUsers();
         } catch (error) {
           console.error(
             `[SocketService] Error authenticating user ${userId}:`,
             error,
           );
+        }
+      });
+
+      // Handle get active users request
+      socket.on("get_active_users", () => {
+        try {
+          const activeUsers = this.getActiveAdminStaffUsers();
+          socket.emit("active_users_list", activeUsers);
+        } catch (error) {
+          console.error("[SocketService] Error getting active users:", error);
         }
       });
 
@@ -139,6 +161,8 @@ class SocketService {
         try {
           this.removeSocket(socket.id);
           console.log(`[SocketService] Client disconnected: ${socket.id}`);
+          // Emit active users update after removal
+          this.broadcastActiveUsers();
         } catch (error) {
           console.error(
             `[SocketService] Error handling disconnect for ${socket.id}:`,
@@ -149,12 +173,39 @@ class SocketService {
     });
   }
 
-  // Register a user with their socket ID
-  private registerUser(userId: string, socketId: string) {
+  // Register a user with their socket ID and fetch user info
+  private async registerUser(userId: string, socketId: string) {
     if (!this.activeConnections.has(userId)) {
       this.activeConnections.set(userId, new Set());
     }
     this.activeConnections.get(userId)?.add(socketId);
+
+    // Fetch and cache user info if not already cached or if it's a new connection
+    if (!this.userInfoCache.has(userId)) {
+      try {
+        const userIdNum = Number(userId);
+        if (!isNaN(userIdNum)) {
+          const user = await userService.findById(userIdNum);
+          if (
+            user &&
+            (user.type === "ADMIN" || user.type === "STAFF") &&
+            user.isActive !== false
+          ) {
+            this.userInfoCache.set(userId, {
+              id: userIdNum,
+              name: user.name || "Unknown",
+              image: user.image || null,
+              type: user.type as "ADMIN" | "STAFF",
+            });
+          }
+        }
+      } catch (error) {
+        console.error(
+          `[SocketService] Error fetching user info for ${userId}:`,
+          error,
+        );
+      }
+    }
   }
 
   // Remove a socket when the connection is closed
@@ -164,9 +215,43 @@ class SocketService {
         sockets.delete(socketId);
         if (sockets.size === 0) {
           this.activeConnections.delete(userId);
+          // Remove from cache when user has no active connections
+          this.userInfoCache.delete(userId);
         }
       }
     });
+  }
+
+  // Get active ADMIN/STAFF users
+  private getActiveAdminStaffUsers(): ActiveUserInfo[] {
+    const activeUsers: ActiveUserInfo[] = [];
+    this.activeConnections.forEach((sockets, userId) => {
+      // Only include users with active connections
+      if (sockets.size > 0) {
+        const userInfo = this.userInfoCache.get(userId);
+        if (userInfo) {
+          activeUsers.push(userInfo);
+        }
+      }
+    });
+    return activeUsers;
+  }
+
+  // Broadcast active users list to all connected clients
+  private broadcastActiveUsers() {
+    if (!this.io) {
+      return;
+    }
+
+    try {
+      const activeUsers = this.getActiveAdminStaffUsers();
+      this.io.emit("active_users_update", activeUsers);
+      console.log(
+        `[SocketService] Broadcasted active users update: ${activeUsers.length} users`,
+      );
+    } catch (error) {
+      console.error("[SocketService] Error broadcasting active users:", error);
+    }
   }
 
   // Send notification to all connected clients

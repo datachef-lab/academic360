@@ -1,4 +1,4 @@
-import { db } from "@/db/index.js";
+import { db, pool } from "@/db/index.js";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { cuRegistrationDocumentUploadModel } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
 import { studentModel } from "@repo/db/schemas/models/user";
@@ -24,6 +24,7 @@ import {
   or,
   inArray,
   isNotNull,
+  sql,
 } from "drizzle-orm";
 import { CuRegistrationCorrectionRequestInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { cuRegistrationDocumentUploadInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
@@ -2994,414 +2995,412 @@ interface CuRegistrationExportData {
 }
 
 // Export service function
-export const exportCuRegistrationCorrectionRequests =
-  async (): Promise<Buffer> => {
-    try {
-      console.log(
-        "🔍 [CU-REG-EXPORT] Starting export of CU registration correction requests",
+export const exportCuRegistrationCorrectionRequests = async (
+  academicYearId: number,
+): Promise<Buffer> => {
+  try {
+    console.log(
+      "🔍 [CU-REG-EXPORT] Starting export of CU registration correction requests",
+    );
+
+    // Get all correction requests with joined data in a single query
+    const correctionRequests = await db
+      .select({
+        // Correction request data
+        id: cuRegistrationCorrectionRequestModel.id,
+        studentId: cuRegistrationCorrectionRequestModel.studentId,
+        cuRegistrationApplicationNumber:
+          cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+        status: cuRegistrationCorrectionRequestModel.status,
+        onlineRegistrationDone:
+          cuRegistrationCorrectionRequestModel.onlineRegistrationDone,
+        physicalRegistrationDone:
+          cuRegistrationCorrectionRequestModel.physicalRegistrationDone,
+        remarks: cuRegistrationCorrectionRequestModel.remarks,
+        createdAt: cuRegistrationCorrectionRequestModel.createdAt,
+        updatedAt: cuRegistrationCorrectionRequestModel.updatedAt,
+        genderCorrectionRequest:
+          cuRegistrationCorrectionRequestModel.genderCorrectionRequest,
+        nationalityCorrectionRequest:
+          cuRegistrationCorrectionRequestModel.nationalityCorrectionRequest,
+        aadhaarCardNumberCorrectionRequest:
+          cuRegistrationCorrectionRequestModel.aadhaarCardNumberCorrectionRequest,
+        apaarIdCorrectionRequest:
+          cuRegistrationCorrectionRequestModel.apaarIdCorrectionRequest,
+        subjectsCorrectionRequest:
+          cuRegistrationCorrectionRequestModel.subjectsCorrectionRequest,
+        personalInfoDeclaration:
+          cuRegistrationCorrectionRequestModel.personalInfoDeclaration,
+        addressInfoDeclaration:
+          cuRegistrationCorrectionRequestModel.addressInfoDeclaration,
+        subjectsDeclaration:
+          cuRegistrationCorrectionRequestModel.subjectsDeclaration,
+        documentsDeclaration:
+          cuRegistrationCorrectionRequestModel.documentsDeclaration,
+        physicalRegistrationDoneBy:
+          cuRegistrationCorrectionRequestModel.physicalRegistrationDoneBy,
+        physicalRegistrationDoneAt:
+          cuRegistrationCorrectionRequestModel.physicalRegistrationDoneAt,
+
+        // Student data
+        studentUserId: studentModel.userId,
+        studentBelongsToEWS: studentModel.belongsToEWS,
+        studentApaarId: studentModel.apaarId,
+        studentUid: studentModel.uid,
+        studentProgramCourseId: studentModel.programCourseId,
+
+        // User data
+        userName: userModel.name,
+
+        // Personal details
+        personalDetailsId: personalDetailsModel.id,
+        gender: personalDetailsModel.gender,
+        nationalityId: personalDetailsModel.nationalityId,
+        aadhaarCardNumber: personalDetailsModel.aadhaarCardNumber,
+
+        // Nationality name
+        nationalityName: nationalityModel.name,
+
+        // Program course name
+        programCourseName: programCourseModel.name,
+
+        // Admission academic info
+        admissionRollNumber: admissionAcademicInfoModel.rollNumber,
+
+        // Address data (residential)
+        residentialAddressLine: addressModel.addressLine,
+        residentialCountryId: addressModel.countryId,
+        residentialStateId: addressModel.stateId,
+        residentialDistrictId: addressModel.districtId,
+        residentialCityId: addressModel.cityId,
+        residentialPinCode: addressModel.pincode,
+        residentialPoliceStation: addressModel.otherPoliceStation,
+        residentialPostOffice: addressModel.otherPostoffice,
+        residentialOtherCountry: addressModel.otherCountry,
+        residentialOtherState: addressModel.otherState,
+        residentialOtherDistrict: addressModel.otherDistrict,
+        residentialOtherCity: addressModel.otherCity,
+
+        // Country/State/District/City names for residential
+        residentialCountryName: countryModel.name,
+        residentialStateName: stateModel.name,
+        residentialDistrictName: districtModel.name,
+        residentialCityName: cityModel.name,
+      })
+      .from(cuRegistrationCorrectionRequestModel)
+      .leftJoin(
+        studentModel,
+        eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
+      )
+      .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+      .leftJoin(
+        personalDetailsModel,
+        eq(userModel.id, personalDetailsModel.userId),
+      )
+      .leftJoin(
+        nationalityModel,
+        eq(personalDetailsModel.nationalityId, nationalityModel.id),
+      )
+      .leftJoin(
+        programCourseModel,
+        eq(studentModel.programCourseId, programCourseModel.id),
+      )
+      .leftJoin(
+        admissionAcademicInfoModel,
+        eq(studentModel.id, admissionAcademicInfoModel.studentId),
+      )
+      .leftJoin(
+        addressModel,
+        and(
+          eq(addressModel.personalDetailsId, personalDetailsModel.id),
+          eq(addressModel.type, "RESIDENTIAL"),
+        ),
+      )
+      .leftJoin(countryModel, eq(addressModel.countryId, countryModel.id))
+      .leftJoin(stateModel, eq(addressModel.stateId, stateModel.id))
+      .leftJoin(districtModel, eq(addressModel.districtId, districtModel.id))
+      .leftJoin(cityModel, eq(addressModel.cityId, cityModel.id))
+      .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+      .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+      .where(eq(sessionModel.academicYearId, academicYearId));
+
+    console.log(
+      `🔍 [CU-REG-EXPORT] Found ${correctionRequests.length} correction requests`,
+    );
+
+    // Get mailing addresses separately
+    const mailingAddresses = await db
+      .select({
+        personalDetailsId: addressModel.personalDetailsId,
+        addressLine: addressModel.addressLine,
+        countryId: addressModel.countryId,
+        stateId: addressModel.stateId,
+        districtId: addressModel.districtId,
+        cityId: addressModel.cityId,
+        pincode: addressModel.pincode,
+        otherPoliceStation: addressModel.otherPoliceStation,
+        otherPostoffice: addressModel.otherPostoffice,
+        otherCountry: addressModel.otherCountry,
+        otherState: addressModel.otherState,
+        otherDistrict: addressModel.otherDistrict,
+        otherCity: addressModel.otherCity,
+        countryName: countryModel.name,
+        stateName: stateModel.name,
+        districtName: districtModel.name,
+        cityName: cityModel.name,
+      })
+      .from(addressModel)
+      .leftJoin(countryModel, eq(addressModel.countryId, countryModel.id))
+      .leftJoin(stateModel, eq(addressModel.stateId, stateModel.id))
+      .leftJoin(districtModel, eq(addressModel.districtId, districtModel.id))
+      .leftJoin(cityModel, eq(addressModel.cityId, cityModel.id))
+      .where(eq(addressModel.type, "MAILING"));
+
+    // Get user names for physical marked by
+    const userIds = [
+      ...new Set([
+        ...correctionRequests
+          .map((r) => r.physicalRegistrationDoneBy)
+          .filter((id): id is number => id !== null),
+      ]),
+    ];
+
+    const users =
+      userIds.length > 0
+        ? await db
+            .select({
+              id: userModel.id,
+              name: userModel.name,
+            })
+            .from(userModel)
+            .where(inArray(userModel.id, userIds))
+        : [];
+
+    const userMap = new Map(users.map((u) => [u.id, u.name]));
+
+    // Get documents
+    const documents = await db
+      .select({
+        cuRegistrationCorrectionRequestId:
+          cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+        documentId: cuRegistrationDocumentUploadModel.documentId,
+        fileName: cuRegistrationDocumentUploadModel.fileName,
+      })
+      .from(cuRegistrationDocumentUploadModel)
+      .where(
+        inArray(
+          cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+          correctionRequests.map((r) => r.id),
+        ),
       );
 
-      // Get all correction requests with joined data in a single query
-      const correctionRequests = await db
-        .select({
-          // Correction request data
-          id: cuRegistrationCorrectionRequestModel.id,
-          studentId: cuRegistrationCorrectionRequestModel.studentId,
+    // Create maps for quick lookup
+    const mailingAddressMap = new Map();
+    mailingAddresses.forEach((addr) => {
+      if (addr.personalDetailsId) {
+        mailingAddressMap.set(addr.personalDetailsId, addr);
+      }
+    });
+
+    const documentMap = new Map();
+    documents.forEach((doc) => {
+      if (!documentMap.has(doc.cuRegistrationCorrectionRequestId)) {
+        documentMap.set(doc.cuRegistrationCorrectionRequestId, {});
+      }
+      const docTypeMap: Record<number, string> = {
+        1: "classXIIMarksheet",
+        2: "aadhaarCard",
+        3: "apaarIdCard",
+        4: "fatherPhotoId",
+        5: "motherPhotoId",
+        10: "ewsCertificate",
+      };
+      const docType = docTypeMap[doc.documentId];
+      if (docType) {
+        documentMap.get(doc.cuRegistrationCorrectionRequestId)[docType] =
+          doc.fileName || "Uploaded";
+      }
+    });
+
+    // Format functions
+    const formatApaarId = (apaarId: string) => {
+      if (!apaarId || apaarId === "Not provided") return apaarId;
+      const digits = apaarId.replace(/\D/g, "");
+      if (digits.length === 12) {
+        return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{3})$/, "$1-$2-$3-$4");
+      }
+      return apaarId;
+    };
+
+    const formatAadhaarNumber = (aadhaar: string) => {
+      if (!aadhaar || aadhaar === "XXXX XXXX XXXX") return aadhaar;
+      const digits = aadhaar.replace(/\D/g, "");
+      if (digits.length === 12) {
+        return digits.replace(/^(\d{4})(\d{4})(\d{4})$/, "$1-$2-$3");
+      }
+      return aadhaar;
+    };
+
+    // Helper function to format date/time in AM/PM format
+    const formatDateTimeAMPM = (date: Date | null | undefined): string => {
+      if (!date) return "";
+      try {
+        const dateObj = new Date(date);
+        // Format as MM/DD/YYYY HH:MM:SS AM/PM in IST timezone
+        const formatted = dateObj.toLocaleString("en-US", {
+          timeZone: "Asia/Kolkata",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        });
+        return formatted;
+      } catch (error) {
+        console.error("Error formatting date:", error);
+        return "";
+      }
+    };
+
+    // Process data
+    const exportData: CuRegistrationExportData[] = correctionRequests.map(
+      (request) => {
+        const mailingAddress = mailingAddressMap.get(request.personalDetailsId);
+        const documents = documentMap.get(request.id) || {};
+
+        return {
+          // Basic Info
+          studentId: request.studentId,
+          studentName: request.userName || "",
+          studentUid: request.studentUid || "",
+          programCourseName: request.programCourseName || "",
           cuRegistrationApplicationNumber:
-            cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
-          status: cuRegistrationCorrectionRequestModel.status,
-          onlineRegistrationDone:
-            cuRegistrationCorrectionRequestModel.onlineRegistrationDone,
-          physicalRegistrationDone:
-            cuRegistrationCorrectionRequestModel.physicalRegistrationDone,
-          remarks: cuRegistrationCorrectionRequestModel.remarks,
-          createdAt: cuRegistrationCorrectionRequestModel.createdAt,
-          updatedAt: cuRegistrationCorrectionRequestModel.updatedAt,
-          genderCorrectionRequest:
-            cuRegistrationCorrectionRequestModel.genderCorrectionRequest,
+            request.cuRegistrationApplicationNumber || "",
+          status: request.status || "",
+          onlineRegistrationDone: request.onlineRegistrationDone || false,
+          physicalRegistrationDone: request.physicalRegistrationDone || false,
+          remarks: request.remarks || "",
+          createdAt: formatDateTimeAMPM(request.createdAt),
+          updatedAt: formatDateTimeAMPM(request.updatedAt),
+          physicalRegistrationDoneAt: formatDateTimeAMPM(
+            request.physicalRegistrationDoneAt,
+          ),
+          physicalRegistrationDoneByUserName: request.physicalRegistrationDoneBy
+            ? userMap.get(request.physicalRegistrationDoneBy) || ""
+            : "",
+          admissionRollNumber: request.admissionRollNumber || "",
+
+          // Personal Info
+          fullName: request.userName || "",
+          parentName: "", // Would need family details
+          gender: request.gender || "",
+          nationality: request.nationalityName || "",
+          ews: request.studentBelongsToEWS ? "Yes" : "No",
+          aadhaarNumber: formatAadhaarNumber(
+            request.aadhaarCardNumber || "XXXX XXXX XXXX",
+          ),
+          apaarId: formatApaarId(request.studentApaarId || ""),
+
+          // Residential Address
+          residentialAddressLine: request.residentialAddressLine || "",
+          residentialCountry: request.residentialCountryName || "",
+          residentialState: request.residentialStateName || "",
+          residentialDistrict: request.residentialDistrictName || "",
+          residentialCity: request.residentialCityName || "",
+          residentialPinCode: request.residentialPinCode || "",
+          residentialPoliceStation: request.residentialPoliceStation || "",
+          residentialPostOffice: request.residentialPostOffice || "",
+          residentialOtherCountry: request.residentialOtherCountry || "",
+          residentialOtherState: request.residentialOtherState || "",
+          residentialOtherDistrict: request.residentialOtherDistrict || "",
+          residentialOtherCity: request.residentialOtherCity || "",
+
+          // Mailing Address
+          mailingAddressLine: mailingAddress?.addressLine || "",
+          mailingCountry: mailingAddress?.countryName || "",
+          mailingState: mailingAddress?.stateName || "",
+          mailingDistrict: mailingAddress?.districtName || "",
+          mailingCity: mailingAddress?.cityName || "",
+          mailingPinCode: mailingAddress?.pincode || "",
+          mailingPoliceStation: mailingAddress?.otherPoliceStation || "",
+          mailingPostOffice: mailingAddress?.otherPostoffice || "",
+          mailingOtherCountry: mailingAddress?.otherCountry || "",
+          mailingOtherState: mailingAddress?.otherState || "",
+          mailingOtherDistrict: mailingAddress?.otherDistrict || "",
+          mailingOtherCity: mailingAddress?.otherCity || "",
+
+          // Documents
+          classXIIMarksheet: documents.classXIIMarksheet || "",
+          aadhaarCard: documents.aadhaarCard || "",
+          apaarIdCard: documents.apaarIdCard || "",
+          fatherPhotoId: documents.fatherPhotoId || "",
+          motherPhotoId: documents.motherPhotoId || "",
+          ewsCertificate: documents.ewsCertificate || "",
+
+          // Correction Flags
+          genderCorrectionRequest: request.genderCorrectionRequest || false,
           nationalityCorrectionRequest:
-            cuRegistrationCorrectionRequestModel.nationalityCorrectionRequest,
+            request.nationalityCorrectionRequest || false,
           aadhaarCardNumberCorrectionRequest:
-            cuRegistrationCorrectionRequestModel.aadhaarCardNumberCorrectionRequest,
-          apaarIdCorrectionRequest:
-            cuRegistrationCorrectionRequestModel.apaarIdCorrectionRequest,
-          subjectsCorrectionRequest:
-            cuRegistrationCorrectionRequestModel.subjectsCorrectionRequest,
-          personalInfoDeclaration:
-            cuRegistrationCorrectionRequestModel.personalInfoDeclaration,
-          addressInfoDeclaration:
-            cuRegistrationCorrectionRequestModel.addressInfoDeclaration,
-          subjectsDeclaration:
-            cuRegistrationCorrectionRequestModel.subjectsDeclaration,
-          documentsDeclaration:
-            cuRegistrationCorrectionRequestModel.documentsDeclaration,
-          physicalRegistrationDoneBy:
-            cuRegistrationCorrectionRequestModel.physicalRegistrationDoneBy,
-          physicalRegistrationDoneAt:
-            cuRegistrationCorrectionRequestModel.physicalRegistrationDoneAt,
+            request.aadhaarCardNumberCorrectionRequest || false,
+          apaarIdCorrectionRequest: request.apaarIdCorrectionRequest || false,
+          subjectsCorrectionRequest: request.subjectsCorrectionRequest || false,
 
-          // Student data
-          studentUserId: studentModel.userId,
-          studentBelongsToEWS: studentModel.belongsToEWS,
-          studentApaarId: studentModel.apaarId,
-          studentUid: studentModel.uid,
-          studentProgramCourseId: studentModel.programCourseId,
+          // Declarations
+          personalInfoDeclaration: request.personalInfoDeclaration || false,
+          addressInfoDeclaration: request.addressInfoDeclaration || false,
+          subjectsDeclaration: request.subjectsDeclaration || false,
+          documentsDeclaration: request.documentsDeclaration || false,
 
-          // User data
-          userName: userModel.name,
-
-          // Personal details
-          personalDetailsId: personalDetailsModel.id,
-          gender: personalDetailsModel.gender,
-          nationalityId: personalDetailsModel.nationalityId,
-          aadhaarCardNumber: personalDetailsModel.aadhaarCardNumber,
-
-          // Nationality name
-          nationalityName: nationalityModel.name,
-
-          // Program course name
-          programCourseName: programCourseModel.name,
-
-          // Admission academic info
-          admissionRollNumber: admissionAcademicInfoModel.rollNumber,
-
-          // Address data (residential)
-          residentialAddressLine: addressModel.addressLine,
-          residentialCountryId: addressModel.countryId,
-          residentialStateId: addressModel.stateId,
-          residentialDistrictId: addressModel.districtId,
-          residentialCityId: addressModel.cityId,
-          residentialPinCode: addressModel.pincode,
-          residentialPoliceStation: addressModel.otherPoliceStation,
-          residentialPostOffice: addressModel.otherPostoffice,
-          residentialOtherCountry: addressModel.otherCountry,
-          residentialOtherState: addressModel.otherState,
-          residentialOtherDistrict: addressModel.otherDistrict,
-          residentialOtherCity: addressModel.otherCity,
-
-          // Country/State/District/City names for residential
-          residentialCountryName: countryModel.name,
-          residentialStateName: stateModel.name,
-          residentialDistrictName: districtModel.name,
-          residentialCityName: cityModel.name,
-        })
-        .from(cuRegistrationCorrectionRequestModel)
-        .leftJoin(
-          studentModel,
-          eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
-        )
-        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-        .leftJoin(
-          personalDetailsModel,
-          eq(userModel.id, personalDetailsModel.userId),
-        )
-        .leftJoin(
-          nationalityModel,
-          eq(personalDetailsModel.nationalityId, nationalityModel.id),
-        )
-        .leftJoin(
-          programCourseModel,
-          eq(studentModel.programCourseId, programCourseModel.id),
-        )
-        .leftJoin(
-          admissionAcademicInfoModel,
-          eq(studentModel.id, admissionAcademicInfoModel.studentId),
-        )
-        .leftJoin(
-          addressModel,
-          and(
-            eq(addressModel.personalDetailsId, personalDetailsModel.id),
-            eq(addressModel.type, "RESIDENTIAL"),
-          ),
-        )
-        .leftJoin(countryModel, eq(addressModel.countryId, countryModel.id))
-        .leftJoin(stateModel, eq(addressModel.stateId, stateModel.id))
-        .leftJoin(districtModel, eq(addressModel.districtId, districtModel.id))
-        .leftJoin(cityModel, eq(addressModel.cityId, cityModel.id));
-
-      console.log(
-        `🔍 [CU-REG-EXPORT] Found ${correctionRequests.length} correction requests`,
-      );
-
-      // Get mailing addresses separately
-      const mailingAddresses = await db
-        .select({
-          personalDetailsId: addressModel.personalDetailsId,
-          addressLine: addressModel.addressLine,
-          countryId: addressModel.countryId,
-          stateId: addressModel.stateId,
-          districtId: addressModel.districtId,
-          cityId: addressModel.cityId,
-          pincode: addressModel.pincode,
-          otherPoliceStation: addressModel.otherPoliceStation,
-          otherPostoffice: addressModel.otherPostoffice,
-          otherCountry: addressModel.otherCountry,
-          otherState: addressModel.otherState,
-          otherDistrict: addressModel.otherDistrict,
-          otherCity: addressModel.otherCity,
-          countryName: countryModel.name,
-          stateName: stateModel.name,
-          districtName: districtModel.name,
-          cityName: cityModel.name,
-        })
-        .from(addressModel)
-        .leftJoin(countryModel, eq(addressModel.countryId, countryModel.id))
-        .leftJoin(stateModel, eq(addressModel.stateId, stateModel.id))
-        .leftJoin(districtModel, eq(addressModel.districtId, districtModel.id))
-        .leftJoin(cityModel, eq(addressModel.cityId, cityModel.id))
-        .where(eq(addressModel.type, "MAILING"));
-
-      // Get user names for physical marked by
-      const userIds = [
-        ...new Set([
-          ...correctionRequests
-            .map((r) => r.physicalRegistrationDoneBy)
-            .filter((id): id is number => id !== null),
-        ]),
-      ];
-
-      const users =
-        userIds.length > 0
-          ? await db
-              .select({
-                id: userModel.id,
-                name: userModel.name,
-              })
-              .from(userModel)
-              .where(inArray(userModel.id, userIds))
-          : [];
-
-      const userMap = new Map(users.map((u) => [u.id, u.name]));
-
-      // Get documents
-      const documents = await db
-        .select({
-          cuRegistrationCorrectionRequestId:
-            cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
-          documentId: cuRegistrationDocumentUploadModel.documentId,
-          fileName: cuRegistrationDocumentUploadModel.fileName,
-        })
-        .from(cuRegistrationDocumentUploadModel)
-        .where(
-          inArray(
-            cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
-            correctionRequests.map((r) => r.id),
-          ),
-        );
-
-      // Create maps for quick lookup
-      const mailingAddressMap = new Map();
-      mailingAddresses.forEach((addr) => {
-        if (addr.personalDetailsId) {
-          mailingAddressMap.set(addr.personalDetailsId, addr);
-        }
-      });
-
-      const documentMap = new Map();
-      documents.forEach((doc) => {
-        if (!documentMap.has(doc.cuRegistrationCorrectionRequestId)) {
-          documentMap.set(doc.cuRegistrationCorrectionRequestId, {});
-        }
-        const docTypeMap: Record<number, string> = {
-          1: "classXIIMarksheet",
-          2: "aadhaarCard",
-          3: "apaarIdCard",
-          4: "fatherPhotoId",
-          5: "motherPhotoId",
-          10: "ewsCertificate",
+          // User info
+          createdByUserName: "", // No longer tracked
+          updatedByUserName: request.physicalRegistrationDoneBy
+            ? userMap.get(request.physicalRegistrationDoneBy) || ""
+            : "",
         };
-        const docType = docTypeMap[doc.documentId];
-        if (docType) {
-          documentMap.get(doc.cuRegistrationCorrectionRequestId)[docType] =
-            doc.fileName || "Uploaded";
-        }
-      });
+      },
+    );
 
-      // Format functions
-      const formatApaarId = (apaarId: string) => {
-        if (!apaarId || apaarId === "Not provided") return apaarId;
-        const digits = apaarId.replace(/\D/g, "");
-        if (digits.length === 12) {
-          return digits.replace(
-            /^(\d{3})(\d{3})(\d{3})(\d{3})$/,
-            "$1-$2-$3-$4",
-          );
-        }
-        return apaarId;
-      };
+    console.log(
+      `🔍 [CU-REG-EXPORT] Processed ${exportData.length} records for export`,
+    );
 
-      const formatAadhaarNumber = (aadhaar: string) => {
-        if (!aadhaar || aadhaar === "XXXX XXXX XXXX") return aadhaar;
-        const digits = aadhaar.replace(/\D/g, "");
-        if (digits.length === 12) {
-          return digits.replace(/^(\d{4})(\d{4})(\d{4})$/, "$1-$2-$3");
-        }
-        return aadhaar;
-      };
+    // Create Excel workbook using ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    const correctionSheet = workbook.addWorksheet("cu-reg-correction-report");
 
-      // Helper function to format date/time in AM/PM format
-      const formatDateTimeAMPM = (date: Date | null | undefined): string => {
-        if (!date) return "";
-        try {
-          const dateObj = new Date(date);
-          // Format as MM/DD/YYYY HH:MM:SS AM/PM in IST timezone
-          const formatted = dateObj.toLocaleString("en-US", {
-            timeZone: "Asia/Kolkata",
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: true,
-          });
-          return formatted;
-        } catch (error) {
-          console.error("Error formatting date:", error);
-          return "";
-        }
-      };
+    // Get column headers from the first record
+    const correctionHeaders = Object.keys(exportData[0] || {});
 
-      // Process data
-      const exportData: CuRegistrationExportData[] = correctionRequests.map(
-        (request) => {
-          const mailingAddress = mailingAddressMap.get(
-            request.personalDetailsId,
-          );
-          const documents = documentMap.get(request.id) || {};
+    let highlightedCount = 0;
 
-          return {
-            // Basic Info
-            studentId: request.studentId,
-            studentName: request.userName || "",
-            studentUid: request.studentUid || "",
-            programCourseName: request.programCourseName || "",
-            cuRegistrationApplicationNumber:
-              request.cuRegistrationApplicationNumber || "",
-            status: request.status || "",
-            onlineRegistrationDone: request.onlineRegistrationDone || false,
-            physicalRegistrationDone: request.physicalRegistrationDone || false,
-            remarks: request.remarks || "",
-            createdAt: formatDateTimeAMPM(request.createdAt),
-            updatedAt: formatDateTimeAMPM(request.updatedAt),
-            physicalRegistrationDoneAt: formatDateTimeAMPM(
-              request.physicalRegistrationDoneAt,
-            ),
-            physicalRegistrationDoneByUserName:
-              request.physicalRegistrationDoneBy
-                ? userMap.get(request.physicalRegistrationDoneBy) || ""
-                : "",
-            admissionRollNumber: request.admissionRollNumber || "",
-
-            // Personal Info
-            fullName: request.userName || "",
-            parentName: "", // Would need family details
-            gender: request.gender || "",
-            nationality: request.nationalityName || "",
-            ews: request.studentBelongsToEWS ? "Yes" : "No",
-            aadhaarNumber: formatAadhaarNumber(
-              request.aadhaarCardNumber || "XXXX XXXX XXXX",
-            ),
-            apaarId: formatApaarId(request.studentApaarId || ""),
-
-            // Residential Address
-            residentialAddressLine: request.residentialAddressLine || "",
-            residentialCountry: request.residentialCountryName || "",
-            residentialState: request.residentialStateName || "",
-            residentialDistrict: request.residentialDistrictName || "",
-            residentialCity: request.residentialCityName || "",
-            residentialPinCode: request.residentialPinCode || "",
-            residentialPoliceStation: request.residentialPoliceStation || "",
-            residentialPostOffice: request.residentialPostOffice || "",
-            residentialOtherCountry: request.residentialOtherCountry || "",
-            residentialOtherState: request.residentialOtherState || "",
-            residentialOtherDistrict: request.residentialOtherDistrict || "",
-            residentialOtherCity: request.residentialOtherCity || "",
-
-            // Mailing Address
-            mailingAddressLine: mailingAddress?.addressLine || "",
-            mailingCountry: mailingAddress?.countryName || "",
-            mailingState: mailingAddress?.stateName || "",
-            mailingDistrict: mailingAddress?.districtName || "",
-            mailingCity: mailingAddress?.cityName || "",
-            mailingPinCode: mailingAddress?.pincode || "",
-            mailingPoliceStation: mailingAddress?.otherPoliceStation || "",
-            mailingPostOffice: mailingAddress?.otherPostoffice || "",
-            mailingOtherCountry: mailingAddress?.otherCountry || "",
-            mailingOtherState: mailingAddress?.otherState || "",
-            mailingOtherDistrict: mailingAddress?.otherDistrict || "",
-            mailingOtherCity: mailingAddress?.otherCity || "",
-
-            // Documents
-            classXIIMarksheet: documents.classXIIMarksheet || "",
-            aadhaarCard: documents.aadhaarCard || "",
-            apaarIdCard: documents.apaarIdCard || "",
-            fatherPhotoId: documents.fatherPhotoId || "",
-            motherPhotoId: documents.motherPhotoId || "",
-            ewsCertificate: documents.ewsCertificate || "",
-
-            // Correction Flags
-            genderCorrectionRequest: request.genderCorrectionRequest || false,
-            nationalityCorrectionRequest:
-              request.nationalityCorrectionRequest || false,
-            aadhaarCardNumberCorrectionRequest:
-              request.aadhaarCardNumberCorrectionRequest || false,
-            apaarIdCorrectionRequest: request.apaarIdCorrectionRequest || false,
-            subjectsCorrectionRequest:
-              request.subjectsCorrectionRequest || false,
-
-            // Declarations
-            personalInfoDeclaration: request.personalInfoDeclaration || false,
-            addressInfoDeclaration: request.addressInfoDeclaration || false,
-            subjectsDeclaration: request.subjectsDeclaration || false,
-            documentsDeclaration: request.documentsDeclaration || false,
-
-            // User info
-            createdByUserName: "", // No longer tracked
-            updatedByUserName: request.physicalRegistrationDoneBy
-              ? userMap.get(request.physicalRegistrationDoneBy) || ""
-              : "",
-          };
-        },
-      );
-
-      console.log(
-        `🔍 [CU-REG-EXPORT] Processed ${exportData.length} records for export`,
-      );
-
-      // Create Excel workbook using ExcelJS
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("CU Registration Corrections");
-
-      // Get column headers from the first record
-      const headers = Object.keys(exportData[0] || {});
-
+    if (correctionHeaders.length > 0) {
       // Add header row with styling
-      worksheet.columns = headers.map((header) => ({
+      correctionSheet.columns = correctionHeaders.map((header) => ({
         header: header,
         key: header,
         width: 20,
       }));
 
       // Style the header row
-      worksheet.getRow(1).font = { bold: true };
-      worksheet.getRow(1).fill = {
+      correctionSheet.getRow(1).font = { bold: true };
+      correctionSheet.getRow(1).fill = {
         type: "pattern",
         pattern: "solid",
         fgColor: { argb: "FFE0E0E0" },
       };
 
       // Find column indices for fields that need highlighting
-      const genderColIndex = headers.indexOf("gender") + 1; // ExcelJS uses 1-based indexing
-      const nationalityColIndex = headers.indexOf("nationality") + 1;
-      const aadhaarColIndex = headers.indexOf("aadhaarNumber") + 1;
-      const apaarColIndex = headers.indexOf("apaarId") + 1;
-
-      let highlightedCount = 0;
+      const genderColIndex = correctionHeaders.indexOf("gender") + 1; // ExcelJS uses 1-based indexing
+      const nationalityColIndex = correctionHeaders.indexOf("nationality") + 1;
+      const aadhaarColIndex = correctionHeaders.indexOf("aadhaarNumber") + 1;
+      const apaarColIndex = correctionHeaders.indexOf("apaarId") + 1;
 
       // Add data rows
-      exportData.forEach((rowData, index) => {
-        const row = worksheet.addRow(rowData);
+      exportData.forEach((rowData) => {
+        const row = correctionSheet.addRow(rowData);
 
         // Apply highlighting for correction flags
         if (rowData.genderCorrectionRequest && genderColIndex > 0) {
@@ -3448,24 +3447,693 @@ export const exportCuRegistrationCorrectionRequests =
           highlightedCount++;
         }
       });
-
-      console.log(
-        `🔍 [CU-REG-EXPORT] Total cells highlighted: ${highlightedCount}`,
-      );
-
-      // Generate Excel buffer
-      const excelBuffer = await workbook.xlsx.writeBuffer();
-
-      console.log("✅ [CU-REG-EXPORT] Excel export completed successfully");
-      return Buffer.from(excelBuffer);
-    } catch (error) {
-      console.error(
-        "❌ [CU-REG-EXPORT] Error exporting CU registration correction requests:",
-        error,
-      );
-      throw error;
+    } else {
+      correctionSheet.addRow(["No data available"]);
     }
-  };
+
+    console.log(
+      `🔍 [CU-REG-EXPORT] Total cells highlighted: ${highlightedCount}`,
+    );
+
+    console.log("🔍 [CU-REG-EXPORT] Fetching CU registration report data");
+    console.log(
+      "🔍 [CU-REG-EXPORT] Academic Year ID:",
+      academicYearId,
+      typeof academicYearId,
+    );
+
+    // Ensure academicYearId is a valid number
+    if (!academicYearId || isNaN(Number(academicYearId))) {
+      throw new Error(`Invalid academicYearId: ${academicYearId}`);
+    }
+
+    // Convert to number for proper type
+    const academicYearIdNum = Number(academicYearId);
+
+    // Use pg pool directly to avoid Drizzle parameter binding issues with CTEs
+    const queryText = `
+          WITH latest_promotion AS (
+              SELECT
+                  p.*,
+                  ROW_NUMBER() OVER (
+                      PARTITION BY p.student_id_fk
+                      ORDER BY COALESCE(p.date_of_joining, p.created_at) DESC NULLS LAST, p.id DESC
+                  ) AS rn
+              FROM promotions AS p
+          ),
+          promotion_current AS (
+              SELECT * FROM latest_promotion WHERE rn = 1
+          ),
+          latest_academic_info AS (
+              SELECT
+                  a.*,
+                  ROW_NUMBER() OVER (
+                      PARTITION BY a.student_id_fk
+                      ORDER BY COALESCE(a.updated_at, a.created_at) DESC NULLS LAST, a.id DESC
+                  ) AS rn
+              FROM admission_academic_info AS a
+          ),
+          academic_info_selected AS (
+              SELECT * FROM latest_academic_info WHERE rn = 1
+          ),
+          family_with_names AS (
+              SELECT
+                  fd.user_id_fk AS user_id,
+                  MAX(fd.annual_income_id_fk) AS annual_income_id,
+                  MAX(pr.name) FILTER (WHERE pr.type = 'FATHER') AS father_name,
+                  MAX(pr.name) FILTER (WHERE pr.type = 'MOTHER') AS mother_name,
+                  MAX(pr.name) FILTER (WHERE pr.type = 'GUARDIAN') AS guardian_name
+              FROM family_details AS fd
+              LEFT JOIN person AS pr ON pr.family_id_fk = fd.id
+              GROUP BY fd.user_id_fk
+          ),
+          address_residential AS (
+              SELECT
+                  a.personal_details_id_fk AS personal_details_id,
+                  a.address_line, a.pincode, a.locality_type,
+                  c.name AS country_name, s.name AS state_name,
+                  ROW_NUMBER() OVER (
+                      PARTITION BY a.personal_details_id_fk
+                      ORDER BY COALESCE(a.updated_at, a.created_at) DESC NULLS LAST, a.id DESC
+                  ) AS rn
+              FROM address AS a
+              LEFT JOIN countries c ON c.id = a.country_id_fk
+              LEFT JOIN states s ON s.id = a.state_id_fk
+              WHERE a.type = 'RESIDENTIAL'
+          ),
+          address_mailing AS (
+              SELECT
+                  a.personal_details_id_fk AS personal_details_id,
+                  a.address_line, a.pincode,
+                  c.name AS country_name, s.name AS state_name,
+                  ROW_NUMBER() OVER (
+                      PARTITION BY a.personal_details_id_fk
+                      ORDER BY COALESCE(a.updated_at, a.created_at) DESC NULLS LAST, a.id DESC
+                  ) AS rn
+              FROM address AS a
+              LEFT JOIN countries c ON c.id = a.country_id_fk
+              LEFT JOIN states s ON s.id = a.state_id_fk
+              WHERE a.type = 'MAILING'
+          ),
+          student_subjects_raw AS (
+              SELECT
+                  sss.student_id_fk AS student_id,
+                  UPPER(COALESCE(st.code, '')) AS subject_type_code,
+                  UPPER(COALESCE(ssm.label, '')) AS label_upper,
+                  COALESCE(ssm.label, '') AS label,
+                  subj.code AS subject_code,
+                  subj.name AS subject_name,
+                  ROW_NUMBER() OVER (
+                      PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+                      ORDER BY sss.version DESC, sss.created_at DESC NULLS LAST, sss.id DESC
+                  ) AS rn
+              FROM student_subject_selections AS sss
+              JOIN subject_selection_meta ssm ON ssm.id = sss.subject_selection_meta_id_fk
+              LEFT JOIN subject_types st ON st.id = ssm.subject_type_id_fk
+              LEFT JOIN subjects subj ON subj.id = sss.subject_id_fk
+              WHERE sss.is_active = TRUE
+          ),
+          student_subjects_latest AS (
+              SELECT student_id, subject_type_code, label_upper, label, subject_code, subject_name
+              FROM student_subjects_raw WHERE rn = 1
+          ),
+          student_subjects_pivot AS (
+              SELECT
+                  student_id,
+                  MAX(subject_code) FILTER (WHERE subject_type_code IN ('DSCC','CORE','MAJOR')) AS dscc_core,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MN' AND label_upper LIKE 'MINOR 1%') AS minor1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MN' AND label_upper LIKE 'MINOR 2%') AS minor2,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MN' AND label_upper LIKE 'MINOR 3%') AS minor3,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MN' AND label_upper LIKE 'MINOR 4%') AS minor4,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'AEC' AND (label_upper LIKE 'AEC 1%' OR label_upper LIKE 'AEC (SEMESTER I%')) AS aec1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'AEC' AND label_upper LIKE 'AEC 2%') AS aec2,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'AEC' AND (label_upper LIKE 'AEC 3%' OR label_upper LIKE 'AEC3%' OR label_upper LIKE 'AEC (SEMESTER III%' OR label_upper LIKE 'AEC (SEMESTER III & IV%')) AS aec3,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'AEC' AND (label_upper LIKE 'AEC 4%' OR label_upper LIKE 'AEC4%' OR label_upper LIKE 'AEC (SEMESTER V%')) AS aec4,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'IDC' AND label_upper LIKE 'IDC 1%') AS idc1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'IDC' AND label_upper LIKE 'IDC 2%') AS idc2,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'IDC' AND label_upper LIKE 'IDC 3%') AS idc3,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MDC' AND label_upper LIKE 'MDC 1%') AS mdc1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MDC' AND label_upper LIKE 'MDC 2%') AS mdc2,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MDC' AND label_upper LIKE 'MDC 3%') AS mdc3,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'SEC' AND label_upper LIKE 'SEC 1%') AS sec1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'SEC' AND label_upper LIKE 'SEC 2%') AS sec2,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'CVAC' OR label_upper LIKE 'CVAC%') AS cvac
+              FROM student_subjects_latest
+              GROUP BY student_id
+          ),
+          program_papers AS (
+              SELECT
+                  p.programe_course_id_fk AS program_course_id,
+                  UPPER(st.code) AS subject_type_code,
+                  UPPER(cls.name) AS class_name,
+                  subj.code AS subject_code,
+                  subj.name AS subject_name,
+                  ROW_NUMBER() OVER (
+                      PARTITION BY p.programe_course_id_fk, st.code, cls.name
+                      ORDER BY p.sequence NULLS LAST, p.id
+                  ) AS rn
+              FROM papers p
+              JOIN subject_types st ON st.id = p.subject_type_id_fk
+              JOIN subjects subj ON subj.id = p.subject_id_fk
+              JOIN classes cls ON cls.id = p.class_id_fk
+              WHERE p.is_active = TRUE
+          ),
+          program_papers_first AS (
+              SELECT program_course_id, subject_type_code, class_name, subject_code, subject_name
+              FROM program_papers WHERE rn = 1
+          ),
+          paper_pivot AS (
+              SELECT
+                  program_course_id,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'DSCC' AND class_name LIKE 'SEMESTER I%') AS dscc_sem1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MN' AND class_name LIKE 'SEMESTER I%') AS mn_sem1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MN' AND class_name LIKE 'SEMESTER II%') AS mn_sem2,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MN' AND class_name LIKE 'SEMESTER III%') AS mn_sem3,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'AEC' AND class_name LIKE 'SEMESTER I%') AS aec_sem1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'AEC' AND class_name LIKE 'SEMESTER II%') AS aec_sem2,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'AEC' AND class_name LIKE 'SEMESTER III%') AS aec_sem3,
+                  MAX(subject_code) FILTER (WHERE subject_type_code IN ('IDC','MDC') AND class_name LIKE 'SEMESTER I%') AS idc_sem1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code IN ('IDC','MDC') AND class_name LIKE 'SEMESTER II%') AS idc_sem2,
+                  MAX(subject_code) FILTER (WHERE subject_type_code IN ('IDC','MDC') AND class_name LIKE 'SEMESTER III%') AS idc_sem3,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MDC' AND class_name LIKE 'SEMESTER I%') AS mdc_sem1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MDC' AND class_name LIKE 'SEMESTER II%') AS mdc_sem2,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'MDC' AND class_name LIKE 'SEMESTER III%') AS mdc_sem3,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'SEC' AND class_name LIKE 'SEMESTER I%') AS sec_sem1,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'SEC' AND class_name LIKE 'SEMESTER II%') AS sec_sem2,
+                  MAX(subject_code) FILTER (WHERE subject_type_code = 'CVAC' AND class_name LIKE 'SEMESTER II%') AS cvac_sem2
+              FROM program_papers_first
+              GROUP BY program_course_id
+          ),
+          student_context AS (
+              SELECT
+                  cr.cu_registration_application_number AS form_number,
+                  std.id AS student_id,
+                  std.user_id_fk AS user_id,
+                  std.program_course_id_fk AS program_course_id,
+                  std.uid, std.apaar_id, std.belongs_to_ews, std.handicapped,
+                  u.name AS student_name, u.phone AS mobile_number,
+                  pd.id AS personal_details_id, pd.email, pd.aadhaar_card_number,
+                  pd.date_of_birth, pd.gender, pd.disability,
+                  rlg.name AS religion_name, ct.name AS category_name,
+                  nl.code AS nationality_code, nl.name AS nationality_name,
+                  dc.code AS disability_code,
+                  promo.date_of_joining, promo.shift_id_fk AS shift_id,
+                  promo.class_id_fk AS class_id, promo.promotion_status_id_fk,
+                  sh.name AS shift_name,
+                  sess.id AS session_id, sess.name AS session_name,
+                  ay.year AS session_year,
+                  aai.id AS academic_info_id, aai.board_id_fk,
+                  bd.name AS board_name, bd.code AS board_code,
+                  aai.other_board, aai.roll_number AS board_roll_number,
+                  aai.year_of_passing, aai.subject_studied, aai.cu_registration_number,
+                  pc.university_code, pc.duration, pc.name AS program_course_name,
+                  crs.name AS course_name, str.name AS stream_name,
+                  ps.name AS admission_mode
+              FROM cu_registration_correction_requests AS cr
+              JOIN students std ON std.id = cr.student_id_fk
+              JOIN users u ON u.id = std.user_id_fk
+              LEFT JOIN personal_details pd ON pd.user_id_fk = u.id
+              LEFT JOIN religion rlg ON rlg.id = pd.religion_id_fk
+              LEFT JOIN categories ct ON ct.id = pd.category_id_fk
+              LEFT JOIN nationality nl ON nl.id = pd.nationality_id_fk
+              LEFT JOIN disability_codes dc ON dc.id = pd.disablity_code_id_fk
+              LEFT JOIN promotion_current promo ON promo.student_id_fk = std.id
+              LEFT JOIN shifts sh ON sh.id = promo.shift_id_fk
+              LEFT JOIN sessions sess ON sess.id = promo.session_id_fk
+              LEFT JOIN academic_years ay ON ay.id = sess.academic_id_fk
+              LEFT JOIN promotion_status ps ON ps.id = promo.promotion_status_id_fk
+              LEFT JOIN academic_info_selected aai ON aai.student_id_fk = std.id
+              LEFT JOIN boards bd ON bd.id = aai.board_id_fk
+              LEFT JOIN program_courses pc ON pc.id = std.program_course_id_fk
+              LEFT JOIN courses crs ON crs.id = pc.course_id_fk
+              LEFT JOIN streams str ON str.id = pc.stream_id_fk
+              WHERE cr.cu_registration_application_number IS NOT NULL
+                  AND ay.id = $1
+          ),
+          combined_subjects AS (
+              SELECT
+                  sc.student_id,
+                  sc.stream_name,
+                  COALESCE(sp.dscc_core, pp.dscc_sem1, sc.course_name) AS core_major,
+                  COALESCE(sp.minor1, pp.mn_sem1) AS minor1,
+                  COALESCE(sp.minor2, pp.mn_sem2, pp.mn_sem3) AS minor2,
+                  COALESCE(sp.minor3, pp.mn_sem3) AS minor3,
+                  COALESCE(sp.cvac, pp.cvac_sem2) AS cvac,
+                  COALESCE(sp.aec1, pp.aec_sem1) AS aec1,
+                  COALESCE(sp.aec2, pp.aec_sem2) AS aec2,
+                  sp.aec3 AS aec3,
+                  COALESCE(sp.idc1, pp.idc_sem1) AS idc1,
+                  COALESCE(sp.idc2, pp.idc_sem2) AS idc2,
+                  COALESCE(sp.idc3, pp.idc_sem3) AS idc3,
+                  CASE WHEN sc.stream_name ILIKE 'Commerce%' THEN pp.mdc_sem1 ELSE NULL END AS mdc1,
+                  CASE WHEN sc.stream_name ILIKE 'Commerce%' THEN pp.mdc_sem2 ELSE NULL END AS mdc2,
+                  CASE WHEN sc.stream_name ILIKE 'Commerce%' THEN pp.mdc_sem3 ELSE NULL END AS mdc3,
+                  pp.sec_sem1 AS sec1,
+                  pp.sec_sem2 AS sec2
+              FROM student_context sc
+              LEFT JOIN student_subjects_pivot sp ON sp.student_id = sc.student_id
+              LEFT JOIN paper_pivot pp ON pp.program_course_id = sc.program_course_id
+          ),
+          marks_base AS (
+              SELECT
+                  sc.student_id,
+                  COALESCE(NULLIF(TRIM(bsn.code), ''), bsn.name, '') AS display_subject,
+                  CASE
+                      WHEN COALESCE(bs.full_marks_theory, 0) + COALESCE(bs.full_marks_practical, 0) > 0
+                          THEN COALESCE(bs.full_marks_theory, 0) + COALESCE(bs.full_marks_practical, 0)
+                      WHEN sas.total_marks IS NOT NULL AND sas.total_marks > 0 THEN 100
+                      WHEN COALESCE(sas.theory_marks, 0) + COALESCE(sas.practical_marks, 0) > 0
+                          THEN COALESCE(sas.theory_marks, 0) + COALESCE(sas.practical_marks, 0)
+                      ELSE NULL
+                  END AS full_marks,
+                  COALESCE(
+                      sas.total_marks,
+                      COALESCE(sas.theory_marks, 0) + COALESCE(sas.practical_marks, 0)
+                  ) AS obtained_marks
+              FROM student_context sc
+              INNER JOIN academic_info_selected aai ON aai.student_id_fk = sc.student_id
+              INNER JOIN student_academic_subjects sas ON sas.admission_academic_info_id_fk = aai.id
+              LEFT JOIN board_subjects bs ON bs.id = sas.board_subject_id_fk
+              LEFT JOIN board_subject_names bsn ON bsn.id = bs.board_subject_name_id_fk
+              WHERE (
+                      COALESCE(sas.theory_marks, 0) + COALESCE(sas.practical_marks, 0) > 0
+                      OR sas.total_marks IS NOT NULL
+                  )
+                  AND COALESCE(
+                      sas.total_marks,
+                      COALESCE(sas.theory_marks, 0) + COALESCE(sas.practical_marks, 0)
+                  ) IS NOT NULL
+                  AND (
+                      NULLIF(TRIM(bsn.code), '') IS NOT NULL
+                      OR (bsn.name IS NOT NULL AND bsn.name != '')
+                  )
+          ),
+          marks_ranked AS (
+              SELECT
+                  mb.*,
+                  CASE
+                      WHEN mb.full_marks > 0 AND mb.obtained_marks IS NOT NULL
+                          THEN LEAST(
+                              ROUND(((mb.obtained_marks * 100.0) / mb.full_marks)::numeric, 2),
+                              100.00
+                          )
+                      ELSE NULL
+                  END AS percentage,
+                  ROW_NUMBER() OVER (
+                      PARTITION BY mb.student_id
+                      ORDER BY mb.obtained_marks DESC NULLS LAST, mb.full_marks DESC, mb.display_subject
+                  ) AS seq
+              FROM marks_base mb
+              WHERE mb.full_marks IS NOT NULL AND mb.obtained_marks IS NOT NULL
+          ),
+          top_four_pivot AS (
+              SELECT
+                  student_id,
+                  MAX(display_subject) FILTER (WHERE seq = 1) AS subject_1,
+                  MAX(display_subject) FILTER (WHERE seq = 2) AS subject_2,
+                  MAX(display_subject) FILTER (WHERE seq = 3) AS subject_3,
+                  MAX(display_subject) FILTER (WHERE seq = 4) AS subject_4,
+                  MAX(full_marks) FILTER (WHERE seq = 1) AS full_marks_1,
+                  MAX(full_marks) FILTER (WHERE seq = 2) AS full_marks_2,
+                  MAX(full_marks) FILTER (WHERE seq = 3) AS full_marks_3,
+                  MAX(full_marks) FILTER (WHERE seq = 4) AS full_marks_4,
+                  MAX(obtained_marks) FILTER (WHERE seq = 1) AS marks_obt_1,
+                  MAX(obtained_marks) FILTER (WHERE seq = 2) AS marks_obt_2,
+                  MAX(obtained_marks) FILTER (WHERE seq = 3) AS marks_obt_3,
+                  MAX(obtained_marks) FILTER (WHERE seq = 4) AS marks_obt_4,
+                  MAX(percentage) FILTER (WHERE seq = 1) AS pct_1,
+                  MAX(percentage) FILTER (WHERE seq = 2) AS pct_2,
+                  MAX(percentage) FILTER (WHERE seq = 3) AS pct_3,
+                  MAX(percentage) FILTER (WHERE seq = 4) AS pct_4,
+                  SUM(full_marks) FILTER (WHERE seq <= 4) AS total_full,
+                  SUM(obtained_marks) FILTER (WHERE seq <= 4) AS total_obt,
+                  CASE
+                      WHEN SUM(full_marks) FILTER (WHERE seq <= 4) > 0
+                          THEN LEAST(
+                              ROUND(
+                                  (
+                                      (SUM(obtained_marks) FILTER (WHERE seq <= 4) * 100.0) /
+                                      NULLIF(SUM(full_marks) FILTER (WHERE seq <= 4), 0)
+                                  )::numeric,
+                                  2
+                              ),
+                              100.00
+                          )
+                      ELSE NULL
+                  END AS total_pct
+              FROM marks_ranked
+              GROUP BY student_id
+          ),
+          others_ranked AS (
+              SELECT
+                  mr.student_id,
+                  mr.display_subject AS subject_name,
+                  mr.full_marks,
+                  mr.obtained_marks,
+                  mr.percentage,
+                  (mr.seq - 4) AS ord
+              FROM marks_ranked mr
+              WHERE mr.seq > 4 AND mr.seq <= 8
+          ),
+          others_pivot AS (
+              SELECT
+                  student_id,
+                  MAX(subject_name) FILTER (WHERE ord = 1) AS subject_1,
+                  MAX(subject_name) FILTER (WHERE ord = 2) AS subject_2,
+                  MAX(subject_name) FILTER (WHERE ord = 3) AS subject_3,
+                  MAX(subject_name) FILTER (WHERE ord = 4) AS subject_4,
+                  MAX(full_marks) FILTER (WHERE ord = 1) AS full_marks_1,
+                  MAX(full_marks) FILTER (WHERE ord = 2) AS full_marks_2,
+                  MAX(full_marks) FILTER (WHERE ord = 3) AS full_marks_3,
+                  MAX(full_marks) FILTER (WHERE ord = 4) AS full_marks_4,
+                  MAX(obtained_marks) FILTER (WHERE ord = 1) AS marks_obt_1,
+                  MAX(obtained_marks) FILTER (WHERE ord = 2) AS marks_obt_2,
+                  MAX(obtained_marks) FILTER (WHERE ord = 3) AS marks_obt_3,
+                  MAX(obtained_marks) FILTER (WHERE ord = 4) AS marks_obt_4,
+                  MAX(percentage) FILTER (WHERE ord = 1) AS pct_1,
+                  MAX(percentage) FILTER (WHERE ord = 2) AS pct_2,
+                  MAX(percentage) FILTER (WHERE ord = 3) AS pct_3,
+                  MAX(percentage) FILTER (WHERE ord = 4) AS pct_4
+              FROM others_ranked
+              GROUP BY student_id
+          )
+          SELECT
+              sc.form_number AS "Form_Number",
+              sc.aadhaar_card_number AS "Aadhar_Number",
+              sc.cu_registration_number AS "CU_Reg_Number",
+              '017' AS "College_Name",
+              COALESCE(sc.university_code, sc.course_name) AS "Course_Name",
+              TO_CHAR(sc.date_of_joining, 'DD/MM/YYYY') AS "Date_of_Admission",
+              sc.session_year AS "Session_of_Admission",
+              'No' AS "Non_Formal_Education",
+              sc.student_name AS "Student_Name",
+              fam.father_name AS "Father_Name",
+              fam.mother_name AS "Mother_Name",
+              fam.guardian_name AS "Guardian_Name",
+              TO_CHAR(sc.date_of_birth, 'DD/MM/YYYY') AS "Date_of_Birth",
+              CASE
+                  WHEN sc.gender::text ILIKE 'MALE' THEN 'M'
+                  WHEN sc.gender::text ILIKE 'FEMALE' THEN 'F'
+                  WHEN sc.gender::text ILIKE 'OTHER' THEN 'O'
+                  ELSE NULL
+              END AS "Gender",
+              sc.religion_name AS "Religion",
+              sc.category_name AS "Category",
+              COALESCE(sc.nationality_code::text, sc.nationality_name) AS "Nationality",
+              CASE
+                  WHEN sc.handicapped OR sc.disability IS NOT NULL THEN 'Y'
+                  ELSE 'N'
+              END AS "Differently_Abled",
+              sc.disability_code AS "Disability_Code",
+              NULL AS "Disability_Percentage",
+              sc.mobile_number AS "Contact_Mobile_Number",
+              sc.email AS "Email_Id",
+              'N' AS "BPL",
+              CASE
+                  WHEN sc.belongs_to_ews IS TRUE THEN 'Y'
+                  WHEN sc.belongs_to_ews IS FALSE THEN 'N'
+                  ELSE NULL
+              END AS "EWS",
+              ai.range AS "Family_Income",
+              res.locality_type AS "Locality_Type",
+              res.address_line AS "Present_Address",
+              res.pincode AS "Present_Pin",
+              res.state_name AS "Present_State",
+              res.country_name AS "Present_Country",
+              mail.address_line AS "Permanent_Address",
+              mail.pincode AS "Permanent_Pin",
+              mail.state_name AS "Permanent_State",
+              mail.country_name AS "Permanent_Country",
+              CASE
+                  WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+                      OR sc.program_course_name ILIKE 'BBA (H)%'
+                      OR sc.program_course_name ILIKE 'B.Com (G)%'
+                  THEN ''
+                  ELSE COALESCE(cs.core_major, sc.course_name, '')
+              END AS "BA_BSC_BMUS_CVOC_Hons_Core_Major_Subject",
+              CASE
+                  WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+                      OR sc.program_course_name ILIKE 'BBA (H)%'
+                      OR sc.program_course_name ILIKE 'B.Com (G)%'
+                  THEN ''
+                  ELSE COALESCE(cs.minor1, '')
+              END AS "BA_BSC_BMUS_CVOC_Hons_1st_Minor_Subject",
+              CASE
+                  WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+                      OR sc.program_course_name ILIKE 'BBA (H)%'
+                      OR sc.program_course_name ILIKE 'B.Com (G)%'
+                  THEN ''
+                  ELSE COALESCE(cs.minor2, '')
+              END AS "BA_BSC_BMUS_CVOC_Hons_2nd_Minor_Subject",
+              CASE
+                  WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+                      OR sc.program_course_name ILIKE 'BBA (H)%'
+                      OR sc.program_course_name ILIKE 'B.Com (G)%'
+                  THEN ''
+                  ELSE COALESCE(cs.cvac, '')
+              END AS "BA_BSC_BMUS_CVOC_Hons_CVAC",
+              CASE
+                  WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+                      OR sc.program_course_name ILIKE 'BBA (H)%'
+                      OR sc.program_course_name ILIKE 'B.Com (G)%'
+                  THEN ''
+                  ELSE COALESCE(cs.aec1, '')
+              END AS "BA_BSC_BMUS_CVOC_Hons_AEC",
+              CASE
+                  WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+                      OR sc.program_course_name ILIKE 'BBA (H)%'
+                      OR sc.program_course_name ILIKE 'B.Com (G)%'
+                  THEN ''
+                  ELSE COALESCE(cs.idc1, '')
+              END AS "BA_BSC_BMUS_CVOC_Hons_IDC_1",
+              CASE
+                  WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+                      OR sc.program_course_name ILIKE 'BBA (H)%'
+                      OR sc.program_course_name ILIKE 'B.Com (G)%'
+                  THEN ''
+                  ELSE COALESCE(cs.idc2, '')
+              END AS "BA_BSC_BMUS_CVOC_Hons_IDC_2",
+              CASE
+                  WHEN sc.program_course_name ILIKE 'B.Com (H)%'
+                      OR sc.program_course_name ILIKE 'BBA (H)%'
+                      OR sc.program_course_name ILIKE 'B.Com (G)%'
+                  THEN ''
+                  ELSE COALESCE(cs.idc3, '')
+              END AS "BA_BSC_BMUS_CVOC_Hons_IDC_3",
+              '' AS "BA_BSC_MDC_Core_Subject_1",
+              '' AS "BA_BSC_MDC_Core_Subject_2",
+              '' AS "BA_BSC_MDC_Minor_Subject",
+              '' AS "BA_BSC_MDC_SEC_1",
+              '' AS "BA_BSC_MDC_SEC_2",
+              '' AS "BA_BSC_MDC_CVAC",
+              '' AS "BA_BSC_MDC_AEC",
+              '' AS "BA_BSC_MDC_IDC_1",
+              '' AS "BA_BSC_MDC_IDC_2",
+              '' AS "BA_BSC_MDC_IDC_3",
+              COALESCE(
+                  CASE
+                      WHEN sc.program_course_name ILIKE '%B.Com (H)%'
+                          OR sc.program_course_name ILIKE '%B.Com(H)%'
+                          OR sc.program_course_name ILIKE '%BCOM (H)%'
+                          OR sc.program_course_name ILIKE '%BCOM(H)%'
+                      THEN cs.minor3
+                  END,
+                  ''
+              ) AS "BCOM_Hons_Minor",
+              '' AS "BCOM_Hons_CVAC",
+              '' AS "BCOM_Hons_AEC",
+              COALESCE(
+                  CASE
+                      WHEN sc.program_course_name ILIKE '%B.Com (G)%'
+                          OR sc.program_course_name ILIKE '%B.Com(G)%'
+                          OR sc.program_course_name ILIKE '%BCOM (G)%'
+                          OR sc.program_course_name ILIKE '%BCOM(G)%'
+                      THEN cs.minor3
+                  END,
+                  ''
+              ) AS "BCOM_3_Year_Minor",
+              '' AS "BCOM_3_Year_CVAC",
+              '' AS "BCOM_3_Year_AEC",
+              COALESCE(
+                  CASE
+                      WHEN sc.board_code IN ('WBCHSE','ICSE','CBSE','NIOS')
+                          THEN COALESCE(sc.board_name, sc.other_board)
+                      ELSE NULL
+                  END,
+                  ''
+              ) AS "Non_Migrating_Board",
+              COALESCE(
+                  CASE
+                      WHEN sc.board_code IS NULL THEN sc.other_board
+                      WHEN sc.board_code NOT IN ('WBCHSE','ICSE','CBSE','NIOS') THEN sc.board_name
+                      ELSE NULL
+                  END,
+                  ''
+              ) AS "Migrating_Board",
+              'Class XII' AS "Last_Exam_Name",
+              COALESCE(sc.board_code, sc.other_board, '') AS "Last_Exam_Board",
+              COALESCE(sc.board_roll_number, '') AS "Last_Exam_Roll",
+              COALESCE(sc.year_of_passing::text, '') AS "Last_Exam_YOP",
+              COALESCE(tf.subject_1, '') AS "Top_Four_Subject_1",
+              COALESCE(tf.subject_2, '') AS "Top_Four_Subject_2",
+              COALESCE(tf.subject_3, '') AS "Top_Four_Subject_3",
+              COALESCE(tf.subject_4, '') AS "Top_Four_Subject_4",
+              COALESCE(tf.full_marks_1::text, '') AS "Top_Four_Full_Marks_1",
+              COALESCE(tf.full_marks_2::text, '') AS "Top_Four_Full_Marks_2",
+              COALESCE(tf.full_marks_3::text, '') AS "Top_Four_Full_Marks_3",
+              COALESCE(tf.full_marks_4::text, '') AS "Top_Four_Full_Marks_4",
+              COALESCE(tf.marks_obt_1::text, '') AS "Top_Four_Marks_Obt_1",
+              COALESCE(tf.marks_obt_2::text, '') AS "Top_Four_Marks_Obt_2",
+              COALESCE(tf.marks_obt_3::text, '') AS "Top_Four_Marks_Obt_3",
+              COALESCE(tf.marks_obt_4::text, '') AS "Top_Four_Marks_Obt_4",
+              COALESCE(tf.pct_1::text, '') AS "Top_Four_Marks_Prcntg_1",
+              COALESCE(tf.pct_2::text, '') AS "Top_Four_Marks_Prcntg_2",
+              COALESCE(tf.pct_3::text, '') AS "Top_Four_Marks_Prcntg_3",
+              COALESCE(tf.pct_4::text, '') AS "Top_Four_Marks_Prcntg_4",
+              COALESCE(tf.total_full::text, '') AS "Total_of_Top_Four_Full_Marks",
+              COALESCE(tf.total_obt::text, '') AS "Total_of_Top_Four_Marks_Obtained",
+              COALESCE(tf.total_pct::text, '') AS "Total_of_Top_Four_Marks_Percentage",
+              COALESCE(ot.subject_1, '') AS "Others_Subject_1",
+              COALESCE(ot.subject_2, '') AS "Others_Subject_2",
+              COALESCE(ot.subject_3, '') AS "Others_Subject_3",
+              COALESCE(ot.subject_4, '') AS "Others_Subject_4",
+              COALESCE(ot.full_marks_1::text, '') AS "Others_Full_Marks_1",
+              COALESCE(ot.full_marks_2::text, '') AS "Others_Full_Marks_2",
+              COALESCE(ot.full_marks_3::text, '') AS "Others_Full_Marks_3",
+              COALESCE(ot.full_marks_4::text, '') AS "Others_Full_Marks_4",
+              COALESCE(ot.marks_obt_1::text, '') AS "Others_Marks_Obt_1",
+              COALESCE(ot.marks_obt_2::text, '') AS "Others_Marks_Obt_2",
+              COALESCE(ot.marks_obt_3::text, '') AS "Others_Marks_Obt_3",
+              COALESCE(ot.marks_obt_4::text, '') AS "Others_Marks_Obt_4",
+              COALESCE(ot.pct_1::text, '') AS "Others_Marks_Prcntg_1",
+              COALESCE(ot.pct_2::text, '') AS "Others_Marks_Prcntg_2",
+              COALESCE(ot.pct_3::text, '') AS "Others_Marks_Prcntg_3",
+              COALESCE(ot.pct_4::text, '') AS "Others_Marks_Prcntg_4",
+              'CLP' AS "Admission_Mode",
+              COALESCE(sc.apaar_id, '') AS "ABC_Id",
+              COALESCE(sc.uid::text, '') AS "UID"
+          FROM student_context sc
+          LEFT JOIN family_with_names fam ON fam.user_id = sc.user_id
+          LEFT JOIN annual_incomes ai ON ai.id = fam.annual_income_id
+          LEFT JOIN address_residential res ON res.personal_details_id = sc.personal_details_id AND res.rn = 1
+          LEFT JOIN address_mailing mail ON mail.personal_details_id = sc.personal_details_id AND mail.rn = 1
+          LEFT JOIN combined_subjects cs ON cs.student_id = sc.student_id
+          LEFT JOIN top_four_pivot tf ON tf.student_id = sc.student_id
+          LEFT JOIN others_pivot ot ON ot.student_id = sc.student_id
+          ORDER BY sc.form_number;
+        `;
+
+    // Trim the query to remove leading/trailing whitespace
+    const trimmedQuery = queryText.trim();
+
+    console.log("🔍 [CU-REG-EXPORT] Query text length:", trimmedQuery.length);
+    console.log("🔍 [CU-REG-EXPORT] Query parameters:", [academicYearIdNum]);
+    console.log(
+      "🔍 [CU-REG-EXPORT] Query text (first 1000 chars):",
+      trimmedQuery.substring(0, 1000),
+    );
+    console.log(
+      "🔍 [CU-REG-EXPORT] Query text (last 1000 chars):",
+      trimmedQuery.substring(trimmedQuery.length - 1000),
+    );
+
+    // Count parentheses to check for balance
+    const openParens = (trimmedQuery.match(/\(/g) || []).length;
+    const closeParens = (trimmedQuery.match(/\)/g) || []).length;
+    console.log(
+      "🔍 [CU-REG-EXPORT] Parentheses count - Open:",
+      openParens,
+      "Close:",
+      closeParens,
+    );
+
+    // Log the query around position 18529 if it exists (where the error occurred)
+    if (trimmedQuery.length > 18529) {
+      const startPos = Math.max(0, 18529 - 300);
+      const endPos = Math.min(trimmedQuery.length, 18529 + 300);
+      console.log(
+        "🔍 [CU-REG-EXPORT] Query text around error position (18529):",
+      );
+      console.log(trimmedQuery.substring(startPos, endPos));
+    }
+
+    let cuRegistrationReportRows: any[] = [];
+    try {
+      const result = await pool.query(trimmedQuery, [academicYearIdNum]);
+      cuRegistrationReportRows = result.rows;
+    } catch (queryError: any) {
+      console.error("❌ [CU-REG-EXPORT] SQL Query Error Details:");
+      console.error("Error code:", queryError.code);
+      console.error("Error message:", queryError.message);
+      console.error("Error position:", queryError.position);
+      console.error("Error detail:", queryError.detail);
+      console.error("Error hint:", queryError.hint);
+
+      if (queryError.position) {
+        const errorPos = queryError.position;
+        const startPos = Math.max(0, errorPos - 200);
+        const endPos = Math.min(trimmedQuery.length, errorPos + 200);
+        console.error(
+          "Query text around error position:",
+          trimmedQuery.substring(startPos, endPos),
+        );
+        console.error(
+          "Character at error position:",
+          trimmedQuery[errorPos - 1],
+          "|",
+          trimmedQuery[errorPos],
+          "|",
+          trimmedQuery[errorPos + 1],
+        );
+        console.error("Full query length:", trimmedQuery.length);
+      }
+
+      throw queryError;
+    }
+
+    console.log(
+      `🔍 [CU-REG-EXPORT] Retrieved ${cuRegistrationReportRows.length} rows for cu-reg-report`,
+    );
+
+    const cuRegWorksheet = workbook.addWorksheet("cu-reg-report");
+    const cuRegHeaders = Object.keys(
+      cuRegistrationReportRows[0] || {},
+    ) as string[];
+
+    if (cuRegHeaders.length > 0) {
+      cuRegWorksheet.columns = cuRegHeaders.map((header) => ({
+        header,
+        key: header,
+        width: 20,
+      }));
+
+      cuRegWorksheet.getRow(1).font = { bold: true };
+      cuRegWorksheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+
+      cuRegistrationReportRows.forEach((row) => {
+        cuRegWorksheet.addRow(row);
+      });
+    } else {
+      cuRegWorksheet.addRow(["No data available"]);
+    }
+
+    // Generate Excel buffer
+    const excelBuffer = await workbook.xlsx.writeBuffer();
+
+    console.log("✅ [CU-REG-EXPORT] Excel export completed successfully");
+    return Buffer.from(excelBuffer);
+  } catch (error) {
+    console.error(
+      "❌ [CU-REG-EXPORT] Error exporting CU registration correction requests:",
+      error,
+    );
+    throw error;
+  }
+};
 
 const formNumbers: string[] = [
   "0170547",
