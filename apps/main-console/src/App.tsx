@@ -303,6 +303,7 @@ const router = createBrowserRouter(
           element: <documentIssuanceModule.DocumentIssuanceMasterLayout />,
           children: [
             { path: "", element: <documentIssuanceModule.DocumentIssuanceHomePage /> },
+            { path: "student/:id", element: <documentIssuanceModule.DocumentIssuanceStudentPage /> },
             { path: "reports", element: <documentIssuanceModule.DocumentIssuanceReportsPage /> },
             { path: "types", element: <documentIssuanceModule.DocumentTypesPage /> },
             { path: "templates", element: <documentIssuanceModule.DocumentTemplatesPage /> },
