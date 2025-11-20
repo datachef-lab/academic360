@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClipboardList, Edit, PlusCircle } from "lucide-react";
-import type { Designation } from "@repo/db";
+import { DesignationT } from "@/schemas";
 
 import {
   createDesignation,
@@ -37,7 +37,7 @@ const designationSchema = z.object({
 type DesignationFormValues = z.infer<typeof designationSchema>;
 
 interface DesignationFormProps {
-  initialData: Designation | null;
+  initialData: DesignationT | null;
   onSubmit: (payload: DesignationPayload) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
@@ -113,12 +113,12 @@ function DesignationForm({ initialData, onSubmit, onCancel, isSubmitting }: Desi
 }
 
 export default function DesignationPage() {
-  const [designations, setDesignations] = useState<Designation[]>([]);
+  const [designations, setDesignations] = useState<DesignationT[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-  const [selectedDesignation, setSelectedDesignation] = useState<Designation | null>(null);
+  const [selectedDesignation, setSelectedDesignation] = useState<DesignationT | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
