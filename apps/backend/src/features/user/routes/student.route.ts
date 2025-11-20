@@ -14,6 +14,8 @@ import {
   updateFamilyMemberTitlesController,
   bulkUpdateFamilyMemberTitlesController,
   importStudentsFromExcelController,
+  exportStudentDetailedReportController,
+  exportStudentAcademicSubjectsReportController,
 } from "../controllers/student.controller.js";
 
 import { uploadMiddleware } from "../controllers/student-apaar-update.controller.js";
@@ -68,6 +70,12 @@ router.post(
 // PUT /api/students/:uid/family-titles
 // Update family member titles (father, mother, guardian) for a student
 router.put("/:uid/family-titles", updateFamilyMemberTitlesController);
+
+router.get("/export/detailed-report", exportStudentDetailedReportController);
+router.get(
+  "/export/academic-subjects",
+  exportStudentAcademicSubjectsReportController,
+);
 
 router.delete("/", deleteStudent);
 

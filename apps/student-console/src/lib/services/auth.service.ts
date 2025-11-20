@@ -351,15 +351,29 @@ export async function lookupUsersByPrefix(
 
 export async function adminBypassOtpLogin(
   uid: string,
-  adminToken: string,
+  adminToken?: string,
+  isSimulationMode?: boolean,
 ): Promise<ApiResponse<{ accessToken: string; refreshToken: string; user: UserDto }>> {
+  const headers: Record<string, string> = {};
+  // Only add header if token is provided (backend will check cookie if not provided)
+  if (adminToken) {
+    headers["X-Admin-Bypass-Token"] = adminToken;
+  }
+  // Add simulation mode header to help backend detect iframe context
+  if (isSimulationMode) {
+    headers["X-Simulation-Mode"] = "true";
+    console.log("[SIMULATION] Sending X-Simulation-Mode header with admin bypass request");
+  } else {
+    console.log("[SIMULATION] NOT in simulation mode, not sending header");
+  }
+
+  console.log("[SIMULATION] Admin bypass request headers:", headers);
+
   const response = await axiosInstance.post(
     "/auth/otp/admin-bypass",
     { uid },
     {
-      headers: {
-        "X-Admin-Bypass-Token": adminToken,
-      },
+      headers,
     },
   );
   return response.data;

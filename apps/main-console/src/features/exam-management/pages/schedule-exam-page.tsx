@@ -110,7 +110,7 @@ export default function ScheduleExamPage() {
   const [selectedProgramCourses, setSelectedProgramCourses] = useState<number[]>([]);
   const [selectedShifts, setSelectedShifts] = useState<number[]>([]);
   const [selectedSubjectCategories, setSelectedSubjectCategories] = useState<number[]>([]);
-  const [selectedPaper, setSelectedPaper] = useState<number | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [selectedExamComponent, setSelectedExamComponent] = useState<number | null>(null);
   const [totalStudents, setTotalStudents] = useState(0);
   const [studentsWithSeats, setStudentsWithSeats] = useState<StudentWithSeat[]>([]);
@@ -123,8 +123,8 @@ export default function ScheduleExamPage() {
   const [totalCapacity, setTotalCapacity] = useState(0);
   const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
 
-  // Step 3: Exam Schedule
-  const [paperSchedules, setPaperSchedules] = useState<Record<string, Schedule>>({});
+  // Step 3: Exam Schedule (keyed by subjectId)
+  const [subjectSchedules, setSubjectSchedules] = useState<Record<string, Schedule>>({});
 
   // Assignments
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -394,7 +394,60 @@ export default function ScheduleExamPage() {
     return allStudents.filter((s) => s.gender === filterGender);
   }, [gender, generateMockStudents]);
 
-  // Fetch student count from API based on selected papers
+  const getAvailablePapers = useCallback((): PaperDto[] => {
+    let filtered = papers.filter((paper) => paper.isActive !== false);
+
+    // Filter by selected exam component if one is selected
+    if (selectedExamComponent !== null) {
+      filtered = filtered.filter((paper) => {
+        // Check if paper has components array and if any component has the selected exam component
+        return (
+          paper.components &&
+          Array.isArray(paper.components) &&
+          paper.components.some((component) => component.examComponent?.id === selectedExamComponent)
+        );
+      });
+    }
+
+    return filtered;
+  }, [papers, selectedExamComponent]);
+
+  const getDistinctSubjects = (): Array<{
+    subjectId: number | null;
+    subjectName: string;
+    subjectCode: string | null;
+  }> => {
+    const availablePapers = getAvailablePapers();
+    const subjectMap = new Map<number | null, { name: string; code: string | null }>();
+
+    availablePapers.forEach((paper) => {
+      if (paper.subjectId) {
+        const subject = subjects.find((s) => s.id === paper.subjectId);
+        const subjectName = subject?.name || `Subject ID: ${paper.subjectId}`;
+        const subjectCode = subject?.code || null;
+        if (!subjectMap.has(paper.subjectId)) {
+          subjectMap.set(paper.subjectId, { name: subjectName, code: subjectCode });
+        }
+      } else {
+        if (!subjectMap.has(null)) {
+          subjectMap.set(null, { name: "Unknown Subject", code: null });
+        }
+      }
+    });
+
+    return Array.from(subjectMap.entries()).map(([subjectId, subjectData]) => ({
+      subjectId,
+      subjectName: subjectData.name,
+      subjectCode: subjectData.code,
+    }));
+  };
+
+  const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
+    if (!selectedSubjectId) return [];
+    return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
+  }, [selectedSubjectId, getAvailablePapers]);
+
+  // Fetch student count from API based on selected subject
   useEffect(() => {
     const fetchStudentCount = async () => {
       // Check if currentAcademicYear is available
@@ -404,7 +457,15 @@ export default function ScheduleExamPage() {
         return;
       }
 
-      if (selectedProgramCourses.length === 0 || !semester || !selectedPaper) {
+      if (selectedProgramCourses.length === 0 || !semester || !selectedSubjectId) {
+        setTotalStudents(0);
+        return;
+      }
+
+      const papersForSubject = getPapersForSelectedSubject();
+      const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
+
+      if (paperIds.length === 0) {
         setTotalStudents(0);
         return;
       }
@@ -419,7 +480,7 @@ export default function ScheduleExamPage() {
         console.log("[SCHEDULE-EXAM] Fetching student count with params:", {
           classId: classObj.id,
           programCourseIds: selectedProgramCourses,
-          paperIds: [selectedPaper],
+          paperIds,
           academicYearIds: [currentAcademicYear.id],
           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
         });
@@ -427,7 +488,7 @@ export default function ScheduleExamPage() {
         const response = await countStudentsForExam({
           classId: classObj.id,
           programCourseIds: selectedProgramCourses,
-          paperIds: [selectedPaper],
+          paperIds,
           academicYearIds: [currentAcademicYear.id],
           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
         });
@@ -447,25 +508,15 @@ export default function ScheduleExamPage() {
     };
 
     void fetchStudentCount();
-  }, [selectedProgramCourses, selectedShifts, semester, selectedPaper, classes, currentAcademicYear]);
-
-  const getAvailablePapers = (): PaperDto[] => {
-    let filtered = papers.filter((paper) => paper.isActive !== false);
-
-    // Filter by selected exam component if one is selected
-    if (selectedExamComponent !== null) {
-      filtered = filtered.filter((paper) => {
-        // Check if paper has components array and if any component has the selected exam component
-        return (
-          paper.components &&
-          Array.isArray(paper.components) &&
-          paper.components.some((component) => component.examComponent?.id === selectedExamComponent)
-        );
-      });
-    }
-
-    return filtered;
-  };
+  }, [
+    selectedProgramCourses,
+    selectedShifts,
+    semester,
+    selectedSubjectId,
+    classes,
+    currentAcademicYear,
+    getPapersForSelectedSubject,
+  ]);
 
   useEffect(() => {
     const capacity = selectedRooms.reduce((total, room) => {
@@ -483,9 +534,17 @@ export default function ScheduleExamPage() {
         selectedRooms.length === 0 ||
         selectedProgramCourses.length === 0 ||
         !semester ||
-        !selectedPaper ||
+        !selectedSubjectId ||
         !currentAcademicYear?.id
       ) {
+        setStudentsWithSeats([]);
+        return;
+      }
+
+      const papersForSubject = getPapersForSelectedSubject();
+      const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
+
+      if (paperIds.length === 0) {
         setStudentsWithSeats([]);
         return;
       }
@@ -515,7 +574,7 @@ export default function ScheduleExamPage() {
         const response = await getStudentsForExam({
           classId: classObj.id,
           programCourseIds: selectedProgramCourses,
-          paperIds: [selectedPaper],
+          paperIds,
           academicYearIds: [currentAcademicYear.id],
           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
           assignBy,
@@ -541,11 +600,12 @@ export default function ScheduleExamPage() {
     selectedProgramCourses,
     selectedShifts,
     semester,
-    selectedPaper,
+    selectedSubjectId,
     classes,
     currentAcademicYear,
     assignBy,
     floors,
+    getPapersForSelectedSubject,
   ]);
 
   const handleProgramCourseToggle = (courseId: number) => {
@@ -592,9 +652,10 @@ export default function ScheduleExamPage() {
     );
   };
 
-  const handleScheduleChange = (paperId: number | string, field: keyof Schedule, value: string) => {
-    const id = typeof paperId === "number" ? paperId.toString() : paperId;
-    setPaperSchedules((prev) => ({
+  const handleScheduleChange = (subjectId: number | string | null, field: keyof Schedule, value: string) => {
+    if (subjectId === null) return;
+    const id = typeof subjectId === "number" ? subjectId.toString() : subjectId;
+    setSubjectSchedules((prev) => ({
       ...prev,
       [id]: {
         ...prev[id],
@@ -637,16 +698,15 @@ export default function ScheduleExamPage() {
       const maxStudentsPerBench = currentRoom.maxStudentsPerBenchOverride || currentRoom.maxStudentsPerBench || 2;
       const roomCapacity = (currentRoom.numberOfBenches || 0) * maxStudentsPerBench;
 
-      const studentPapers = getAvailablePapers()
-        .filter((p) => p.id === selectedPaper)
-        .map((paper) => ({
-          paperId: paper.id?.toString() || "",
-          name: paper.name || "Unnamed Paper",
-          date: paperSchedules[paper.id?.toString() || ""]?.date || "TBD",
-          time: paperSchedules[paper.id?.toString() || ""]?.startTime
-            ? `${formatTime(paperSchedules[paper.id?.toString() || ""]?.startTime)} - ${formatTime(paperSchedules[paper.id?.toString() || ""]?.endTime)}`
-            : "TBD",
-        }));
+      const subjectSchedule = selectedSubjectId ? subjectSchedules[selectedSubjectId.toString()] : null;
+      const studentPapers = getPapersForSelectedSubject().map((paper) => ({
+        paperId: paper.id?.toString() || "",
+        name: paper.name || "Unnamed Paper",
+        date: subjectSchedule?.date || "TBD",
+        time: subjectSchedule?.startTime
+          ? `${formatTime(subjectSchedule.startTime)} - ${formatTime(subjectSchedule.endTime)}`
+          : "TBD",
+      }));
 
       const seatNo = generateSeatNumber(currentBench, currentPosition, maxStudentsPerBench);
 
@@ -729,7 +789,6 @@ export default function ScheduleExamPage() {
   };
 
   const capacityStatus = totalCapacity >= totalStudents;
-  const availablePapers = getAvailablePapers();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -956,46 +1015,45 @@ export default function ScheduleExamPage() {
                       <Loader2 className="h-4 w-4 animate-spin" />
                       <span className="ml-2 text-sm text-gray-500">Loading papers...</span>
                     </div>
-                  ) : availablePapers.length === 0 ? (
+                  ) : getDistinctSubjects().length === 0 ? (
                     <p className="text-sm text-gray-500 text-center py-8">
-                      Select courses and categories to see papers
+                      Select courses and categories to see subjects
                     </p>
                   ) : (
-                    availablePapers.map((paper) => {
-                      const isSelected = paper.id !== undefined && paper.id === selectedPaper;
-                      return (
-                        <div
-                          key={paper.id}
-                          className={`flex items-start space-x-3 p-3 bg-white rounded-lg border-2 transition-colors cursor-pointer ${
-                            isSelected ? "border-purple-500 bg-purple-50" : "hover:border-purple-400/50"
-                          }`}
-                          onClick={() => {
-                            if (paper.id !== undefined) {
-                              setSelectedPaper(paper.id);
-                            }
-                          }}
-                        >
-                          <div className="mt-1 flex items-center justify-center">
-                            <div
-                              className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
-                                isSelected ? "border-purple-600 bg-purple-600" : "border-gray-300"
-                              }`}
-                            >
-                              {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                    <div className="space-y-2">
+                      {getDistinctSubjects().map((subject) => {
+                        const isSelected = subject.subjectId === selectedSubjectId;
+                        return (
+                          <div
+                            key={subject.subjectId || "unknown"}
+                            className={`flex items-start space-x-3 p-3 bg-white rounded-lg border-2 transition-colors cursor-pointer ${
+                              isSelected ? "border-purple-500 bg-purple-50" : "hover:border-purple-400/50"
+                            }`}
+                            onClick={() => {
+                              setSelectedSubjectId(subject.subjectId);
+                            }}
+                          >
+                            <div className="mt-1 flex items-center justify-center">
+                              <div
+                                className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
+                                  isSelected ? "border-purple-600 bg-purple-600" : "border-gray-300"
+                                }`}
+                              >
+                                {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                              </div>
                             </div>
+                            <Label className="cursor-pointer flex-1">
+                              <div className="font-semibold text-sm">
+                                {subject.subjectName}
+                                {subject.subjectCode && (
+                                  <span className="text-gray-500 font-normal"> ({subject.subjectCode})</span>
+                                )}
+                              </div>
+                            </Label>
                           </div>
-                          <Label className="cursor-pointer flex-1">
-                            <div className="font-semibold text-sm">
-                              {paper.subjectId
-                                ? subjects.find((s) => s.id === paper.subjectId)?.name ||
-                                  `Subject ID: ${paper.subjectId}`
-                                : "Unknown Subject"}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">Paper: {paper.name || "Unnamed Paper"}</div>
-                          </Label>
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1322,70 +1380,61 @@ export default function ScheduleExamPage() {
               </div>
             </CardHeader>
             <CardContent className="p-6 overflow-y-auto max-h-[calc(100vh-280px)] scrollbar-hide">
-              {!selectedPaper || !availablePapers.find((p) => p.id === selectedPaper) ? (
+              {!selectedSubjectId || getPapersForSelectedSubject().length === 0 ? (
                 <div className="text-center py-12">
                   <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                  <p className="font-semibold text-gray-600">No Paper Selected</p>
-                  <p className="text-sm text-gray-400 mt-1">Select a paper in Section 1</p>
+                  <p className="font-semibold text-gray-600">No Subject Selected</p>
+                  <p className="text-sm text-gray-400 mt-1">Select a subject in Section 1</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {availablePapers
-                    .filter((paper) => paper.id === selectedPaper)
-                    .map((paper) => {
-                      if (!paper.id) return null;
-                      const paperId = paper.id.toString();
-                      return (
-                        <div
-                          key={paper.id}
-                          className="p-4 border-2 rounded-xl hover:border-purple-400/50 transition-colors bg-white"
-                        >
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="font-semibold">
-                                {paper.subjectId
-                                  ? subjects.find((s) => s.id === paper.subjectId)?.name ||
-                                    `Subject ID: ${paper.subjectId}`
-                                  : "Unknown Subject"}
-                              </Label>
-                              <div className="text-xs text-gray-500 mt-1">Paper: {paper.name || "Unnamed Paper"}</div>
-                            </div>
-                            <div className="space-y-3">
-                              <div>
-                                <Label className="text-xs font-semibold mb-1.5 block">Exam Date</Label>
-                                <Input
-                                  type="date"
-                                  value={paperSchedules[paperId]?.date || ""}
-                                  onChange={(e) => handleScheduleChange(paperId, "date", e.target.value)}
-                                  className="h-9"
-                                />
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <Label className="text-xs font-semibold mb-1.5 block">Start Time</Label>
-                                  <Input
-                                    type="time"
-                                    value={paperSchedules[paperId]?.startTime || ""}
-                                    onChange={(e) => handleScheduleChange(paperId, "startTime", e.target.value)}
-                                    className="h-9"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-semibold mb-1.5 block">End Time</Label>
-                                  <Input
-                                    type="time"
-                                    value={paperSchedules[paperId]?.endTime || ""}
-                                    onChange={(e) => handleScheduleChange(paperId, "endTime", e.target.value)}
-                                    className="h-9"
-                                  />
-                                </div>
-                              </div>
-                            </div>
+                  <div className="p-4 border-2 rounded-xl hover:border-purple-400/50 transition-colors bg-white">
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="font-semibold">
+                          {selectedSubjectId
+                            ? subjects.find((s) => s.id === selectedSubjectId)?.name ||
+                              `Subject ID: ${selectedSubjectId}`
+                            : "Unknown Subject"}
+                        </Label>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {getPapersForSelectedSubject().length} paper
+                          {getPapersForSelectedSubject().length !== 1 ? "s" : ""} for this subject
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs font-semibold mb-1.5 block">Exam Date</Label>
+                          <Input
+                            type="date"
+                            value={subjectSchedules[selectedSubjectId.toString()]?.date || ""}
+                            onChange={(e) => handleScheduleChange(selectedSubjectId, "date", e.target.value)}
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs font-semibold mb-1.5 block">Start Time</Label>
+                            <Input
+                              type="time"
+                              value={subjectSchedules[selectedSubjectId.toString()]?.startTime || ""}
+                              onChange={(e) => handleScheduleChange(selectedSubjectId, "startTime", e.target.value)}
+                              className="h-9"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-semibold mb-1.5 block">End Time</Label>
+                            <Input
+                              type="time"
+                              value={subjectSchedules[selectedSubjectId.toString()]?.endTime || ""}
+                              onChange={(e) => handleScheduleChange(selectedSubjectId, "endTime", e.target.value)}
+                              className="h-9"
+                            />
                           </div>
                         </div>
-                      );
-                    })
-                    .filter(Boolean)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -1515,16 +1564,16 @@ export default function ScheduleExamPage() {
                             {assignBy === "UID" ? "UID" : "CU Reg. No."}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                            Email
+                            Contact
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                            WhatsApp Phone
+                            Subject
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                            Floor
+                            Paper
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                            Room
+                            Location
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider bg-gray-100">
                             Seat Number
@@ -1549,24 +1598,33 @@ export default function ScheduleExamPage() {
                               {assignBy === "UID" ? student.uid : student.cuRegistrationApplicationNumber || "N/A"}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-700 border-r border-gray-300">
-                              {student.email || "N/A"}
+                              <div className="space-y-1">
+                                <div>{student.email || "N/A"}</div>
+                                <div className="text-xs text-gray-500">WA: {student.whatsappPhone || "N/A"}</div>
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-700 border-r border-gray-300">
-                              {student.whatsappPhone || "N/A"}
+                              {selectedSubjectId
+                                ? (() => {
+                                    const subject = subjects.find((s) => s.id === selectedSubjectId);
+                                    return subject?.code && subject.code.trim() ? subject.code : subject?.name || "N/A";
+                                  })()
+                                : "N/A"}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-700 border-r border-gray-300">
-                              {student.floorName || "N/A"}
+                              {getPapersForSelectedSubject()
+                                .map((paper) => {
+                                  const paperCode = paper.code && paper.code.trim() ? paper.code : null;
+                                  return paperCode || paper.name || "Unnamed Paper";
+                                })
+                                .join(", ") || "N/A"}
                             </td>
-                            <td className="px-4 py-3 border-r border-gray-300">
-                              <Badge className="font-mono text-xs bg-purple-500 hover:bg-purple-600 text-white">
-                                {student.roomName}
-                              </Badge>
+                            <td className="px-4 py-3 text-sm text-gray-700 border-r border-gray-300">
+                              {student.floorName && student.roomName
+                                ? `${student.floorName}, ${student.roomName}`
+                                : student.floorName || student.roomName || "N/A"}
                             </td>
-                            <td className="px-4 py-3">
-                              <Badge variant="outline" className="font-mono font-bold border-2 text-xs">
-                                {student.seatNumber}
-                              </Badge>
-                            </td>
+                            <td className="px-4 py-3 text-sm font-mono text-gray-700">{student.seatNumber}</td>
                           </tr>
                         ))}
                       </tbody>
