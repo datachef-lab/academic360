@@ -1,5 +1,5 @@
 import axiosInstance from "@/utils/api";
-import type { ApiResponse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import { DesignationT } from "@/schemas";
 
 const BASE_URL = "/api/administration/designations";
