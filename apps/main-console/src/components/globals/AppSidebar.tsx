@@ -103,8 +103,8 @@ const data = {
       icon: Megaphone, // already imported
     },
     {
-      title: "Faculty & Staff",
-      url: "/dashboard/faculty-staff",
+      title: "User Groups & Accesses",
+      url: "/dashboard/user-groups-accesses",
       icon: UserCog, // new icon
     },
     {
