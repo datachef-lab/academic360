@@ -3,40 +3,42 @@ import MasterLayout from "@/components/layouts/MasterLayout";
 import { LayoutDashboard, Users2, UserPlus, BadgeCheck, FileText, Building2 } from "lucide-react";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
+const basePath = "/dashboard/user-groups-accesses";
+
 const subLinks = [
   {
     title: "Home",
-    url: "/dashboard/faculty-staff",
+    url: basePath,
     icon: LayoutDashboard,
   },
   {
-    title: "Faculty List",
-    url: "/dashboard/faculty-staff/faculties",
+    title: "User Directory",
+    url: `${basePath}/faculties`,
     icon: Users2,
   },
   {
-    title: "Add Faculty/Staff",
-    url: "/dashboard/faculty-staff/create",
+    title: "Add User",
+    url: `${basePath}/create`,
     icon: UserPlus,
   },
   {
     title: "Departments",
-    url: "/dashboard/faculty-staff/departments",
+    url: `${basePath}/departments`,
     icon: Building2,
   },
   {
     title: "Roles & Permissions",
-    url: "/dashboard/faculty-staff/roles",
+    url: `${basePath}/roles`,
     icon: BadgeCheck,
   },
   {
     title: "Reports",
-    url: "/dashboard/faculty-staff/reports",
+    url: `${basePath}/reports`,
     icon: FileText,
   },
 ];
 
-export default function FacultyStaffMaster() {
+export default function UserGroupsAccessMaster() {
   useRestrictTempUsers();
   return (
     <MasterLayout subLinks={subLinks}>

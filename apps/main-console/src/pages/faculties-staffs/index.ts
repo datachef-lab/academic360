@@ -1,3 +1,3 @@
-import FacultyStaffMaster from "./FacultStaffMaster";
+import UserGroupsAccessMaster from "./FacultStaffMaster";
 
-export { FacultyStaffMaster }
+export { UserGroupsAccessMaster };

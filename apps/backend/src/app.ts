@@ -77,6 +77,7 @@ import {
   examScheduleRouter,
   departmentRouter,
   designationRouter,
+  subDepartmentRouter,
 } from "@/features/index.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
@@ -386,6 +387,8 @@ app.use("/api/qualifications", qualificationRouter);
 app.use("/api/administration/departments", departmentRouter);
 
 app.use("/api/administration/designations", designationRouter);
+
+app.use("/api/administration/sub-departments", subDepartmentRouter);
 
 app.use("/api/address", addressRouter);
 

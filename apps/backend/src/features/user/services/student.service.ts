@@ -1304,6 +1304,368 @@ export async function generateExport() {
   };
 }
 
+export async function exportStudentDetailedReport(academicYearId: number) {
+  console.log(
+    "[STUDENT-EXPORT] Generating detailed student report for academic year:",
+    academicYearId,
+  );
+
+  const { rows } = await db.execute(
+    sql`
+      WITH addr AS (
+        SELECT
+          a.id,
+          a.personal_details_id_fk,
+          a.type,
+          a.other_country,
+          a.other_state,
+          a.other_city,
+          a.other_district,
+          a.address,
+          a.address_line,
+          a.landmark,
+          a.locality_type,
+          a.postoffice_id_fk,
+          a.other_postoffice,
+          a.police_station_id_fk,
+          a.other_police_station,
+          a.block,
+          a.phone,
+          a.emergency_phone,
+          a.pincode,
+          co.name AS country_name,
+          st.name AS state_name,
+          ci.name AS city_name,
+          di.name AS district_name,
+          ROW_NUMBER() OVER (
+            PARTITION BY a.personal_details_id_fk
+            ORDER BY
+              CASE a.type
+                WHEN 'RESIDENTIAL' THEN 0
+                WHEN 'MAILING' THEN 1
+                ELSE 2
+              END,
+              a.id
+          ) AS rn
+        FROM address a
+        LEFT JOIN countries co ON co.id = a.country_id_fk
+        LEFT JOIN states st ON st.id = a.state_id_fk
+        LEFT JOIN cities ci ON ci.id = a.city_id_fk
+        LEFT JOIN districts di ON di.id = a.district_id_fk
+      ),
+      addr_pivot AS (
+        SELECT
+          personal_details_id_fk,
+          MAX(CASE WHEN rn = 1 THEN type END) AS address_1_type,
+          MAX(CASE WHEN rn = 1 THEN address END) AS address_1_address,
+          MAX(CASE WHEN rn = 1 THEN address_line END) AS address_1_address_line,
+          MAX(CASE WHEN rn = 1 THEN landmark END) AS address_1_landmark,
+          MAX(CASE WHEN rn = 1 THEN locality_type END) AS address_1_locality_type,
+          MAX(CASE WHEN rn = 1 THEN block END) AS address_1_block,
+          MAX(CASE WHEN rn = 1 THEN phone END) AS address_1_phone,
+          MAX(CASE WHEN rn = 1 THEN emergency_phone END) AS address_1_emergency_phone,
+          MAX(CASE WHEN rn = 1 THEN pincode END) AS address_1_pincode,
+          MAX(CASE WHEN rn = 1 THEN country_name END) AS address_1_country_name,
+          MAX(CASE WHEN rn = 1 THEN state_name END) AS address_1_state_name,
+          MAX(CASE WHEN rn = 1 THEN city_name END) AS address_1_city_name,
+          MAX(CASE WHEN rn = 1 THEN district_name END) AS address_1_district_name,
+          MAX(CASE WHEN rn = 1 THEN other_country END) AS address_1_other_country,
+          MAX(CASE WHEN rn = 1 THEN other_state END) AS address_1_other_state,
+          MAX(CASE WHEN rn = 1 THEN other_city END) AS address_1_other_city,
+          MAX(CASE WHEN rn = 1 THEN other_district END) AS address_1_other_district,
+          MAX(CASE WHEN rn = 1 THEN other_postoffice END) AS address_1_other_postoffice,
+          MAX(CASE WHEN rn = 1 THEN other_police_station END) AS address_1_other_police_station,
+          MAX(CASE WHEN rn = 2 THEN type END) AS address_2_type,
+          MAX(CASE WHEN rn = 2 THEN address END) AS address_2_address,
+          MAX(CASE WHEN rn = 2 THEN address_line END) AS address_2_address_line,
+          MAX(CASE WHEN rn = 2 THEN landmark END) AS address_2_landmark,
+          MAX(CASE WHEN rn = 2 THEN locality_type END) AS address_2_locality_type,
+          MAX(CASE WHEN rn = 2 THEN block END) AS address_2_block,
+          MAX(CASE WHEN rn = 2 THEN phone END) AS address_2_phone,
+          MAX(CASE WHEN rn = 2 THEN emergency_phone END) AS address_2_emergency_phone,
+          MAX(CASE WHEN rn = 2 THEN pincode END) AS address_2_pincode,
+          MAX(CASE WHEN rn = 2 THEN country_name END) AS address_2_country_name,
+          MAX(CASE WHEN rn = 2 THEN state_name END) AS address_2_state_name,
+          MAX(CASE WHEN rn = 2 THEN city_name END) AS address_2_city_name,
+          MAX(CASE WHEN rn = 2 THEN district_name END) AS address_2_district_name,
+          MAX(CASE WHEN rn = 2 THEN other_country END) AS address_2_other_country,
+          MAX(CASE WHEN rn = 2 THEN other_state END) AS address_2_other_state,
+          MAX(CASE WHEN rn = 2 THEN other_city END) AS address_2_other_city,
+          MAX(CASE WHEN rn = 2 THEN other_district END) AS address_2_other_district,
+          MAX(CASE WHEN rn = 2 THEN other_postoffice END) AS address_2_other_postoffice,
+          MAX(CASE WHEN rn = 2 THEN other_police_station END) AS address_2_other_police_station,
+          MAX(CASE WHEN rn = 3 THEN type END) AS address_3_type,
+          MAX(CASE WHEN rn = 3 THEN address END) AS address_3_address,
+          MAX(CASE WHEN rn = 3 THEN address_line END) AS address_3_address_line,
+          MAX(CASE WHEN rn = 3 THEN landmark END) AS address_3_landmark,
+          MAX(CASE WHEN rn = 3 THEN locality_type END) AS address_3_locality_type,
+          MAX(CASE WHEN rn = 3 THEN block END) AS address_3_block,
+          MAX(CASE WHEN rn = 3 THEN phone END) AS address_3_phone,
+          MAX(CASE WHEN rn = 3 THEN emergency_phone END) AS address_3_emergency_phone,
+          MAX(CASE WHEN rn = 3 THEN pincode END) AS address_3_pincode,
+          MAX(CASE WHEN rn = 3 THEN country_name END) AS address_3_country_name,
+          MAX(CASE WHEN rn = 3 THEN state_name END) AS address_3_state_name,
+          MAX(CASE WHEN rn = 3 THEN city_name END) AS address_3_city_name,
+          MAX(CASE WHEN rn = 3 THEN district_name END) AS address_3_district_name,
+          MAX(CASE WHEN rn = 3 THEN other_country END) AS address_3_other_country,
+          MAX(CASE WHEN rn = 3 THEN other_state END) AS address_3_other_state,
+          MAX(CASE WHEN rn = 3 THEN other_city END) AS address_3_other_city,
+          MAX(CASE WHEN rn = 3 THEN other_district END) AS address_3_other_district,
+          MAX(CASE WHEN rn = 3 THEN other_postoffice END) AS address_3_other_postoffice,
+          MAX(CASE WHEN rn = 3 THEN other_police_station END) AS address_3_other_police_station
+        FROM addr
+        GROUP BY personal_details_id_fk
+      )
+      SELECT
+        u.email AS user_institutional_email,
+        u.name AS user_name,
+        pd.email AS personal_email,
+        u.phone AS user_phone,
+        u.whatsapp_number AS user_whatsappnumber,
+        u.is_active AS user_is_active,
+        std.uid AS student_uid,
+        std.old_uid AS student_old_uid,
+        sh.name AS shift,
+        sec.name AS section,
+        std.rfid_number AS student_rfid_number,
+        std.class_roll_number AS student_class_roll_number,
+        pd.aadhaar_card_number AS personal_details_aadhaar_card_number,
+        pd.date_of_birth AS personal_details_dateOfBirth,
+        pd.gender AS personal_details_gender,
+        father.name AS father_person_name,
+        mother.name AS mother_person_name,
+        pc.name AS promotion_program_course_name,
+        rel.name AS personal_details_religion,
+        nat.name AS personal_details_nationality,
+        cat.name AS personal_details_category,
+        ap.address_1_type,
+        ap.address_1_address,
+        ap.address_1_address_line,
+        ap.address_1_landmark,
+        ap.address_1_locality_type,
+        ap.address_1_block,
+        ap.address_1_phone,
+        ap.address_1_emergency_phone,
+        ap.address_1_pincode,
+        ap.address_1_country_name,
+        ap.address_1_state_name,
+        ap.address_1_city_name,
+        ap.address_1_district_name,
+        ap.address_1_other_country,
+        ap.address_1_other_state,
+        ap.address_1_other_city,
+        ap.address_1_other_district,
+        ap.address_1_other_postoffice,
+        ap.address_1_other_police_station,
+        ap.address_2_type,
+        ap.address_2_address,
+        ap.address_2_address_line,
+        ap.address_2_landmark,
+        ap.address_2_locality_type,
+        ap.address_2_block,
+        ap.address_2_phone,
+        ap.address_2_emergency_phone,
+        ap.address_2_pincode,
+        ap.address_2_country_name,
+        ap.address_2_state_name,
+        ap.address_2_city_name,
+        ap.address_2_district_name,
+        ap.address_2_other_country,
+        ap.address_2_other_state,
+        ap.address_2_other_city,
+        ap.address_2_other_district,
+        ap.address_2_other_postoffice,
+        ap.address_2_other_police_station,
+        ap.address_3_type,
+        ap.address_3_address,
+        ap.address_3_address_line,
+        ap.address_3_landmark,
+        ap.address_3_locality_type,
+        ap.address_3_block,
+        ap.address_3_phone,
+        ap.address_3_emergency_phone,
+        ap.address_3_pincode,
+        ap.address_3_country_name,
+        ap.address_3_state_name,
+        ap.address_3_city_name,
+        ap.address_3_district_name,
+        ap.address_3_other_country,
+        ap.address_3_other_state,
+        ap.address_3_other_city,
+        ap.address_3_other_district,
+        ap.address_3_other_postoffice,
+        ap.address_3_other_police_station
+      FROM users u
+      JOIN students std ON u.id = std.user_id_fk
+      JOIN promotions pr ON pr.student_id_fk = std.id
+      JOIN program_courses pc ON pr.program_course_id_fk = pc.id
+      JOIN sessions sess ON pr.session_id_fk = sess.id
+      JOIN personal_details pd ON pd.user_id_fk = u.id
+      LEFT JOIN nationality nat ON nat.id = pd.nationality_id_fk
+      LEFT JOIN religion rel ON rel.id = pd.religion_id_fk
+      LEFT JOIN categories cat ON cat.id = pd.category_id_fk
+      JOIN application_forms af ON af.id = std.application_form_id_fk
+      JOIN family_details fd ON fd.user_id_fk = u.id
+      LEFT JOIN sections sec ON sec.id = pr.section_id_fk
+      LEFT JOIN shifts sh ON sh.id = pr.shift_id_fk
+      LEFT JOIN person father ON father.family_id_fk = fd.id AND father.type = 'FATHER'
+      LEFT JOIN person mother ON mother.family_id_fk = fd.id AND mother.type = 'MOTHER'
+      LEFT JOIN addr_pivot ap ON ap.personal_details_id_fk = pd.id
+      WHERE u.type = 'STUDENT'
+        AND sess.academic_id_fk = ${academicYearId};
+    `,
+  );
+
+  console.log(
+    `[STUDENT-EXPORT] Retrieved ${rows.length} rows for detailed student report`,
+  );
+
+  const workbook = XLSX.utils.book_new();
+
+  if (rows.length > 0) {
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "student_data");
+  } else {
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["message"],
+      ["No data available"],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "student_data");
+  }
+
+  const excelBuffer = XLSX.write(workbook, {
+    type: "buffer",
+    bookType: "xlsx",
+  });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+  return {
+    buffer: excelBuffer,
+    fileName: `student_data_export_${timestamp}.xlsx`,
+    totalRecords: rows.length,
+  };
+}
+
+export async function exportStudentAcademicSubjectsReport(
+  academicYearId: number,
+) {
+  console.log(
+    "[STUDENT-EXPORT] Generating student academic subjects report for academic year:",
+    academicYearId,
+  );
+
+  const { rows } = await db.execute(
+    sql`
+      SELECT
+        DISTINCT std.uid AS student_uid,
+        b.name AS student_academic_info_board_name,
+        ai.other_board,
+        ai.percentage_of_marks,
+        ai.division,
+        ai.rank,
+        ai.index_number_1,
+        ai.index_number_2,
+        ai.registration_number,
+        ai.roll_number,
+        ai.school_number,
+        ai.center_number,
+        ai.admit_card_id,
+        MAX(CASE WHEN subj_no = 1 THEN bsn.name ELSE NULL END) AS student_ref_academic_subject_1_board_subject_name,
+        MAX(CASE WHEN subj_no = 1 THEN sa.total_marks ELSE NULL END) AS student_ref_academic_subject_1_total_marks,
+        MAX(CASE WHEN subj_no = 1 THEN sa.result_status ELSE NULL END) AS student_ref_academic_subject_1_result_status,
+        MAX(CASE WHEN subj_no = 2 THEN bsn.name ELSE NULL END) AS student_ref_academic_subject_2_board_subject_name,
+        MAX(CASE WHEN subj_no = 2 THEN sa.total_marks ELSE NULL END) AS student_ref_academic_subject_2_total_marks,
+        MAX(CASE WHEN subj_no = 2 THEN sa.result_status ELSE NULL END) AS student_ref_academic_subject_2_result_status,
+        MAX(CASE WHEN subj_no = 3 THEN bsn.name ELSE NULL END) AS student_ref_academic_subject_3_board_subject_name,
+        MAX(CASE WHEN subj_no = 3 THEN sa.total_marks ELSE NULL END) AS student_ref_academic_subject_3_total_marks,
+        MAX(CASE WHEN subj_no = 3 THEN sa.result_status ELSE NULL END) AS student_ref_academic_subject_3_result_status,
+        MAX(CASE WHEN subj_no = 4 THEN bsn.name ELSE NULL END) AS student_ref_academic_subject_4_board_subject_name,
+        MAX(CASE WHEN subj_no = 4 THEN sa.total_marks ELSE NULL END) AS student_ref_academic_subject_4_total_marks,
+        MAX(CASE WHEN subj_no = 4 THEN sa.result_status ELSE NULL END) AS student_ref_academic_subject_4_result_status,
+        MAX(CASE WHEN subj_no = 5 THEN bsn.name ELSE NULL END) AS student_ref_academic_subject_5_board_subject_name,
+        MAX(CASE WHEN subj_no = 5 THEN sa.total_marks ELSE NULL END) AS student_ref_academic_subject_5_total_marks,
+        MAX(CASE WHEN subj_no = 5 THEN sa.result_status ELSE NULL END) AS student_ref_academic_subject_5_result_status,
+        MAX(CASE WHEN subj_no = 6 THEN bsn.name ELSE NULL END) AS student_ref_academic_subject_6_board_subject_name,
+        MAX(CASE WHEN subj_no = 6 THEN sa.total_marks ELSE NULL END) AS student_ref_academic_subject_6_total_marks,
+        MAX(CASE WHEN subj_no = 6 THEN sa.result_status ELSE NULL END) AS student_ref_academic_subject_6_result_status
+      FROM (
+        SELECT
+          sa.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY sa.admission_academic_info_id_fk
+            ORDER BY sa.id
+          ) AS subj_no
+        FROM student_academic_subjects sa
+      ) sa
+      JOIN admission_academic_info ai ON ai.id = sa.admission_academic_info_id_fk
+      JOIN application_forms af ON af.id = ai.application_form_id_fk
+      JOIN admissions adm ON adm.id = af.admission_id_fk
+      JOIN sessions sess ON sess.id = adm.session_id_fk
+      JOIN students std ON std.application_form_id_fk = af.id
+      JOIN users u ON u.id = std.user_id_fk
+      JOIN board_subjects bs ON bs.id = sa.board_subject_id_fk
+      JOIN board_subject_names bsn ON bsn.id = bs.board_subject_name_id_fk
+      JOIN boards b ON b.id = bs.board_id_fk
+      WHERE ai.student_id_fk IS NOT NULL
+        AND u.is_active = true
+        AND sess.academic_id_fk = ${academicYearId}
+      GROUP BY
+        std.uid,
+        b.name,
+        ai.other_board,
+        ai.percentage_of_marks,
+        ai.division,
+        ai.rank,
+        ai.index_number_1,
+        ai.index_number_2,
+        ai.registration_number,
+        ai.roll_number,
+        ai.school_number,
+        ai.center_number,
+        ai.admit_card_id;
+    `,
+  );
+
+  console.log(
+    `[STUDENT-EXPORT] Retrieved ${rows.length} rows for academic subjects report`,
+  );
+
+  const workbook = XLSX.utils.book_new();
+
+  if (rows.length > 0) {
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "student_academic_subjects",
+    );
+  } else {
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["message"],
+      ["No data available"],
+    ]);
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "student_academic_subjects",
+    );
+  }
+
+  const excelBuffer = XLSX.write(workbook, {
+    type: "buffer",
+    bookType: "xlsx",
+  });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+  return {
+    buffer: excelBuffer,
+    fileName: `student_academic_subjects_${timestamp}.xlsx`,
+    totalRecords: rows.length,
+  };
+}
+
 // Helper function to dynamically generate export fields from database objects
 function generateExportFields(
   data: any,

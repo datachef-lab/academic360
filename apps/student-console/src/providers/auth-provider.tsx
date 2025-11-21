@@ -55,7 +55,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setAccessToken(null);
       setUser(null);
       setIsLoading(false);
-      router.push("/");
+      // Preserve simulation parameter if present
+      const urlParams = new URLSearchParams(window.location.search);
+      const simulation = urlParams.get("simulation");
+      const currentUrl = window.location.href;
+      console.log("[SIMULATION] Logout - preserving simulation parameter:", {
+        simulation,
+        currentUrl,
+        search: window.location.search,
+        isInIframe: window.self !== window.top,
+      });
+
+      if (simulation) {
+        // Use Next.js router with query to preserve parameter
+        const newUrl = `/?simulation=${simulation}`;
+        console.log("[SIMULATION] Redirecting to:", newUrl);
+        // Use router.push with the full URL including query
+        router.push(newUrl);
+      } else {
+        console.log("[SIMULATION] No simulation parameter found, redirecting to /");
+        router.push("/");
+      }
     }
   }, [router, isProtectedRoute]);
 
@@ -93,7 +113,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const success = await generateNewToken();
         if (!success) {
           console.log("❌ Auth failed, redirecting to login");
-          router.push("/");
+          // Preserve simulation parameter if present
+          const urlParams = new URLSearchParams(window.location.search);
+          const simulation = urlParams.get("simulation");
+          console.log("[SIMULATION] Auth failed - preserving simulation parameter:", simulation);
+
+          if (simulation) {
+            // Use window.location to ensure query parameter is preserved
+            window.location.href = `/?simulation=${simulation}`;
+          } else {
+            router.push("/");
+          }
         }
       } else {
         console.log("🌐 Public route, skipping auth check");
