@@ -122,7 +122,6 @@ export default function AcademicYearSetupPage() {
   return (
     <div className=" bg-white">
       <div className="p-6 max-w-7xl mx-auto">
-        {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
@@ -144,7 +143,6 @@ export default function AcademicYearSetupPage() {
           </div>
         </div>
 
-        {/* Stats Tiles */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-6">
             <Star className="h-6 w-6 text-yellow-500" />
@@ -176,7 +174,6 @@ export default function AcademicYearSetupPage() {
           </div>
         </div>
 
-        {/* Feature Cards Grid */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-6">
             <Settings className="h-6 w-6 text-blue-500" />
