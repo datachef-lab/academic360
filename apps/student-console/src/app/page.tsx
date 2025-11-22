@@ -43,44 +43,73 @@ export default function SignInPage() {
   const [userPreview, setUserPreview] = useState<{ name: string; email?: string } | null>(null);
   const [lookupPending, setLookupPending] = useState(false);
 
-  // Simulation mode state
+  // Simulation mode state (detected via URL parameter)
   const [isSimulationMode, setIsSimulationMode] = useState(false);
-  const [adminToken, setAdminToken] = useState<string | null>(null);
 
   // Storage keys for persistence
   const OTP_EXPIRY_KEY = "otp_expiry_timestamp";
   const RESEND_COOLDOWN_KEY = "resend_cooldown_timestamp";
   const OTP_UID_KEY = "otp_uid";
 
-  // Detect simulation mode and request admin token
+  // No need for message listeners or sessionStorage - backend checks admin cookie automatically
+
+  // Detect simulation mode (via URL parameter or iframe context)
   useEffect(() => {
     setMounted(true);
 
-    // Check if in simulation mode (via URL parameter)
-    const urlParams = new URLSearchParams(window.location.search);
-    const simulation = urlParams.get("simulation");
-    if (simulation === "true") {
-      setIsSimulationMode(true);
+    const detectSimulationMode = () => {
+      // Check URL parameter first
+      const urlParams = new URLSearchParams(window.location.search);
+      let simulation = urlParams.get("simulation");
 
-      // Request admin token from parent (main-console)
-      if (window.parent && window.parent !== window) {
-        window.parent.postMessage({ type: "REQUEST_ADMIN_TOKEN" }, "*");
+      // If not in URL, check if we're in an iframe (simulation mode indicator)
+      if (!simulation && window.self !== window.top) {
+        // If we're in an iframe, we're likely in simulation mode
+        // The iframe src from main console always includes ?simulation=true
+        // Even if the parameter is lost during redirect, being in an iframe suggests simulation
+        try {
+          // Try to get parent URL (may fail due to cross-origin restrictions)
+          const parentUrl = window.parent.location.href;
+          if (parentUrl.includes("simulation") || parentUrl.includes("/apps/student-console/simulation")) {
+            simulation = "true";
+            console.log("[SIMULATION] Detected from parent URL (iframe context)");
+          } else {
+            // In iframe but can't verify parent - assume simulation mode if in iframe
+            // This is safe because the iframe is only used for simulation
+            simulation = "true";
+            console.log("[SIMULATION] In iframe but parameter missing - assuming simulation mode");
+          }
+        } catch (e) {
+          // Cross-origin restriction - can't access parent URL
+          // If we're in an iframe, assume simulation mode (iframe is only used for simulation)
+          simulation = "true";
+          console.log("[SIMULATION] Cannot access parent URL (cross-origin) - in iframe, assuming simulation mode");
+        }
       }
-    }
 
-    // Listen for admin token from parent
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === "ADMIN_TOKEN_RESPONSE" && event.data.token) {
-        setAdminToken(event.data.token);
-        console.log("[SIMULATION] Admin token received");
-      }
+      console.log("[SIMULATION] Simulation mode detected:", simulation, {
+        currentUrl: window.location.href,
+        searchParams: window.location.search,
+        isInIframe: window.self !== window.top,
+      });
+      setIsSimulationMode(simulation === "true");
     };
 
-    window.addEventListener("message", handleMessage);
+    detectSimulationMode();
+
+    // Also listen for URL changes (in case of client-side navigation)
+    const handleLocationChange = () => {
+      detectSimulationMode();
+    };
+
+    window.addEventListener("popstate", handleLocationChange);
+
     return () => {
-      window.removeEventListener("message", handleMessage);
+      window.removeEventListener("popstate", handleLocationChange);
     };
-  }, []);
+  }, []); // Run on every mount (including after logout)
+
+  // No periodic checks needed - backend automatically checks admin cookie on each request
 
   // Periodic sync with backend every 30 seconds when OTP is active
   useEffect(() => {
@@ -390,10 +419,25 @@ export default function SignInPage() {
     try {
       const email = `${uid}@thebges.edu.in`;
 
-      // If in simulation mode and admin token is available, bypass OTP
-      if (isSimulationMode && adminToken) {
-        console.log("[SIMULATION] Bypassing OTP with admin token");
-        const response = await adminBypassOtpLogin(uid, adminToken);
+      // Try admin bypass first - backend will automatically check for admin JWT cookie
+      // This works in simulation mode when admin console is logged in (cookie is shared via iframe)
+      // Check URL parameter directly, with iframe fallback
+      const urlParams = new URLSearchParams(window.location.search);
+      let isInSimulationMode = urlParams.get("simulation") === "true";
+
+      // Fallback: if in iframe and parameter missing, assume simulation mode
+      if (!isInSimulationMode && window.self !== window.top) {
+        isInSimulationMode = true;
+        console.log("[SIMULATION] Parameter missing but in iframe - assuming simulation mode");
+      }
+
+      try {
+        console.log("[SIMULATION] Attempting admin bypass", {
+          isSimulationMode: isInSimulationMode,
+          urlParam: urlParams.get("simulation"),
+          stateValue: isSimulationMode,
+        });
+        const response = await adminBypassOtpLogin(uid, undefined, isInSimulationMode);
 
         if (response.httpStatusCode === 200 && response.payload) {
           const payload = response.payload as { accessToken: string; refreshToken: string; user: UserDto };
@@ -410,11 +454,20 @@ export default function SignInPage() {
               router.push("/dashboard");
             }, 100);
           }
+          setIsLoading(false);
+          return;
         } else {
-          throw new Error(response.message || "Failed to login");
+          // Admin bypass failed (no admin cookie or not authorized), fall through to OTP flow
+          console.log("[SIMULATION] Admin bypass failed, falling back to OTP flow:", response.message);
         }
-        setIsLoading(false);
-        return;
+      } catch (error: any) {
+        // Admin bypass failed (403/401), fall through to normal OTP flow
+        if (error.response?.status === 403 || error.response?.status === 401) {
+          console.log("[SIMULATION] Admin bypass not available (no admin cookie), using normal OTP flow");
+        } else {
+          // Other error, log it but still fall through to OTP
+          console.warn("[SIMULATION] Admin bypass error:", error);
+        }
       }
 
       // Normal OTP flow

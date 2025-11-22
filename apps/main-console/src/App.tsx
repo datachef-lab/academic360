@@ -33,6 +33,7 @@ import GradeCard from "./components/GradeMarks/GradeCard";
 
 import * as courseSubjectModule from "@/pages/courses-subjects-design";
 import * as admissionFeesModule from "@/pages/admissions-fees";
+import * as documentIssuanceModule from "@/features/document-issuance";
 import * as batchModule from "@/pages/batches";
 import * as studentModule from "@/pages/students";
 import * as attendanceModule from "@/pages/attendance-timetable";
@@ -298,6 +299,18 @@ const router = createBrowserRouter(
           ],
         },
         {
+          path: "document-issuance",
+          element: <documentIssuanceModule.DocumentIssuanceMasterLayout />,
+          children: [
+            { path: "", element: <documentIssuanceModule.DocumentIssuanceHomePage /> },
+            { path: "student/:id", element: <documentIssuanceModule.DocumentIssuanceStudentPage /> },
+            { path: "reports", element: <documentIssuanceModule.DocumentIssuanceReportsPage /> },
+            { path: "types", element: <documentIssuanceModule.DocumentTypesPage /> },
+            { path: "templates", element: <documentIssuanceModule.DocumentTemplatesPage /> },
+            { path: "logs", element: <documentIssuanceModule.DocumentIssuanceLogsPage /> },
+          ],
+        },
+        {
           path: "admissions-fees",
           element: <admissionFeesModule.AdmissionsFeesMaster />,
           children: [
@@ -454,16 +467,17 @@ const router = createBrowserRouter(
           element: <appModule.StudentConsoleSimulation />,
         },
         {
-          path: "faculty-staff",
-          element: <administrationModule.AdministrationLayout />,
+          path: "user-groups-accesses",
+          element: <administrationModule.UserGroupsAccessLayout />,
           children: [
-            { path: "", element: <div>TODO: Faculty/Staff Home</div> },
-            { path: "faculties", element: <div>TODO: Faculty List</div> },
-            { path: "create", element: <div>TODO: Create Page</div> },
+            { path: "", element: <administrationModule.UserGroupsAccessHomePage /> },
+            { path: "user-groups", element: <div>TODO: User Groups Master</div> },
+            { path: "faculties", element: <div>TODO: User Directory</div> },
+            { path: "create", element: <div>TODO: Create User Group</div> },
             { path: "departments", element: <administrationModule.DepartmentPage /> },
             { path: "designations", element: <administrationModule.DesignationPage /> },
-            { path: "roles", element: <div>TODO: Roles & Permission Page</div> },
-            { path: "reports", element: <div>TODO: Roles & Reports Page</div> },
+            { path: "roles", element: <div>TODO: Roles & Permissions Page</div> },
+            { path: "reports", element: <div>TODO: User Access Reports Page</div> },
           ],
         },
         { path: "notices", element: <NoticeMaster /> },

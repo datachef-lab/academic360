@@ -66,13 +66,17 @@ export class ExportService {
 
   /**
    * Export CU registration correction requests to Excel
+   * @param academicYearId - The academic year ID to filter by
    * @returns Promise with export response
    */
-  static async exportCuRegistrationCorrections(): Promise<ExportResponse> {
+  static async exportCuRegistrationCorrections(academicYearId: number): Promise<ExportResponse> {
     try {
       // Backend mounts this router at /api/admissions/cu-registration-correction-requests
       // and the route path is GET /export
       const response = await axiosInstance.get(`/api/admissions/cu-registration-correction-requests/export`, {
+        params: {
+          academicYearId,
+        },
         responseType: "blob", // Important for file downloads
       });
 
@@ -182,6 +186,102 @@ export class ExportService {
       return {
         success: false,
         message: error instanceof Error ? error.message : "Download failed",
+      };
+    }
+  }
+
+  /**
+   * Export student detailed data report
+   */
+  static async exportStudentDetailedReport(academicYearId?: number): Promise<ExportResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (academicYearId) {
+        params.append("academicYearId", academicYearId.toString());
+      }
+      const endpoint = `/api/students/export/detailed-report${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await axiosInstance.get(endpoint, {
+        responseType: "blob",
+      });
+
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = `student_data_export_${new Date().toISOString().split("T")[0]}.xlsx`;
+
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+        }
+      }
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const downloadUrl = URL.createObjectURL(blob);
+
+      return {
+        success: true,
+        message: "Export completed successfully",
+        data: {
+          downloadUrl,
+          fileName,
+          totalRecords: 0,
+        },
+      };
+    } catch (error: unknown) {
+      console.error("Student detailed export error:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Export failed",
+      };
+    }
+  }
+
+  /**
+   * Export student academic subjects report
+   */
+  static async exportStudentAcademicSubjectsReport(academicYearId?: number): Promise<ExportResponse> {
+    try {
+      const params = new URLSearchParams();
+      if (academicYearId) {
+        params.append("academicYearId", academicYearId.toString());
+      }
+      const endpoint = `/api/students/export/academic-subjects${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await axiosInstance.get(endpoint, {
+        responseType: "blob",
+      });
+
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = `student_academic_subjects_${new Date().toISOString().split("T")[0]}.xlsx`;
+
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+        }
+      }
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const downloadUrl = URL.createObjectURL(blob);
+
+      return {
+        success: true,
+        message: "Export completed successfully",
+        data: {
+          downloadUrl,
+          fileName,
+          totalRecords: 0,
+        },
+      };
+    } catch (error: unknown) {
+      console.error("Student academic subjects export error:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Export failed",
       };
     }
   }

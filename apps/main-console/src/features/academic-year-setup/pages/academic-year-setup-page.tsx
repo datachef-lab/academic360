@@ -1,18 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Outlet, useNavigate } from "react-router-dom";
+import { useState, useCallback, useEffect } from "React";
 import { BookOpen, Users, Award, Settings, BarChart3, FileText, Shield, Database, Star } from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
+import { getAcademicStats } from "@/services/academic-year-api";
+// import { AcademicYear } from "@/types/academics/academic-year";
 
 // Remove hardcoded academic years - now using Redux state
-
-const statsData = [
-  { title: "Total Program-Courses", value: "12", icon: BookOpen, color: "bg-blue-500" },
-  { title: "Total Subjects", value: "48", icon: FileText, color: "bg-green-500" },
-  { title: "Active Eligibility Rules", value: "8", icon: Shield, color: "bg-purple-500" },
-  { title: "Merit Criteria Defined", value: "Yes", icon: Award, color: "bg-orange-500" },
-  { title: "Ongoing Admissions", value: "156", icon: Users, color: "bg-pink-500" },
-];
 
 const featureCards = [
   {
@@ -24,7 +20,7 @@ const featureCards = [
     iconColor: "text-blue-600",
     status: "Active",
     items: "12 courses",
-    illustration: null, // No illustration available
+    illustration: "/academic-setup-illustrations/cd.jpg",
   },
   {
     title: "Admission Board & Stats",
@@ -46,7 +42,7 @@ const featureCards = [
     iconColor: "text-purple-600",
     status: "Active",
     items: "8 rules",
-    illustration: null, // No illustration available
+    illustration: "/academic-setup-illustrations/ec.jpg",
   },
   {
     title: "Merit List Criteria",
@@ -68,7 +64,7 @@ const featureCards = [
     iconColor: "text-indigo-600",
     status: "Ready",
     items: "15 boards",
-    illustration: null, // No illustration available
+    illustration: "/academic-setup-illustrations/sm.jpg",
   },
   {
     title: "Subject Selection Configurations",
@@ -87,8 +83,44 @@ export default function AcademicYearSetupPage() {
   useRestrictTempUsers();
   const navigate = useNavigate();
 
+  const [academicStats, setAcademicStats] = useState<any | null>(null);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(null);
+
+  const fetchAcademicStats = useCallback(async (academicYearId: number) => {
+    try {
+      const res = await getAcademicStats(academicYearId);
+      const payload = res.payload || res;
+      console.log("payloads", payload);
+      setAcademicStats(payload ?? null);
+    } catch (error) {
+      console.error("Failed to fetch academic setup stats", error);
+      setAcademicStats(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedAcademicYearId) {
+      fetchAcademicStats(selectedAcademicYearId);
+    } else {
+      fetchAcademicStats(1);
+    }
+  }, [selectedAcademicYearId, fetchAcademicStats]);
+
+  const statsData = [
+    { title: " Program Courses", value: academicStats?.programCoursesCount ?? 0, icon: BookOpen, color: "bg-blue-500" },
+    {
+      title: "Admission Program Courses",
+      value: academicStats?.admissionProgramCoursesTotal ?? 0,
+      icon: FileText,
+      color: "bg-green-500",
+    },
+    { title: "Subjects", value: academicStats?.subjectsCount ?? 0, icon: Shield, color: "bg-purple-500" },
+    { title: "Board Subjects", value: academicStats?.boardSubjects12thCount ?? 0, icon: Award, color: "bg-orange-500" },
+    { title: "Boards", value: academicStats?.boardsCount ?? 0, icon: Users, color: "bg-pink-500" },
+  ];
+
   return (
-    <div className=" bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className=" bg-white">
       <div className="p-6 max-w-7xl mx-auto">
         {/* Page Header */}
         <div className="mb-8">
@@ -104,7 +136,8 @@ export default function AcademicYearSetupPage() {
                 className="w-64"
                 showLabel={false}
                 onAcademicYearChange={(year) => {
-                  console.log("Academic year changed to:", year?.year);
+                  console.log("Academic year changed to:", year?.id);
+                  setSelectedAcademicYearId(year?.id ?? null);
                 }}
               />
             </div>
@@ -121,7 +154,7 @@ export default function AcademicYearSetupPage() {
             {statsData.map((stat, index) => (
               <Card
                 key={index}
-                className="hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group border-0 shadow-md"
+                className="hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group border drop-shadow-md"
               >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -130,7 +163,7 @@ export default function AcademicYearSetupPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-3xl font-bold text-gray-900 group-hover:text-gray-700 transition-colors">
-                        {stat.value}
+                        {(stat.value ?? 0).toLocaleString("en-IN")}
                       </p>
                     </div>
                   </div>

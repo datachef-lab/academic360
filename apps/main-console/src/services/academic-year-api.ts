@@ -14,6 +14,19 @@ export async function getAcademicYearById(id: number): Promise<ApiResponse<Acade
   return response.data;
 }
 
+// Fetch academic setup stats for a given academic year
+// export const fetchAcademicSetupStats = async (academicYearId: number,): Promise<ApiResponse<unknown>> => {
+//   const response = await axiosInstance.get(`/api/v1/course-design/academic-setup/stats`, {
+//     params: { academicYearId },
+//   });
+//   return response.data;
+// };
+export const getAcademicStats = async (academicYearId: number): Promise<ApiResponse<unknown>> => {
+  const res = await axiosInstance.get(`/api/v1/course-design/academic-setup/stats?academicYearId=${academicYearId}`);
+  console.log("stats data", res.data);
+  return res.data;
+};
+
 // Create new academic year
 export async function createAcademicYear(
   academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">,

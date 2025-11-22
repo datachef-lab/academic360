@@ -78,6 +78,7 @@ import {
 import {
   departmentRouter,
   designationRouter,
+  subDepartmentRouter,
 } from "./administration/routes/index.js";
 
 export {
@@ -146,4 +147,5 @@ export {
   examScheduleRouter,
   departmentRouter,
   designationRouter,
+  subDepartmentRouter,
 };

@@ -35,16 +35,28 @@ export default function StudentConsoleSimulation() {
       }
 
       // Handle request for admin token
-      if (event.data.type === "REQUEST_ADMIN_TOKEN" && accessToken) {
-        // Send admin token to student console
-        if (iframeRef.current?.contentWindow) {
-          iframeRef.current.contentWindow.postMessage(
-            {
-              type: "ADMIN_TOKEN_RESPONSE",
-              token: accessToken,
-            },
-            STUDENT_CONSOLE_BASE_URL,
-          );
+      if (event.data.type === "REQUEST_ADMIN_TOKEN") {
+        console.log("[SIMULATION] Received REQUEST_ADMIN_TOKEN from iframe", {
+          hasAccessToken: !!accessToken,
+          origin: event.origin,
+        });
+
+        if (accessToken) {
+          // Send admin token to student console immediately
+          if (iframeRef.current?.contentWindow) {
+            iframeRef.current.contentWindow.postMessage(
+              {
+                type: "ADMIN_TOKEN_RESPONSE",
+                token: accessToken,
+              },
+              STUDENT_CONSOLE_BASE_URL,
+            );
+            console.log("[SIMULATION] Sent admin token in response to REQUEST_ADMIN_TOKEN");
+          } else {
+            console.warn("[SIMULATION] Iframe contentWindow not available when responding to REQUEST_ADMIN_TOKEN");
+          }
+        } else {
+          console.warn("[SIMULATION] REQUEST_ADMIN_TOKEN received but accessToken is null");
         }
       }
 
@@ -55,8 +67,10 @@ export default function StudentConsoleSimulation() {
       }
     };
 
+    console.log("[SIMULATION] Setting up message listener for REQUEST_ADMIN_TOKEN");
     window.addEventListener("message", handleMessage);
     return () => {
+      console.log("[SIMULATION] Removing message listener");
       window.removeEventListener("message", handleMessage);
     };
   }, [accessToken]);
@@ -64,12 +78,12 @@ export default function StudentConsoleSimulation() {
   // Send admin token when iframe loads
   useEffect(() => {
     const iframe = iframeRef.current;
-    if (!iframe || !accessToken) return;
+    if (!iframe) return;
 
     const handleLoad = () => {
       // Wait a bit for iframe to be ready
       setTimeout(() => {
-        if (iframe.contentWindow) {
+        if (iframe.contentWindow && accessToken) {
           iframe.contentWindow.postMessage(
             {
               type: "ADMIN_TOKEN_RESPONSE",
@@ -86,6 +100,90 @@ export default function StudentConsoleSimulation() {
       iframe.removeEventListener("load", handleLoad);
     };
   }, [accessToken, studentConsoleUrl]);
+
+  // Send admin token whenever accessToken changes (e.g., after logout/login)
+  // This ensures the student console gets the token even after main console logout/login
+  useEffect(() => {
+    if (!accessToken) return; // Don't send if no token
+
+    let retryCount = 0;
+    const maxRetries = 10; // Max 5 seconds of retries (10 * 500ms)
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    const sendToken = () => {
+      const iframe = iframeRef.current;
+      if (!iframe || !iframe.contentWindow) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          timeoutId = setTimeout(sendToken, 500);
+        }
+        return;
+      }
+
+      try {
+        iframe.contentWindow.postMessage(
+          {
+            type: "ADMIN_TOKEN_RESPONSE",
+            token: accessToken,
+          },
+          STUDENT_CONSOLE_BASE_URL,
+        );
+        console.log("[SIMULATION] Admin token sent to iframe (token updated)");
+      } catch (error) {
+        console.warn("[SIMULATION] Failed to send admin token:", error);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          timeoutId = setTimeout(sendToken, 1000);
+        }
+      }
+    };
+
+    // Wait a bit to ensure iframe is ready, then send
+    timeoutId = setTimeout(sendToken, 500);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [accessToken]);
+
+  // Periodically send admin token to ensure it's always available
+  // This handles cases where the student console remounts after logout
+  useEffect(() => {
+    if (!accessToken) {
+      console.log("[SIMULATION] No accessToken available, skipping periodic send");
+      return;
+    }
+
+    const sendTokenPeriodically = () => {
+      const iframe = iframeRef.current;
+      if (iframe?.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage(
+            {
+              type: "ADMIN_TOKEN_RESPONSE",
+              token: accessToken,
+            },
+            STUDENT_CONSOLE_BASE_URL,
+          );
+          console.log("[SIMULATION] Periodic admin token sent to iframe");
+        } catch (error) {
+          console.warn("[SIMULATION] Failed to send periodic token:", error);
+        }
+      } else {
+        console.log("[SIMULATION] Iframe not ready for periodic token send");
+      }
+    };
+
+    // Send immediately, then every 1 second (more frequent)
+    console.log("[SIMULATION] Starting periodic token sending");
+    sendTokenPeriodically();
+    const intervalId = setInterval(sendTokenPeriodically, 1000); // Every 1 second
+
+    return () => {
+      console.log("[SIMULATION] Stopping periodic token sending");
+      clearInterval(intervalId);
+    };
+  }, [accessToken]);
 
   // Fullscreen functionality
   const toggleFullscreen = useCallback(async () => {

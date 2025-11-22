@@ -17,7 +17,7 @@ import {
   Settings,
   Search,
 } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import ProcessControlDialog from "../components/ProcessControlDialog";
 import { CuRegistrationSearch } from "../components/CuRegistrationSearch";
@@ -25,6 +25,8 @@ import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import { useSocket } from "@/hooks/useSocket";
 import { ExportService } from "@/services/exportService";
 import { ProgressUpdate } from "@/types/progress";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
+import { useMemo } from "react";
 
 export default function CuRegistrationHomePage() {
   const [processControlOpen, setProcessControlOpen] = useState(false);
@@ -39,6 +41,14 @@ export default function CuRegistrationHomePage() {
   // Authenticated user id for scoping socket room
   const { user } = useAuth();
   const userId = (user?.id ?? "").toString();
+
+  // Get academic year
+  const { availableAcademicYears, loadAcademicYears } = useAcademicYear();
+  const selectedAcademicYear = useMemo(
+    () => availableAcademicYears.find((year) => year.isCurrentYear) || availableAcademicYears[0] || null,
+    [availableAcademicYears],
+  );
+  const selectedAcademicYearId = selectedAcademicYear?.id;
 
   // Memoize the progress update handler to prevent re-renders
   const handleProgressUpdate = useCallback((data: ProgressUpdate) => {
@@ -61,6 +71,13 @@ export default function CuRegistrationHomePage() {
     userId,
     onProgressUpdate: handleProgressUpdate,
   });
+
+  // Load academic years on mount
+  useEffect(() => {
+    if (availableAcademicYears.length === 0) {
+      loadAcademicYears();
+    }
+  }, [availableAcademicYears.length, loadAcademicYears]);
 
   // Mock data - replace with actual data from API
   const overallStats = {
@@ -291,6 +308,10 @@ export default function CuRegistrationHomePage() {
       }
 
       // Export 2: CU Registration Corrections Report
+      if (!selectedAcademicYearId) {
+        throw new Error("Academic year is required for export");
+      }
+
       setCurrentProgressUpdate({
         id: `export_${Date.now()}`,
         userId: userId,
@@ -301,7 +322,7 @@ export default function CuRegistrationHomePage() {
         createdAt: new Date(),
       });
 
-      const cuRegistrationResult = await ExportService.exportCuRegistrationCorrections();
+      const cuRegistrationResult = await ExportService.exportCuRegistrationCorrections(selectedAcademicYearId);
 
       if (cuRegistrationResult.success && cuRegistrationResult.data) {
         // Trigger download for CU registration corrections

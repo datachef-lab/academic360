@@ -18,13 +18,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { createAcademicYear, getAllAcademicYears, updateAcademicYearById } from "@/services/academic-year-api";
 
-
 const AcademicYearPage: React.FC = () => {
   const [data, setData] = useState<AcademicYear[]>([]);
   const [filteredData, setFilteredData] = useState<AcademicYear[]>([]);
+
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<AcademicYear | null>(null);
-  const [form, setForm] = useState<AcademicYear>({ id: 0, year: "", isCurrentYear: true, });
+  const [form, setForm] = useState<AcademicYear>({ id: 0, year: "", isCurrentYear: true });
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
@@ -38,6 +38,7 @@ const AcademicYearPage: React.FC = () => {
           year: item.year,
           isCurrentYear: item.isCurrentYear,
         }));
+
         setData(mapped);
         setFilteredData(mapped);
       } catch (error) {
@@ -263,10 +264,18 @@ const AcademicYearPage: React.FC = () => {
         <Table>
           <TableHeader className="bg-gray-50 border-b border-gray-200">
             <TableRow className="hover:bg-gray-50">
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">#</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Academic Year</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                #
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Academic Year
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Status
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="bg-white divide-y divide-gray-200">
@@ -278,13 +287,19 @@ const AcademicYearPage: React.FC = () => {
                     <span className="text-sm font-medium text-gray-900">{item.year}</span>
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.isCurrentYear ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.isCurrentYear ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                    >
                       {item.isCurrentYear ? "Active" : "Inactive"}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                    <button onClick={() => handleEdit(item)} className="text-purple-600 hover:text-purple-800">Edit</button>
-                    <button onClick={() => handleDelete(item.id!)} className="text-red-600 hover:text-red-800 ml-4">Delete</button>
+                    <button onClick={() => handleEdit(item)} className="text-purple-600 hover:text-purple-800">
+                      Edit
+                    </button>
+                    <button onClick={() => handleDelete(item.id!)} className="text-red-600 hover:text-red-800 ml-4">
+                      Delete
+                    </button>
                   </TableCell>
                 </TableRow>
               ))
@@ -312,7 +327,7 @@ const AcademicYearPage: React.FC = () => {
                 id="year"
                 type="text"
                 value={form.year}
-                onChange={e => {
+                onChange={(e) => {
                   setForm({ ...form, year: e.target.value });
                 }}
                 placeholder="e.g., 2025"
@@ -323,13 +338,17 @@ const AcademicYearPage: React.FC = () => {
               <Switch
                 id="isCurrentYear"
                 checked={form.isCurrentYear}
-                onCheckedChange={checked => setForm({ ...form, isCurrentYear: checked })}
+                onCheckedChange={(checked) => setForm({ ...form, isCurrentYear: checked })}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={handleClose}>Cancel</Button>
-            <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700">{editingItem ? "Update" : "Create"} Academic Year</Button>
+            <Button variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700">
+              {editingItem ? "Update" : "Create"} Academic Year
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

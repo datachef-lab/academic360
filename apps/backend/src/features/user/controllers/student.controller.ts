@@ -474,6 +474,98 @@ export const updateFamilyMemberTitlesController = async (
   }
 };
 
+export const exportStudentDetailedReportController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { academicYearId } = req.query;
+    if (!academicYearId) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "academicYearId query parameter is required"));
+    }
+
+    const academicYearIdNumber = Number(academicYearId);
+    if (Number.isNaN(academicYearIdNumber)) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "Invalid academicYearId parameter"));
+    }
+
+    console.log("[STUDENT-EXPORT] Starting detailed student export...");
+    const result =
+      await studentService.exportStudentDetailedReport(academicYearIdNumber);
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${result.fileName}"`,
+    );
+    res.setHeader("Content-Length", result.buffer.length);
+
+    res.status(200).send(result.buffer);
+  } catch (error) {
+    console.error(
+      "[STUDENT-EXPORT] Failed to export detailed student report",
+      error,
+    );
+    handleError(error, res, next);
+  }
+};
+
+export const exportStudentAcademicSubjectsReportController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { academicYearId } = req.query;
+    if (!academicYearId) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "academicYearId query parameter is required"));
+    }
+
+    const academicYearIdNumber = Number(academicYearId);
+    if (Number.isNaN(academicYearIdNumber)) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "Invalid academicYearId parameter"));
+    }
+
+    console.log(
+      "[STUDENT-EXPORT] Starting student academic subjects report export...",
+    );
+    const result =
+      await studentService.exportStudentAcademicSubjectsReport(
+        academicYearIdNumber,
+      );
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${result.fileName}"`,
+    );
+    res.setHeader("Content-Length", result.buffer.length);
+
+    res.status(200).send(result.buffer);
+  } catch (error) {
+    console.error(
+      "[STUDENT-EXPORT] Failed to export student academic subjects report",
+      error,
+    );
+    handleError(error, res, next);
+  }
+};
+
 // Bulk update family member titles from Excel file
 export const bulkUpdateFamilyMemberTitlesController = async (
   req: Request,
