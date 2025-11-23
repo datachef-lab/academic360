@@ -129,7 +129,7 @@ export default function StudentContent({ activeTab, studentId, userId, personalE
 
   return (
     <TabsContent value={activeTab.label}>
-      <div className="my-5 h-full overflow-auto pb-10">{handleContent()}</div>
+      <div className="my-3 sm:my-5 h-full overflow-auto pb-6 sm:pb-10">{handleContent()}</div>
     </TabsContent>
   );
 }

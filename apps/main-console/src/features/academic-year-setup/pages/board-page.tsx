@@ -37,13 +37,12 @@ const BoardTableRow = React.memo(
     pageSize: number;
   }) => (
     <TableRow className="group">
-      <TableCell className="text-center" style={{ width: "8%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+      <TableCell className="text-center" style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
         {(currentPage - 1) * pageSize + index + 1}.
       </TableCell>
       <TableCell
         style={{
-          width: "25%",
-          padding: "8px 4px",
+          padding: "12px 8px",
           borderRight: "1px solid #e5e7eb",
           wordWrap: "break-word",
           wordBreak: "break-word",
@@ -52,13 +51,11 @@ const BoardTableRow = React.memo(
       >
         {board.name ? <div className="text-sm leading-tight">{board.name}</div> : "-"}
       </TableCell>
-      <TableCell style={{ width: "12%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-        {board.code ?? "-"}
-      </TableCell>
-      <TableCell className="text-center" style={{ width: "12%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>{board.code ?? "-"}</TableCell>
+      <TableCell className="text-center" style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
         {board.passingMarks ?? "-"}
       </TableCell>
-      <TableCell style={{ width: "18%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
         {board.degree?.name ? (
           <Badge variant="outline" className="text-xs">
             {board.degree.name}
@@ -67,7 +64,7 @@ const BoardTableRow = React.memo(
           "-"
         )}
       </TableCell>
-      <TableCell style={{ width: "10%", borderRight: "1px solid #e5e7eb" }}>
+      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
         {board.isActive ? (
           <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">Active</Badge>
         ) : (
@@ -76,7 +73,7 @@ const BoardTableRow = React.memo(
           </Badge>
         )}
       </TableCell>
-      <TableCell style={{ width: "15%", padding: "8px 4px" }}>
+      <TableCell style={{ padding: "12px 8px" }}>
         <div className="flex space-x-2 justify-center">
           <Button variant="outline" size="sm" onClick={() => onEdit(board)} className="h-5 w-5 p-0">
             <Edit className="h-4 w-4" />
@@ -136,7 +133,7 @@ const BoardForm = React.memo(
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="name">Board Name *</Label>
             <Input
@@ -160,7 +157,7 @@ const BoardForm = React.memo(
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="passingMarks">Passing Marks</Label>
             <Input
@@ -183,7 +180,7 @@ const BoardForm = React.memo(
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="degreeId">Degree</Label>
             <Select
@@ -423,23 +420,24 @@ export default function BoardPage() {
   return (
     <div className="p-4">
       <Card className="border-none">
-        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
-          <div>
-            <CardTitle className="flex items-center">
-              <GraduationCap className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center mb-3 gap-4 sm:gap-0 sm:justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
+          <div className="flex-1">
+            <CardTitle className="flex items-center text-lg sm:text-xl">
+              <GraduationCap className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400" />
               Boards
             </CardTitle>
-            <div className="text-muted-foreground">Manage board configuration.</div>
+            <div className="text-sm sm:text-base text-muted-foreground mt-1">Manage board configuration.</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Board
+                  <span className="hidden sm:inline">Add Board</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="max-w-2xl">
+              <AlertDialogContent className="w-[95vw] sm:w-full max-w-2xl">
                 <AlertDialogHeader>
                   <AlertDialogTitle>{selectedBoard ? "Edit Board" : "Add New Board"}</AlertDialogTitle>
                 </AlertDialogHeader>
@@ -453,17 +451,18 @@ export default function BoardPage() {
                 />
               </AlertDialogContent>
             </AlertDialog>
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
-              <Download className="h-4 w-4" /> Download
+            <Button variant="outline" className="flex items-center gap-2 flex-shrink-0" onClick={handleDownloadAll}>
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Download</span>
             </Button>
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-4 mb-0 justify-between">
-            <div className="flex items-center gap-4">
+          <div className="sticky top-[72px] sm:top-[88px] z-20 bg-background p-4 border-b flex flex-col sm:flex-row sm:items-center gap-4 mb-0 sm:justify-between">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 flex-1">
               <Input
                 placeholder="Search by board name, code, or degree..."
-                className="w-64"
+                className="w-full sm:w-64"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />
@@ -471,7 +470,7 @@ export default function BoardPage() {
                 value={selectedDegreeId?.toString() || "all"}
                 onValueChange={(value) => setSelectedDegreeId(value === "all" ? undefined : parseInt(value))}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filter by Degree" />
                 </SelectTrigger>
                 <SelectContent>
@@ -484,13 +483,18 @@ export default function BoardPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              Showing {memoizedBoards.length} of {totalItems} results
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-shrink-0">
+              <span className="hidden sm:inline">
+                Showing {memoizedBoards.length} of {totalItems} results
+              </span>
+              <span className="sm:hidden">
+                {memoizedBoards.length} / {totalItems}
+              </span>
             </div>
           </div>
           <div className="relative" style={{ height: "600px" }}>
-            <div className="overflow-y-auto h-full">
-              <Table className="border rounded-md w-full" style={{ tableLayout: "fixed" }}>
+            <div className="overflow-y-auto overflow-x-auto h-full">
+              <Table className="border rounded-md w-full min-w-max" style={{ tableLayout: "auto" }}>
                 <TableHeader
                   className="sticky top-0 z-10"
                   style={{ background: "#f3f4f6", borderRight: "1px solid #e5e7eb" }}
@@ -648,21 +652,28 @@ export default function BoardPage() {
 
           {/* Pagination Controls */}
           {!loading && !error && totalItems > 0 && (
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of{" "}
-                {totalItems} results
+            <div className="mt-4 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
+              <div className="text-xs sm:text-sm text-gray-600">
+                <span className="hidden sm:inline">
+                  Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of{" "}
+                  {totalItems} results
+                </span>
+                <span className="sm:hidden">
+                  Page {currentPage} of {Math.ceil(totalItems / pageSize)} ({totalItems} total)
+                </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-nowrap">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
+                  className="flex-shrink-0"
                 >
-                  Previous
+                  <span className="hidden sm:inline">Previous</span>
+                  <span className="sm:hidden">Prev</span>
                 </Button>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 overflow-x-auto">
                   {Array.from({ length: Math.min(5, Math.ceil(totalItems / pageSize)) }, (_, i) => {
                     const pageNum = Math.max(1, Math.min(Math.ceil(totalItems / pageSize) - 4, currentPage - 2)) + i;
                     if (pageNum > Math.ceil(totalItems / pageSize)) return null;
@@ -672,7 +683,7 @@ export default function BoardPage() {
                         variant={currentPage === pageNum ? "default" : "outline"}
                         size="sm"
                         onClick={() => setCurrentPage(pageNum)}
-                        className="w-8 h-8 p-0"
+                        className="w-8 h-8 p-0 flex-shrink-0"
                       >
                         {pageNum}
                       </Button>
@@ -684,6 +695,7 @@ export default function BoardPage() {
                   size="sm"
                   onClick={() => setCurrentPage((prev) => Math.min(Math.ceil(totalItems / pageSize), prev + 1))}
                   disabled={currentPage === Math.ceil(totalItems / pageSize)}
+                  className="flex-shrink-0"
                 >
                   Next
                 </Button>

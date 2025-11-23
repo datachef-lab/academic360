@@ -394,100 +394,111 @@ export default function ReportsPage() {
   ];
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">Reports</h1>
-          <p className="text-slate-600 mt-2">Download various reports and analytics</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Reports</h1>
+          <p className="text-sm sm:text-base text-slate-600 mt-2">Download various reports and analytics</p>
         </div>
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-6 w-6 text-slate-600" />
-          <span className="text-sm text-slate-500">Analytics Dashboard</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-slate-600" />
+          <span className="text-xs sm:text-sm text-slate-500">Analytics Dashboard</span>
         </div>
       </div>
 
       {/* Reports Table */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-16 border border-slate-200">Sr. No.</TableHead>
-            <TableHead className="w-32 border border-slate-200">Domain</TableHead>
-            <TableHead className="w-80 border border-slate-200">Report</TableHead>
-            <TableHead className="border border-slate-200">Description</TableHead>
-            <TableHead className="w-48 border border-slate-200">Filters</TableHead>
-            <TableHead className="w-40 border border-slate-200">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {reports.map((report, index) => {
-            return (
-              <TableRow key={report.id} className="hover:bg-slate-50">
-                <TableCell className="font-medium border border-slate-200">{index + 1}</TableCell>
-                <TableCell className="border border-slate-200">
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                    POST_ADMISSION
-                  </Badge>
-                </TableCell>
-                <TableCell className="border border-slate-200">
-                  <div className="flex items-center gap-3">
-                    {report.icon}
-                    <div>
-                      <div className="font-semibold text-slate-800">{report.name}</div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-slate-600 border border-slate-200">{report.description}</TableCell>
-                <TableCell className="border border-slate-200">
-                  {report.requiresRegulation ? (
-                    <div className="space-y-2">
-                      <div className="space-y-1">
-                        {/* <label className="text-xs font-medium text-slate-600">Regulation</label> */}
-                        <Select value={selectedRegulationType} onValueChange={setSelectedRegulationType}>
-                          <SelectTrigger className="w-full h-8 text-xs">
-                            <SelectValue placeholder="Select Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {regulationTypes.map((type) => (
-                              <SelectItem key={type.id} value={type.shortName || type.name}>
-                                {type.shortName || type.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+      <div className="overflow-x-auto">
+        <Table className="min-w-max">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-16 sm:w-20 border border-slate-200 text-xs sm:text-sm">Sr. No.</TableHead>
+              <TableHead className="w-32 sm:w-40 border border-slate-200 text-xs sm:text-sm">Domain</TableHead>
+              <TableHead className="w-64 sm:w-80 border border-slate-200 text-xs sm:text-sm">Report</TableHead>
+              <TableHead className="min-w-[200px] sm:min-w-[300px] border border-slate-200 text-xs sm:text-sm">
+                Description
+              </TableHead>
+              <TableHead className="w-40 sm:w-48 border border-slate-200 text-xs sm:text-sm">Filters</TableHead>
+              <TableHead className="w-32 sm:w-40 border border-slate-200 text-xs sm:text-sm">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {reports.map((report, index) => {
+              return (
+                <TableRow key={report.id} className="hover:bg-slate-50">
+                  <TableCell className="font-medium border border-slate-200 text-xs sm:text-sm py-3 sm:py-4 px-2 sm:px-4">
+                    {index + 1}
+                  </TableCell>
+                  <TableCell className="border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                      POST_ADMISSION
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="flex-shrink-0">{report.icon}</div>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-800 text-xs sm:text-sm truncate">{report.name}</div>
                       </div>
                     </div>
-                  ) : null}
-                </TableCell>
-                <TableCell className="border border-slate-200">
-                  <Button
-                    onClick={report.downloadFunction}
-                    disabled={
-                      isExporting ||
-                      (report.requiresAcademicYear && !selectedAcademicYearId) ||
-                      (report.requiresRegulation && !selectedRegulationType)
-                    }
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm disabled:opacity-50"
-                    size="sm"
-                  >
-                    {isExporting ? (
-                      <>
-                        <Clock className="h-4 w-4 animate-spin" />
-                        Downloading...
-                      </>
+                  </TableCell>
+                  <TableCell className="text-slate-600 border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm">
+                    {report.description}
+                  </TableCell>
+                  <TableCell className="border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                    {report.requiresRegulation ? (
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <Select value={selectedRegulationType} onValueChange={setSelectedRegulationType}>
+                            <SelectTrigger className="w-full h-8 text-xs">
+                              <SelectValue placeholder="Select Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {regulationTypes.map((type) => (
+                                <SelectItem key={type.id} value={type.shortName || type.name}>
+                                  {type.shortName || type.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     ) : (
-                      <>
-                        <Download className="h-4 w-4" />
-                        Download
-                      </>
+                      <span className="text-xs text-slate-400">-</span>
                     )}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                  </TableCell>
+                  <TableCell className="border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                    <Button
+                      onClick={report.downloadFunction}
+                      disabled={
+                        isExporting ||
+                        (report.requiresAcademicYear && !selectedAcademicYearId) ||
+                        (report.requiresRegulation && !selectedRegulationType)
+                      }
+                      className="flex items-center gap-1 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm disabled:opacity-50 w-full sm:w-auto flex-shrink-0"
+                      size="sm"
+                    >
+                      {isExporting ? (
+                        <>
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                          <span className="hidden sm:inline">Downloading...</span>
+                          <span className="sm:hidden">...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden sm:inline">Download</span>
+                          <span className="sm:hidden">DL</span>
+                        </>
+                      )}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Export Progress Dialog */}
       <ExportProgressDialog

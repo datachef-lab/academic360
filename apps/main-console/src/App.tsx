@@ -488,7 +488,6 @@ const router = createBrowserRouter(
             { path: "", element: <settingsModule.GeneralSettingsPage /> },
             { path: "users", element: <settingsModule.UsersPage /> },
             { path: "api-config", element: <settingsModule.ApiConfigurationPage /> },
-            { path: "departments", element: <settingsModule.DepartmentsPage /> },
           ],
         },
 

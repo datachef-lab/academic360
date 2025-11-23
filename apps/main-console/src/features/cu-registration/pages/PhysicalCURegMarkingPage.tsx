@@ -249,26 +249,28 @@ export default function PhysicalCURegMarkingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Physical CU Registration Marking</h1>
-          <p className="text-gray-600 mt-2">Mark physical registration completion for students</p>
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Physical CU Registration Marking</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">Mark physical registration completion for students</p>
         </div>
 
         {/* Search Section */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
+        <Card className="mb-4 sm:mb-6">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <Search className="h-4 w-4 sm:h-5 sm:w-5" />
               Search Student
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1">
-                <Label htmlFor="studentUid">Student UID</Label>
+                <Label htmlFor="studentUid" className="text-sm sm:text-base">
+                  Student UID
+                </Label>
                 <Input
                   id="studentUid"
                   type="text"
@@ -276,18 +278,20 @@ export default function PhysicalCURegMarkingPage() {
                   value={studentUid}
                   onChange={(e) => setStudentUid(e.target.value)}
                   disabled={loading}
+                  className="mt-1"
                 />
               </div>
-              <div className="flex items-end">
+              <div className="flex items-end sm:items-end">
                 <Button
                   onClick={handleSearch}
                   disabled={loading || !studentUid.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Searching...
+                      <span className="hidden sm:inline">Searching...</span>
+                      <span className="sm:hidden">Searching</span>
                     </>
                   ) : (
                     <>
@@ -303,17 +307,17 @@ export default function PhysicalCURegMarkingPage() {
 
         {/* Alerts */}
         {error && (
-          <Alert className="mb-6" variant="destructive">
+          <Alert className="mb-4 sm:mb-6" variant="destructive">
             <XCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="text-sm sm:text-base">{error}</AlertDescription>
           </Alert>
         )}
 
         {studentStatus && isBlocked && (
-          <Alert className="mb-6" variant="destructive">
+          <Alert className="mb-4 sm:mb-6" variant="destructive">
             <XCircle className="h-4 w-4" />
             <AlertDescription>
-              <div className="space-y-1">
+              <div className="space-y-1 text-sm sm:text-base">
                 {studentStatus.userInactive && <div>User status: Inactive</div>}
                 {studentStatus.userSuspended && (
                   <div>
@@ -335,84 +339,92 @@ export default function PhysicalCURegMarkingPage() {
         )}
 
         {success && (
-          <Alert className="mb-6">
+          <Alert className="mb-4 sm:mb-6">
             <CheckCircle className="h-4 w-4" />
-            <AlertDescription>{success}</AlertDescription>
+            <AlertDescription className="text-sm sm:text-base">{success}</AlertDescription>
           </Alert>
         )}
 
         {/* Results */}
         {cuRegistrationData.length > 0 && !isBlocked && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <User className="h-4 w-4 sm:h-5 sm:w-5" />
                 CU Registration Records
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <div className="space-y-4">
                 {cuRegistrationData.map((record) => (
                   <div
                     key={record.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                    className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-4 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{record.studentName}</h3>
-                          <Badge variant="outline">{record.studentUid}</Badge>
-                          <Badge
-                            variant={
-                              record.isMAOrMCOM
-                                ? "secondary"
-                                : record.physicalRegistrationDone
-                                  ? "default"
-                                  : "secondary"
-                            }
-                            className={
-                              record.isMAOrMCOM
-                                ? "bg-orange-100 text-orange-800 border-orange-200"
-                                : record.physicalRegistrationDone
-                                  ? "bg-green-100 text-green-800 border-green-200"
-                                  : "bg-yellow-100 text-yellow-800 border-yellow-200"
-                            }
-                          >
-                            {record.isMAOrMCOM ? (
-                              <>
-                                <XCircle className="w-3 h-3 mr-1" />
-                                Not Applicable
-                              </>
-                            ) : record.physicalRegistrationDone ? (
-                              <>
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Physical Done
-                              </>
-                            ) : (
-                              <>
-                                <Clock className="w-3 h-3 mr-1" />
-                                Pending
-                              </>
-                            )}
-                          </Badge>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
+                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+                            {record.studentName}
+                          </h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs sm:text-sm">
+                              {record.studentUid}
+                            </Badge>
+                            <Badge
+                              variant={
+                                record.isMAOrMCOM
+                                  ? "secondary"
+                                  : record.physicalRegistrationDone
+                                    ? "default"
+                                    : "secondary"
+                              }
+                              className={
+                                record.isMAOrMCOM
+                                  ? "bg-orange-100 text-orange-800 border-orange-200 text-xs sm:text-sm"
+                                  : record.physicalRegistrationDone
+                                    ? "bg-green-100 text-green-800 border-green-200 text-xs sm:text-sm"
+                                    : "bg-yellow-100 text-yellow-800 border-yellow-200 text-xs sm:text-sm"
+                              }
+                            >
+                              {record.isMAOrMCOM ? (
+                                <>
+                                  <XCircle className="w-3 h-3 mr-1" />
+                                  <span className="hidden sm:inline">Not Applicable</span>
+                                  <span className="sm:hidden">N/A</span>
+                                </>
+                              ) : record.physicalRegistrationDone ? (
+                                <>
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  <span className="hidden sm:inline">Physical Done</span>
+                                  <span className="sm:hidden">Done</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  Pending
+                                </>
+                              )}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                          <div className="break-words">
                             <span className="font-medium">Program:</span> {record.programCourseName}
                           </div>
-                          <div>
+                          <div className="break-words">
                             <span className="font-medium">CU Form No:</span> {record.cuRegistrationApplicationNumber}
                           </div>
-                          <div>
+                          <div className="break-words sm:col-span-2 lg:col-span-1">
                             <span className="font-medium">Status:</span> {record.status}
                           </div>
                         </div>
                       </div>
-                      <div className="ml-4">
+                      <div className="flex-shrink-0 sm:ml-4">
                         {record.isMAOrMCOM ? (
                           <div className="flex items-center text-orange-600">
                             <XCircle className="w-4 h-4 mr-2" />
-                            <span className="text-sm font-medium">Not Applicable</span>
+                            <span className="text-xs sm:text-sm font-medium">Not Applicable</span>
                           </div>
                         ) : !record.physicalRegistrationDone ? (
                           <Button
@@ -420,27 +432,29 @@ export default function PhysicalCURegMarkingPage() {
                             disabled={markingPhysical !== null}
                             className={
                               record.status === "PENDING" || record.status === "REQUEST_CORRECTION"
-                                ? "bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                : "bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                ? "bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                                : "bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                             }
                           >
                             {markingPhysical === record.id ? (
                               <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Marking...
+                                <span className="hidden sm:inline">Marking...</span>
+                                <span className="sm:hidden">Marking</span>
                               </>
                             ) : (
                               <>
                                 <UserCheck className="w-4 h-4 mr-2" />
-                                Mark Physical Done
+                                <span className="hidden sm:inline">Mark Physical Done</span>
+                                <span className="sm:hidden">Mark Done</span>
                               </>
                             )}
                           </Button>
                         ) : (
-                          <div className="flex flex-col items-end text-green-600">
+                          <div className="flex flex-col items-start sm:items-end text-green-600">
                             <div className="flex items-center">
                               <CheckCircle className="w-4 h-4 mr-2" />
-                              <span className="text-sm font-medium">Completed</span>
+                              <span className="text-xs sm:text-sm font-medium">Completed</span>
                             </div>
                             {record.physicalRegistrationDoneAt && (
                               <div className="text-xs text-gray-500 mt-1">

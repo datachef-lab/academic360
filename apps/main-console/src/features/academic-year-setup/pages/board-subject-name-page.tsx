@@ -49,7 +49,7 @@ const BoardSubjectNameForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Subject Name *</Label>
           <Input
@@ -70,7 +70,7 @@ const BoardSubjectNameForm = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="sequence">Sequence</Label>
           <Input
@@ -203,23 +203,24 @@ export default function BoardSubjectNamePage() {
   return (
     <div className="p-4">
       <Card className="border-none">
-        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
-          <div>
-            <CardTitle className="flex items-center">
-              <BookText className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center mb-3 gap-4 sm:gap-0 sm:justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
+          <div className="flex-1">
+            <CardTitle className="flex items-center text-lg sm:text-xl">
+              <BookText className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400" />
               Subjects
             </CardTitle>
-            <div className="text-muted-foreground">Manage master list of subjects.</div>
+            <div className="text-sm sm:text-base text-muted-foreground mt-1">Manage master list of subjects.</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Subjects
+                  <span className="hidden sm:inline">Add Subjects</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="max-w-2xl">
+              <AlertDialogContent className="w-[95vw] sm:w-full max-w-2xl">
                 <AlertDialogHeader>
                   <AlertDialogTitle>{selectedSubjectName ? "Edit Subject" : "Add New Subject"}</AlertDialogTitle>
                 </AlertDialogHeader>
@@ -231,41 +232,54 @@ export default function BoardSubjectNamePage() {
                 />
               </AlertDialogContent>
             </AlertDialog>
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
-              <Download className="h-4 w-4" /> Download
+            <Button variant="outline" className="flex items-center gap-2 flex-shrink-0" onClick={handleDownloadAll}>
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Download</span>
             </Button>
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
+          <div className="sticky top-[72px] sm:top-[88px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
             <Input
               placeholder="Search by name, code, or sequence..."
-              className="w-64"
+              className="w-full sm:w-64"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
           </div>
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
+              <Table className="border rounded-md min-w-max" style={{ tableLayout: "auto" }}>
                 <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap" }}>
+                    <TableHead
+                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                    >
                       ID
                     </TableHead>
-                    <TableHead style={{ width: 250, background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap" }}>
+                    <TableHead
+                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                    >
                       Subject Name
                     </TableHead>
-                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap" }}>
+                    <TableHead
+                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                    >
                       Code
                     </TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap" }}>
+                    <TableHead
+                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                    >
                       Sequence
                     </TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap" }}>
+                    <TableHead
+                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                    >
                       Status
                     </TableHead>
-                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap" }}>
+                    <TableHead
+                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                    >
                       Actions
                     </TableHead>
                   </TableRow>
@@ -292,18 +306,18 @@ export default function BoardSubjectNamePage() {
                   ) : (
                     filtered.map((sn, index) => (
                       <TableRow key={sn.id} className="group">
-                        <TableCell style={{ width: 60 }}>{index + 1}</TableCell>
-                        <TableCell style={{ width: 250 }}>{sn.name}</TableCell>
-                        <TableCell style={{ width: 140 }}>{sn.code || "-"}</TableCell>
-                        <TableCell style={{ width: 120 }}>{sn.sequence ?? "-"}</TableCell>
-                        <TableCell style={{ width: 120 }}>
+                        <TableCell style={{ padding: "12px 8px" }}>{index + 1}</TableCell>
+                        <TableCell style={{ padding: "12px 8px" }}>{sn.name}</TableCell>
+                        <TableCell style={{ padding: "12px 8px" }}>{sn.code || "-"}</TableCell>
+                        <TableCell style={{ padding: "12px 8px" }}>{sn.sequence ?? "-"}</TableCell>
+                        <TableCell style={{ padding: "12px 8px" }}>
                           {sn.isActive ? (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
                           ) : (
                             <Badge variant="secondary">Inactive</Badge>
                           )}
                         </TableCell>
-                        <TableCell style={{ width: 140 }}>
+                        <TableCell style={{ padding: "12px 8px" }}>
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(sn)} className="h-5 w-5 p-0">
                               <Edit className="h-4 w-4" />

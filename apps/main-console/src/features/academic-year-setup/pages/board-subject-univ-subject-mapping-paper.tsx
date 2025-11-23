@@ -98,7 +98,7 @@ const MappingForm = ({
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Board Subjects *</label>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="border rounded p-2 h-72 flex flex-col">
             <div className="flex items-center justify-between mb-2 border-b pb-2">
               <div className="flex items-center gap-2">
@@ -460,18 +460,22 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
   return (
     <div className="p-4">
       <Card className="border-none">
-        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
-          <div>
-            <CardTitle className="flex items-center">Board Subject ↔ Univ Subject Mappings</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center mb-3 gap-4 sm:gap-0 sm:justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
+          <div className="flex-1">
+            <CardTitle className="flex items-center text-lg sm:text-xl">
+              Board Subject ↔ Univ Subject Mappings
+            </CardTitle>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={onAdd} className="bg-purple-600 hover:bg-purple-700 text-white">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Mapping
+                <Button onClick={onAdd} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Add Mapping</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="max-w-6xl w-[1100px]">
+              <AlertDialogContent className="w-[95vw] sm:w-full max-w-6xl">
                 <AlertDialogHeader>
                   <AlertDialogTitle>{selected ? "Edit Mapping" : "Add New Mapping"}</AlertDialogTitle>
                 </AlertDialogHeader>
@@ -486,19 +490,20 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
               </AlertDialogContent>
             </AlertDialog>
 
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={onDownload}>
-                <Download className="h-4 w-4 mr-2" /> Download
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button variant="outline" onClick={onDownload} className="flex-shrink-0">
+                <Download className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Download</span>
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-4 mb-0 justify-between">
-            <div className="flex items-center gap-4">
+          <div className="sticky top-[72px] sm:top-[88px] z-20 bg-background p-4 border-b flex flex-col sm:flex-row sm:items-center gap-4 mb-0 sm:justify-between">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 flex-1">
               <Input
                 placeholder="Search by subject, board or board subject name..."
-                className="w-64"
+                className="w-full sm:w-64"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />
@@ -509,7 +514,7 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                   setCurrentPage(1);
                 }}
               >
-                <SelectTrigger className="w-64">
+                <SelectTrigger className="w-full sm:w-64">
                   <SelectValue placeholder="University Subject" />
                 </SelectTrigger>
                 <SelectContent className="max-h-72 overflow-auto">
@@ -526,43 +531,58 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                 size="sm"
                 onClick={onEditSelected}
                 disabled={typeof selectedSubjectId !== "number"}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 flex-shrink-0"
                 title="Edit mapping for selected subject"
               >
-                <Edit3 className="h-4 w-4" /> Edit
+                <Edit3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Edit</span>
               </Button>
               {/* Top pagination controls */}
-              <div className="ml-2 flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPageSafe === 1}
+                  className="flex-shrink-0"
                 >
-                  Prev
+                  <span className="hidden sm:inline">Prev</span>
+                  <span className="sm:hidden">‹</span>
                 </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {currentPageSafe} / {totalPages}
+                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                  <span className="hidden sm:inline">
+                    Page {currentPageSafe} / {totalPages}
+                  </span>
+                  <span className="sm:hidden">
+                    {currentPageSafe}/{totalPages}
+                  </span>
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPageSafe === totalPages}
+                  className="flex-shrink-0"
                 >
-                  Next
+                  <span className="hidden sm:inline">Next</span>
+                  <span className="sm:hidden">›</span>
                 </Button>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              Showing {(currentPageSafe - 1) * pageSize + 1} to {Math.min(currentPageSafe * pageSize, totalItems)} of{" "}
-              {totalItems} results
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-shrink-0">
+              <span className="hidden sm:inline">
+                Showing {(currentPageSafe - 1) * pageSize + 1} to {Math.min(currentPageSafe * pageSize, totalItems)} of{" "}
+                {totalItems} results
+              </span>
+              <span className="sm:hidden">
+                {Math.min(currentPageSafe * pageSize, totalItems)} / {totalItems}
+              </span>
             </div>
           </div>
 
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md w-full" style={{ tableLayout: "fixed" }}>
+              <Table className="border rounded-md w-full min-w-max" style={{ tableLayout: "auto" }}>
                 <TableHeader
                   className="sticky top-0 z-10"
                   style={{ background: "#f3f4f6", borderRight: "1px solid #e5e7eb" }}
@@ -570,13 +590,12 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                   <TableRow>
                     <TableHead
                       style={{
-                        width: "6%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: 600,
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -584,13 +603,12 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "34%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: 600,
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -598,13 +616,12 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "30%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: 600,
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -612,13 +629,12 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: 600,
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -626,13 +642,12 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: 600,
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -640,13 +655,12 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: 600,
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                       }}
                     >
                       Action
@@ -675,10 +689,10 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                   ) : (
                     paginatedRows.map((r, idx) => (
                       <TableRow key={`${r.mappingId}-${r.boardSubjectId}`} className="group">
-                        <TableCell style={{ width: "6%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           {(currentPageSafe - 1) * pageSize + idx + 1}
                         </TableCell>
-                        <TableCell style={{ width: "34%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           <div
                             className="truncate"
                             title={`${r.subjectName}${r.subjectCode ? ` (${r.subjectCode})` : ""}`}
@@ -691,10 +705,10 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell style={{ width: "30%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           <span className="text-sm truncate">{r.boardSubjectName}</span>
                         </TableCell>
-                        <TableCell style={{ width: "10%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           {r.boardCode ? (
                             <Badge variant="outline" className="text-xs border-blue-500 text-blue-700 bg-blue-50">
                               {r.boardCode}
@@ -703,7 +717,7 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell style={{ width: "10%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           {r.isActive ? (
                             <Badge className="bg-green-500 text-white text-xs">Active</Badge>
                           ) : (
@@ -712,7 +726,7 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell style={{ width: "10%", padding: "8px 4px" }}>
+                        <TableCell style={{ padding: "12px 8px" }}>
                           <Button
                             variant="outline"
                             size="sm"
@@ -738,21 +752,28 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
       </Card>
       {/* Pagination Controls */}
       {!loading && !error && totalItems > 0 && (
-        <div className="mt-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Showing {(currentPageSafe - 1) * pageSize + 1} to {Math.min(currentPageSafe * pageSize, totalItems)} of{" "}
-            {totalItems} results
+        <div className="mt-4 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
+          <div className="text-xs sm:text-sm text-gray-600">
+            <span className="hidden sm:inline">
+              Showing {(currentPageSafe - 1) * pageSize + 1} to {Math.min(currentPageSafe * pageSize, totalItems)} of{" "}
+              {totalItems} results
+            </span>
+            <span className="sm:hidden">
+              Page {currentPageSafe} of {totalPages} ({totalItems} total)
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-nowrap">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPageSafe === 1}
+              className="flex-shrink-0"
             >
-              Previous
+              <span className="hidden sm:inline">Previous</span>
+              <span className="sm:hidden">Prev</span>
             </Button>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 overflow-x-auto">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 const pageNum = Math.max(1, Math.min(totalPages - 4, currentPageSafe - 2)) + i;
                 if (pageNum > totalPages) return null;
@@ -762,7 +783,7 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                     variant={currentPageSafe === pageNum ? "default" : "outline"}
                     size="sm"
                     onClick={() => setCurrentPage(pageNum)}
-                    className="w-8 h-8 p-0"
+                    className="w-8 h-8 p-0 flex-shrink-0"
                   >
                     {pageNum}
                   </Button>
@@ -774,6 +795,7 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPageSafe === totalPages}
+              className="flex-shrink-0"
             >
               Next
             </Button>

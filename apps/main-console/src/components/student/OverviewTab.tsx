@@ -2,25 +2,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 export default function OverviewTab() {
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <Card className="shadow-sm border">
-          <CardHeader>
-            <CardTitle className="text-sm">Overview</CardTitle>
+          <CardHeader className="p-3 sm:p-4">
+            <CardTitle className="text-sm sm:text-base">Overview</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">No data available.</CardContent>
+          <CardContent className="p-3 sm:p-4 pt-0 text-xs sm:text-sm text-muted-foreground">
+            No data available.
+          </CardContent>
         </Card>
         <Card className="shadow-sm border">
-          <CardHeader>
-            <CardTitle className="text-sm">Attendance</CardTitle>
+          <CardHeader className="p-3 sm:p-4">
+            <CardTitle className="text-sm sm:text-base">Attendance</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">No data available.</CardContent>
+          <CardContent className="p-3 sm:p-4 pt-0 text-xs sm:text-sm text-muted-foreground">
+            No data available.
+          </CardContent>
         </Card>
         <Card className="shadow-sm border">
-          <CardHeader>
-            <CardTitle className="text-sm">Fee Details</CardTitle>
+          <CardHeader className="p-3 sm:p-4">
+            <CardTitle className="text-sm sm:text-base">Fee Details</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">No data available.</CardContent>
+          <CardContent className="p-3 sm:p-4 pt-0 text-xs sm:text-sm text-muted-foreground">
+            No data available.
+          </CardContent>
         </Card>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
+import { SidebarInset, SidebarProvider, useSidebar } from "@/components/ui/sidebar";
+// import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -32,6 +32,7 @@ import {
   Search,
   BookOpen,
   FileText,
+  Menu,
 } from "lucide-react";
 import { NavUser } from "../../../components/globals/NavUser";
 import { ActiveUsersAvatars } from "../../../components/globals/ActiveUsersAvatars";
@@ -130,6 +131,77 @@ const searchData = [
   },
 ];
 
+// Header component that uses useSidebar hook (must be inside SidebarProvider)
+function LayoutHeader({ pathSegments, setOpen }: { pathSegments: string[]; setOpen: (open: boolean) => void }) {
+  const { toggleSidebar } = useSidebar();
+
+  return (
+    <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+      <div className="flex items-center gap-2 px-2 sm:px-4 flex-1 min-w-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="border border-slate-500 ml-2 h-8 w-8 flex-shrink-0 md:hidden"
+          onClick={toggleSidebar}
+        >
+          <Menu className="h-6 w-6" />
+          <span className="sr-only">Toggle Sidebar</span>
+        </Button>
+        {/* <Separator orientation="vertical" className="mr-2 h-4 hidden sm:block" /> */}
+        <Breadcrumb className="min-w-0 flex-1">
+          <BreadcrumbList className="flex-wrap">
+            <BreadcrumbItem className="hidden lg:inline-flex">
+              <BreadcrumbLink asChild>Academics</BreadcrumbLink>
+              <BreadcrumbSeparator className="hidden lg:inline-flex" />
+            </BreadcrumbItem>
+
+            {pathSegments.map((segment, index) => {
+              const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
+              const Icon = pathIconMap[segment];
+              const isLastSegment = index === pathSegments.length - 1;
+
+              return (
+                <BreadcrumbItem key={index} className={isLastSegment ? "inline-flex" : "hidden lg:inline-flex"}>
+                  <BreadcrumbLink asChild>
+                    <Link
+                      to={path}
+                      className="flex items-center gap-1 text-gray-700 hover:text-purple-600 transition-colors text-sm lg:text-base truncate"
+                    >
+                      {Icon && <Icon className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500 flex-shrink-0" />}
+                      <span className="capitalize truncate">{segment.replace(/-/g, " ")}</span>
+                    </Link>
+                  </BreadcrumbLink>
+                  {!isLastSegment && <BreadcrumbSeparator className="hidden lg:inline-flex" />}
+                </BreadcrumbItem>
+              );
+            })}
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+      <div className="flex items-center mr-2 gap-2 flex-shrink-0">
+        <ActiveUsersAvatars />
+        {/* Search Button */}
+        <Button
+          variant="outline"
+          size="icon"
+          className="relative h-9 w-9 sm:w-full sm:justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
+          onClick={() => setOpen(true)}
+        >
+          <Search className="h-4 w-4 sm:mr-2" />
+          <span className="hidden lg:inline-flex">Search...</span>
+          <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </Button>
+
+        <div>
+          <NavUser />
+        </div>
+      </div>
+    </header>
+  );
+}
+
 export default function HomeLayout() {
   useRestrictTempUsers();
   const { accessToken, isReady } = useAuth();
@@ -199,75 +271,7 @@ export default function HomeLayout() {
           <SidebarProvider className="w-screen overflow-x-hidden">
             <AppSidebar />
             <SidebarInset className="w-[100%] overflow-hidden max-h-screen">
-              <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-                <div className="flex items-center gap-2 px-4">
-                  {/* <SidebarTrigger className="-ml-1" /> */}
-                  <Separator orientation="vertical" className="mr-2 h-4" />
-                  <Breadcrumb>
-                    <BreadcrumbList>
-                      <BreadcrumbItem>
-                        <BreadcrumbLink asChild>Academics</BreadcrumbLink>
-                        <BreadcrumbSeparator />
-                      </BreadcrumbItem>
-
-                      {/* {pathSegments.map((segment, index) => {
-                    const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
-
-                    return (
-                      <BreadcrumbItem key={index}>
-                        <BreadcrumbLink asChild className="text-blue-500">
-                          <Link to={path}>{segment.charAt(0).toUpperCase() + segment.slice(1)}</Link>
-                        </BreadcrumbLink>
-                        <BreadcrumbSeparator />
-                      </BreadcrumbItem>
-                    );
-                  })} */}
-
-                      {pathSegments.map((segment, index) => {
-                        const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
-                        const Icon = pathIconMap[segment];
-
-                        return (
-                          <BreadcrumbItem key={index}>
-                            <BreadcrumbLink asChild>
-                              <Link
-                                to={path}
-                                className="flex items-center gap-1 text-gray-700 hover:text-purple-600 transition-colors"
-                              >
-                                {Icon && <Icon className="w-4 h-4 text-gray-500" />}
-                                <span className="capitalize">{segment.replace(/-/g, " ")}</span>
-                              </Link>
-                            </BreadcrumbLink>
-                            <BreadcrumbSeparator />
-                          </BreadcrumbItem>
-                        );
-                      })}
-                    </BreadcrumbList>
-                  </Breadcrumb>
-                </div>
-                <div className="flex items-center mr-2 gap-2">
-                  <ActiveUsersAvatars />
-                  {/* Search Button */}
-                  <Button
-                    variant="outline"
-                    className="relative h-9 w-full justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
-                    onClick={() => setOpen(true)}
-                  >
-                    <Search className="mr-2 h-4 w-4" />
-                    <span className="hidden lg:inline-flex">Search...</span>
-                    <span className="inline-flex lg:hidden">Search</span>
-                    <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                      <span className="text-xs">⌘</span>K
-                    </kbd>
-                  </Button>
-
-                  <div>
-                    <NavUser />
-                  </div>
-                  {/* <NotifcationPanel /> */}
-                  {/* <ModeToggle /> */}
-                </div>
-              </header>
+              <LayoutHeader pathSegments={pathSegments} setOpen={setOpen} />
               <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
                 {accessToken && <Outlet />}
               </div>

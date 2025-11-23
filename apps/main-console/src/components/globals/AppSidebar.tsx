@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import {
   Settings,
@@ -122,6 +122,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user, accessToken, isReady } = useAuth();
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  // Close mobile sidebar when route changes
+  React.useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPath, isMobile]);
 
   // Academic Year Management with Redux
   const {
@@ -436,9 +445,19 @@ interface NavItemProps {
 }
 
 export function NavItem({ href, icon, children, isActive }: NavItemProps) {
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleClick = () => {
+    // Close sidebar on mobile when link is clicked
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
   return (
     <Link
       to={href}
+      onClick={handleClick}
       className={cn(
         " border border-transparent group flex items-center transition-all duration-150 px-6 py-1 hover:border-slate-50 text-sm font-medium relative rounded-l-md",
         isActive
