@@ -1305,7 +1305,10 @@ export async function createStudentSubjectSelectionsWithValidation(
   }
 
   // If admin is creating and selections exist, mark existing ones as deprecated
-  if (existingSelections.length > 0 && userType === "ADMIN") {
+  if (
+    existingSelections.length > 0 &&
+    (userType === "ADMIN" || userType === "STAFF")
+  ) {
     console.log(
       `Admin overriding existing selections for student ${studentId}`,
     );
