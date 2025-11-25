@@ -16,6 +16,7 @@ import {
   debugMinor3ConditionsHandler,
   getLiveProgramCourseCountsHandler,
   getMisTableDataHandler,
+  exportStudentSubjectsReportHandler,
 } from "../controllers/student-subject-selection.controller.js";
 import { createAdminStudentSubjectSelectionsHandler } from "../controllers/student-subject-selection.controller.js";
 
@@ -47,6 +48,11 @@ router.put(
 
 // Get paginated student subject selections
 router.get("/", getStudentSubjectSelectionsHandler as RequestHandler);
+
+router.get(
+  "/exports/subjects",
+  exportStudentSubjectsReportHandler as RequestHandler,
+);
 
 // Get student subject selection by ID
 router.get("/:id", getStudentSubjectSelectionByIdHandler as RequestHandler);

@@ -64,6 +64,46 @@ export class ExportService {
     }
   }
 
+  static async exportStudentSubjectsInventory(academicYearId: number): Promise<ExportResponse> {
+    try {
+      const response = await axiosInstance.get(`/api/subject-selection/student-subject-selection/exports/subjects`, {
+        params: { academicYearId },
+        responseType: "blob",
+        timeout: 0,
+      });
+
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = `student_subjects_${academicYearId}_${new Date().toISOString().split("T")[0]}.xlsx`;
+
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) fileName = match[1];
+      }
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const downloadUrl = URL.createObjectURL(blob);
+
+      return {
+        success: true,
+        message: "Export completed successfully",
+        data: {
+          downloadUrl,
+          fileName,
+          totalRecords: 0,
+        },
+      };
+    } catch (error: unknown) {
+      console.error("Student subjects export error:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Export failed",
+      };
+    }
+  }
+
   /**
    * Export CU registration correction requests to Excel
    * @param academicYearId - The academic year ID to filter by

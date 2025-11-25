@@ -97,9 +97,6 @@ export default function ReportsPage() {
   );
   const selectedAcademicYearId = selectedAcademicYear?.id?.toString() || "";
 
-  // Mock subject selection meta ID - replace with actual ID from your data
-  const subjectSelectionMetaId = 1;
-
   const handleDownload = async (reportId: string, downloadFunction: () => Promise<void>) => {
     try {
       setIsExporting(true);
@@ -135,7 +132,11 @@ export default function ReportsPage() {
   };
 
   const downloadSubjectSelectionReport = async () => {
-    // Update progress for subject selection report
+    if (!selectedAcademicYearId) {
+      toast.error("Please select an academic year");
+      return;
+    }
+
     setCurrentProgressUpdate({
       id: `export_${Date.now()}`,
       userId: userId,
@@ -146,7 +147,7 @@ export default function ReportsPage() {
       createdAt: new Date(),
     });
 
-    const result = await ExportService.exportStudentSubjectSelections(subjectSelectionMetaId);
+    const result = await ExportService.exportStudentSubjectsInventory(Number(selectedAcademicYearId));
 
     if (result.success && result.data) {
       // Trigger download
@@ -335,14 +336,79 @@ export default function ReportsPage() {
     }
   };
 
+  const downloadStudentUniversitySubjectsReport = async () => {
+    if (!selectedAcademicYearId) {
+      toast.error("Please select an academic year");
+      return;
+    }
+
+    setCurrentProgressUpdate({
+      id: `export_${Date.now()}`,
+      userId,
+      type: "export_progress",
+      message: "Exporting Student University Subjects Report...",
+      progress: 25,
+      status: "in_progress",
+      createdAt: new Date(),
+    });
+
+    const result = await ExportService.exportStudentSubjectsInventory(Number(selectedAcademicYearId));
+
+    if (result.success && result.data) {
+      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId,
+        type: "export_progress",
+        message: "Student University Subjects Report downloaded successfully!",
+        progress: 100,
+        status: "completed",
+        fileName: result.data?.fileName,
+        downloadUrl: result.data?.downloadUrl,
+        createdAt: new Date(),
+      });
+      toast.success("Student University Subjects Report downloaded successfully!");
+    } else {
+      throw new Error(result.message || "Export failed");
+    }
+  };
+
   const reports: ReportItem[] = [
+    {
+      id: "student-detailed-report",
+      name: "Student Detailed Report",
+      description: "Download student personal, program, and address information",
+      icon: <Users className="h-5 w-5 text-green-600" />,
+      downloadFunction: () => handleDownload("student-detailed-report", downloadStudentDetailedReport),
+      requiresAcademicYear: true,
+      requiresRegulation: false,
+    },
+    {
+      id: "student-academic-subjects-report",
+      name: "Student's 12th Subjects Report",
+      description: "Download students' XII subjects, marks, and related data",
+      icon: <FileText className="h-5 w-5 text-teal-600" />,
+      downloadFunction: () => handleDownload("student-academic-subjects-report", downloadStudentAcademicSubjectsReport),
+      requiresAcademicYear: true,
+      requiresRegulation: false,
+    },
     {
       id: "subject-selection",
       name: "Subject Selection Report",
       description: "Export all student subject selections with details and statistics",
       icon: <Users className="h-5 w-5 text-blue-600" />,
       downloadFunction: () => handleDownload("subject-selection", downloadSubjectSelectionReport),
-      requiresAcademicYear: false,
+      requiresAcademicYear: true,
+      requiresRegulation: false,
+    },
+    {
+      id: "student-university-subjects-report",
+      name: "Student University Subjects Report",
+      description: "Download university subject inventory per student for selected academic year",
+      icon: <Users className="h-5 w-5 text-cyan-600" />,
+      downloadFunction: () =>
+        handleDownload("student-university-subjects-report", downloadStudentUniversitySubjectsReport),
+      requiresAcademicYear: true,
       requiresRegulation: false,
     },
     {
@@ -372,24 +438,6 @@ export default function ReportsPage() {
         handleDownload("cu-registration-documents", () => downloadCuRegistrationDocuments("documents")),
       requiresAcademicYear: true,
       requiresRegulation: true,
-    },
-    {
-      id: "student-detailed-report",
-      name: "Student Detailed Report",
-      description: "Download student personal, program, and address information",
-      icon: <Users className="h-5 w-5 text-green-600" />,
-      downloadFunction: () => handleDownload("student-detailed-report", downloadStudentDetailedReport),
-      requiresAcademicYear: true,
-      requiresRegulation: false,
-    },
-    {
-      id: "student-academic-subjects-report",
-      name: "Student Academic Subjects Report",
-      description: "Download students' XII subjects, marks, and related data",
-      icon: <FileText className="h-5 w-5 text-teal-600" />,
-      downloadFunction: () => handleDownload("student-academic-subjects-report", downloadStudentAcademicSubjectsReport),
-      requiresAcademicYear: true,
-      requiresRegulation: false,
     },
   ];
 
