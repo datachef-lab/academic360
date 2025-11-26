@@ -1,4 +1,4 @@
-import { CourseT, DegreeT, PaperComponentT, ExamComponentT, PaperT, TopicT, ProgramCourseT, StreamT, CourseTypeT, CourseLevelT, AffiliationT, RegulationTypeT, SubjectT, SubjectTypeT, AcademicYearT, ClassT } from "@/schemas/models";
+import { CourseT, DegreeT, PaperComponentT, ExamComponentT, PaperT, TopicT, ProgramCourseT, StreamT, CourseTypeT, CourseLevelT, AffiliationT, RegulationTypeT, SubjectT, SubjectTypeT, AcademicYearT, ClassT, SubjectGroupingMainT, SubjectGroupingProgramCourseT, SubjectGroupingSubjectT } from "@/schemas/models";
 
 export interface CourseDto extends Omit<CourseT, "degreeId"> {
     degree: DegreeT | null;
@@ -34,3 +34,19 @@ export interface ProgramCourseDto extends Omit<ProgramCourseT, "streamId" | "cou
 
 // Basic DTO for Subject model (extendable for relations if needed later)
 export interface SubjectDto extends SubjectT { }
+
+
+export interface SubjectGroupingProgramCourseDto extends SubjectGroupingProgramCourseT { 
+    programCourse: ProgramCourseDto;
+}
+
+export interface SubjectGroupingSubjectDto extends SubjectGroupingSubjectT { 
+    subject: SubjectDto;
+}
+
+export interface SubjectGroupingMainDto extends SubjectGroupingMainT { 
+    academicYear: AcademicYearT;
+    subjectType: SubjectTypeT;
+    subjectGroupingProgramCourses: SubjectGroupingProgramCourseDto[];
+    subjectGroupingSubjects: SubjectGroupingSubjectDto[];
+}

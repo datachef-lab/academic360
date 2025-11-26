@@ -14,3 +14,6 @@ export * from "./stream.model";
 export * from "./subject-type.model";
 export * from "./subject.model";
 export * from "./topic.model";
+export * from "./subject-grouping-main.model";
+export * from "./subject-grouping-program-course.model";
+export * from "./subject-grouping-sub.model";

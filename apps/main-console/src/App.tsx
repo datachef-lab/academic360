@@ -149,6 +149,7 @@ const router = createBrowserRouter(
                 { path: "classes", element: <courseSubjectModule.ClassesPage /> },
                 { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
                 { path: "academic-years", element: <AcademicYearPage /> },
+                { path: "subject-groupings", element: <courseSubjectModule.SubjectGroupingsPage /> },
               ],
             },
             {

@@ -12,6 +12,9 @@ import courseLevelRouter from "./course-level.routes.js";
 import specializationRouter from "./specialization.routes.js";
 import examComponentRouter from "./exam-component.routes.js";
 import cascadingDropdownsRouter from "./cascading-dropdowns.route.js";
+import subjectGroupingMainRouter from "./subject-grouping-main.routes.js";
+import subjectGroupingProgramCourseRouter from "./subject-grouping-program-course.routes.js";
+import subjectGroupingSubRouter from "./subject-grouping-sub.routes.js";
 
 export {
   courseRouter,
@@ -28,4 +31,7 @@ export {
   specializationRouter,
   examComponentRouter,
   cascadingDropdownsRouter,
+  subjectGroupingMainRouter,
+  subjectGroupingProgramCourseRouter,
+  subjectGroupingSubRouter,
 };

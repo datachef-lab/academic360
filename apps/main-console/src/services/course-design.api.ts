@@ -15,6 +15,7 @@ import type {
   ExamComponent,
   Stream,
   PaperDto,
+  SubjectGroupingMainDto,
 } from "@repo/db";
 import { ApiResponse } from "@/types/api-response";
 // import { Stream } from '@/pages/courses-subjects-design/streams/columns';
@@ -80,7 +81,7 @@ export const getPapersPaginated = async (
     searchText?: string | null;
   },
 ) => {
-  const params: Record<string, any> = { page, pageSize };
+  const params: Record<string, unknown> = { page, pageSize };
   if (filters?.subjectId) params.subjectId = filters.subjectId;
   if (filters?.affiliationId) params.affiliationId = filters.affiliationId;
   if (filters?.regulationTypeId) params.regulationTypeId = filters.regulationTypeId;
@@ -271,6 +272,28 @@ export const bulkUploadAffiliations = async (
   return res.data.payload;
 };
 
+// Subject Groupings
+export const getSubjectGroupings = async () => {
+  const res = await axiosInstance.get<ApiResponse<SubjectGroupingMainDto[]>>(`${BASE}/subject-grouping-mains`);
+  return res.data.payload;
+};
+
+export const createSubjectGrouping = async (data: unknown) => {
+  const res = await axiosInstance.post<ApiResponse<SubjectGroupingMainDto | null>>(
+    `${BASE}/subject-grouping-mains`,
+    data,
+  );
+  return res.data.payload;
+};
+
+export const updateSubjectGrouping = async (id: number, data: unknown) => {
+  const res = await axiosInstance.put<ApiResponse<SubjectGroupingMainDto | null>>(
+    `${BASE}/subject-grouping-mains/${id}`,
+    data,
+  );
+  return res.data.payload;
+};
+
 // Affiliation Types
 // AffiliationType functions removed as AffiliationType doesn't exist in @repo/db
 
@@ -408,7 +431,7 @@ export const downloadPapers = async (filters?: {
   isOptional?: boolean | null;
   searchText?: string | null;
 }) => {
-  const params: Record<string, any> = {};
+  const params: Record<string, unknown> = {};
   if (filters?.subjectId) params.subjectId = filters.subjectId;
   if (filters?.affiliationId) params.affiliationId = filters.affiliationId;
   if (filters?.regulationTypeId) params.regulationTypeId = filters.regulationTypeId;

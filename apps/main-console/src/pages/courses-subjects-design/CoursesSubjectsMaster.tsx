@@ -23,6 +23,11 @@ const nestedHomeLinks = [
     icon: Library,
   },
   {
+    title: "Subject Groupings",
+    url: "/dashboard/academic-year-setup/course-design/subject-groupings",
+    icon: Book,
+  },
+  {
     title: "Subject Paper Mapping",
     url: "/dashboard/academic-year-setup/course-design/subject-paper-mapping",
     icon: FileText,
