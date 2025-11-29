@@ -2820,15 +2820,15 @@ export async function downloadStudentImages(
   // 4) Generate zip buffer and return
   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
-  socketService.sendProgressUpdate(userId.toString(), {
-    id: `download-${Date.now()}`,
-    userId: userId.toString(),
-    type: "export_progress",
-    message: `Downloading images for academic year ${academicYearId}`,
-    progress: 100,
-    status: "completed",
-    createdAt: new Date(),
-  });
+  //   socketService.sendProgressUpdate(userId.toString(), {
+  //     id: `download-${Date.now()}`,
+  //     userId: userId.toString(),
+  //     type: "export_progress",
+  //     message: `Downloading images for academic year ${academicYearId}`,
+  //     progress: 100,
+  //     status: "completed",
+  //     createdAt: new Date(),
+  //   });
 
   return zipBuffer;
 }
