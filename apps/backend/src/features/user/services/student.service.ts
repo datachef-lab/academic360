@@ -2784,7 +2784,7 @@ export async function downloadStudentImages(
 
             const response = await axios.get(
               `https://besc.academic360.app/id-card-generate/api/images?uid=${student.uid}&crop=true`,
-              { responseType: "arraybuffer", timeout: 30_000 },
+              { responseType: "arraybuffer", timeout: 0 },
             );
 
             if (response.status !== 200 || !response.data) {
