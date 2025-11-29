@@ -4,7 +4,7 @@ import axios, { AxiosHeaders, AxiosResponse } from "axios";
 // Define an Axios instance with a base URL and performance optimizations
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_APP_BACKEND_URL,
-  timeout: 30000, // 30 second timeout - increased for slower backends
+  timeout: 0, // 0 second timeout - no timeout
   headers: {
     "Content-Type": "application/json",
   },

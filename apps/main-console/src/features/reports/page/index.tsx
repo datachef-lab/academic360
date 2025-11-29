@@ -373,6 +373,39 @@ export default function ReportsPage() {
     }
   };
 
+  const downloadStudentImagesReport = async () => {
+    setCurrentProgressUpdate({
+      id: `export_${Date.now()}`,
+      userId: userId,
+      type: "export_progress",
+      message: "Exporting Student Images Report...",
+      progress: 25,
+      status: "in_progress",
+      createdAt: new Date(),
+    });
+
+    const academicYearIdNumber = Number(selectedAcademicYearId);
+    const result = await ExportService.downloadStudentImages(academicYearIdNumber);
+
+    if (result.success && result.data) {
+      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: userId,
+        type: "export_progress",
+        message: "Student Images Report downloaded successfully!",
+        progress: 100,
+        status: "completed",
+        fileName: result.data?.fileName,
+        downloadUrl: result.data?.downloadUrl,
+        createdAt: new Date(),
+      });
+      toast.success("Student Images Report downloaded successfully!");
+    } else {
+      throw new Error(result.message || "Export failed");
+    }
+  };
+
   const reports: ReportItem[] = [
     {
       id: "student-detailed-report",
@@ -380,6 +413,15 @@ export default function ReportsPage() {
       description: "Download student personal, program, and address information",
       icon: <Users className="h-5 w-5 text-green-600" />,
       downloadFunction: () => handleDownload("student-detailed-report", downloadStudentDetailedReport),
+      requiresAcademicYear: true,
+      requiresRegulation: false,
+    },
+    {
+      id: "student-images",
+      name: "Student Avatar Images",
+      description: "Download student avatar images as ZIP file",
+      icon: <Users className="h-5 w-5 text-green-600" />,
+      downloadFunction: () => handleDownload("student-images", downloadStudentImagesReport),
       requiresAcademicYear: true,
       requiresRegulation: false,
     },

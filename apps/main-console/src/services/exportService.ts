@@ -64,6 +64,47 @@ export class ExportService {
     }
   }
 
+  static async downloadStudentImages(academicYearId: number): Promise<ExportResponse> {
+    try {
+      const response = await axiosInstance.get(`/api/students/export/images`, {
+        params: { academicYearId },
+        responseType: "blob",
+      });
+
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = `student_images_${academicYearId}.zip`;
+
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+        }
+      }
+
+      const blob = new Blob([response.data], {
+        type: "application/zip",
+      });
+
+      const downloadUrl = URL.createObjectURL(blob);
+
+      return {
+        success: true,
+        message: "Export completed successfully",
+        data: {
+          downloadUrl,
+          fileName,
+          totalRecords: 0,
+        },
+      };
+    } catch (error: unknown) {
+      console.error("Student images export error:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Export failed",
+      };
+    }
+  }
+
   static async exportStudentSubjectsInventory(academicYearId: number): Promise<ExportResponse> {
     try {
       const response = await axiosInstance.get(`/api/subject-selection/student-subject-selection/exports/subjects`, {
