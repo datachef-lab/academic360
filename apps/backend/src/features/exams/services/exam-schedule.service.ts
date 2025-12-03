@@ -1,7 +1,26 @@
 import { db, pool } from "@/db/index.js";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
-import { eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { ExamDto } from "@repo/db/dtos/exams";
+import {
+  ExamCandidate,
+  examCandidateModel,
+  examModel,
+  examProgramCourseModel,
+  ExamRoom,
+  examRoomModel,
+  ExamRoomT,
+  ExamShift,
+  examShiftModel,
+  ExamShiftT,
+  ExamSubject,
+  examSubjectModel,
+  ExamSubjectType,
+  examSubjectTypeModel,
+  promotionModel,
+  sessionModel,
+} from "@repo/db/schemas";
 
 export interface CountStudentsByPapersParams {
   classId: number;
@@ -172,6 +191,126 @@ export interface StudentWithSeat {
  * Get students eligible for exam with seat assignments
  * Returns students with their assigned floor, room, and seat numbers
  */
+// export async function getStudentsByPapers(
+//     params: GetStudentsByPapersParams,
+//     roomAssignments: Array<{
+//         roomId: number;
+//         floorId: number | null;
+//         floorName: string | null;
+//         roomName: string;
+//         maxStudentsPerBench: number;
+//         numberOfBenches: number;
+//     }>,
+// ): Promise<StudentWithSeat[]> {
+//     const {
+//         classId,
+//         programCourseIds,
+//         paperIds,
+//         academicYearIds,
+//         shiftIds,
+//         assignBy,
+//     } = params;
+
+//     if (
+//         paperIds.length === 0 ||
+//         programCourseIds.length === 0 ||
+//         academicYearIds.length === 0
+//     ) {
+//         return [];
+//     }
+
+//     try {
+//         const studentIdsArray = await getEligibleStudentIds(params);
+
+//         if (studentIdsArray.length === 0) {
+//             return [];
+//         }
+
+//         // Fetch student details with user info and CU registration application number
+//         const students = await db
+//             .select({
+//                 studentId: studentModel.id,
+//                 uid: studentModel.uid,
+//                 userId: studentModel.userId,
+//                 userName: userModel.name,
+//                 userEmail: userModel.email,
+//                 userWhatsappPhone: userModel.whatsappNumber,
+//                 cuRegistrationApplicationNumber:
+//                     cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+//             })
+//             .from(studentModel)
+//             .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+//             .leftJoin(
+//                 cuRegistrationCorrectionRequestModel,
+//                 eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
+//             )
+//             .where(inArray(studentModel.id, studentIdsArray));
+
+//         // Sort students based on assignBy
+//         students.sort((a, b) => {
+//             if (assignBy === "UID") {
+//                 return (a.uid || "").localeCompare(b.uid || "");
+//             } else {
+//                 // Sort by CU Registration Application Number
+//                 const aAppNum = a.cuRegistrationApplicationNumber || "";
+//                 const bAppNum = b.cuRegistrationApplicationNumber || "";
+//                 return aAppNum.localeCompare(bAppNum);
+//             }
+//         });
+
+//         // Assign seats to students
+//         const studentsWithSeats: StudentWithSeat[] = [];
+//         let studentIndex = 0;
+
+//         for (const roomAssignment of roomAssignments) {
+//             const {
+//                 roomId,
+//                 floorId,
+//                 floorName,
+//                 roomName,
+//                 maxStudentsPerBench,
+//                 numberOfBenches,
+//             } = roomAssignment;
+//             const roomCapacity = numberOfBenches * maxStudentsPerBench;
+
+//             for (
+//                 let bench = 1;
+//                 bench <= numberOfBenches && studentIndex < students.length;
+//                 bench++
+//             ) {
+//                 // Generate seat positions: extreme left and right based on maxStudentsPerBench
+//                 const seatPositions = generateSeatPositions(maxStudentsPerBench);
+
+//                 for (const position of seatPositions) {
+//                     if (studentIndex >= students.length) break;
+
+//                     const student = students[studentIndex]!;
+//                     const seatNumber = `${bench}${position}`;
+
+//                     studentsWithSeats.push({
+//                         studentId: student.studentId,
+//                         uid: student.uid || "",
+//                         name: student.userName || "",
+//                         email: student.userEmail || "",
+//                         whatsappPhone: student.userWhatsappPhone || "",
+//                         cuRegistrationApplicationNumber:
+//                             student.cuRegistrationApplicationNumber,
+//                         floorName,
+//                         roomName,
+//                         seatNumber,
+//                     });
+
+//                     studentIndex++;
+//                 }
+//             }
+//         }
+
+//         return studentsWithSeats;
+//     } catch (error) {
+//         console.error("[EXAM-SCHEDULE] Error fetching students:", error);
+//         throw error;
+//     }
+// }
 export async function getStudentsByPapers(
   params: GetStudentsByPapersParams,
   roomAssignments: Array<{
@@ -179,118 +318,68 @@ export async function getStudentsByPapers(
     floorId: number | null;
     floorName: string | null;
     roomName: string;
-    maxStudentsPerBench: number;
-    numberOfBenches: number;
+    studentsPerBench: number;
+    capacity: number;
   }>,
 ): Promise<StudentWithSeat[]> {
-  const {
-    classId,
-    programCourseIds,
-    paperIds,
-    academicYearIds,
-    shiftIds,
-    assignBy,
-  } = params;
+  const studentIds = await getEligibleStudentIds(params);
+  if (studentIds.length === 0) return [];
 
-  if (
-    paperIds.length === 0 ||
-    programCourseIds.length === 0 ||
-    academicYearIds.length === 0
-  ) {
-    return [];
+  const students = await db
+    .select({
+      studentId: studentModel.id,
+      uid: studentModel.uid,
+      userName: userModel.name,
+      userEmail: userModel.email,
+      userWhatsappPhone: userModel.whatsappNumber,
+      cuRegistrationApplicationNumber:
+        cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+    })
+    .from(studentModel)
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      cuRegistrationCorrectionRequestModel,
+      eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
+    )
+    .where(inArray(studentModel.id, studentIds));
+
+  students.sort((a, b) =>
+    params.assignBy === "UID"
+      ? (a.uid || "").localeCompare(b.uid || "")
+      : (a.cuRegistrationApplicationNumber || "").localeCompare(
+          b.cuRegistrationApplicationNumber || "",
+        ),
+  );
+
+  const result: StudentWithSeat[] = [];
+  let studentIdx = 0;
+
+  for (const room of roomAssignments) {
+    const letters = generateSeatPositions(room.studentsPerBench);
+    let seatIdx = 0;
+
+    while (studentIdx < students.length && seatIdx < room.capacity) {
+      const bench = Math.floor(seatIdx / room.studentsPerBench) + 1;
+      const letter = letters[seatIdx % room.studentsPerBench];
+      const seatNumber = `${bench}${letter}`;
+
+      const s = students[studentIdx++];
+      result.push({
+        studentId: s.studentId,
+        uid: s.uid || "",
+        name: s.userName || "",
+        email: s.userEmail || "",
+        whatsappPhone: s.userWhatsappPhone || "",
+        cuRegistrationApplicationNumber: s.cuRegistrationApplicationNumber,
+        floorName: room.floorName,
+        roomName: room.roomName,
+        seatNumber,
+      });
+      seatIdx++;
+    }
   }
 
-  try {
-    const studentIdsArray = await getEligibleStudentIds(params);
-
-    if (studentIdsArray.length === 0) {
-      return [];
-    }
-
-    // Fetch student details with user info and CU registration application number
-    const students = await db
-      .select({
-        studentId: studentModel.id,
-        uid: studentModel.uid,
-        userId: studentModel.userId,
-        userName: userModel.name,
-        userEmail: userModel.email,
-        userWhatsappPhone: userModel.whatsappNumber,
-        cuRegistrationApplicationNumber:
-          cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
-      })
-      .from(studentModel)
-      .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-      .leftJoin(
-        cuRegistrationCorrectionRequestModel,
-        eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
-      )
-      .where(inArray(studentModel.id, studentIdsArray));
-
-    // Sort students based on assignBy
-    students.sort((a, b) => {
-      if (assignBy === "UID") {
-        return (a.uid || "").localeCompare(b.uid || "");
-      } else {
-        // Sort by CU Registration Application Number
-        const aAppNum = a.cuRegistrationApplicationNumber || "";
-        const bAppNum = b.cuRegistrationApplicationNumber || "";
-        return aAppNum.localeCompare(bAppNum);
-      }
-    });
-
-    // Assign seats to students
-    const studentsWithSeats: StudentWithSeat[] = [];
-    let studentIndex = 0;
-
-    for (const roomAssignment of roomAssignments) {
-      const {
-        roomId,
-        floorId,
-        floorName,
-        roomName,
-        maxStudentsPerBench,
-        numberOfBenches,
-      } = roomAssignment;
-      const roomCapacity = numberOfBenches * maxStudentsPerBench;
-
-      for (
-        let bench = 1;
-        bench <= numberOfBenches && studentIndex < students.length;
-        bench++
-      ) {
-        // Generate seat positions: extreme left and right based on maxStudentsPerBench
-        const seatPositions = generateSeatPositions(maxStudentsPerBench);
-
-        for (const position of seatPositions) {
-          if (studentIndex >= students.length) break;
-
-          const student = students[studentIndex]!;
-          const seatNumber = `${bench}${position}`;
-
-          studentsWithSeats.push({
-            studentId: student.studentId,
-            uid: student.uid || "",
-            name: student.userName || "",
-            email: student.userEmail || "",
-            whatsappPhone: student.userWhatsappPhone || "",
-            cuRegistrationApplicationNumber:
-              student.cuRegistrationApplicationNumber,
-            floorName,
-            roomName,
-            seatNumber,
-          });
-
-          studentIndex++;
-        }
-      }
-    }
-
-    return studentsWithSeats;
-  } catch (error) {
-    console.error("[EXAM-SCHEDULE] Error fetching students:", error);
-    throw error;
-  }
+  return result;
 }
 
 /**
@@ -353,3 +442,222 @@ function generateSeatPositions(maxStudentsPerBench: number): string[] {
 
   return positions;
 }
+
+export async function createExamAssignment(dto: ExamDto) {
+  return await db.transaction(async (tx) => {
+    // 1. Create exam record
+    const [exam] = await tx
+      .insert(examModel)
+      .values({
+        academicYearId: dto.academicYear.id!,
+        examTypeId: dto.examType.id!,
+        classId: dto.classId.id!,
+
+        gender: dto.gender,
+        orderType: dto.orderType,
+      })
+      .returning();
+
+    if (!exam) throw new Error("Failed to create exam");
+
+    // 2. Insert exam rooms
+    const roomIdToExamRoom = new Map<number, any>();
+    for (const loc of dto.locations) {
+      const [er] = await tx
+        .insert(examRoomModel)
+        .values({
+          examId: exam.id,
+          roomId: loc.room.id!,
+          capacity: loc.capacity,
+          studentsPerBench: loc.studentsPerBench,
+        })
+        .returning();
+
+      roomIdToExamRoom.set(loc.room.id!, er);
+    }
+
+    // 3. Insert related records (program courses, shifts, subject types)
+    await Promise.all([
+      ...dto.programCourses.map((pc) =>
+        tx.insert(examProgramCourseModel).values({
+          examId: exam.id,
+          programCourseId: pc.id!,
+        }),
+      ),
+      ...dto.shifts.map((s) =>
+        tx.insert(examShiftModel).values({
+          examId: exam.id,
+          shiftId: s.id!,
+        }),
+      ),
+      ...dto.subjectTypes.map((st) =>
+        tx.insert(examSubjectTypeModel).values({
+          examId: exam.id,
+          subjectTypeId: st.id!,
+        }),
+      ),
+    ]);
+
+    // 4. Insert exam subjects
+    const subjectToExamSubject = new Map<number, number>();
+    for (const subj of dto.subjects) {
+      const [es] = await tx
+        .insert(examSubjectModel)
+        .values({
+          examId: exam.id,
+          subjectId: subj.id!,
+          startTime: subj.startTime,
+          endTime: subj.endTime,
+        })
+        .returning();
+      subjectToExamSubject.set(subj.id!, es.id);
+    }
+
+    // 5. Resolve paperIds exactly like getEligibleStudentIds()
+    const subjectIds = dto.subjects.map((s) => s.id!);
+    const subjectTypeIds = dto.subjectTypes.map((st) => st.id!);
+    const programCourseIds = dto.programCourses.map((pc) => pc.id!);
+    const shiftIds = dto.shifts.map((s) => s.id!);
+
+    const paperResult = await tx.execute(sql`
+            SELECT DISTINCT p.id
+            FROM papers p
+            WHERE p.class_id_fk = ${dto.classId.id!}
+              AND p.programe_course_id_fk = ANY(${programCourseIds}::int[])
+              AND p.academic_year_id_fk = ${dto.academicYear.id!}
+              AND p.subject_id_fk = ANY(${subjectIds}::int[])
+              AND p.subject_type_id_fk = ANY(${subjectTypeIds}::int[])
+              AND p.is_active = TRUE
+        `);
+
+    const paperIds = paperResult.rows.map((r: any) => Number(r.id));
+    if (paperIds.length === 0)
+      throw new Error("No active papers found for the given subjects");
+
+    // 6. Prepare seat assignment
+    const seatParams: GetStudentsByPapersParams = {
+      classId: dto.classId.id!,
+      programCourseIds,
+      paperIds,
+      academicYearIds: [dto.academicYear.id!],
+      shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
+      assignBy: dto.orderType === "UID" ? "UID" : "CU Reg. No.",
+    };
+
+    const roomAssignments = dto.locations.map((l) => ({
+      roomId: l.room.id!,
+      floorId: l.room.floor?.id ?? null,
+      floorName: l.room.floor?.name ?? null,
+      roomName: l.room.name,
+      studentsPerBench: l.studentsPerBench,
+      capacity: l.capacity,
+    }));
+
+    const studentsWithSeats = await getStudentsByPapers(
+      seatParams,
+      roomAssignments,
+    );
+    if (studentsWithSeats.length === 0)
+      throw new Error("No eligible students found");
+
+    // 7. Batch fetch latest promotion for each student (using ROW_NUMBER)
+    const studentIds = studentsWithSeats.map((s) => s.studentId);
+
+    const promotionSubquery = tx
+      .select({
+        studentId: promotionModel.studentId,
+        promotionId: promotionModel.id,
+        rn: sql<number>`ROW_NUMBER() OVER (
+                    PARTITION BY ${promotionModel.studentId}
+                    ORDER BY ${promotionModel.startDate} DESC NULLS LAST,
+                             ${promotionModel.createdAt} DESC,
+                             ${promotionModel.id} DESC
+                )`.as("rn"),
+      })
+      .from(promotionModel)
+      .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+      .where(
+        and(
+          inArray(promotionModel.studentId, studentIds),
+          eq(promotionModel.classId, dto.classId.id!),
+          inArray(promotionModel.programCourseId, programCourseIds),
+          eq(sessionModel.academicYearId, dto.academicYear.id!),
+          shiftIds.length > 0
+            ? inArray(promotionModel.shiftId, shiftIds)
+            : sql`TRUE`,
+        ),
+      )
+      .as("promotion_subquery");
+
+    const latestPromotions = await tx
+      .select({
+        studentId: promotionSubquery.studentId,
+        promotionId: promotionSubquery.promotionId,
+      })
+      .from(promotionSubquery)
+      .where(eq(promotionSubquery.rn, 1));
+
+    const promotionMap = new Map<number, number>(
+      latestPromotions.map((p) => [p.studentId, p.promotionId]),
+    );
+
+    // 8. Resolve exam_subject_type_id (first one – enhance if needed)
+    let examSubjectTypeId: number | null = null;
+    if (dto.subjectTypes.length > 0) {
+      const row = await tx
+        .select({ id: examSubjectTypeModel.id })
+        .from(examSubjectTypeModel)
+        .where(
+          and(
+            eq(examSubjectTypeModel.examId, exam.id),
+            eq(examSubjectTypeModel.subjectTypeId, dto.subjectTypes[0].id!),
+          ),
+        )
+        .limit(1);
+      examSubjectTypeId = row[0]?.id ?? null;
+    }
+
+    const examSubjectId =
+      dto.subjects.length > 0
+        ? subjectToExamSubject.get(dto.subjects[0].id!)
+        : null;
+
+    // 9. Build and insert exam_candidates
+    const candidateInserts: ExamCandidate[] = studentsWithSeats.map((s) => {
+      const examRoom = [...roomIdToExamRoom.entries()].find(
+        ([rid]) =>
+          s.roomName ===
+          dto.locations.find((l) => l.room.id === rid)?.room.name,
+      )?.[1] as ExamRoomT;
+
+      if (!examRoom) throw new Error(`Room not found for student ${s.uid}`);
+
+      const promotionId = promotionMap.get(s.studentId);
+      if (!promotionId)
+        throw new Error(`Promotion not found for student ${s.uid}`);
+
+      return {
+        examId: exam.id!,
+        promotionId: promotionId!,
+        examRoomId: examRoom.id!,
+        examSubjectTypeId: examSubjectTypeId!,
+        examSubjectId: examSubjectId!,
+        paperId: paperIds[0]!, // can be enhanced later for per-student paper
+        seatNumber: s.seatNumber, // DB column must be varchar!
+      };
+    });
+
+    if (candidateInserts.length > 0) {
+      await tx.insert(examCandidateModel).values(candidateInserts);
+    }
+
+    return {
+      examId: exam.id,
+      totalStudentsAssigned: studentsWithSeats.length,
+      roomsAssigned: dto.locations.length,
+      message: "Exam assignment created successfully",
+    };
+  });
+}
+
+export async function getExamById() {}
