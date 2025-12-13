@@ -11,21 +11,21 @@ import AffiliationsPage from "./affiliations";
 import ProgramCoursesPage from "./program-course";
 import ClassesPage from "./classes/ClassesPage";
 import ExamComponentesPage from "./exam-component";
-
+import SubjectGroupingsPage from "./subject-groupings";
 
 export {
-    ExamComponentesPage,
-    ClassesPage,
-    ProgramCoursesPage,
-    AffiliationsPage,
-    SubjectPaperMappingPage,
-    StreamsPage,
-    CoursesPage,
-    CourseTypesPage,
-    CourseLevelsPage,
-
-    RegulationTypesPage,
-    SubjectsPage,
-    SubjectCategoriesPage,
-    CoursesSubjectsMaster,
-}
+  ExamComponentesPage,
+  ClassesPage,
+  ProgramCoursesPage,
+  AffiliationsPage,
+  SubjectPaperMappingPage,
+  StreamsPage,
+  CoursesPage,
+  CourseTypesPage,
+  CourseLevelsPage,
+  RegulationTypesPage,
+  SubjectsPage,
+  SubjectCategoriesPage,
+  CoursesSubjectsMaster,
+  SubjectGroupingsPage,
+};

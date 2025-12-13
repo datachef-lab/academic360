@@ -1,5 +1,7 @@
-import { count, desc, eq, ilike, or, and, sql } from "drizzle-orm";
-import { db } from "@/db/index.js";
+import { count, desc, eq, ilike, or, and, sql, isNotNull } from "drizzle-orm";
+import pLimit from "p-limit";
+import JSZip from "jszip";
+import { db, mysqlConnection } from "@/db/index.js";
 import {
   personalDetailsModel,
   Student,
@@ -156,6 +158,7 @@ import {
   gradeModel,
   admissionAcademicInfoModel,
   admissionCourseDetailsModel,
+  cuRegistrationCorrectionRequestModel,
 } from "@repo/db/schemas/models/admissions";
 import {
   paperModel,
@@ -179,6 +182,8 @@ import * as programCourseService from "@/features/course-design/services/program
 import * as specializationService from "@/features/resources/services/specialization.service";
 import * as sectionService from "@/features/academics/services/section.service";
 import * as shiftService from "@/features/academics/services/shift.service";
+import axios from "axios";
+import { socketService } from "@/services/socketService";
 
 export async function addStudent(
   student: StudentType,
@@ -2586,4 +2591,244 @@ export async function bulkUpdateFamilyMemberTitles(
   });
 
   return result;
+}
+
+// export async function downloadStudentImages(academicYearId: number, userId: number) {
+//     const BATCH_SIZE = 500;
+
+//     socketService.sendProgressUpdate(userId.toString(), {
+//         id: `download-${Date.now()}`,
+//         userId: userId.toString(),
+//         type: "export_progress",
+//         message: `Downloading images for academic year ${academicYearId}`,
+//         progress: 0,
+//         status: "started",
+//         createdAt: new Date(),
+//     });
+
+//     const [{ totalCount: idCardCount }] = await db
+//         .select({ totalCount: count() })
+//         .from(studentModel)
+//         .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+//         .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+//         .leftJoin(academicYearModel, eq(sessionModel.academicYearId, academicYearModel.id))
+//         .where(eq(academicYearModel.id, academicYearId));
+
+//     const zip = new JSZip();
+
+//     let processedCount = 0;
+
+//     for (let offset = 0; offset < idCardCount; offset += BATCH_SIZE) {
+//         const result = await db
+//             .select({ id: studentModel.id, uid: studentModel.uid })
+//             .from(studentModel)
+//             .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+//             .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+//             .leftJoin(academicYearModel, eq(sessionModel.academicYearId, academicYearModel.id))
+//             .where(eq(academicYearModel.id, academicYearId))
+//             .limit(BATCH_SIZE)
+//             .offset(offset);
+
+//         for (const student of result) {
+//             try {
+//                 const response = await axios.get(
+//                     `https://besc.academic360.app/id-card-generate/api/images?uid=${student.uid}&crop=true`,
+//                     { responseType: "arraybuffer" }
+//                 );
+
+//                 if (response.status !== 200) {
+//                     console.error(`Error fetching image for UID ${student.uid}`, response.data);
+//                     continue;
+//                 }
+
+//                 // Add file to ZIP
+//                 zip.file(`${student.uid}.jpg`, response.data);
+//                 socketService.sendProgressUpdate(userId.toString(), {
+//                     id: `download-${Date.now()}`,
+//                     userId: userId.toString(),
+//                     type: "export_progress",
+//                     message: `Downloading image for UID ${student.uid} | ${++processedCount} / ${idCardCount}`,
+//                     progress: Number(Math.floor((offset + 1) / idCardCount * 100).toFixed(2)),
+//                     status: "in_progress",
+//                     createdAt: new Date(),
+//                     meta: {
+//                         uid: student.uid,
+//                     },
+//                 });
+//             } catch (error) {
+//                 console.error(`Error fetching image for UID ${student.uid}`, error);
+//             }
+//         }
+//     }
+
+//     // Generate zip
+//     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+//     socketService.sendProgressUpdate(userId.toString(), {
+//         id: `download-${Date.now()}`,
+//         userId: userId.toString(),
+//         type: "export_progress",
+//         message: `Downloading images for academic year ${academicYearId}`,
+//         progress: 100,
+//         status: "completed",
+//         createdAt: new Date(),
+//     });
+//     return zipBuffer; // Send from controller as ZIP file
+// }
+
+// import pLimit from "p-limit";
+// import JSZip from "jszip";
+// import axios from "axios";
+// import pLimit from "p-limit";
+// import JSZip from "jszip";
+// import axios from "axios";
+// import { and, count, eq, isNotNull } from "drizzle-orm";
+
+export async function downloadStudentImages(
+  academicYearId: number,
+  userId: number,
+) {
+  const BATCH_SIZE = 500;
+  const CONCURRENCY_LIMIT = BATCH_SIZE; // safe default
+  const limit = pLimit(CONCURRENCY_LIMIT);
+  const zip = new JSZip();
+
+  // 1) Count only students that have a non-null cuRegistrationApplicationNumber
+  const [{ totalCount: idCardCount }] = await db
+    .select({ totalCount: count() })
+    .from(studentModel)
+    .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+    .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+    .leftJoin(
+      academicYearModel,
+      eq(sessionModel.academicYearId, academicYearModel.id),
+    )
+    // -> use INNER JOIN to ensure only students with a matching correction request are counted
+    .innerJoin(
+      cuRegistrationCorrectionRequestModel,
+      and(
+        eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
+        eq(
+          cuRegistrationCorrectionRequestModel.academicYearId,
+          academicYearModel.id,
+        ),
+        isNotNull(
+          cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+        ),
+      ),
+    )
+    .where(eq(academicYearModel.id, academicYearId));
+
+  if (!idCardCount || idCardCount === 0) {
+    // nothing to do
+    socketService.sendProgressUpdate(userId.toString(), {
+      id: `download-${Date.now()}`,
+      userId: userId.toString(),
+      type: "export_progress",
+      message: `No images found for academic year ${academicYearId}`,
+      progress: 100,
+      status: "completed",
+      createdAt: new Date(),
+    });
+    return Buffer.from([]);
+  }
+
+  let processedCount = 0;
+  const totalBatches = Math.ceil(idCardCount / BATCH_SIZE);
+
+  // 2) Batch by batch — use batch index and compute offset = batch * BATCH_SIZE
+  for (let batch = 0; batch < totalBatches; batch++) {
+    const offset = batch * BATCH_SIZE;
+
+    // select students + their application number in one query
+    const students = await db
+      .select({
+        id: studentModel.id,
+        uid: studentModel.uid,
+        cuAppNo:
+          cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+      })
+      .from(studentModel)
+      .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+      .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+      .leftJoin(
+        academicYearModel,
+        eq(sessionModel.academicYearId, academicYearModel.id),
+      )
+      .innerJoin(
+        cuRegistrationCorrectionRequestModel,
+        and(
+          eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
+          eq(
+            cuRegistrationCorrectionRequestModel.academicYearId,
+            academicYearModel.id,
+          ),
+          isNotNull(
+            cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+          ),
+        ),
+      )
+      .where(eq(academicYearModel.id, academicYearId))
+      .limit(BATCH_SIZE)
+      .offset(offset);
+
+    // 3) Download concurrently with a limit
+    await Promise.allSettled(
+      students.map((student) =>
+        limit(async () => {
+          try {
+            if (!student.cuAppNo) {
+              // safety: skip if app no missing
+              return;
+            }
+
+            const response = await axios.get(
+              `https://besc.academic360.app/id-card-generate/api/images?uid=${student.uid}&crop=true`,
+              { responseType: "arraybuffer", timeout: 0 },
+            );
+
+            if (response.status !== 200 || !response.data) {
+              console.error(
+                `Bad response for UID ${student.uid}`,
+                response.status,
+              );
+              return;
+            }
+
+            // use application number as filename (prefix P as before)
+            const fileName = `P${student.cuAppNo}.jpg`;
+            zip.file(fileName, response.data);
+
+            processedCount++;
+            socketService.sendProgressUpdate(userId.toString(), {
+              id: `download-${Date.now()}`,
+              userId: userId.toString(),
+              type: "export_progress",
+              message: `Downloading image ${processedCount}/${idCardCount}`,
+              progress: Math.floor((processedCount / idCardCount) * 100),
+              status: "in_progress",
+              createdAt: new Date(),
+            });
+          } catch (err) {
+            console.error(`Error downloading ${student.uid}`, err);
+          }
+        }),
+      ),
+    );
+  }
+
+  // 4) Generate zip buffer and return
+  const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+  //   socketService.sendProgressUpdate(userId.toString(), {
+  //     id: `download-${Date.now()}`,
+  //     userId: userId.toString(),
+  //     type: "export_progress",
+  //     message: `Downloading images for academic year ${academicYearId}`,
+  //     progress: 100,
+  //     status: "completed",
+  //     createdAt: new Date(),
+  //   });
+
+  return zipBuffer;
 }

@@ -180,12 +180,12 @@ export default function RealTimeTrackerPage() {
   // Show authentication message if user is not logged in
   if (!user) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <Activity className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-600 mb-2">Authentication Required</h2>
-            <p className="text-gray-500">Please log in to access the real-time tracker.</p>
+            <Activity className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-600 mb-2">Authentication Required</h2>
+            <p className="text-sm sm:text-base text-gray-500">Please log in to access the real-time tracker.</p>
           </div>
         </div>
       </div>
@@ -193,43 +193,13 @@ export default function RealTimeTrackerPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      {/* Main Content - Flexible Height */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Column - Main Content (Table) */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Subject Selection Table - Full Height */}
-          <div className="flex-1 overflow-hidden">
-            {currentData && <MisTable data={currentData} isLoading={isLoading} />}
-
-            {/* Loading State */}
-            {!currentData && isLoading && (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Activity className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-                  <p className="text-gray-600">Loading real-time data...</p>
-                </div>
-              </div>
-            )}
-
-            {/* Empty State */}
-            {!currentData && !isLoading && !apiError && (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Activity className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">No Data Available</h3>
-                  <p className="text-gray-500">Real-time data will appear here once available</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column - Side Panel - Fixed Width */}
-        <div className="w-80 flex-shrink-0 border-l bg-gray-50 overflow-y-auto">
-          <div className="p-4 space-y-4">
+    <div className="min-h-screen flex flex-col">
+      {/* Top Section - Filters and System Status */}
+      <div className="flex-shrink-0 border-b bg-gray-50">
+        <div className="p-3 sm:p-4">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
             {/* Filters Panel */}
-            <div className="">
+            <div className="flex-1">
               <MisFiltersComponent
                 filters={filters}
                 onFiltersChange={handleFiltersChange}
@@ -241,50 +211,81 @@ export default function RealTimeTrackerPage() {
             </div>
 
             {/* System Status Card */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-blue-600" />
-                System Status
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-blue-600" />
-                    <span className="text-xs font-medium text-blue-800">Admin/Staff Online</span>
-                  </div>
-                  <span className="text-sm font-bold text-blue-800">
-                    {isConnected && (user?.type === "ADMIN" || user?.type === "STAFF") ? "1" : "0"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4 text-green-600" />
-                    <span className="text-xs font-medium text-green-800">Students Online</span>
-                  </div>
-                  <span className="text-sm font-bold text-green-800">
-                    {isConnected && user?.type === "STUDENT" ? "1" : "0"}
-                  </span>
-                </div>
-                {lastUpdate && (
-                  <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <span className="text-xs font-medium text-gray-700">Last Update</span>
-                    <span className="text-xs font-medium text-gray-600">
-                      {new Date(lastUpdate).toLocaleTimeString()}
+            <div className="lg:w-80 flex-shrink-0">
+              <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+                <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+                  <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                  System Status
+                </h3>
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                      <span className="text-xs font-medium text-blue-800">Admin/Staff Online</span>
+                    </div>
+                    <span className="text-xs sm:text-sm font-bold text-blue-800">
+                      {isConnected && (user?.type === "ADMIN" || user?.type === "STAFF") ? "1" : "0"}
                     </span>
                   </div>
-                )}
+                  <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                      <span className="text-xs font-medium text-green-800">Students Online</span>
+                    </div>
+                    <span className="text-xs sm:text-sm font-bold text-green-800">
+                      {isConnected && user?.type === "STUDENT" ? "1" : "0"}
+                    </span>
+                  </div>
+                  {lastUpdate && (
+                    <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <span className="text-xs font-medium text-gray-700">Last Update</span>
+                      <span className="text-xs font-medium text-gray-600">
+                        {new Date(lastUpdate).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Bottom Section - Table */}
+      <div className="flex-1 min-w-0">
+        {/* Subject Selection Table */}
+        <div>
+          {currentData && <MisTable data={currentData} isLoading={isLoading} />}
+
+          {/* Loading State */}
+          {!currentData && isLoading && (
+            <div className="flex items-center justify-center min-h-[400px] p-4">
+              <div className="text-center">
+                <Activity className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                <p className="text-sm sm:text-base text-gray-600">Loading real-time data...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!currentData && !isLoading && !apiError && (
+            <div className="flex items-center justify-center min-h-[400px] p-4">
+              <div className="text-center">
+                <Activity className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-base sm:text-lg font-semibold text-gray-600 mb-2">No Data Available</h3>
+                <p className="text-xs sm:text-sm text-gray-500">Real-time data will appear here once available</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Real-time Indicator */}
       {isConnected && (
-        <div className="fixed bottom-4 right-4">
-          <div className="flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg shadow-lg">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <span className="text-sm font-medium">Live Updates</span>
+        <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-50">
+          <div className="flex items-center gap-2 bg-red-600 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg shadow-lg">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse" />
+            <span className="text-xs sm:text-sm font-medium">Live Updates</span>
           </div>
         </div>
       )}

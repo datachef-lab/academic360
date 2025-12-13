@@ -149,6 +149,7 @@ const router = createBrowserRouter(
                 { path: "classes", element: <courseSubjectModule.ClassesPage /> },
                 { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
                 { path: "academic-years", element: <AcademicYearPage /> },
+                { path: "subject-groupings", element: <courseSubjectModule.SubjectGroupingsPage /> },
               ],
             },
             {
@@ -174,7 +175,7 @@ const router = createBrowserRouter(
           children: [
             { path: "", element: <examManagementModule.HomePage /> },
             { path: "exams", element: <examManagementModule.ExamsPage /> },
-            { path: "schedule", element: <examManagementModule.ScheduleExamPage /> },
+
             // { path: "components", element: <examManagementModule.ExamComponentsPage /> },
             { path: "floors", element: <examManagementModule.ExamFloorsPage /> },
             { path: "rooms", element: <examManagementModule.ExamRoomsPage /> },
@@ -182,6 +183,7 @@ const router = createBrowserRouter(
             // { path: "evaluation-types", element: <examManagementModule.EvaluationTypePage /> },
           ],
         },
+        { path: "exam-management/schedule", element: <examManagementModule.ScheduleExamPage /> },
         {
           path: "exam-management/exams/:examId",
           element: <examManagementModule.ExamLayoutMaster />,
@@ -488,7 +490,6 @@ const router = createBrowserRouter(
             { path: "", element: <settingsModule.GeneralSettingsPage /> },
             { path: "users", element: <settingsModule.UsersPage /> },
             { path: "api-config", element: <settingsModule.ApiConfigurationPage /> },
-            { path: "departments", element: <settingsModule.DepartmentsPage /> },
           ],
         },
 

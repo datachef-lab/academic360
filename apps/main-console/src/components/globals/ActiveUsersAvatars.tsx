@@ -22,8 +22,8 @@ export function ActiveUsersAvatars() {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex items-center gap-2">
-        <div className="flex items-center -space-x-2">
+      <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center -space-x-1 sm:-space-x-2">
           {visibleUsers.map((activeUser) => (
             <Tooltip key={activeUser.id}>
               <TooltipTrigger asChild>
@@ -44,7 +44,7 @@ export function ActiveUsersAvatars() {
           {remainingCount > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="h-8 w-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer">
+                <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-[10px] sm:text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer">
                   +{remainingCount}
                 </div>
               </TooltipTrigger>
@@ -56,9 +56,9 @@ export function ActiveUsersAvatars() {
             </Tooltip>
           )}
         </div>
-        {remainingCount > 0 && <span className="text-xs text-gray-500">+{remainingCount} more</span>}
+        {remainingCount > 0 && <span className="hidden sm:inline text-xs text-gray-500">+{remainingCount} more</span>}
         <div
-          className="h-4 w-4 rounded-full bg-green-500 border-2 border-white"
+          className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-green-500 border-2 border-white flex-shrink-0"
           title={`${otherActiveUsers.length} active ${otherActiveUsers.length === 1 ? "user" : "users"}`}
         />
       </div>

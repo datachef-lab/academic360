@@ -89,19 +89,19 @@ export default function AcademicYearSetupPage() {
 
   return (
     <div className=" bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
         {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Academic Year Setup</h1>
-              <p className="text-gray-600">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Academic Year Setup</h1>
+              <p className="text-sm sm:text-base text-gray-600">
                 Configure and manage your academic year settings, courses, and admission processes
               </p>
             </div>
             <div className="flex items-center gap-3">
               <AcademicYearSelector
-                className="w-64"
+                className="w-full sm:w-64"
                 showLabel={false}
                 onAcademicYearChange={(year) => {
                   console.log("Academic year changed to:", year?.year);
@@ -112,30 +112,30 @@ export default function AcademicYearSetupPage() {
         </div>
 
         {/* Stats Tiles */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-6">
-            <Star className="h-6 w-6 text-yellow-500" />
-            <h2 className="text-xl font-semibold text-gray-900">Quick Stats</h2>
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 mb-4 sm:mb-6">
+            <Star className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Quick Stats</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
             {statsData.map((stat, index) => (
               <Card
                 key={index}
                 className="hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group border-0 shadow-md"
               >
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`p-3 rounded-xl ${stat.color} shadow-lg`}>
-                      <stat.icon className="h-6 w-6 text-white" />
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div className={`p-2 sm:p-3 rounded-xl ${stat.color} shadow-lg`}>
+                      <stat.icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
                     <div className="text-right">
-                      <p className="text-3xl font-bold text-gray-900 group-hover:text-gray-700 transition-colors">
+                      <p className="text-2xl sm:text-3xl font-bold text-gray-900 group-hover:text-gray-700 transition-colors">
                         {stat.value}
                       </p>
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600 leading-tight">{stat.title}</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">{stat.title}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -144,12 +144,12 @@ export default function AcademicYearSetupPage() {
         </div>
 
         {/* Feature Cards Grid */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-6">
-            <Settings className="h-6 w-6 text-blue-500" />
-            <h2 className="text-xl font-semibold text-gray-900">Academic Setup Modules</h2>
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 mb-4 sm:mb-6">
+            <Settings className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Academic Setup Modules</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {featureCards.map((card, index) => (
               <Card
                 key={index}
@@ -158,13 +158,13 @@ export default function AcademicYearSetupPage() {
               >
                 <CardContent className="p-0">
                   {/* Header with Icon and Status */}
-                  <div className="p-6 pb-4">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`p-3 rounded-lg ${card.color.replace("50", "100")} shadow-sm`}>
-                        <card.icon className={`h-6 w-6 ${card.iconColor}`} />
+                  <div className="p-4 sm:p-6 pb-3 sm:pb-4">
+                    <div className="flex items-start justify-between mb-3 sm:mb-4">
+                      <div className={`p-2 sm:p-3 rounded-lg ${card.color.replace("50", "100")} shadow-sm`}>
+                        <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.iconColor}`} />
                       </div>
                       <span
-                        className={`px-3 py-1 text-xs font-medium rounded-full ${
+                        className={`px-2 sm:px-3 py-1 text-xs font-medium rounded-full ${
                           card.status === "Active"
                             ? "bg-green-100 text-green-700"
                             : card.status === "Ready"
@@ -178,17 +178,17 @@ export default function AcademicYearSetupPage() {
                       </span>
                     </div>
 
-                    <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-gray-700 transition-colors mb-2">
+                    <CardTitle className="text-base sm:text-lg font-semibold text-gray-900 group-hover:text-gray-700 transition-colors mb-2">
                       {card.title}
                     </CardTitle>
 
-                    <p className="text-sm font-medium text-gray-500 mb-3">{card.items}</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">{card.items}</p>
                   </div>
 
                   {/* Illustration Section */}
-                  <div className="px-6 pb-6">
+                  <div className="px-4 sm:px-6 pb-4 sm:pb-6">
                     {card.illustration ? (
-                      <div className="relative h-32 rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+                      <div className="relative h-24 sm:h-32 rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
                         <img
                           src={card.illustration}
                           alt={`${card.title} illustration`}
@@ -198,10 +198,10 @@ export default function AcademicYearSetupPage() {
                       </div>
                     ) : (
                       <div
-                        className={`h-32 rounded-lg ${card.color.replace("50", "100")} flex justify-center items-center relative overflow-hidden`}
+                        className={`h-24 sm:h-32 rounded-lg ${card.color.replace("50", "100")} flex justify-center items-center relative overflow-hidden`}
                       >
                         <card.icon
-                          className={`h-16 w-16 ${card.iconColor} group-hover:scale-110 transition-transform duration-300`}
+                          className={`h-12 w-12 sm:h-16 sm:w-16 ${card.iconColor} group-hover:scale-110 transition-transform duration-300`}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent"></div>
                       </div>
@@ -209,8 +209,8 @@ export default function AcademicYearSetupPage() {
                   </div>
 
                   {/* Description */}
-                  <div className="px-6 pb-6">
-                    <CardDescription className="text-sm text-gray-600 leading-relaxed group-hover:text-gray-500 transition-colors">
+                  <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+                    <CardDescription className="text-xs sm:text-sm text-gray-600 leading-relaxed group-hover:text-gray-500 transition-colors">
                       {card.description}
                     </CardDescription>
                   </div>

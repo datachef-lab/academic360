@@ -12,6 +12,9 @@ import {
 } from "../services/student.service.js";
 import { readExcelFromBuffer } from "@/utils/readExcel.js";
 import XLSX from "xlsx";
+import { academicYearModel } from "@repo/db/index.js";
+import { db } from "@/db/index.js";
+import { eq } from "drizzle-orm";
 
 export const createStudent = async (
   req: Request,
@@ -514,6 +517,51 @@ export const exportStudentDetailedReportController = async (
       "[STUDENT-EXPORT] Failed to export detailed student report",
       error,
     );
+    handleError(error, res, next);
+  }
+};
+
+export const downloadStudentImagesController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { academicYearId } = req.query;
+
+    if (!academicYearId) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "academicYearId query parameter is required"));
+    }
+
+    const academicYearIdNumber = Number(academicYearId);
+    if (Number.isNaN(academicYearIdNumber)) {
+      return res
+        .status(400)
+        .json(new ApiError(400, "Invalid academicYearId parameter"));
+    }
+
+    const [academicYear] = await db
+      .select()
+      .from(academicYearModel)
+      .where(eq(academicYearModel.id, academicYearIdNumber));
+
+    const zipBuffer = await studentService.downloadStudentImages(
+      academicYearIdNumber,
+      (req as any).user?.id,
+    );
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="student-images-${academicYear.year}.zip"`,
+    );
+    res.setHeader("Content-Length", zipBuffer.byteLength);
+
+    return res.send(zipBuffer); // 👈 THIS WAS MISSING
+  } catch (error) {
+    console.error("[STUDENT-EXPORT] Failed to download student images", error);
     handleError(error, res, next);
   }
 };

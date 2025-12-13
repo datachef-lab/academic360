@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+// import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import {
   Users,
   FileText,
@@ -27,7 +27,7 @@ import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 // import { ChartBarStacked } from './ChartBarStacked';
 
 // Mock academic years and summary data for UI demo
-const academicYears: number[] = [];
+// const academicYears: number[] = [];
 const mockSummary = {
   admissions: { total: 0, approved: 0, rejected: 0 },
   students: { total: 0, new: 0, active: 0, suspended: 0, graduated: 0 },
@@ -126,7 +126,7 @@ function RecentActivity({
 export default function Dashboard() {
   useRestrictTempUsers();
   const [tab, setTab] = useState("overview");
-  const [year, setYear] = useState(academicYears[0]);
+  //   const [year, setYear] = useState(academicYears[0]);
   // In real app, fetch summary data for selected year
   const summary = mockSummary;
 
@@ -136,21 +136,23 @@ export default function Dashboard() {
         <Tabs value={tab} onValueChange={setTab} className="w-full border-none">
           {/* Sticky Header Row: Tabs and Academic Year Selector */}
           <div
-            className="flex items-center justify-between border-none sticky top-0 z-30 bg-gradient-to-br from-gray-50 to-blue-50 px-4 py-3 shadow"
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 border-none sticky top-0 z-30 bg-gradient-to-br from-gray-50 to-blue-50 px-4 py-3 shadow"
             style={{ minHeight: 64 }}
           >
-            <TabsList className="flex gap-8 bg-transparent shadow-none border-none p-0">
-              <TabButton value="overview" label="Overview" tab={tab} />
-              <TabButton value="academics" label="Academics" tab={tab} />
-              <TabButton value="admissions" label="Admissions" tab={tab} />
-              <TabButton value="fees" label="Fees" tab={tab} />
-              <TabButton value="library" label="Library" tab={tab} />
-              <TabButton value="events" label="Events" tab={tab} />
-            </TabsList>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-700 font-medium">Academic Year:</span>
+            <div className="w-full sm:w-auto overflow-x-auto sm:overflow-x-visible -mx-4 sm:mx-0 px-4 sm:px-0">
+              <TabsList className="flex gap-4 sm:gap-8 bg-transparent shadow-none border-none p-0 min-w-max">
+                <TabButton value="overview" label="Overview" tab={tab} />
+                <TabButton value="academics" label="Academics" tab={tab} />
+                <TabButton value="admissions" label="Admissions" tab={tab} />
+                <TabButton value="fees" label="Fees" tab={tab} />
+                <TabButton value="library" label="Library" tab={tab} />
+                <TabButton value="events" label="Events" tab={tab} />
+              </TabsList>
+            </div>
+            {/* <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-gray-700 font-medium text-sm sm:text-base whitespace-nowrap">Academic Year:</span>
               <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-                <SelectTrigger className="w-36">
+                <SelectTrigger className="w-32 sm:w-36">
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -161,7 +163,7 @@ export default function Dashboard() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
           </div>
           {/* Overview Tab */}
           <TabsContent value="overview">

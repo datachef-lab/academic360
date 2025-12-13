@@ -224,19 +224,19 @@ export default function DesignationPage() {
   };
 
   return (
-    <div className="p-4 flex flex-col min-h-[calc(100vh-140px)] gap-4">
+    <div className="p-2 sm:p-4 flex flex-col min-h-[calc(100vh-140px)] gap-4">
       <Card className="border-none flex flex-col h-full">
-        <CardHeader className="flex flex-row items-center justify-between border rounded-md p-4 sticky top-0 z-20 bg-background">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-              <ClipboardList className="h-8 w-8 border rounded-md p-1 border-slate-400" />
-              Designation Management
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border rounded-md p-4 sticky top-0 z-20 bg-background">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl font-semibold">
+              <ClipboardList className="h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
+              <span className="truncate">Designation Management</span>
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1">
               Manage staff designations, descriptions, and activation status.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Dialog
               open={isDialogOpen}
               onOpenChange={(open) => {
@@ -248,17 +248,18 @@ export default function DesignationPage() {
             >
               <DialogTrigger asChild>
                 <Button
-                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-none"
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-none w-full sm:w-auto"
                   onClick={() => {
                     setSelectedDesignation(null);
                     setIsDialogOpen(true);
                   }}
                 >
                   <PlusCircle className="h-4 w-4" />
-                  Add Designation
+                  <span className="hidden sm:inline">Add Designation</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-xl">
+              <DialogContent className="max-w-xl w-[95vw] sm:w-full">
                 <DialogHeader>
                   <DialogTitle>{selectedDesignation ? "Edit Designation" : "Add Designation"}</DialogTitle>
                 </DialogHeader>
@@ -276,114 +277,144 @@ export default function DesignationPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4 pt-6 flex-1 flex flex-col">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-            <div className="w-full md:w-72">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="w-full sm:w-72">
               <Input
                 placeholder="Search by name or description..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
+                className="w-full"
               />
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
               Showing {totalItems} of {designations.length} designations
             </div>
           </div>
 
-          <div className="overflow-x-auto flex-1">
-            <div className="rounded-md border border-slate-300 h-full max-h-[480px] overflow-y-auto">
-              <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur" style={{ minWidth: "720px" }}>
-                <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
-                  <div
-                    className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center"
-                    style={{ width: "8%" }}
-                  >
-                    #
+          <div className="overflow-x-auto flex-1 -mx-2 sm:mx-0">
+            <div className="rounded-md border border-slate-300 h-full max-h-[480px] overflow-y-auto min-w-full">
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
+                  <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
+                    <div className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center w-[8%]">
+                      #
+                    </div>
+                    <div className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center w-[28%]">
+                      Name
+                    </div>
+                    <div className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center w-[40%]">
+                      Description
+                    </div>
+                    <div className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center w-[14%]">
+                      Status
+                    </div>
+                    <div className="flex-shrink-0 px-3 py-2 flex items-center justify-center w-[10%]">Actions</div>
                   </div>
-                  <div
-                    className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center"
-                    style={{ width: "28%" }}
-                  >
-                    Name
-                  </div>
-                  <div
-                    className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center"
-                    style={{ width: "40%" }}
-                  >
-                    Description
-                  </div>
-                  <div
-                    className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center"
-                    style={{ width: "14%" }}
-                  >
-                    Status
-                  </div>
-                  <div className="flex-shrink-0 px-3 py-2 flex items-center justify-center" style={{ width: "10%" }}>
-                    Actions
-                  </div>
+                </div>
+
+                <div className="bg-white">
+                  {loading ? (
+                    <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200">
+                      Loading designations...
+                    </div>
+                  ) : error ? (
+                    <div className="flex items-center justify-center h-52 text-red-600 border-b border-slate-200">
+                      {error}
+                    </div>
+                  ) : totalItems === 0 ? (
+                    <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200">
+                      No designations found. Try adjusting your search.
+                    </div>
+                  ) : (
+                    paginatedDesignations.map((designation, index) => {
+                      const displayIndex = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
+                      return (
+                        <div
+                          key={designation.id ?? displayIndex}
+                          className="flex border-b border-slate-200 hover:bg-muted/40 transition-colors"
+                        >
+                          <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center justify-center w-[8%]">
+                            {displayIndex}
+                          </div>
+                          <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center w-[28%] min-w-0">
+                            <span className="font-medium text-slate-800 truncate w-full">{designation.name}</span>
+                          </div>
+                          <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center w-[40%] min-w-0">
+                            <span
+                              className="text-slate-600 truncate w-full"
+                              title={designation.description || undefined}
+                            >
+                              {designation.description ?? <span className="text-slate-400">No description</span>}
+                            </span>
+                          </div>
+                          <div className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center justify-center w-[14%]">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                                designation.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {designation.isActive ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                          <div className="flex-shrink-0 px-3 py-3 flex items-center justify-center w-[10%]">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="border border-blue-200 text-blue-700 hover:bg-blue-50 h-8 w-8"
+                              onClick={() => {
+                                setSelectedDesignation(designation);
+                                setIsDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
-              <div className="bg-white" style={{ minWidth: "720px" }}>
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3 p-2">
                 {loading ? (
-                  <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200">
+                  <div className="flex items-center justify-center h-52 text-muted-foreground">
                     Loading designations...
                   </div>
                 ) : error ? (
-                  <div className="flex items-center justify-center h-52 text-red-600 border-b border-slate-200">
-                    {error}
-                  </div>
+                  <div className="flex items-center justify-center h-52 text-red-600">{error}</div>
                 ) : totalItems === 0 ? (
-                  <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200">
+                  <div className="flex items-center justify-center h-52 text-muted-foreground">
                     No designations found. Try adjusting your search.
                   </div>
                 ) : (
                   paginatedDesignations.map((designation, index) => {
                     const displayIndex = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
                     return (
-                      <div
-                        key={designation.id ?? displayIndex}
-                        className="flex border-b border-slate-200 hover:bg-muted/40 transition-colors"
-                      >
-                        <div
-                          className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center justify-center"
-                          style={{ width: "8%" }}
-                        >
-                          {displayIndex}
-                        </div>
-                        <div
-                          className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center"
-                          style={{ width: "28%" }}
-                        >
-                          <span className="font-medium text-slate-800 truncate">{designation.name}</span>
-                        </div>
-                        <div
-                          className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center"
-                          style={{ width: "40%" }}
-                        >
-                          <span className="text-slate-600 truncate" title={designation.description || undefined}>
-                            {designation.description ?? <span className="text-slate-400">No description</span>}
-                          </span>
-                        </div>
-                        <div
-                          className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center justify-center"
-                          style={{ width: "14%" }}
-                        >
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              designation.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {designation.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                        <div
-                          className="flex-shrink-0 px-3 py-3 flex items-center justify-center"
-                          style={{ width: "10%" }}
-                        >
+                      <Card key={designation.id ?? displayIndex} className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs text-muted-foreground font-medium">#{displayIndex}</span>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                  designation.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {designation.isActive ? "Active" : "Inactive"}
+                              </span>
+                            </div>
+                            <h3 className="font-semibold text-slate-800 mb-1 truncate">{designation.name}</h3>
+                            <p className="text-sm text-slate-600 line-clamp-2">
+                              {designation.description ?? <span className="text-slate-400">No description</span>}
+                            </p>
+                          </div>
                           <Button
                             variant="outline"
                             size="icon"
-                            className="border border-blue-200 text-blue-700 hover:bg-blue-50"
+                            className="border border-blue-200 text-blue-700 hover:bg-blue-50 flex-shrink-0 h-9 w-9"
                             onClick={() => {
                               setSelectedDesignation(designation);
                               setIsDialogOpen(true);
@@ -392,7 +423,7 @@ export default function DesignationPage() {
                             <Edit className="h-4 w-4" />
                           </Button>
                         </div>
-                      </div>
+                      </Card>
                     );
                   })
                 )}
@@ -404,7 +435,7 @@ export default function DesignationPage() {
 
       {!loading && !error && (
         <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-gray-600">
+          <div className="text-xs sm:text-sm text-gray-600">
             {totalItems === 0
               ? "Showing 0 results"
               : `Showing ${(currentPage - 1) * ITEMS_PER_PAGE + 1} to ${Math.min(
@@ -412,15 +443,16 @@ export default function DesignationPage() {
                   totalItems,
                 )} of ${totalItems} results`}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
             <Button
               variant="outline"
               size="sm"
-              className="border border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="border border-blue-200 text-blue-700 hover:bg-blue-50 flex-shrink-0"
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1 || totalItems === 0}
             >
-              Previous
+              <span className="hidden sm:inline">Previous</span>
+              <span className="sm:hidden">Prev</span>
             </Button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -433,7 +465,7 @@ export default function DesignationPage() {
                     variant={currentPage === pageNum ? "default" : "outline"}
                     size="sm"
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`w-8 h-8 p-0 ${
+                    className={`w-8 h-8 p-0 flex-shrink-0 ${
                       currentPage === pageNum
                         ? "bg-blue-600 hover:bg-blue-700 text-white"
                         : "border border-blue-200 text-blue-700 hover:bg-blue-50"
@@ -448,7 +480,7 @@ export default function DesignationPage() {
             <Button
               variant="outline"
               size="sm"
-              className="border border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="border border-blue-200 text-blue-700 hover:bg-blue-50 flex-shrink-0"
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages || totalItems === 0}
             >

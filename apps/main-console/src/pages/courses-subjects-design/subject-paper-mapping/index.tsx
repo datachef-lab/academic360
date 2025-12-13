@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { PlusCircle, FileText, Download, Upload, Edit, X, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { PlusCircle, FileText, Download, Upload, Edit, X, Loader2, Sparkles } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -131,6 +131,9 @@ const SubjectPaperMappingPage = () => {
   //   const [programCourses, setProgramCourses] = React.useState<Course[]>([]);
   //   const [classes, setClasses] = React.useState<Class[]>([]);
 
+  // Track if component has been initialized to prevent re-fetching on tab switch
+  const hasInitialized = React.useRef(false);
+
   const fetchFilteredData = React.useCallback(async () => {
     console.log("Fetching papers data");
     try {
@@ -192,137 +195,144 @@ const SubjectPaperMappingPage = () => {
     fetchFilteredData,
   ]);
 
-  const fetchData = useCallback(async () => {
-    // Always fetch fresh data (no caching)
-    console.log("Fetching fresh data");
-    setLoading(true);
-    try {
-      const [
-        subjectsRes,
-        affiliationsRes,
-        regulationTypesRes,
-        subjectTypesRes,
-        examComponentsRes,
-        programCourseRes,
-        classesRes,
-        courseRes,
-        courseTypesRes,
-      ] = await Promise.all([
-        getSubjects(),
-        getAffiliations(),
-        getRegulationTypes(),
-        getSubjectTypes(),
-        getExamComponents(),
-        getProgramCourses(),
-        getAllClasses(),
-        getCourses(),
-        getCourseTypes(),
-      ]);
+  const fetchData = useCallback(
+    async (preserveFilters = false) => {
+      // Always fetch fresh data (no caching)
+      console.log("Fetching fresh data", { preserveFilters });
+      setLoading(true);
+      try {
+        const [
+          subjectsRes,
+          affiliationsRes,
+          regulationTypesRes,
+          subjectTypesRes,
+          examComponentsRes,
+          programCourseRes,
+          classesRes,
+          courseRes,
+          courseTypesRes,
+        ] = await Promise.all([
+          getSubjects(),
+          getAffiliations(),
+          getRegulationTypes(),
+          getSubjectTypes(),
+          getExamComponents(),
+          getProgramCourses(),
+          getAllClasses(),
+          getCourses(),
+          getCourseTypes(),
+        ]);
 
-      //   console.log("API Responses:", {
-      //     subjects: subjectsRes,
-      //     affiliations: affiliationsRes,
-      //     regulationTypes: regulationTypesRes,
-      //     subjectTypes: subjectTypesRes,
-      //     examComponents: examComponentsRes,
-      //     academicYears: academicYearsRes,
-      //     programCourses: programCourseRes,
-      //     classes: classesRes,
-      //     sessions: academicYearRes,
-      //   });
+        //   console.log("API Responses:", {
+        //     subjects: subjectsRes,
+        //     affiliations: affiliationsRes,
+        //     regulationTypes: regulationTypesRes,
+        //     subjectTypes: subjectTypesRes,
+        //     examComponents: examComponentsRes,
+        //     academicYears: academicYearsRes,
+        //     programCourses: programCourseRes,
+        //     classes: classesRes,
+        //     sessions: academicYearRes,
+        //   });
 
-      console.log("SubjectTypes response details:", {
-        isArray: Array.isArray(subjectTypesRes),
-        length: Array.isArray(subjectTypesRes) ? subjectTypesRes.length : "not array",
-        data: subjectTypesRes,
-      });
+        console.log("SubjectTypes response details:", {
+          isArray: Array.isArray(subjectTypesRes),
+          length: Array.isArray(subjectTypesRes) ? subjectTypesRes.length : "not array",
+          data: subjectTypesRes,
+        });
 
-      // Handle different response structures
-      setSubjects(Array.isArray(subjectsRes) ? subjectsRes : []);
-      setAffiliations(Array.isArray(affiliationsRes) ? affiliationsRes : []);
-      setRegulationTypes(Array.isArray(regulationTypesRes) ? regulationTypesRes : []);
-      setSubjectTypes(Array.isArray(subjectTypesRes) ? subjectTypesRes : []);
-      setExamComponents(Array.isArray(examComponentsRes) ? examComponentsRes : []);
-      // Academic years now come from Redux state
-      setProgramCourses(Array.isArray(programCourseRes) ? programCourseRes : []);
-      setCourses(Array.isArray(courseRes) ? courseRes : []);
-      setCourseTypes(Array.isArray(courseTypesRes) ? courseTypesRes : []);
-      setClasses(
-        Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
-      );
+        // Handle different response structures
+        setSubjects(Array.isArray(subjectsRes) ? subjectsRes : []);
+        setAffiliations(Array.isArray(affiliationsRes) ? affiliationsRes : []);
+        setRegulationTypes(Array.isArray(regulationTypesRes) ? regulationTypesRes : []);
+        setSubjectTypes(Array.isArray(subjectTypesRes) ? subjectTypesRes : []);
+        setExamComponents(Array.isArray(examComponentsRes) ? examComponentsRes : []);
+        // Academic years now come from Redux state
+        setProgramCourses(Array.isArray(programCourseRes) ? programCourseRes : []);
+        setCourses(Array.isArray(courseRes) ? courseRes : []);
+        setCourseTypes(Array.isArray(courseTypesRes) ? courseTypesRes : []);
+        setClasses(
+          Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
+        );
 
-      console.log(
-        "Classes data set:",
-        Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
-      );
-      console.log(
-        "Filtered SEMESTER classes:",
-        Array.isArray(classesRes)
-          ? classesRes.filter((cls: Class) => cls.type === "SEMESTER")
-          : (classesRes as unknown as { payload: Class[] })?.payload?.filter((cls: Class) => cls.type === "SEMESTER") ||
-              [],
-      );
+        console.log(
+          "Classes data set:",
+          Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
+        );
+        console.log(
+          "Filtered SEMESTER classes:",
+          Array.isArray(classesRes)
+            ? classesRes.filter((cls: Class) => cls.type === "SEMESTER")
+            : (classesRes as unknown as { payload: Class[] })?.payload?.filter(
+                (cls: Class) => cls.type === "SEMESTER",
+              ) || [],
+        );
 
-      // Set filters with current academic year as default
-      setFiltersObj({
-        subjectId: null,
-        affiliationId: null,
-        regulationTypeId: null,
-        academicYearId: currentAcademicYear?.id || null, // Default to current academic year
-        classId: null,
-        programCourseId: null,
-        subjectTypeId: null,
-        isOptional: null,
-        autoAssign: null,
-        searchText: "",
-        page: 1,
-        limit: 10,
-      });
+        // Only set filters on initial load, preserve them otherwise
+        if (!preserveFilters) {
+          setFiltersObj({
+            subjectId: null,
+            affiliationId: null,
+            regulationTypeId: null,
+            academicYearId: currentAcademicYear?.id || null, // Default to current academic year
+            classId: null,
+            programCourseId: null,
+            subjectTypeId: null,
+            isOptional: null,
+            autoAssign: null,
+            searchText: "",
+            page: 1,
+            limit: 10,
+          });
+        }
 
-      // Fetch all data initially
-      await fetchFilteredData();
+        // Fetch all data initially
+        await fetchFilteredData();
 
-      setError(null);
-    } catch (err: unknown) {
-      console.error("Error fetching data:", err);
+        setError(null);
+      } catch (err: unknown) {
+        console.error("Error fetching data:", err);
 
-      // Check for authentication error
-      if (err instanceof AxiosError && err.response?.status === 401) {
-        const errorMessage = "Authentication failed. Please log in again.";
-        setError(errorMessage);
-        toast.error(errorMessage);
-      } else {
-        const errorMessage = err instanceof Error ? err.message : "Failed to load data";
-        setError(errorMessage);
-        toast.error("Failed to load data");
+        // Check for authentication error
+        if (err instanceof AxiosError && err.response?.status === 401) {
+          const errorMessage = "Authentication failed. Please log in again.";
+          setError(errorMessage);
+          toast.error(errorMessage);
+        } else {
+          const errorMessage = err instanceof Error ? err.message : "Failed to load data";
+          setError(errorMessage);
+          toast.error("Failed to load data");
+        }
+
+        // Log more details about the error
+        if (err instanceof Error) {
+          console.error("Error name:", err.name);
+          console.error("Error message:", err.message);
+          console.error("Error stack:", err.stack);
+        }
+
+        // Set empty arrays on error to prevent map errors
+        setPapers([]);
+        setSubjects([]);
+        setAffiliations([]);
+        setRegulationTypes([]);
+        setSubjectTypes([]);
+        setExamComponents([]);
+        // Academic years come from Redux state, don't reset them
+        setProgramCourses([]);
+        setClasses([]);
+      } finally {
+        setLoading(false);
       }
-
-      // Log more details about the error
-      if (err instanceof Error) {
-        console.error("Error name:", err.name);
-        console.error("Error message:", err.message);
-        console.error("Error stack:", err.stack);
-      }
-
-      // Set empty arrays on error to prevent map errors
-      setPapers([]);
-      setSubjects([]);
-      setAffiliations([]);
-      setRegulationTypes([]);
-      setSubjectTypes([]);
-      setExamComponents([]);
-      // Academic years come from Redux state, don't reset them
-      setProgramCourses([]);
-      setClasses([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchFilteredData, currentAcademicYear]);
+    },
+    [fetchFilteredData, currentAcademicYear],
+  );
 
   useEffect(() => {
-    // Only fetch data when authentication is ready
-    if (displayFlag && accessToken) {
-      fetchData();
+    // Only fetch data when authentication is ready, and only on initial mount
+    if (displayFlag && accessToken && !hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchData(false); // false = don't preserve filters (initial load)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayFlag, accessToken]);
@@ -986,7 +996,7 @@ const SubjectPaperMappingPage = () => {
   // Show loading while authentication is in progress
   if (!displayFlag || !accessToken) {
     return (
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         <Card className="border-none">
           <CardContent className="flex items-center justify-center h-64">
             <div className="text-center">Authenticating...</div>
@@ -998,7 +1008,7 @@ const SubjectPaperMappingPage = () => {
 
   if (loading) {
     return (
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         <Card className="border-none">
           <CardContent className="flex items-center justify-center h-64">
             <div className="text-center">Loading subject paper mappings...</div>
@@ -1010,7 +1020,7 @@ const SubjectPaperMappingPage = () => {
 
   if (error) {
     return (
-      <div className="p-4">
+      <div className="p-2 sm:p-4">
         <Card className="border-none">
           <CardContent className="flex items-center justify-center h-64">
             <div className="text-center text-red-600">Error: {error}</div>
@@ -1021,34 +1031,26 @@ const SubjectPaperMappingPage = () => {
   }
 
   return (
-    <div className="p-4">
+    <div className="p-2 sm:p-4">
       <Card className="border-none">
-        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
-          <div>
-            <CardTitle className="flex items-center">
-              <FileText className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
-              Subject Paper Mapping
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center mb-3 justify-between gap-4 border rounded-md p-4 sticky top-0 z-30 bg-background">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="flex items-center text-lg sm:text-xl">
+              <FileText className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
+              <span className="truncate">Subject Paper Mapping</span>
             </CardTitle>
-            <div className="text-muted-foreground">Map subject papers to programCourses.</div>
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1">Map subject papers to programCourses.</div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => fetchData()}
-              disabled={loading}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Refresh Data
-            </Button>
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="flex-shrink-0">
                   <Upload className="mr-2 h-4 w-4" />
-                  Bulk Upload
+                  <span className="hidden sm:inline">Bulk Upload</span>
+                  <span className="sm:hidden">Upload</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="w-[95vw] sm:w-full max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Bulk Upload Subject Paper Mappings</DialogTitle>
                 </DialogHeader>
@@ -1090,18 +1092,22 @@ const SubjectPaperMappingPage = () => {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" onClick={handleDownloadTemplate}>
+            <Button variant="outline" onClick={handleDownloadTemplate} className="flex-shrink-0">
               <Download className="mr-2 h-4 w-4" />
-              Download Template
+              <span className="hidden sm:inline">Download Template</span>
+              <span className="sm:hidden">Template</span>
             </Button>
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Button
+                  onClick={handleAddNew}
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0 hidden md:flex"
+                >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="min-w-[99vw] min-h-[98vh] overflow-auto flex flex-col">
+              <AlertDialogContent className="w-[95vw] sm:w-full min-w-[95vw] sm:min-w-[80vw] min-h-[98vh] overflow-auto flex flex-col">
                 <AlertDialogHeader className="border-b pb-2">
                   <AlertDialogTitle>
                     {selectedPaper ? "Edit Subject Paper Mapping" : "Add New Subject Paper Mapping"}
@@ -1159,17 +1165,17 @@ const SubjectPaperMappingPage = () => {
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-[72px] z-40 bg-background p-4 border-b flex flex-wrap items-center gap-2 mb-0 justify-between">
-            <div className="flex flex-wrap gap-2 items-center">
+          <div className="sticky top-[72px] z-40 bg-background p-2 sm:p-4 border-b flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-0">
+            <div className="flex flex-wrap gap-2 items-center flex-1">
               <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline">Filters</Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-3xl">
-                  <DialogHeader>
+                <DialogContent className="w-[95vw] sm:w-full max-w-3xl max-h-[90vh] flex flex-col">
+                  <DialogHeader className="flex-shrink-0">
                     <DialogTitle>Filter Subject Papers</DialogTitle>
                   </DialogHeader>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2 overflow-y-auto flex-1 min-h-0">
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Affiliation</div>
                       <Select
@@ -1371,7 +1377,7 @@ const SubjectPaperMappingPage = () => {
                       </Select>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-2 pt-2">
+                  <div className="flex justify-end gap-2 pt-2 border-t flex-shrink-0 mt-2">
                     <Button
                       variant="ghost"
                       onClick={() => {
@@ -1574,18 +1580,26 @@ const SubjectPaperMappingPage = () => {
             </div>
             <Input
               placeholder="Search..."
-              className="w-64"
+              className="w-full sm:w-64"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <div className="relative">
-              <Button variant="outline" onClick={() => handleDownload()} disabled={isDownloading}>
+            <div className="relative flex-shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => handleDownload()}
+                disabled={isDownloading}
+                className="w-full sm:w-auto"
+              >
                 {isDownloading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
                   <Download className="h-4 w-4 mr-2" />
                 )}
-                {isDownloading ? `Downloading... ${Math.round(downloadProgress)}%` : "Download All"}
+                <span className="hidden sm:inline">
+                  {isDownloading ? `Downloading... ${Math.round(downloadProgress)}%` : "Download All"}
+                </span>
+                <span className="sm:hidden">{isDownloading ? `${Math.round(downloadProgress)}%` : "Download"}</span>
               </Button>
               {isDownloading && (
                 <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -1767,21 +1781,28 @@ const SubjectPaperMappingPage = () => {
 
       {/* Pagination Controls */}
       {!loading && !error && totalItems > 0 && (
-        <div className="mt-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
-            {totalItems} results
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-2 sm:px-0">
+          <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
+            <span className="hidden sm:inline">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
+              {totalItems} results
+            </span>
+            <span className="sm:hidden">
+              Page {currentPage} of {totalPages} ({totalItems} total)
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto w-full sm:w-auto justify-center sm:justify-end">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
+              className="flex-shrink-0"
             >
-              Previous
+              <span className="hidden sm:inline">Previous</span>
+              <span className="sm:hidden">Prev</span>
             </Button>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 overflow-x-auto">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
                 if (pageNum > totalPages) return null;
@@ -1791,7 +1812,7 @@ const SubjectPaperMappingPage = () => {
                     variant={currentPage === pageNum ? "default" : "outline"}
                     size="sm"
                     onClick={() => setCurrentPage(pageNum)}
-                    className="w-8 h-8 p-0"
+                    className="w-8 h-8 p-0 flex-shrink-0"
                   >
                     {pageNum}
                   </Button>
@@ -1803,6 +1824,7 @@ const SubjectPaperMappingPage = () => {
               size="sm"
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
+              className="flex-shrink-0"
             >
               Next
             </Button>

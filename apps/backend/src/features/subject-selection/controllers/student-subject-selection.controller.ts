@@ -19,6 +19,7 @@ import {
   debugMinor3Conditions,
   getLiveSelectionCountsByProgramCourse,
   getMisTableData,
+  exportStudentSubjectsReport,
 } from "../services/student-subject-selection.service.js";
 
 // Get subject selection meta data for UI form
@@ -870,6 +871,47 @@ export async function exportStudentSubjectSelectionsHandler(
     res.status(200).send(exportResult.buffer);
   } catch (error) {
     console.error("Export error:", error);
+    handleError(error, res, next);
+  }
+}
+
+export async function exportStudentSubjectsReportHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const academicYearId = Number(req.query.academicYearId);
+
+    if (!academicYearId || Number.isNaN(academicYearId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "academicYearId query parameter is required",
+          ),
+        );
+      return;
+    }
+
+    const buffer = await exportStudentSubjectsReport(academicYearId);
+    const filename = `student-subjects-${academicYearId}-${
+      new Date().toISOString().split("T")[0]
+    }.xlsx`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", buffer.length);
+
+    res.status(200).send(buffer);
+  } catch (error) {
+    console.error("[SUBJECTS-EXPORT] controller error:", error);
     handleError(error, res, next);
   }
 }

@@ -123,6 +123,9 @@ import {
   programCourseRouter,
   examComponentRouter,
   cascadingDropdownsRouter,
+  subjectGroupingMainRouter,
+  subjectGroupingProgramCourseRouter,
+  subjectGroupingSubRouter,
 } from "@/features/course-design/routes/index.js";
 import {
   relatedSubjectMainRoutes,
@@ -492,6 +495,15 @@ app.use("/api/course-design/course-levels", courseLevelRouter);
 app.use("/api/course-design/exam-components", examComponentRouter);
 app.use("/api/course-design/specializations", specializationRouter);
 app.use("/api/course-design/cascading-dropdowns", cascadingDropdownsRouter);
+app.use("/api/course-design/subject-grouping-mains", subjectGroupingMainRouter);
+app.use(
+  "/api/course-design/subject-grouping-program-courses",
+  subjectGroupingProgramCourseRouter,
+);
+app.use(
+  "/api/course-design/subject-grouping-subjects",
+  subjectGroupingSubRouter,
+);
 
 // Subject Selection routes
 app.use(

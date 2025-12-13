@@ -96,7 +96,7 @@ const BoardSubjectForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="boardId">Board *</Label>
           <Select
@@ -135,7 +135,7 @@ const BoardSubjectForm = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="fullMarksTheory">Full Marks Theory</Label>
           <Input
@@ -158,7 +158,7 @@ const BoardSubjectForm = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="fullMarksPractical">Full Marks Practical</Label>
           <Input
@@ -436,25 +436,28 @@ export default function BoardSubjectPage() {
   return (
     <div className="p-4">
       <Card className="border-none">
-        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
-          <div>
-            <CardTitle className="flex items-center">
-              <GraduationCap className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center mb-3 gap-4 sm:gap-0 sm:justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
+          <div className="flex-1">
+            <CardTitle className="flex items-center text-lg sm:text-xl">
+              <GraduationCap className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400" />
               Board Subject Mappings
             </CardTitle>
-            <div className="text-muted-foreground">Manage board subject mappings configuration.</div>
+            <div className="text-sm sm:text-base text-muted-foreground mt-1">
+              Manage board subject mappings configuration.
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Mapping
+                  <span className="hidden sm:inline">Add Mapping</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="max-w-4xl">
+              <AlertDialogContent className="w-[95vw] sm:w-full max-w-4xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>
+                  <AlertDialogTitle className="text-lg sm:text-xl">
                     {selectedBoardSubject ? "Edit Board Subject Mapping" : "Add New Board Subject Mapping"}
                   </AlertDialogTitle>
                 </AlertDialogHeader>
@@ -468,7 +471,7 @@ export default function BoardSubjectPage() {
                 />
               </AlertDialogContent>
             </AlertDialog>
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <Button
                 variant="outline"
                 className="flex items-center gap-2"
@@ -476,7 +479,10 @@ export default function BoardSubjectPage() {
                 disabled={isDownloading}
               >
                 {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                {isDownloading ? `Downloading... ${Math.round(downloadProgress)}%` : "Download"}
+                <span className="hidden sm:inline">
+                  {isDownloading ? `Downloading... ${Math.round(downloadProgress)}%` : "Download"}
+                </span>
+                <span className="sm:hidden">{isDownloading ? `${Math.round(downloadProgress)}%` : ""}</span>
               </Button>
               {isDownloading && (
                 <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -490,11 +496,11 @@ export default function BoardSubjectPage() {
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-4 mb-0 justify-between">
-            <div className="flex items-center gap-4">
+          <div className="sticky top-[72px] sm:top-[88px] z-20 bg-background p-4 border-b flex flex-col sm:flex-row sm:items-center gap-4 mb-0 sm:justify-between">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
               <Input
                 placeholder="Search by board name, subject name, or degree..."
-                className="w-64"
+                className="w-full sm:w-64"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />
@@ -505,7 +511,7 @@ export default function BoardSubjectPage() {
                   setCurrentPage(1); // Reset to first page when filter changes
                 }}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filter by Degree" />
                 </SelectTrigger>
                 <SelectContent>
@@ -524,7 +530,7 @@ export default function BoardSubjectPage() {
                   setCurrentPage(1); // Reset to first page when filter changes
                 }}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filter by Board" />
                 </SelectTrigger>
                 <SelectContent>
@@ -537,27 +543,31 @@ export default function BoardSubjectPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              Showing {boardSubjects.length} of {totalItems} results
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-shrink-0">
+              <span className="hidden sm:inline">
+                Showing {boardSubjects.length} of {totalItems} results
+              </span>
+              <span className="sm:hidden">
+                {boardSubjects.length} / {totalItems}
+              </span>
             </div>
           </div>
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md w-full" style={{ tableLayout: "fixed" }}>
+              <Table className="border rounded-md w-full min-w-max" style={{ tableLayout: "auto" }}>
                 <TableHeader
                   className="sticky top-0 z-10"
                   style={{ background: "#f3f4f6", borderRight: "1px solid #e5e7eb" }}
                 >
-                  <TableRow>
+                  <TableRow className="py-3">
                     <TableHead
                       style={{
-                        width: "5%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -565,13 +575,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -579,13 +588,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "20%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -593,13 +601,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "8%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -607,13 +614,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -621,13 +627,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "8%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -635,13 +640,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -649,13 +653,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -663,13 +666,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "8%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -677,13 +679,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "normal",
+                        whiteSpace: "nowrap",
                         fontSize: "14px",
                         fontWeight: "600",
-                        padding: "8px 4px",
+                        padding: "12px 8px",
                       }}
                     >
                       Actions
@@ -712,10 +713,10 @@ export default function BoardSubjectPage() {
                   ) : (
                     boardSubjects.map((bs, index) => (
                       <TableRow key={bs.id} className="group">
-                        <TableCell style={{ width: "5%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           {index + 1}
                         </TableCell>
-                        <TableCell style={{ width: "10%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           {bs.board.code ? (
                             <Badge
                               variant="outline"
@@ -727,7 +728,7 @@ export default function BoardSubjectPage() {
                             "-"
                           )}
                         </TableCell>
-                        <TableCell style={{ width: "20%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           <div
                             className="truncate"
                             title={`${bs.boardSubjectName.name}${bs.boardSubjectName.code && bs.boardSubjectName.code !== "-" ? ` (${bs.boardSubjectName.code})` : ""}`}
@@ -744,19 +745,19 @@ export default function BoardSubjectPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell style={{ width: "8%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           <span className="text-sm">{bs.fullMarksTheory ?? "-"}</span>
                         </TableCell>
-                        <TableCell style={{ width: "10%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           <span className="text-sm">{bs.passingMarksTheory ?? "-"}</span>
                         </TableCell>
-                        <TableCell style={{ width: "8%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           <span className="text-sm">{bs.fullMarksPractical ?? "-"}</span>
                         </TableCell>
-                        <TableCell style={{ width: "10%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           <span className="text-sm">{bs.passingMarksPractical ?? "-"}</span>
                         </TableCell>
-                        <TableCell style={{ width: "10%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           {bs.board.degree?.name ? (
                             <Badge
                               variant="outline"
@@ -768,7 +769,7 @@ export default function BoardSubjectPage() {
                             "-"
                           )}
                         </TableCell>
-                        <TableCell style={{ width: "7%", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
                           {bs.isActive ? (
                             <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">Active</Badge>
                           ) : (
@@ -777,7 +778,7 @@ export default function BoardSubjectPage() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell style={{ width: "10%", padding: "8px 4px" }}>
+                        <TableCell style={{ padding: "12px 8px" }}>
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(bs)} className="h-5 w-5 p-0">
                               <Edit className="h-4 w-4" />
@@ -794,21 +795,28 @@ export default function BoardSubjectPage() {
 
           {/* Pagination Controls */}
           {!loading && !error && totalItems > 0 && (
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of{" "}
-                {totalItems} results
+            <div className="mt-4 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
+              <div className="text-xs sm:text-sm text-gray-600">
+                <span className="hidden sm:inline">
+                  Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of{" "}
+                  {totalItems} results
+                </span>
+                <span className="sm:hidden">
+                  Page {currentPage} of {Math.ceil(totalItems / pageSize)} ({totalItems} total)
+                </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-nowrap">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
+                  className="flex-shrink-0"
                 >
-                  Previous
+                  <span className="hidden sm:inline">Previous</span>
+                  <span className="sm:hidden">Prev</span>
                 </Button>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 overflow-x-auto">
                   {Array.from({ length: Math.min(5, Math.ceil(totalItems / pageSize)) }, (_, i) => {
                     const pageNum = Math.max(1, Math.min(Math.ceil(totalItems / pageSize) - 4, currentPage - 2)) + i;
                     if (pageNum > Math.ceil(totalItems / pageSize)) return null;
@@ -818,7 +826,7 @@ export default function BoardSubjectPage() {
                         variant={currentPage === pageNum ? "default" : "outline"}
                         size="sm"
                         onClick={() => setCurrentPage(pageNum)}
-                        className="w-8 h-8 p-0"
+                        className="w-8 h-8 p-0 flex-shrink-0"
                       >
                         {pageNum}
                       </Button>
@@ -830,6 +838,7 @@ export default function BoardSubjectPage() {
                   size="sm"
                   onClick={() => setCurrentPage((prev) => Math.min(Math.ceil(totalItems / pageSize), prev + 1))}
                   disabled={currentPage === Math.ceil(totalItems / pageSize)}
+                  className="flex-shrink-0"
                 >
                   Next
                 </Button>

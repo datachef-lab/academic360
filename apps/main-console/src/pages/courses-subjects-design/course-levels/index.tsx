@@ -71,8 +71,8 @@ const CourseLevelsPage = () => {
         toast.success(result.message || "Course level deleted successfully");
       } else {
         const details = (result.records || [])
-          .filter(r => r.count > 0)
-          .map(r => `${r.type}: ${r.count}`)
+          .filter((r) => r.count > 0)
+          .map((r) => `${r.type}: ${r.count}`)
           .join(", ");
         toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
       }
@@ -227,25 +227,26 @@ const CourseLevelsPage = () => {
   );
 
   return (
-    <div className="p-4">
+    <div className="p-2 sm:p-4">
       <Card className="border-none">
-        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
-          <div>
-            <CardTitle className="flex items-center">
-              <Sliders className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
-              Course Levels
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center mb-3 justify-between gap-4 border rounded-md p-4 sticky top-0 z-30 bg-background">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="flex items-center text-lg sm:text-xl">
+              <Sliders className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
+              <span className="truncate">Course Levels</span>
             </CardTitle>
-            <div className="text-muted-foreground">A list of all course levels.</div>
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1">A list of all course levels.</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="flex-shrink-0">
                   <Upload className="mr-2 h-4 w-4" />
-                  Bulk Upload
+                  <span className="hidden sm:inline">Bulk Upload</span>
+                  <span className="sm:hidden">Upload</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
                 <DialogHeader>
                   <DialogTitle>Bulk Upload Course Levels</DialogTitle>
                 </DialogHeader>
@@ -321,12 +322,13 @@ const CourseLevelsPage = () => {
             </Dialog>
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Course Level
+                  <span className="hidden sm:inline">Add Course Level</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="w-[95vw] sm:w-full max-w-lg">
                 <AlertDialogHeader>
                   <AlertDialogTitle>
                     {selectedCourseLevel ? "Edit Course Level" : "Add New Course Level"}
@@ -343,17 +345,18 @@ const CourseLevelsPage = () => {
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
+          <div className="sticky top-[72px] z-20 bg-background p-2 sm:p-4 border-b flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-0">
             <Input
               placeholder="Search..."
-              className="w-64"
+              className="w-full sm:w-64"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
-              <Download className="h-4 w-4" /> Download
+            <Button variant="outline" className="flex items-center gap-2 flex-shrink-0" onClick={handleDownloadAll}>
+              <Download className="h-4 w-4" /> <span className="hidden sm:inline">Download</span>
             </Button>
           </div>
+          {/* Table View - Keep original table UI on all screens */}
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
               <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: "fixed" }}>

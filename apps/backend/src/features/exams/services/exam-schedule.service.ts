@@ -1,15 +1,7 @@
-import { db } from "@/db/index.js";
-import { promotionModel } from "@repo/db/schemas/models/batches";
+import { db, pool } from "@/db/index.js";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
-import { paperModel } from "@repo/db/schemas/models/course-design";
-import { studentSubjectSelectionModel } from "@repo/db/schemas/models/subject-selection";
-import {
-  sessionModel,
-  academicYearModel,
-  classModel,
-} from "@repo/db/schemas/models/academics";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
-import { and, eq, inArray, sql, desc } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 export interface CountStudentsByPapersParams {
   classId: number;
@@ -26,9 +18,9 @@ export interface CountStudentsByPapersParams {
  * - Only count active students (user.isActive = true)
  * - Get student IDs from latest promotions
  */
-export async function countStudentsByPapers(
+async function getEligibleStudentIds(
   params: CountStudentsByPapersParams,
-): Promise<number> {
+): Promise<number[]> {
   const { classId, programCourseIds, paperIds, academicYearIds, shiftIds } =
     params;
 
@@ -37,188 +29,127 @@ export async function countStudentsByPapers(
     programCourseIds.length === 0 ||
     academicYearIds.length === 0
   ) {
-    return 0;
+    return [];
   }
 
-  try {
-    // Get all papers with their isOptional flag and subjectId
-    const papers = await db
-      .select({
-        id: paperModel.id,
-        subjectId: paperModel.subjectId,
-        isOptional: paperModel.isOptional,
-        academicYearId: paperModel.academicYearId,
-      })
-      .from(paperModel)
-      .where(
-        and(inArray(paperModel.id, paperIds), eq(paperModel.isActive, true)),
-      );
+  const shiftFilter =
+    shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : "";
 
-    if (papers.length === 0) {
-      return 0;
-    }
-
-    // Separate mandatory and optional papers
-    const mandatoryPapers = papers.filter((p) => !p.isOptional);
-    const optionalPapers = papers.filter((p) => p.isOptional);
-
-    const studentIdSets: Set<number>[] = [];
-
-    // For mandatory papers: get all students from promotions
-    if (mandatoryPapers.length > 0) {
-      const mandatoryConditions = [
-        inArray(promotionModel.programCourseId, programCourseIds),
-        eq(promotionModel.classId, classId),
-        eq(userModel.isActive, true),
-      ];
-
-      if (shiftIds && shiftIds.length > 0) {
-        mandatoryConditions.push(inArray(promotionModel.shiftId, shiftIds));
-      }
-
-      // Get latest promotion per student using a subquery
-      // First, get all promotions matching the criteria
-      const allPromotions = await db
-        .select({
-          id: promotionModel.id,
-          studentId: promotionModel.studentId,
-        })
-        .from(promotionModel)
-        .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-        .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-        .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-        .where(
-          and(
-            ...mandatoryConditions,
-            inArray(sessionModel.academicYearId, academicYearIds),
-          ),
+  const eligibleSql = `
+        WITH filtered_papers AS (
+            SELECT
+                p.id,
+                p.subject_id_fk,
+                p.subject_type_id_fk,
+                p.class_id_fk,
+                p.programe_course_id_fk,
+                p.academic_year_id_fk,
+                p.is_optional
+            FROM papers p
+            WHERE p.id = ANY($1)
+              AND p.class_id_fk = $2
+              AND p.programe_course_id_fk = ANY($3)
+              AND p.academic_year_id_fk = ANY($4)
+              AND p.is_active = TRUE
+        ),
+        latest_promotions AS (
+            SELECT DISTINCT ON (pr.student_id_fk)
+                   pr.student_id_fk,
+                   pr.program_course_id_fk,
+                   pr.session_id_fk,
+                   pr.class_id_fk
+            FROM promotions pr
+            INNER JOIN sessions sess ON sess.id = pr.session_id_fk
+            WHERE pr.class_id_fk = $2
+              AND pr.program_course_id_fk = ANY($3)
+              AND sess.academic_id_fk = ANY($4)
+              ${shiftFilter}
+            ORDER BY pr.student_id_fk,
+                     pr.start_date DESC NULLS LAST,
+                     pr.created_at DESC,
+                     pr.id DESC
+        ),
+        latest_student_selections AS (
+            SELECT id,
+                   student_id_fk,
+                   subject_id_fk,
+                   subject_selection_meta_id_fk
+            FROM (
+                SELECT sss.*,
+                       ROW_NUMBER() OVER (
+                         PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+                         ORDER BY sss.version DESC,
+                                  sss.updated_at DESC NULLS LAST,
+                                  sss.created_at DESC,
+                                  sss.id DESC
+                       ) AS rn
+                FROM student_subject_selections sss
+                WHERE sss.is_active = TRUE
+            ) ranked
+            WHERE rn = 1
+        ),
+        mandatory AS (
+            SELECT DISTINCT std.id AS student_id
+            FROM filtered_papers fp
+            JOIN latest_promotions pr
+              ON pr.program_course_id_fk = fp.programe_course_id_fk
+             AND pr.class_id_fk = fp.class_id_fk
+            JOIN students std ON std.id = pr.student_id_fk
+            JOIN users u ON u.id = std.user_id_fk
+            WHERE fp.is_optional = FALSE
+              AND u.is_active = TRUE
+        ),
+        optional AS (
+            SELECT DISTINCT std.id AS student_id
+            FROM filtered_papers fp
+            JOIN latest_promotions pr
+              ON pr.program_course_id_fk = fp.programe_course_id_fk
+             AND pr.class_id_fk = fp.class_id_fk
+            JOIN students std ON std.id = pr.student_id_fk
+            JOIN users u ON u.id = std.user_id_fk
+            JOIN latest_student_selections lss
+              ON lss.student_id_fk = std.id
+             AND lss.subject_id_fk = fp.subject_id_fk
+            JOIN subject_selection_meta sm
+              ON sm.id = lss.subject_selection_meta_id_fk
+             AND sm.subject_type_id_fk = fp.subject_type_id_fk
+            JOIN subject_selection_meta_classes smc
+              ON smc.subject_selection_meta_id_fk = sm.id
+             AND smc.class_id_fk = fp.class_id_fk
+            WHERE fp.is_optional = TRUE
+              AND u.is_active = TRUE
         )
-        .orderBy(desc(promotionModel.id));
+        SELECT DISTINCT student_id
+        FROM (
+            SELECT * FROM mandatory
+            UNION ALL
+            SELECT * FROM optional
+        ) eligible_students
+    `;
 
-      // Get latest promotion per student
-      const latestPromotionMap = new Map<number, number>();
-      for (const promotion of allPromotions) {
-        if (
-          promotion.studentId &&
-          !latestPromotionMap.has(promotion.studentId)
-        ) {
-          latestPromotionMap.set(promotion.studentId, promotion.id!);
-        }
-      }
+  const eligibleParams: any[] = [
+    paperIds,
+    classId,
+    programCourseIds,
+    academicYearIds,
+  ];
 
-      const mandatoryStudentIds = Array.from(latestPromotionMap.keys()).map(
-        (studentId) => ({
-          studentId,
-        }),
-      );
-
-      if (mandatoryStudentIds.length > 0) {
-        studentIdSets.push(
-          new Set(mandatoryStudentIds.map((s) => s.studentId!)),
-        );
-      }
-    }
-
-    // For optional papers: get students who selected ANY of those subjects (UNION)
-    if (optionalPapers.length > 0) {
-      const optionalSubjectIds = optionalPapers
-        .map((p) => p.subjectId)
-        .filter((id): id is number => id !== null && id !== undefined);
-
-      if (optionalSubjectIds.length > 0) {
-        // Get all promotions for students who selected ANY of the optional subjects
-        const allOptionalPromotions = await db
-          .select({
-            promotionId: promotionModel.id,
-            studentId: studentSubjectSelectionModel.studentId,
-          })
-          .from(studentSubjectSelectionModel)
-          .innerJoin(
-            promotionModel,
-            eq(
-              promotionModel.studentId,
-              studentSubjectSelectionModel.studentId,
-            ),
-          )
-          .innerJoin(
-            studentModel,
-            eq(studentModel.id, promotionModel.studentId),
-          )
-          .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-          .innerJoin(
-            sessionModel,
-            eq(sessionModel.id, promotionModel.sessionId),
-          )
-          .where(
-            and(
-              inArray(
-                studentSubjectSelectionModel.subjectId,
-                optionalSubjectIds,
-              ),
-              eq(studentSubjectSelectionModel.isActive, true),
-              inArray(promotionModel.programCourseId, programCourseIds),
-              eq(promotionModel.classId, classId),
-              inArray(sessionModel.academicYearId, academicYearIds),
-              eq(userModel.isActive, true),
-            ),
-          )
-          .orderBy(desc(promotionModel.id));
-
-        // Get latest promotion per student
-        const latestOptionalPromotionMap = new Map<number, number>();
-        for (const promotion of allOptionalPromotions) {
-          if (
-            promotion.studentId &&
-            !latestOptionalPromotionMap.has(promotion.studentId)
-          ) {
-            latestOptionalPromotionMap.set(
-              promotion.studentId,
-              promotion.promotionId!,
-            );
-          }
-        }
-
-        const optionalStudentIds = Array.from(
-          latestOptionalPromotionMap.keys(),
-        );
-
-        if (optionalStudentIds.length > 0) {
-          studentIdSets.push(new Set(optionalStudentIds));
-        }
-      }
-    }
-
-    // Combine all student ID sets using UNION
-    // A student is eligible if they have ANY of the selected papers (mandatory OR optional)
-    if (studentIdSets.length === 0) {
-      return 0;
-    }
-
-    // Union all sets: students who have ANY mandatory paper OR ANY optional paper
-    let finalStudentIds: Set<number> = new Set();
-    for (const studentSet of studentIdSets) {
-      finalStudentIds = new Set([...finalStudentIds, ...studentSet]);
-    }
-
-    console.log("[EXAM-SCHEDULE] Student count calculation:", {
-      mandatoryPapers: mandatoryPapers.length,
-      optionalPapers: optionalPapers.length,
-      studentIdSets: studentIdSets.length,
-      finalCount: finalStudentIds.size,
-      params: {
-        classId,
-        programCourseIds,
-        paperIds,
-        academicYearIds,
-        shiftIds,
-      },
-    });
-
-    return finalStudentIds.size;
-  } catch (error) {
-    console.error("[EXAM-SCHEDULE] Error counting students:", error);
-    throw error;
+  if (shiftIds && shiftIds.length > 0) {
+    eligibleParams.push(shiftIds);
   }
+
+  const { rows } = await pool.query(eligibleSql, eligibleParams);
+
+  return rows
+    .map((row: { student_id: number }) => Number(row.student_id))
+    .filter((id: number) => !Number.isNaN(id));
+}
+
+export async function countStudentsByPapers(
+  params: CountStudentsByPapersParams,
+): Promise<number> {
+  const eligibleIds = await getEligibleStudentIds(params);
+  return eligibleIds.length;
 }
 
 export interface GetStudentsByPapersParams extends CountStudentsByPapersParams {
@@ -270,153 +201,7 @@ export async function getStudentsByPapers(
   }
 
   try {
-    // Get all papers with their isOptional flag and subjectId
-    const papers = await db
-      .select({
-        id: paperModel.id,
-        subjectId: paperModel.subjectId,
-        isOptional: paperModel.isOptional,
-        academicYearId: paperModel.academicYearId,
-      })
-      .from(paperModel)
-      .where(
-        and(inArray(paperModel.id, paperIds), eq(paperModel.isActive, true)),
-      );
-
-    if (papers.length === 0) {
-      return [];
-    }
-
-    // Separate mandatory and optional papers
-    const mandatoryPapers = papers.filter((p) => !p.isOptional);
-    const optionalPapers = papers.filter((p) => p.isOptional);
-
-    const studentIdSets: Set<number>[] = [];
-
-    // For mandatory papers: get all students from promotions
-    if (mandatoryPapers.length > 0) {
-      const mandatoryConditions = [
-        inArray(promotionModel.programCourseId, programCourseIds),
-        eq(promotionModel.classId, classId),
-        eq(userModel.isActive, true),
-      ];
-
-      if (shiftIds && shiftIds.length > 0) {
-        mandatoryConditions.push(inArray(promotionModel.shiftId, shiftIds));
-      }
-
-      const allPromotions = await db
-        .select({
-          id: promotionModel.id,
-          studentId: promotionModel.studentId,
-        })
-        .from(promotionModel)
-        .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-        .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-        .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-        .where(
-          and(
-            ...mandatoryConditions,
-            inArray(sessionModel.academicYearId, academicYearIds),
-          ),
-        )
-        .orderBy(desc(promotionModel.id));
-
-      const latestPromotionMap = new Map<number, number>();
-      for (const promotion of allPromotions) {
-        if (
-          promotion.studentId &&
-          !latestPromotionMap.has(promotion.studentId)
-        ) {
-          latestPromotionMap.set(promotion.studentId, promotion.id!);
-        }
-      }
-
-      const mandatoryStudentIds = Array.from(latestPromotionMap.keys());
-
-      if (mandatoryStudentIds.length > 0) {
-        studentIdSets.push(new Set(mandatoryStudentIds));
-      }
-    }
-
-    // For optional papers: get students who selected ANY of those subjects (UNION)
-    if (optionalPapers.length > 0) {
-      const optionalSubjectIds = optionalPapers
-        .map((p) => p.subjectId)
-        .filter((id): id is number => id !== null && id !== undefined);
-
-      if (optionalSubjectIds.length > 0) {
-        const allOptionalPromotions = await db
-          .select({
-            promotionId: promotionModel.id,
-            studentId: studentSubjectSelectionModel.studentId,
-          })
-          .from(studentSubjectSelectionModel)
-          .innerJoin(
-            promotionModel,
-            eq(
-              promotionModel.studentId,
-              studentSubjectSelectionModel.studentId,
-            ),
-          )
-          .innerJoin(
-            studentModel,
-            eq(studentModel.id, promotionModel.studentId),
-          )
-          .innerJoin(userModel, eq(userModel.id, studentModel.userId))
-          .innerJoin(
-            sessionModel,
-            eq(sessionModel.id, promotionModel.sessionId),
-          )
-          .where(
-            and(
-              inArray(
-                studentSubjectSelectionModel.subjectId,
-                optionalSubjectIds,
-              ),
-              eq(studentSubjectSelectionModel.isActive, true),
-              inArray(promotionModel.programCourseId, programCourseIds),
-              eq(promotionModel.classId, classId),
-              inArray(sessionModel.academicYearId, academicYearIds),
-              eq(userModel.isActive, true),
-            ),
-          )
-          .orderBy(desc(promotionModel.id));
-
-        const latestOptionalPromotionMap = new Map<number, number>();
-        for (const promotion of allOptionalPromotions) {
-          if (
-            promotion.studentId &&
-            !latestOptionalPromotionMap.has(promotion.studentId)
-          ) {
-            latestOptionalPromotionMap.set(
-              promotion.studentId,
-              promotion.promotionId!,
-            );
-          }
-        }
-
-        const optionalStudentIds = Array.from(
-          latestOptionalPromotionMap.keys(),
-        );
-
-        if (optionalStudentIds.length > 0) {
-          studentIdSets.push(new Set(optionalStudentIds));
-        }
-      }
-    }
-
-    // Union all sets
-    if (studentIdSets.length === 0) {
-      return [];
-    }
-
-    let finalStudentIds: Set<number> = new Set();
-    for (const studentSet of studentIdSets) {
-      finalStudentIds = new Set([...finalStudentIds, ...studentSet]);
-    }
-
-    const studentIdsArray = Array.from(finalStudentIds);
+    const studentIdsArray = await getEligibleStudentIds(params);
 
     if (studentIdsArray.length === 0) {
       return [];

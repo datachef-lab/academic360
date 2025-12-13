@@ -435,6 +435,20 @@
       "when": 1763627618044,
       "tag": "0061_elite_magdalene",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1764141916729,
+      "tag": "0062_quick_skreet",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1764142235344,
+      "tag": "0063_unknown_thunderbolts",
+      "breakpoints": true
     }
   ]
 }

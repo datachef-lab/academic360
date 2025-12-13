@@ -1,5 +1,5 @@
 // import { motion } from "framer-motion";
-import {  TabsList, TabsTrigger } from "../ui/tabs";
+import { TabsList, TabsTrigger } from "../ui/tabs";
 
 type StudentPanelProps = {
   studentTabs: {
@@ -23,20 +23,19 @@ type StudentPanelProps = {
 
 export default function StudentPanel({ studentTabs, setActiveTab }: StudentPanelProps) {
   return (
-
-
-
-    <TabsList>
-      {studentTabs.map((tab, index) => (
-        <TabsTrigger
-          key={`tab-${index}`}
-          value={tab.label}
-          onClick={() => setActiveTab(tab)}
-        >
-          {tab.label}
-        </TabsTrigger>
-      ))}
-      {/* <ul className="space-y-1">
+    <div className="overflow-x-auto">
+      <TabsList className="inline-flex h-auto min-w-max w-full lg:w-auto">
+        {studentTabs.map((tab, index) => (
+          <TabsTrigger
+            key={`tab-${index}`}
+            value={tab.label}
+            onClick={() => setActiveTab(tab)}
+            className="flex-shrink-0 text-xs sm:text-sm px-2 sm:px-4 py-2"
+          >
+            {tab.label}
+          </TabsTrigger>
+        ))}
+        {/* <ul className="space-y-1">
           {studentTabs.map((tab, index) => (
             <motion.li
               key={`tab-${index}`}
@@ -83,7 +82,7 @@ export default function StudentPanel({ studentTabs, setActiveTab }: StudentPanel
             </motion.li>
           ))}
         </ul> */}
-    </TabsList>
-
+      </TabsList>
+    </div>
   );
 }

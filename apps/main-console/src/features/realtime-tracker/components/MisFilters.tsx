@@ -41,23 +41,23 @@ export function MisFiltersComponent({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Filter className="h-5 w-5" />
+      <CardHeader className="p-3 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
           Filters
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="p-3 sm:p-6 pt-0">
+        <div className="space-y-3 sm:space-y-4">
           {/* Session Filter */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Academic Session</label>
+            <label className="text-xs sm:text-sm font-medium">Academic Session</label>
             <Select
               value={filters.sessionId?.toString() || ""}
               onValueChange={handleSessionChange}
               disabled={isLoadingSessions}
             >
-              <SelectTrigger>
+              <SelectTrigger className="text-sm">
                 <SelectValue placeholder="Select session" />
               </SelectTrigger>
               <SelectContent>
@@ -77,13 +77,13 @@ export function MisFiltersComponent({
 
           {/* Class Filter */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Academic Class</label>
+            <label className="text-xs sm:text-sm font-medium">Academic Class</label>
             <Select
               value={filters.classId?.toString() || ""}
               onValueChange={handleClassChange}
               disabled={isLoadingClasses}
             >
-              <SelectTrigger>
+              <SelectTrigger className="text-sm">
                 <SelectValue placeholder="Select class" />
               </SelectTrigger>
               <SelectContent>

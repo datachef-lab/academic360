@@ -1,4 +1,4 @@
-import { db } from "@/db/index.js";
+import { db, pool } from "@/db/index.js";
 import { and, countDistinct, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { studentSubjectSelectionModel } from "@repo/db/schemas/models/subject-selection/student-subject-selection.model";
 import { sessionModel } from "@repo/db/schemas/models/academics";
@@ -1305,7 +1305,10 @@ export async function createStudentSubjectSelectionsWithValidation(
   }
 
   // If admin is creating and selections exist, mark existing ones as deprecated
-  if (existingSelections.length > 0 && userType === "ADMIN") {
+  if (
+    existingSelections.length > 0 &&
+    (userType === "ADMIN" || userType === "STAFF")
+  ) {
     console.log(
       `Admin overriding existing selections for student ${studentId}`,
     );
@@ -2117,6 +2120,205 @@ export async function getSubjectSelectionMetaForStudent(
     subjectSelectionMetas,
     availableSubjects,
   };
+}
+
+const STUDENT_SUBJECTS_EXPORT_SQL = `
+WITH latest_promotions AS (
+  SELECT DISTINCT ON (pr.student_id_fk)
+         pr.student_id_fk,
+         pr.program_course_id_fk,
+         pr.session_id_fk,
+         pr.class_id_fk AS current_class_id,
+         pr.section_id_fk
+  FROM promotions pr
+  WHERE pr.is_alumni = FALSE
+  ORDER BY pr.student_id_fk,
+           pr.start_date DESC NULLS LAST,
+           pr.created_at DESC
+),
+latest_student_selections AS (
+  SELECT id,
+         student_id_fk,
+         subject_id_fk,
+         subject_selection_meta_id_fk,
+         version
+  FROM (
+    SELECT sss.*,
+           ROW_NUMBER() OVER (
+             PARTITION BY sss.student_id_fk,
+                          sss.subject_selection_meta_id_fk
+             ORDER BY sss.version DESC,
+                      sss.updated_at DESC NULLS LAST,
+                      sss.created_at DESC,
+                      sss.id DESC
+           ) AS rn
+    FROM student_subject_selections sss
+    WHERE sss.is_active = TRUE
+  ) ranked
+  WHERE rn = 1
+),
+mandatory AS (
+  SELECT
+      std.id  AS student_id,
+      std.uid,
+      u.name  AS user_name,
+      ay.year AS academic_year,
+      pc.name AS program_course,
+      aff.name AS affiliation,
+      reg.name AS regulation,
+      cl.name AS semester,
+      cl.id   AS class_id_for_order,
+      COALESCE(sbj.code, sbj.name) AS subject,
+      COALESCE(sbt.code, sbt.name) AS subject_type,
+      NULL::text    AS selection_label,
+      NULL::integer AS selection_id_for_order,
+      NULL::integer AS selection_version,
+      p.id   AS paper_id,
+      CASE
+        WHEN p.is_optional = FALSE AND p.auto_assign = FALSE THEN 'Mandatory'
+        WHEN p.is_optional = FALSE AND p.auto_assign = TRUE  THEN 'Not possible'
+        WHEN p.is_optional = TRUE  AND p.auto_assign = FALSE THEN 'Elective'
+        ELSE 'Elective & Auto-Assign'
+      END AS paper_type,
+      p.name  AS paper,
+      p.code  AS paper_code,
+      CASE WHEN p.is_optional THEN 'Yes' ELSE 'No' END AS is_optional,
+      CASE WHEN p.auto_assign THEN 'Yes' ELSE 'No' END AS auto_assign,
+      CASE WHEN p.is_active   THEN 'Yes' ELSE 'No' END AS is_active
+  FROM students std
+  JOIN users u              ON u.id = std.user_id_fk AND u.is_active = TRUE
+  JOIN latest_promotions pr ON pr.student_id_fk = std.id
+  JOIN program_courses pc   ON pc.id = pr.program_course_id_fk
+  LEFT JOIN affiliations     aff ON aff.id = pc.affiliation_id_fk
+  LEFT JOIN regulation_types reg ON reg.id = pc.regulation_type_id_fk
+  JOIN sessions sess        ON sess.id = pr.session_id_fk
+  JOIN academic_years ay    ON ay.id = sess.academic_id_fk
+  JOIN papers p             ON p.academic_year_id_fk = ay.id
+                            AND p.programe_course_id_fk = pc.id
+  JOIN classes cl           ON cl.id = p.class_id_fk
+  JOIN subjects sbj         ON sbj.id = p.subject_id_fk
+  JOIN subject_types sbt    ON sbt.id = p.subject_type_id_fk
+  WHERE p.is_optional = FALSE
+    AND ay.id = $1
+),
+optional AS (
+  SELECT
+      std.id  AS student_id,
+      std.uid,
+      u.name  AS user_name,
+      ay.year AS academic_year,
+      pc.name AS program_course,
+      aff.name AS affiliation,
+      reg.name AS regulation,
+      cl.name AS semester,
+      cl.id   AS class_id_for_order,
+      COALESCE(sbj.code, sbj.name) AS subject,
+      COALESCE(sbt.code, sbt.name) AS subject_type,
+      ssm.label AS selection_label,
+      lss.id   AS selection_id_for_order,
+      lss.version AS selection_version,
+      p.id   AS paper_id,
+      CASE
+        WHEN p.is_optional = FALSE AND p.auto_assign = FALSE THEN 'Mandatory'
+        WHEN p.is_optional = FALSE AND p.auto_assign = TRUE  THEN 'Not possible'
+        WHEN p.is_optional = TRUE  AND p.auto_assign = FALSE THEN 'Elective'
+        ELSE 'Elective & Auto-Assign'
+      END AS paper_type,
+      p.name  AS paper,
+      p.code  AS paper_code,
+      CASE WHEN p.is_optional THEN 'Yes' ELSE 'No' END AS is_optional,
+      CASE WHEN p.auto_assign THEN 'Yes' ELSE 'No' END AS auto_assign,
+      CASE WHEN p.is_active   THEN 'Yes' ELSE 'No' END AS is_active
+  FROM students std
+  JOIN users u              ON u.id = std.user_id_fk AND u.is_active = TRUE
+  JOIN latest_promotions pr ON pr.student_id_fk = std.id
+  JOIN program_courses pc   ON pc.id = pr.program_course_id_fk
+  LEFT JOIN affiliations     aff ON aff.id = pc.affiliation_id_fk
+  LEFT JOIN regulation_types reg ON reg.id = pc.regulation_type_id_fk
+  JOIN sessions sess        ON sess.id = pr.session_id_fk
+  JOIN academic_years ay    ON ay.id = sess.academic_id_fk
+  JOIN papers p             ON p.academic_year_id_fk = ay.id
+                            AND p.programe_course_id_fk = pc.id
+  JOIN classes cl           ON cl.id = p.class_id_fk
+  JOIN subjects sbj         ON sbj.id = p.subject_id_fk
+  JOIN subject_types sbt    ON sbt.id = p.subject_type_id_fk
+  JOIN subject_selection_meta ssm
+                            ON ssm.subject_type_id_fk = sbt.id
+  JOIN subject_selection_meta_classes ssmc
+                            ON ssmc.subject_selection_meta_id_fk = ssm.id
+                           AND ssmc.class_id_fk = cl.id
+  JOIN latest_student_selections lss
+                            ON lss.student_id_fk = std.id
+                           AND lss.subject_selection_meta_id_fk = ssm.id
+                           AND lss.subject_id_fk = p.subject_id_fk
+  WHERE p.is_optional = TRUE
+    AND ay.id = $1
+)
+SELECT
+    student_id,
+    uid,
+    user_name,
+    academic_year,
+    program_course,
+    affiliation,
+    regulation,
+    semester,
+    subject,
+    subject_type,
+    selection_label,
+    selection_version,
+    paper_id,
+    paper_type,
+    paper,
+    paper_code,
+    is_optional,
+    auto_assign,
+    is_active
+FROM (
+  SELECT * FROM mandatory
+  UNION ALL
+  SELECT * FROM optional
+) q
+ORDER BY q.uid,
+         q.class_id_for_order,
+         q.selection_id_for_order NULLS FIRST,
+         q.paper_code;
+`;
+
+export async function exportStudentSubjectsReport(
+  academicYearId: number,
+): Promise<Buffer> {
+  const trimmedQuery = STUDENT_SUBJECTS_EXPORT_SQL.trim();
+  console.log(
+    "[SUBJECTS-EXPORT] Running student subjects export",
+    academicYearId,
+  );
+
+  try {
+    const { rows } = await pool.query(trimmedQuery, [academicYearId]);
+    console.log(
+      `[SUBJECTS-EXPORT] Retrieved ${rows.length} rows for academic year ${academicYearId}`,
+    );
+
+    const workbook = XLSX.utils.book_new();
+
+    if (rows.length === 0) {
+      const ws = XLSX.utils.aoa_to_sheet([["No data available"]]);
+      XLSX.utils.book_append_sheet(workbook, ws, "student-subjects");
+    } else {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(workbook, ws, "student-subjects");
+    }
+
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+    return Buffer.from(buffer);
+  } catch (error) {
+    console.error(
+      "[SUBJECTS-EXPORT] Failed to export student subjects:",
+      error,
+    );
+    throw error;
+  }
 }
 
 // -- Version History and Audit Trail Functions --
