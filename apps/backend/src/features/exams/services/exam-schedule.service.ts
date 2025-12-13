@@ -451,7 +451,7 @@ export async function createExamAssignment(dto: ExamDto) {
       .values({
         academicYearId: dto.academicYear.id!,
         examTypeId: dto.examType.id!,
-        classId: dto.classId.id!,
+        classId: dto.class.id!,
 
         gender: dto.gender,
         orderType: dto.orderType,
@@ -519,16 +519,51 @@ export async function createExamAssignment(dto: ExamDto) {
     const programCourseIds = dto.programCourses.map((pc) => pc.id!);
     const shiftIds = dto.shifts.map((s) => s.id!);
 
+    // CRITICAL: Always pass arrays — even if single value or empty
+    const safeArray = <T>(arr: T[] | T | undefined): T[] =>
+      Array.isArray(arr) ? arr : arr != null ? [arr] : [];
+
+    // Use safe arrays everywhere
+    const programCourseIdsArr = safeArray(programCourseIds);
+    const subjectIdsArr = safeArray(subjectIds);
+    const subjectTypeIdsArr = safeArray(subjectTypeIds);
+    const shiftIdsArr = safeArray(shiftIds);
+
+    // const paperResult = await tx.execute(sql`
+    //         SELECT DISTINCT p.id
+    //         FROM papers p
+    //         WHERE p.class_id_fk = ${dto.class.id!}
+    //           AND p.programe_course_id_fk = ANY(${programCourseIds}::int[])
+    //           AND p.academic_year_id_fk = ${dto.academicYear.id!}
+    //           AND p.subject_id_fk = ANY(${subjectIds}::int[])
+    //           AND p.subject_type_id_fk = ANY(${subjectTypeIds}::int[])
+    //           AND p.is_active = TRUE
+    //     `);
+
+    // Build the WHERE conditions dynamically so we never send an empty array to ANY()
+    const conditions = [
+      sql`p.class_id_fk = ${dto.class.id!}`,
+      // Always an array now → safe for ANY()
+      sql`p.programe_course_id_fk = ANY(${programCourseIdsArr}::int[])`,
+      sql`p.academic_year_id_fk = ${dto.academicYear.id!}`,
+      sql`p.is_active = TRUE`,
+    ];
+
+    if (subjectIdsArr.length > 0) {
+      conditions.push(sql`p.subject_id_fk = ANY(${subjectIdsArr}::int[])`);
+    }
+
+    if (subjectTypeIdsArr.length > 0) {
+      conditions.push(
+        sql`p.subject_type_id_fk = ANY(${subjectTypeIdsArr}::int[])`,
+      );
+    }
+
     const paperResult = await tx.execute(sql`
-            SELECT DISTINCT p.id
-            FROM papers p
-            WHERE p.class_id_fk = ${dto.classId.id!}
-              AND p.programe_course_id_fk = ANY(${programCourseIds}::int[])
-              AND p.academic_year_id_fk = ${dto.academicYear.id!}
-              AND p.subject_id_fk = ANY(${subjectIds}::int[])
-              AND p.subject_type_id_fk = ANY(${subjectTypeIds}::int[])
-              AND p.is_active = TRUE
-        `);
+        SELECT DISTINCT p.id
+        FROM papers p
+        WHERE ${sql.join(conditions, sql` AND `)}
+      `);
 
     const paperIds = paperResult.rows.map((r: any) => Number(r.id));
     if (paperIds.length === 0)
@@ -536,11 +571,11 @@ export async function createExamAssignment(dto: ExamDto) {
 
     // 6. Prepare seat assignment
     const seatParams: GetStudentsByPapersParams = {
-      classId: dto.classId.id!,
-      programCourseIds,
+      classId: dto.class.id!,
+      programCourseIds: programCourseIdsArr, // ← now always array
       paperIds,
       academicYearIds: [dto.academicYear.id!],
-      shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
+      shiftIds: shiftIdsArr.length > 0 ? shiftIdsArr : undefined,
       assignBy: dto.orderType === "UID" ? "UID" : "CU Reg. No.",
     };
 
@@ -579,7 +614,7 @@ export async function createExamAssignment(dto: ExamDto) {
       .where(
         and(
           inArray(promotionModel.studentId, studentIds),
-          eq(promotionModel.classId, dto.classId.id!),
+          eq(promotionModel.classId, dto.class.id!),
           inArray(promotionModel.programCourseId, programCourseIds),
           eq(sessionModel.academicYearId, dto.academicYear.id!),
           shiftIds.length > 0

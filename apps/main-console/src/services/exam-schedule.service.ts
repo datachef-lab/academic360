@@ -27,7 +27,7 @@ export async function countStudentsForExam(params: CountStudentsParams): Promise
 }
 
 export interface GetStudentsParams extends CountStudentsParams {
-  assignBy: "UID" | "CU Reg. No.";
+  assignBy: "UID" | "CU_ROLL_NUMBER";
   roomAssignments: Array<{
     roomId: number;
     floorId: number | null;

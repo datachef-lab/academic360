@@ -14,12 +14,12 @@ export const examSubjectModel = pgTable("exam_subjects", {
         .notNull(),
     startTime: timestamp("start_time").notNull(),
     endTime: timestamp("end_time").notNull(),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    createdAt: timestamp().defaultNow(),
+    updatedAt: timestamp().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const createExamSubjectSchema = createInsertSchema(examSubjectModel);
 
 export type ExamSubject = z.infer<typeof createExamSubjectSchema>;
 
-export type ExamSubjectT = typeof examSubjectModel.$inferSelect;
+export type ExamSubjectT = typeof createExamSubjectSchema._type;

@@ -16,31 +16,42 @@ import { getAllShifts } from "@/services/academic";
 import { getSubjectTypes, getExamComponents } from "@/services/course-design.api";
 import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
-import { getAllRooms, type RoomT } from "@/services/room.service";
+import { getAllRooms } from "@/services/room.service";
 import { getAllFloors, type FloorT } from "@/services/floor.service";
 import { countStudentsForExam, getStudentsForExam, type StudentWithSeat } from "@/services/exam-schedule.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import type { Class } from "@/types/academics/class";
-import type { ProgramCourse, SubjectType, PaperDto, Affiliation, RegulationType } from "@repo/db";
+import type {
+  ProgramCourse,
+  SubjectType,
+  PaperDto,
+  Affiliation,
+  RegulationType,
+  ExamDto,
+  ExamSubjectT,
+  ExamRoomDto,
+  RoomDto,
+} from "@repo/db";
 import type { Shift } from "@/types/academics/shift";
 import type { Subject } from "@repo/db";
 import type { ExamComponent } from "@/types/course-design";
+import { doAssignExam } from "../services";
 
-interface SelectedRoom extends RoomT {
+interface SelectedRoom extends RoomDto {
   capacity: number;
   maxStudentsPerBenchOverride?: number;
 }
 
-interface Student {
-  uid: string;
-  name: string;
-  cuRollNo: string;
-  cuRegNo: string;
-  programCourse: string;
-  semester: string;
-  shift: string;
-  gender: "Male" | "Female";
-}
+// interface Student {
+//   uid: string;
+//   name: string;
+//   cuRollNo: string;
+//   cuRegNo: string;
+//   programCourse: string;
+//   semester: string;
+//   shift: string;
+//   gender: "Male" | "Female";
+// }
 
 interface Schedule {
   date: string;
@@ -48,16 +59,16 @@ interface Schedule {
   endTime: string;
 }
 
-interface Assignment {
-  uid: string;
-  name: string;
-  cuRollNo: string;
-  cuRegNo: string;
-  programCourse: string;
-  papers: { paperId: string; name: string; date: string; time: string }[];
-  room: string;
-  seatNo: string;
-}
+// interface Assignment {
+//   uid: string;
+//   name: string;
+//   cuRollNo: string;
+//   cuRegNo: string;
+//   programCourse: string;
+//   papers: { paperId: string; name: string; date: string; time: string }[];
+//   room: string;
+//   seatNo: string;
+// }
 
 export default function ScheduleExamPage() {
   // Academic Year hook - get current academic year from Redux slice
@@ -73,7 +84,7 @@ export default function ScheduleExamPage() {
   const [regulationTypes, setRegulationTypes] = useState<RegulationType[]>([]);
   const [papers, setPapers] = useState<PaperDto[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [rooms, setRooms] = useState<RoomT[]>([]);
+  const [rooms, setRooms] = useState<RoomDto[]>([]);
   const [floors, setFloors] = useState<FloorT[]>([]);
   const [examComponents, setExamComponents] = useState<ExamComponent[]>([]);
   const [loading, setLoading] = useState({
@@ -105,10 +116,11 @@ export default function ScheduleExamPage() {
   const [totalStudents, setTotalStudents] = useState(0);
   const [studentsWithSeats, setStudentsWithSeats] = useState<StudentWithSeat[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  //   const [examAssignment, setExamAssignment] = useState<ExamDto | null>(null);
 
   // Step 2: Room Selection
-  const [gender, setGender] = useState<"ALL" | "MALE" | "FEMALE" | "OTHER">("ALL");
-  const [assignBy, setAssignBy] = useState<"UID" | "CU Reg. No.">("UID");
+  const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | null>(null);
+  const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
   const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
   const [totalCapacity, setTotalCapacity] = useState(0);
 
@@ -373,51 +385,51 @@ export default function ScheduleExamPage() {
     void fetchPapers();
   }, [fetchPapers]);
 
-  const generateMockStudents = useCallback((): Student[] => {
-    const students: Student[] = [];
-    let counter = 1;
+  //   const generateMockStudents = useCallback((): Student[] => {
+  //     const students: Student[] = [];
+  //     let counter = 1;
 
-    selectedProgramCourses.forEach((courseId) => {
-      const course = programCourses.find((c) => c.id === courseId);
-      const courseName = course?.name || `Course ${courseId}`;
-      const shiftsToUse =
-        selectedShifts.length > 0
-          ? selectedShifts
-          : shifts.map((s) => s.id).filter((id): id is number => id !== undefined);
-      shiftsToUse.forEach((shiftId) => {
-        const shift = shifts.find((s) => s.id === shiftId);
-        const shiftName = shift?.name || `Shift ${shiftId}`;
-        const studentsPerGroup = 15;
-        for (let i = 0; i < studentsPerGroup; i++) {
-          students.push({
-            uid: `UID${String(counter).padStart(6, "0")}`,
-            name: `Student ${counter}`,
-            cuRollNo: `CUR${String(counter).padStart(6, "0")}`,
-            cuRegNo: `REG${String(counter).padStart(6, "0")}`,
-            programCourse: courseName,
-            semester: semester,
-            shift: shiftName,
-            gender: i % 2 === 0 ? "Male" : "Female",
-          });
-          counter++;
-        }
-      });
-    });
+  //     selectedProgramCourses.forEach((courseId) => {
+  //       const course = programCourses.find((c) => c.id === courseId);
+  //       const courseName = course?.name || `Course ${courseId}`;
+  //       const shiftsToUse =
+  //         selectedShifts.length > 0
+  //           ? selectedShifts
+  //           : shifts.map((s) => s.id).filter((id): id is number => id !== undefined);
+  //       shiftsToUse.forEach((shiftId) => {
+  //         const shift = shifts.find((s) => s.id === shiftId);
+  //         const shiftName = shift?.name || `Shift ${shiftId}`;
+  //         const studentsPerGroup = 15;
+  //         for (let i = 0; i < studentsPerGroup; i++) {
+  //           students.push({
+  //             uid: `UID${String(counter).padStart(6, "0")}`,
+  //             name: `Student ${counter}`,
+  //             cuRollNo: `CUR${String(counter).padStart(6, "0")}`,
+  //             cuRegNo: `REG${String(counter).padStart(6, "0")}`,
+  //             programCourse: courseName,
+  //             semester: semester,
+  //             shift: shiftName,
+  //             gender: i % 2 === 0 ? "Male" : "Female",
+  //           });
+  //           counter++;
+  //         }
+  //       });
+  //     });
 
-    return students;
-  }, [selectedProgramCourses, selectedShifts, semester, programCourses, shifts]);
+  //     return students;
+  //   }, [selectedProgramCourses, selectedShifts, semester, programCourses, shifts]);
 
-  const getFilteredStudents = useCallback((): Student[] => {
-    const allStudents = generateMockStudents();
-    if (gender === "ALL") return allStudents;
-    // Map enum values to student gender format
-    const genderMap: Record<string, "Male" | "Female"> = {
-      MALE: "Male",
-      FEMALE: "Female",
-    };
-    const filterGender = genderMap[gender] || gender;
-    return allStudents.filter((s) => s.gender === filterGender);
-  }, [gender, generateMockStudents]);
+  //   const getFilteredStudents = useCallback((): Student[] => {
+  //     const allStudents = generateMockStudents();
+  //     if (gender === null) return allStudents;
+  //     // Map enum values to student gender format
+  //     const genderMap: Record<string, "Male" | "Female"> = {
+  //       MALE: "Male",
+  //       FEMALE: "Female",
+  //     };
+  //     const filterGender = genderMap[gender] || gender;
+  //     return allStudents.filter((s) => s.gender === filterGender);
+  //   }, [gender, generateMockStudents]);
 
   const getAvailablePapers = useCallback((): PaperDto[] => {
     let filtered = papers.filter((paper) => paper.isActive !== false);
@@ -585,11 +597,11 @@ export default function ScheduleExamPage() {
 
         // Prepare room assignments
         const roomAssignments = selectedRooms.map((room) => {
-          const floor = floors.find((f) => f.id === room.floorId);
+          const floor = floors.find((f) => f.id === room.floor.id);
           const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
           return {
             roomId: room.id!,
-            floorId: room.floorId,
+            floorId: room.floor.id,
             floorName: floor?.name || null,
             roomName: room.name || `Room ${room.id}`,
             maxStudentsPerBench,
@@ -603,7 +615,7 @@ export default function ScheduleExamPage() {
           paperIds,
           academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-          assignBy,
+          assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
           roomAssignments,
         });
 
@@ -651,7 +663,7 @@ export default function ScheduleExamPage() {
     );
   };
 
-  const handleRoomSelection = (room: RoomT, selected: boolean) => {
+  const handleRoomSelection = (room: RoomDto, selected: boolean) => {
     if (selected) {
       const maxStudentsPerBench = room.maxStudentsPerBench || 2;
       const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
@@ -691,81 +703,81 @@ export default function ScheduleExamPage() {
     }));
   };
 
-  const formatTime = (time24?: string) => {
-    if (!time24) return "";
-    const [hours, minutes] = time24.split(":");
-    const hour = parseInt(hours!);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
-  };
+  //   const formatTime = (time24?: string) => {
+  //     if (!time24) return "";
+  //     const [hours, minutes] = time24.split(":");
+  //     const hour = parseInt(hours!);
+  //     const ampm = hour >= 12 ? "PM" : "AM";
+  //     const hour12 = hour % 12 || 12;
+  //     return `${hour12}:${minutes} ${ampm}`;
+  //   };
 
-  const generateSeatNumber = (benchNumber: number, positionOnBench: number, maxStudentsPerBench: number): string => {
-    const letters = maxStudentsPerBench === 2 ? ["A", "C"] : ["A", "B", "C"];
-    return `${benchNumber}${letters[positionOnBench - 1]}`;
-  };
+  //   const generateSeatNumber = (benchNumber: number, positionOnBench: number, maxStudentsPerBench: number): string => {
+  //     const letters = maxStudentsPerBench === 2 ? ["A", "C"] : ["A", "B", "C"];
+  //     return `${benchNumber}${letters[positionOnBench - 1]}`;
+  //   };
 
-  const handleGenerate = () => {
-    const students = getFilteredStudents();
+  //   const handleGenerate = () => {
+  //     const students = getFilteredStudents();
 
-    students.sort((a, b) => {
-      if (assignBy === "UID") return a.uid.localeCompare(b.uid);
-      return a.cuRegNo.localeCompare(b.cuRegNo);
-    });
+  //     students.sort((a, b) => {
+  //       if (assignBy === "UID") return a.uid.localeCompare(b.uid);
+  //       return a.cuRegNo.localeCompare(b.cuRegNo);
+  //     });
 
-    const newAssignments: Assignment[] = [];
-    let currentRoomIndex = 0;
-    let currentBench = 1;
-    let currentPosition = 1;
+  //     const newAssignments: Assignment[] = [];
+  //     let currentRoomIndex = 0;
+  //     let currentBench = 1;
+  //     let currentPosition = 1;
 
-    students.forEach((student) => {
-      if (currentRoomIndex >= selectedRooms.length) return;
+  //     students.forEach((student) => {
+  //       if (currentRoomIndex >= selectedRooms.length) return;
 
-      const currentRoom = selectedRooms[currentRoomIndex]!;
-      const maxStudentsPerBench = currentRoom.maxStudentsPerBenchOverride || currentRoom.maxStudentsPerBench || 2;
-      const roomCapacity = (currentRoom.numberOfBenches || 0) * maxStudentsPerBench;
+  //       const currentRoom = selectedRooms[currentRoomIndex]!;
+  //       const maxStudentsPerBench = currentRoom.maxStudentsPerBenchOverride || currentRoom.maxStudentsPerBench || 2;
+  //       const roomCapacity = (currentRoom.numberOfBenches || 0) * maxStudentsPerBench;
 
-      const subjectSchedule = selectedSubjectId ? subjectSchedules[selectedSubjectId.toString()] : null;
-      const studentPapers = getPapersForSelectedSubject().map((paper) => ({
-        paperId: paper.id?.toString() || "",
-        name: paper.name || "Unnamed Paper",
-        date: subjectSchedule?.date || "TBD",
-        time: subjectSchedule?.startTime
-          ? `${formatTime(subjectSchedule.startTime)} - ${formatTime(subjectSchedule.endTime)}`
-          : "TBD",
-      }));
+  //       const subjectSchedule = selectedSubjectId ? subjectSchedules[selectedSubjectId.toString()] : null;
+  //       const studentPapers = getPapersForSelectedSubject().map((paper) => ({
+  //         paperId: paper.id?.toString() || "",
+  //         name: paper.name || "Unnamed Paper",
+  //         date: subjectSchedule?.date || "TBD",
+  //         time: subjectSchedule?.startTime
+  //           ? `${formatTime(subjectSchedule.startTime)} - ${formatTime(subjectSchedule.endTime)}`
+  //           : "TBD",
+  //       }));
 
-      const seatNo = generateSeatNumber(currentBench, currentPosition, maxStudentsPerBench);
+  //       const seatNo = generateSeatNumber(currentBench, currentPosition, maxStudentsPerBench);
 
-      newAssignments.push({
-        uid: student.uid,
-        name: student.name,
-        cuRollNo: student.cuRollNo,
-        cuRegNo: student.cuRegNo,
-        programCourse: student.programCourse,
-        papers: studentPapers,
-        room: currentRoom.name || `Room ${currentRoom.id}`,
-        seatNo,
-      });
+  //       newAssignments.push({
+  //         uid: student.uid,
+  //         name: student.name,
+  //         cuRollNo: student.cuRollNo,
+  //         cuRegNo: student.cuRegNo,
+  //         programCourse: student.programCourse,
+  //         papers: studentPapers,
+  //         room: currentRoom.name || `Room ${currentRoom.id}`,
+  //         seatNo,
+  //       });
 
-      currentPosition++;
-      if (currentPosition > maxStudentsPerBench) {
-        currentPosition = 1;
-        currentBench++;
-      }
+  //       currentPosition++;
+  //       if (currentPosition > maxStudentsPerBench) {
+  //         currentPosition = 1;
+  //         currentBench++;
+  //       }
 
-      const studentsInRoom = newAssignments.filter(
-        (a) => a.room === (currentRoom.name || `Room ${currentRoom.id}`),
-      ).length;
-      if (studentsInRoom >= roomCapacity) {
-        currentRoomIndex++;
-        currentBench = 1;
-        currentPosition = 1;
-      }
-    });
+  //       const studentsInRoom = newAssignments.filter(
+  //         (a) => a.room === (currentRoom.name || `Room ${currentRoom.id}`),
+  //       ).length;
+  //       if (studentsInRoom >= roomCapacity) {
+  //         currentRoomIndex++;
+  //         currentBench = 1;
+  //         currentPosition = 1;
+  //       }
+  //     });
 
-    toast.success(`Successfully assigned ${newAssignments.length} students`);
-  };
+  //     toast.success(`Successfully assigned ${newAssignments.length} students`);
+  //   };
 
   const capacityStatus = totalCapacity >= totalStudents;
   const [centerTab, setCenterTab] = useState<"rooms" | "students">("rooms");
@@ -776,6 +788,62 @@ export default function ScheduleExamPage() {
       setSelectedAcademicYearId(currentAcademicYear.id);
     }
   }, [currentAcademicYear, selectedAcademicYearId]);
+
+  const handleAssignExam = async () => {
+    const examSubjects: ExamSubjectT[] = [];
+    for (const subjectId in subjectSchedules) {
+      examSubjects.push({
+        subjectId: Number(subjectId),
+        startTime: new Date(),
+        endTime: new Date(),
+        examId: 0,
+        id: 0,
+        createdAt: null,
+        updatedAt: null,
+      });
+    }
+
+    const locations: ExamRoomDto[] = selectedRooms.map((room) => ({
+      roomId: room.id!,
+      studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
+      capacity: room.capacity,
+      room: rooms.find((r) => r.id === room.id)!,
+      examId: 0, // will be set backend
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      id: 0,
+    }));
+
+    const tmpExamAssignment: ExamDto = {
+      orderType: assignBy,
+      academicYear: availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)!,
+      class: classes.find((c) => c.id?.toString() === semester)!,
+      examType: examTypes.find((et) => et.id?.toString() === examType)!,
+      programCourses: programCourses.filter((pc) => selectedProgramCourses.includes(pc.id!)),
+      shifts: shifts.filter((s) => selectedShifts.includes(s.id!)),
+      // subject: subjects.find(s => s.id === selectedSubjectId)!,
+      // examComponent: examComponents.find(ec => ec.id === selectedExamComponent!) || null,
+      subjectTypes: subjectTypes.filter((st) => selectedSubjectCategories.includes(st.id!)),
+      gender: gender,
+      subjects: examSubjects,
+      locations,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      id: 0,
+      legacyExamAssginmentId: null,
+    };
+
+    try {
+      console.log("Before calling doAssignExam with:", tmpExamAssignment);
+      const response = await doAssignExam(tmpExamAssignment);
+      console.log("In exam assignment post api, response:", response);
+
+      toast.success(`Successfully assigned exam to the students`);
+    } catch (error) {
+      console.log("In exam assignment post api, error:", error);
+      toast.error(`Something went wrong while assigning exam!`);
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-gray-50">
@@ -1178,7 +1246,8 @@ export default function ScheduleExamPage() {
                       <span className="text-xl font-bold text-purple-600">{totalStudents}</span>
                     </div>
                     <Button
-                      onClick={handleGenerate}
+                      //   onClick={handleGenerate}
+                      onClick={handleAssignExam}
                       className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold"
                     >
                       Assign
@@ -1220,7 +1289,7 @@ export default function ScheduleExamPage() {
 
                     <div className="flex flex-wrap gap-4">
                       <div className="space-y-1">
-                        <Select value={gender} onValueChange={(value) => setGender(value as typeof gender)}>
+                        <Select value={gender || ""} onValueChange={(value) => setGender(value as typeof gender)}>
                           <SelectTrigger className="h-8 w-40 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                             <SelectValue />
                           </SelectTrigger>
@@ -1239,7 +1308,7 @@ export default function ScheduleExamPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="UID">UID</SelectItem>
-                            <SelectItem value="CU Reg. No.">CU Registration Number</SelectItem>
+                            <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1296,8 +1365,8 @@ export default function ScheduleExamPage() {
                                     const currentMaxStudentsPerBench =
                                       selectedRoom?.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
                                     const calculatedCapacity = (room.numberOfBenches || 0) * currentMaxStudentsPerBench;
-                                    const floorName = room.floorId
-                                      ? floors.find((f) => f.id === room.floorId)?.name
+                                    const floorName = room.floor.id!
+                                      ? floors.find((f) => f.id === room.floor.id)?.name
                                       : "N/A";
 
                                     return (

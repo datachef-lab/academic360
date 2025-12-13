@@ -1,0 +1,172 @@
+{
+  "orderType": "UID",
+  "academicYear": {
+    "id": 1,
+    "legacyAcademicYearId": null,
+    "year": "2025-26",
+    "isCurrentYear": true,
+    "codePrefix": null,
+    "createdAt": "2025-09-10T10:38:22.129Z",
+    "updatedAt": "2025-09-11T08:52:08.302Z"
+  },
+  "class": {
+    "id": 1,
+    "name": "SEMESTER I",
+    "shortName": null,
+    "type": "SEMESTER",
+    "sequence": null,
+    "isActive": true,
+    "createdAt": "2025-09-10T10:19:12.983Z",
+    "updatedAt": "2025-09-10T10:19:12.983Z"
+  },
+  "examType": {
+    "id": 1,
+    "legacyExamTypeId": null,
+    "name": "Internal Exam",
+    "shortName": null,
+    "isActive": true,
+    "createdAt": "2025-11-19T11:21:35.698Z",
+    "updatedAt": "2025-11-19T11:21:35.698Z"
+  },
+  "programCourses": [
+    {
+      "id": 22,
+      "name": "B.Com (G)",
+      "shortName": null,
+      "streamId": 17,
+      "courseId": 19,
+      "courseTypeId": 2,
+      "courseLevelId": 1,
+      "duration": 3,
+      "totalSemesters": 6,
+      "affiliationId": 1,
+      "regulationTypeId": 2,
+      "codePrefix": "18",
+      "universityCode": "13",
+      "isActive": true,
+      "createdAt": "2025-09-17T11:54:19.743Z",
+      "updatedAt": "2025-09-17T11:54:19.743Z"
+    },
+    {
+      "id": 20,
+      "name": "B.Com (H)",
+      "shortName": null,
+      "streamId": 17,
+      "courseId": 19,
+      "courseTypeId": 1,
+      "courseLevelId": 1,
+      "duration": 4,
+      "totalSemesters": 8,
+      "affiliationId": 1,
+      "regulationTypeId": 2,
+      "codePrefix": "01",
+      "universityCode": "10",
+      "isActive": true,
+      "createdAt": "2025-09-17T11:53:34.159Z",
+      "updatedAt": "2025-09-17T11:53:34.159Z"
+    }
+  ],
+  "shifts": [
+    {
+      "id": 1,
+      "legacyShiftId": 2,
+      "name": "Day",
+      "codePrefix": "04",
+      "sequence": null,
+      "disabled": false,
+      "createdAt": "2025-09-16T01:36:15.273Z",
+      "updatedAt": "2025-10-27T14:33:32.004Z"
+    },
+    {
+      "id": 4,
+      "legacyShiftId": 4,
+      "name": "Evening",
+      "codePrefix": "03",
+      "sequence": null,
+      "disabled": false,
+      "createdAt": "2025-09-19T03:56:56.296Z",
+      "updatedAt": "2025-10-27T09:22:10.736Z"
+    },
+    {
+      "id": 3,
+      "legacyShiftId": 1,
+      "name": "Morning",
+      "codePrefix": "01",
+      "sequence": null,
+      "disabled": false,
+      "createdAt": "2025-09-19T03:54:31.315Z",
+      "updatedAt": "2025-10-27T09:53:31.408Z"
+    },
+    {
+      "id": 2,
+      "legacyShiftId": 3,
+      "name": "Afternoon",
+      "codePrefix": "02",
+      "sequence": null,
+      "disabled": false,
+      "createdAt": "2025-09-16T01:38:31.024Z",
+      "updatedAt": "2025-10-27T14:50:57.361Z"
+    }
+  ],
+  "subjectTypes": [
+    {
+      "id": 34,
+      "legacySubjectTypeId": null,
+      "name": "Discipline Specific Core Courses",
+      "code": "DSCC",
+      "sequence": null,
+      "isActive": true,
+      "createdAt": "2025-09-10T12:21:49.718Z",
+      "updatedAt": "2025-11-19T06:23:28.385Z"
+    }
+  ],
+  "gender": null,
+  "subjects": [
+    {
+      "subjectId": 619,
+      "startTime": null,
+      "endTime": null,
+      "examId": 0,
+      "id": 0,
+      "createdAt": "2025-12-04T20:03:59.930Z",
+      "updatedAt": "2025-12-04T20:03:59.930Z"
+    }
+  ],
+  "locations": [
+    {
+      "roomId": 1,
+      "studentsPerBench": 3,
+      "capacity": 60,
+      "room": {
+        "id": 1,
+        "legacyRoomId": null,
+        "name": "101",
+        "shortName": null,
+        "numberOfBenches": 20,
+        "maxStudentsPerBench": 3,
+        "floorId": 1,
+        "isActive": true,
+        "createdAt": "2025-11-19T11:21:27.862Z",
+        "updatedAt": "2025-11-19T11:21:27.862Z",
+        "floor": {
+          "id": 1,
+          "legacyFloorId": null,
+          "name": "1st",
+          "shortName": null,
+          "sequence": null,
+          "isActive": true,
+          "createdAt": "2025-11-19T11:21:11.763Z",
+          "updatedAt": "2025-11-19T11:21:11.763Z"
+        }
+      },
+      "examId": 0,
+      "createdAt": "2025-12-04T20:03:59.930Z",
+      "updatedAt": "2025-12-04T20:03:59.930Z",
+      "id": 0
+    }
+  ],
+  "createdAt": "2025-12-04T20:03:59.930Z",
+  "updatedAt": "2025-12-04T20:03:59.930Z",
+  "id": 0,
+  "legacyExamAssginmentId": null
+}

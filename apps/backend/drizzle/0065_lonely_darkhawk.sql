@@ -1,0 +1,1 @@
+ALTER TYPE "public"."exam_order_type" ADD VALUE 'CU_REGISTRATION_NUMBER' BEFORE 'UID';
