@@ -346,6 +346,98 @@ export class PdfGenerationService {
     }
   }
 
+  public async generateExamAdmitCardPdfBuffer(formData: {
+    semester: string;
+    examType: string;
+    session: string;
+    name: string;
+    cuRollNumber: string | null;
+    cuRegistrationNumber: string | null;
+    uid: string;
+    phone: string;
+    programCourseName: string;
+    shiftName: string;
+    qrCodeDataUrl: string | null;
+    examRows: Array<{
+      date: string;
+      time: string;
+      room: string;
+      seatNo: string;
+      subjectName: string;
+      subjectCode: string;
+    }>;
+    studentImage?: string;
+  }): Promise<Buffer> {
+    formData.studentImage = `https://besc.academic360.app/id-card-generate/api/images?uid=${formData.uid}&crop=true`;
+    try {
+      console.info(
+        "[PDF GENERATION] Starting Exam Form PDF generation in memory",
+        {
+          studentUid: formData.uid,
+        },
+      );
+
+      // Generate QR code for application number if not provided
+
+      try {
+        formData.qrCodeDataUrl = await QRCodeService.generateApplicationQRCode(
+          formData.uid,
+        );
+        console.info("[PDF GENERATION] QR code generated successfully", {
+          applicationNumber: formData.uid,
+        });
+      } catch (error) {
+        console.warn(
+          "[PDF GENERATION] Failed to generate QR code, continuing without it:",
+          error,
+        );
+      }
+
+      // Read the EJS template
+      const templatePath = path.join(__dirname, "../templates/admit-card.ejs");
+      const templateContent = await fs.readFile(templatePath, "utf-8");
+
+      // Render the template with data
+      const htmlContent = ejs.render(templateContent, formData);
+
+      // Get browser instance
+      const browser = await this.getBrowser();
+      const page = await browser.newPage();
+
+      // Set content and wait for resources to load
+      await page.setContent(htmlContent, {
+        waitUntil: "networkidle0",
+      });
+
+      // Generate PDF buffer
+      const pdfUint8Array = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: {
+          top: "0.3in",
+          right: "0.3in",
+          bottom: "0.3in",
+          left: "0.3in",
+        },
+      });
+
+      // Convert Uint8Array to Buffer
+      const pdfBuffer = Buffer.from(pdfUint8Array);
+
+      await page.close();
+
+      console.info("[PDF GENERATION] PDF generated successfully in memory", {
+        bufferSize: pdfBuffer.length,
+        studentUid: formData.uid,
+      });
+
+      return pdfBuffer;
+    } catch (error) {
+      console.error("[PDF GENERATION] PDF generation failed:", error);
+      throw error;
+    }
+  }
+
   public async close(): Promise<void> {
     if (this.browser) {
       await this.browser.close();
