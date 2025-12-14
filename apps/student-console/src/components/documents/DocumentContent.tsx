@@ -49,11 +49,11 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
   const [loading, setLoading] = useState<boolean>(!hasInitialDataRef.current);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!accessControl?.access_course) {
-      router.back();
-    }
-  }, [accessControl, router]);
+  //   useEffect(() => {
+  //     if (!accessControl?.access_course) {
+  //       router.back();
+  //     }
+  //   }, [accessControl, router]);
 
   // Clear any existing timeout on unmount
   useEffect(() => {
