@@ -100,7 +100,7 @@ export default function ScheduleExamPage() {
   const [selectedProgramCourses, setSelectedProgramCourses] = useState<number[]>([]);
   const [selectedShifts, setSelectedShifts] = useState<number[]>([]);
   const [selectedSubjectCategories, setSelectedSubjectCategories] = useState<number[]>([]);
-  const [selectedSubjectId] = useState<number | null>(null);
+  //   const [selectedSubjectId] = useState<number | null>(null);
   const [selectedExamComponent, setSelectedExamComponent] = useState<number | null>(null);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(null);
   const [selectedAffiliationId, setSelectedAffiliationId] = useState<number | null>(null);
@@ -431,27 +431,98 @@ export default function ScheduleExamPage() {
     }));
   };
 
-  const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
-    if (!selectedSubjectId) return [];
-    return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
-  }, [selectedSubjectId, getAvailablePapers]);
+  //   const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
+  //     if (!selectedSubjectId) return [];
+  //     return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
+  //   }, [selectedSubjectId, getAvailablePapers]);
+
+  const getPaperIdsForSelectedSubjects = useCallback((): number[] => {
+    if (selectedSubjectIds.length === 0) return [];
+
+    const paperIds = new Set<number>();
+    selectedSubjectIds.forEach((subjectId) => {
+      const subjectPapers = getAvailablePapers().filter((paper) => paper.subjectId === subjectId && paper.id);
+      subjectPapers.forEach((paper) => {
+        if (paper.id) paperIds.add(paper.id);
+      });
+    });
+
+    return Array.from(paperIds);
+  }, [selectedSubjectIds, getAvailablePapers]);
 
   // Fetch student count from API based on selected subject
+  //   useEffect(() => {
+  //     const fetchStudentCount = async () => {
+  //       if (!currentAcademicYear?.id) {
+  //         console.log("[SCHEDULE-EXAM] Waiting for academic year to be loaded...");
+  //         setTotalStudents(0);
+  //         return;
+  //       }
+
+  //       if (selectedProgramCourses.length === 0 || !semester || !selectedSubjectId) {
+  //         setTotalStudents(0);
+  //         return;
+  //       }
+
+  //       const papersForSubject = getPapersForSelectedSubject();
+  //       const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
+
+  //       if (paperIds.length === 0) {
+  //         setTotalStudents(0);
+  //         return;
+  //       }
+
+  //       try {
+  //         const classObj = classes.find((c) => c.id?.toString() === semester);
+  //         if (!classObj?.id) {
+  //           setTotalStudents(0);
+  //           return;
+  //         }
+
+  //         const response = await countStudentsForExam({
+  //           classId: classObj.id,
+  //           programCourseIds: selectedProgramCourses,
+  //           paperIds,
+  //           academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
+  //           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+  //         });
+
+  //         if (response.httpStatus === "SUCCESS" && response.payload) {
+  //           setTotalStudents(response.payload.count);
+  //         } else {
+  //           setTotalStudents(0);
+  //         }
+  //       } catch (error) {
+  //         console.error("[SCHEDULE-EXAM] Error fetching student count:", error);
+  //         setTotalStudents(0);
+  //       }
+  //     };
+
+  //     void fetchStudentCount();
+  //   }, [
+  //     selectedProgramCourses,
+  //     selectedShifts,
+  //     semester,
+  //     selectedSubjectId,
+  //     classes,
+  //     currentAcademicYear,
+  //     getPapersForSelectedSubject,
+  //     selectedAcademicYearId,
+  //   ]);
+
   useEffect(() => {
     const fetchStudentCount = async () => {
       if (!currentAcademicYear?.id) {
-        console.log("[SCHEDULE-EXAM] Waiting for academic year to be loaded...");
         setTotalStudents(0);
         return;
       }
 
-      if (selectedProgramCourses.length === 0 || !semester || !selectedSubjectId) {
+      if (selectedProgramCourses.length === 0 || !semester || selectedSubjectIds.length === 0) {
         setTotalStudents(0);
         return;
       }
 
-      const papersForSubject = getPapersForSelectedSubject();
-      const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
+      const paperIds = getPaperIdsForSelectedSubjects();
 
       if (paperIds.length === 0) {
         setTotalStudents(0);
@@ -489,10 +560,10 @@ export default function ScheduleExamPage() {
     selectedProgramCourses,
     selectedShifts,
     semester,
-    selectedSubjectId,
+    selectedSubjectIds, // ← now uses multiple subjects
     classes,
     currentAcademicYear,
-    getPapersForSelectedSubject,
+    getPaperIdsForSelectedSubjects, // ← new dependency
     selectedAcademicYearId,
   ]);
 
@@ -506,21 +577,102 @@ export default function ScheduleExamPage() {
   }, [selectedRooms]);
 
   // Fetch students with seat assignments when rooms are selected
+  //   useEffect(() => {
+  //     const fetchStudentsWithSeats = async () => {
+  //       if (
+  //         selectedRooms.length === 0 ||
+  //         selectedProgramCourses.length === 0 ||
+  //         !semester ||
+  //         !selectedSubjectIds ||
+  //         !currentAcademicYear?.id
+  //       ) {
+  //         setStudentsWithSeats([]);
+  //         return;
+  //       }
+
+  //       const papersForSubject = getPapersForSelectedSubjects();
+  //       const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
+
+  //       if (paperIds.length === 0) {
+  //         setStudentsWithSeats([]);
+  //         return;
+  //       }
+
+  //       try {
+  //         setLoadingStudents(true);
+  //         const classObj = classes.find((c) => c.id?.toString() === semester);
+  //         if (!classObj?.id) {
+  //           setStudentsWithSeats([]);
+  //           return;
+  //         }
+
+  //         const roomAssignments = selectedRooms
+  //           .filter((room) => room.id !== undefined && room.id !== null)
+  //           .map((room) => {
+  //             const floor = floors.find((f) => f.id === room.floor.id);
+  //             const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+  //             return {
+  //               roomId: room.id!,
+  //               floorId: room.floor.id,
+  //               floorName: floor?.name || null,
+  //               roomName: room.name || `Room ${room.id}`,
+  //               maxStudentsPerBench,
+  //               numberOfBenches: room.numberOfBenches || 0,
+  //             };
+  //           });
+
+  //         const response = await getStudentsForExam({
+  //           classId: classObj.id,
+  //           programCourseIds: selectedProgramCourses,
+  //           paperIds,
+  //           academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
+  //           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+  //           assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
+  //           roomAssignments,
+  //         });
+
+  //         if (response.httpStatus === "SUCCESS" && response.payload) {
+  //           setStudentsWithSeats(response.payload.students);
+  //         } else {
+  //           setStudentsWithSeats([]);
+  //         }
+  //       } catch (error) {
+  //         console.error("[SCHEDULE-EXAM] Error fetching students with seats:", error);
+  //         setStudentsWithSeats([]);
+  //       } finally {
+  //         setLoadingStudents(false);
+  //       }
+  //     };
+
+  //     void fetchStudentsWithSeats();
+  //   }, [
+  //     selectedRooms,
+  //     selectedProgramCourses,
+  //     selectedShifts,
+  //     semester,
+  //     selectedSubjectId,
+  //     classes,
+  //     currentAcademicYear,
+  //     assignBy,
+  //     floors,
+  //     getPapersForSelectedSubject,
+  //     selectedAcademicYearId,
+  //   ]);
+
   useEffect(() => {
     const fetchStudentsWithSeats = async () => {
       if (
         selectedRooms.length === 0 ||
         selectedProgramCourses.length === 0 ||
         !semester ||
-        !selectedSubjectId ||
+        selectedSubjectIds.length === 0 || // ← changed from !selectedSubjectId
         !currentAcademicYear?.id
       ) {
         setStudentsWithSeats([]);
         return;
       }
 
-      const papersForSubject = getPapersForSelectedSubject();
-      const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
+      const paperIds = getPaperIdsForSelectedSubjects();
 
       if (paperIds.length === 0) {
         setStudentsWithSeats([]);
@@ -579,12 +731,12 @@ export default function ScheduleExamPage() {
     selectedProgramCourses,
     selectedShifts,
     semester,
-    selectedSubjectId,
+    selectedSubjectIds, // ← changed
     classes,
     currentAcademicYear,
     assignBy,
     floors,
-    getPapersForSelectedSubject,
+    getPaperIdsForSelectedSubjects, // ← changed
     selectedAcademicYearId,
   ]);
 
