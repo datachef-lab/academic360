@@ -1,8 +1,8 @@
-import { ExamProgramCourseT, ExamShift, ExamSubject, ExamSubjectT, ExamSubjectType, ExamTypeT, FloorT, RoomT } from "@/schemas/models/exams";
+import { ExamProgramCourseT, ExamShift, ExamSubjectT, ExamSubjectType, ExamTypeT, FloorT, RoomT } from "@/schemas/models/exams";
 import { ExamRoomT } from "@/schemas/models/exams/exam-room.model";
 import { ExamT } from "@/schemas/models/exams/exam.model";
 import { PaperDto, ProgramCourseDto } from "../course-design";
-import { AcademicYearT, ClassT, ProgramCourse, ShiftT, Subject, SubjectT, SubjectTypeT } from "@/schemas";
+import { AcademicYearT, ClassT, ShiftT,  SubjectT, SubjectTypeT } from "@/schemas";
 
 export interface RoomDto extends Omit<RoomT, "floorId"> {
     floor: FloorT;

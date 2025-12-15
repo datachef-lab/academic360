@@ -59,7 +59,10 @@ export default function ExamPage() {
   useEffect(() => {
     if (examId) {
       fetchExamById(Number(examId)).then((data) => setExam(data));
-      fetchExamPapersStatsByExamId(Number(examId)).then((data) => setExamPapersWithStats(data));
+      fetchExamPapersStatsByExamId(Number(examId)).then((data) => {
+        console.log("ExamPapersWithStats: ", data);
+        setExamPapersWithStats(data);
+      });
     }
   }, [examId]);
 
@@ -419,6 +422,7 @@ export default function ExamPage() {
               </div>
             </div>
             {/* {JSON.stringify(exam)} */}
+            {/* {JSON.stringify(examPapersWithStats.length)} */}
             {exam &&
               examPapersWithStats &&
               examPapersWithStats.map((eps, index) => (

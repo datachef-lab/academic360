@@ -58,7 +58,7 @@ export default function ExamsContent() {
   const { accessToken } = useAuth();
   const { student, accessControl } = useStudent();
   const router = useRouter();
-  const [allExams, setAllExams] = useState<ExamDto[]>([]);
+  const [allExams, setAllExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<string>("all");

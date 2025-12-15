@@ -45,6 +45,7 @@ export async function fetchExamCandidatesByExamId(id: number): Promise<{ downloa
 }
 
 export async function updateExamSubject(examSubjectId: number, examSubject: ExamSubjectDto) {
+  console.log(examSubjectId);
   const response = await axiosInstance.put<ApiResponse<ExamSubjectDto>>(
     `/api/exams/schedule/exam-subject`,
     examSubject,

@@ -1,135 +1,135 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { PlusCircle, FileText, Download, Upload, Edit, X, Loader2, Sparkles } from "lucide-react";
-import * as XLSX from "xlsx";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FileText, Edit } from "lucide-react";
+// import * as XLSX from "xlsx";
+// import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+// import {
+//   AlertDialog,
+//   AlertDialogContent,
+//   AlertDialogHeader,
+//   AlertDialogTitle,
+//   AlertDialogTrigger,
+// } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 // import { PaperEditModal } from "./paper-edit-modal";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { toast } from "sonner";
-import {
-  getSubjects,
-  getAffiliations,
-  getRegulationTypes,
-  getExamComponents,
-  getSubjectTypes,
-  bulkUploadSubjectPapers,
-  getProgramCourses,
-  getPapersPaginated,
-  //   BulkUploadRow,
-  //   BulkUploadError,
-  updatePaperWithComponents,
-  getCourses,
-  getCourseTypes,
-  //   createPaper,
-  PaginatedResponse,
-} from "@/services/course-design.api";
-import { getAllClasses } from "@/services/classes.service";
+// import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+// import { toast } from "sonner";
+// import {
+//   getSubjects,
+//   getAffiliations,
+//   getRegulationTypes,
+//   getExamComponents,
+//   getSubjectTypes,
+// //   bulkUploadSubjectPapers,
+//   getProgramCourses,
+//   getPapersPaginated,
+//   //   BulkUploadRow,
+//   //   BulkUploadError,
+// //   updatePaperWithComponents,
+//   getCourses,
+//   getCourseTypes,
+//   //   createPaper,
+// //   PaginatedResponse,
+// } from "@/services/course-design.api";
+// import { getAllClasses } from "@/services/classes.service";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import type {
-  Subject,
-  Affiliation,
-  RegulationType,
-  SubjectType,
+  //   Subject,
+  //   Affiliation,
+  //   RegulationType,
+  //   SubjectType,
 
   // ExamComponent,
-  PaperDto,
-  ExamComponent,
-  PaperComponentDto,
-  ProgramCourse,
-  Course,
-  CourseType,
+  //   PaperDto,
+  //   ExamComponent,
+  // //   PaperComponentDto,
+  //   ProgramCourse,
+  //   Course,
+  //   CourseType,
   ExamDto,
   ExamSubjectDto,
 } from "@repo/db";
-import { Class } from "@/types/academics/class";
-import { AxiosError } from "axios";
-import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
-import { useAcademicYear } from "@/hooks/useAcademicYear";
-import { PaperEditModal } from "@/pages/courses-subjects-design/subject-paper-mapping/paper-edit-modal";
+// import { Class } from "@/types/academics/class";
+// import { AxiosError } from "axios";
+// import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
+// import { useAcademicYear } from "@/hooks/useAcademicYear";
+// import { PaperEditModal } from "@/pages/courses-subjects-design/subject-paper-mapping/paper-edit-modal";
 import { fetchExams } from "@/services/exam.service";
 import { Link } from "react-router-dom";
 
 const ExamsPage = () => {
   const { accessToken, displayFlag } = useAuth();
-  const { currentAcademicYear, availableAcademicYears } = useAcademicYear();
+  //   const { availableAcademicYears } = useAcademicYear();
 
   const [searchText, setSearchText] = React.useState("");
 
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedPaper, setSelectedPaper] = React.useState<PaperDto | null>(null);
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
-  const [bulkFile, setBulkFile] = React.useState<File | null>(null);
-  const [isBulkUploading, setIsBulkUploading] = React.useState(false);
-  const [bulkUploadResult, setBulkUploadResult] = React.useState<{
-    summary: {
-      total: number;
-      successful: number;
-      failed: number;
-    };
-    errors: Array<{
-      row: number;
-      error: string;
-    }>;
-  } | null>(null);
-  const [isPaperEditModalOpen, setIsPaperEditModalOpen] = React.useState(false);
-  const [selectedPaperForEdit, setSelectedPaperForEdit] = React.useState<PaperDto | null>(null);
+  //   const setIsFormOpen = React.useState(false)[1];
+  //   const  setSelectedPaper = React.useState<PaperDto | null>(null)[1];
+  //   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
+  //   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
+  //   const [isBulkUploading, setIsBulkUploading] = React.useState(false);
+  //   const [bulkUploadResult, setBulkUploadResult] = React.useState<{
+  //     summary: {
+  //       total: number;
+  //       successful: number;
+  //       failed: number;
+  //     };
+  //     errors: Array<{
+  //       row: number;
+  //       error: string;
+  //     }>;
+  //   } | null>(null);
+  //   const setIsPaperEditModalOpen = React.useState(false)[1];
+  //   const [selectedPaperForEdit, setSelectedPaperForEdit] = React.useState<PaperDto | null>(null);
 
-  const [filtersObj, setFiltersObj] = useState({
-    subjectId: null as number | null,
-    affiliationId: null as number | null,
-    regulationTypeId: null as number | null,
-    academicYearId: null as number | null,
-    classId: null as number | null,
-    programCourseId: null as number | null,
-    subjectTypeId: null as number | null,
-    isOptional: null as boolean | null,
-    autoAssign: null as boolean | null,
-    searchText: "",
-    page: 1,
-    limit: 10,
-  });
+  //   const [filtersObj, setFiltersObj] = useState({
+  //     subjectId: null as number | null,
+  //     affiliationId: null as number | null,
+  //     regulationTypeId: null as number | null,
+  //     academicYearId: null as number | null,
+  //     classId: null as number | null,
+  //     programCourseId: null as number | null,
+  //     subjectTypeId: null as number | null,
+  //     isOptional: null as boolean | null,
+  //     autoAssign: null as boolean | null,
+  //     searchText: "",
+  //     page: 1,
+  //     limit: 10,
+  //   });
   //   const [subjectFilter, setSubjectFilter] = React.useState<Subject | null>(null);
   //   const [affiliationFilter, setAffiliationFilter] = React.useState<Affiliation | null>(null);
   //   const [regulationTypeFilter, setRegulationTypeFilter] = React.useState<RegulationType | null>(null);
   //   const [academicYearFilter, setAcademicYearsFilter] = React.useState<AcademicYear | null>();
 
   // State for dropdowns and table
-  const [subjects, setSubjects] = React.useState<Subject[]>([]);
-  const [affiliations, setAffiliations] = React.useState<Affiliation[]>([]);
-  const [regulationTypes, setRegulationTypes] = React.useState<RegulationType[]>([]);
-  const [subjectTypes, setSubjectTypes] = React.useState<SubjectType[]>([]);
-  // Academic years now come from Redux state via useAcademicYear hook
-  const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
-  const [programCourses, setProgramCourses] = React.useState<ProgramCourse[]>([]);
-  const [courses, setCourses] = React.useState<Course[]>([]);
-  const [courseTypes, setCourseTypes] = React.useState<CourseType[]>([]);
-  const [classes, setClasses] = React.useState<Class[]>([]);
+  //   const [subjects, setSubjects] = React.useState<Subject[]>([]);
+  //   const [affiliations, setAffiliations] = React.useState<Affiliation[]>([]);
+  //   const [regulationTypes, setRegulationTypes] = React.useState<RegulationType[]>([]);
+  //   const [subjectTypes, setSubjectTypes] = React.useState<SubjectType[]>([]);
+  //   // Academic years now come from Redux state via useAcademicYear hook
+  //   const setExamComponents = React.useState<ExamComponent[]>([])[1];
+  //   const [programCourses, setProgramCourses] = React.useState<ProgramCourse[]>([]);
+  //   const setCourses = React.useState<Course[]>([])[1];
+  //   const setCourseTypes = React.useState<CourseType[]>([])[1];
+  //   const [classes, setClasses] = React.useState<Class[]>([]);
 
   const [currentPage, setCurrentPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
   const [totalItems, setTotalItems] = React.useState(0);
   const [itemsPerPage] = React.useState(10);
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-  const [isDownloading, setIsDownloading] = React.useState(false);
-  const [downloadProgress, setDownloadProgress] = React.useState(0);
+  //   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  //   const setIsDownloading = React.useState(false)[1];
+  //   const setDownloadProgress = React.useState(0)[1];
   const [exams, setExams] = useState<ExamDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading] = useState(false);
+  const [error] = useState<string | null>(null);
   //   const [isFormSubmitting, setIsFormSubmitting] = React.useState(false);
 
-  const [papers, setPapers] = React.useState<PaperDto[]>([]);
+  //   const [papers, setPapers] = React.useState<PaperDto[]>([]);
   //   const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
 
   //   const [programCourses, setProgramCourses] = React.useState<Course[]>([]);
@@ -138,449 +138,454 @@ const ExamsPage = () => {
   // Track if component has been initialized to prevent re-fetching on tab switch
   const hasInitialized = React.useRef(false);
 
-  const fetchFilteredData = React.useCallback(async () => {
-    console.log("Fetching papers data");
-    try {
-      // Server-side pagination and filtering
-      const paged = await getPapersPaginated(currentPage, itemsPerPage, {
-        subjectId: filtersObj.subjectId,
-        affiliationId: filtersObj.affiliationId,
-        regulationTypeId: filtersObj.regulationTypeId,
-        academicYearId: filtersObj.academicYearId,
-        subjectTypeId: filtersObj.subjectTypeId,
-        programCourseId: filtersObj.programCourseId,
-        classId: filtersObj.classId,
-        isOptional: filtersObj.isOptional,
-        autoAssign: filtersObj.autoAssign,
-        searchText: searchText || null,
-      });
-      if (!paged) {
-        setPapers([]);
-        setTotalPages(1);
-        setTotalItems(0);
-        toast.error("No data received from server");
-        return;
-      }
+  //   const fetchFilteredData = React.useCallback(async () => {
+  //     console.log("Fetching papers data");
+  //     try {
+  //       // Server-side pagination and filtering
+  //       const paged = await getPapersPaginated(currentPage, itemsPerPage, {
+  //         subjectId: filtersObj.subjectId,
+  //         affiliationId: filtersObj.affiliationId,
+  //         regulationTypeId: filtersObj.regulationTypeId,
+  //         academicYearId: filtersObj.academicYearId,
+  //         subjectTypeId: filtersObj.subjectTypeId,
+  //         programCourseId: filtersObj.programCourseId,
+  //         classId: filtersObj.classId,
+  //         isOptional: filtersObj.isOptional,
+  //         autoAssign: filtersObj.autoAssign,
+  //         searchText: searchText || null,
+  //       });
+  //       if (!paged) {
+  //         setPapers([]);
+  //         setTotalPages(1);
+  //         setTotalItems(0);
+  //         toast.error("No data received from server");
+  //         return;
+  //       }
 
-      setPapers((paged.content as unknown as PaperDto[]) || []);
-      setTotalPages(paged.totalPages || 1);
-      setTotalItems(paged.totalElements || 0);
-    } catch (error: unknown) {
-      console.error("Error fetching filtered data:", error);
+  //       setPapers((paged.content as unknown as PaperDto[]) || []);
+  //       setTotalPages(paged.totalPages || 1);
+  //       setTotalItems(paged.totalElements || 0);
+  //     } catch (error: unknown) {
+  //       console.error("Error fetching filtered data:", error);
 
-      if (error instanceof AxiosError && error.response?.status === 401) {
-        toast.error("Authentication failed. Please log in again.");
-        setError("Authentication failed. Please log in again.");
-      } else {
-        toast.error("Failed to fetch filtered data");
-      }
+  //       if (error instanceof AxiosError && error.response?.status === 401) {
+  //         toast.error("Authentication failed. Please log in again.");
+  //         setError("Authentication failed. Please log in again.");
+  //       } else {
+  //         toast.error("Failed to fetch filtered data");
+  //       }
 
-      setPapers([]);
-      setTotalPages(1);
-      setTotalItems(0);
-    }
-  }, [currentPage, itemsPerPage, filtersObj, searchText]);
+  //       setPapers([]);
+  //       setTotalPages(1);
+  //       setTotalItems(0);
+  //     }
+  //   }, [currentPage, itemsPerPage, filtersObj, searchText]);
 
   // Fetch filtered data when filters change
-  useEffect(() => {
-    fetchFilteredData();
-  }, [
-    searchText,
-    currentPage,
-    itemsPerPage,
-    filtersObj.subjectId,
-    filtersObj.affiliationId,
-    filtersObj.regulationTypeId,
-    filtersObj.academicYearId,
-    filtersObj.classId,
-    filtersObj.programCourseId,
-    filtersObj.subjectTypeId,
-    filtersObj.isOptional,
-    fetchFilteredData,
-  ]);
+  //   useEffect(() => {
+  //     fetchFilteredData();
+  //   }, [
+  //     searchText,
+  //     currentPage,
+  //     itemsPerPage,
+  //     filtersObj.subjectId,
+  //     filtersObj.affiliationId,
+  //     filtersObj.regulationTypeId,
+  //     filtersObj.academicYearId,
+  //     filtersObj.classId,
+  //     filtersObj.programCourseId,
+  //     filtersObj.subjectTypeId,
+  //     filtersObj.isOptional,
+  //     fetchFilteredData,
+  //   ]);
 
-  const fetchData = useCallback(
-    async (preserveFilters = false) => {
-      // Always fetch fresh data (no caching)
-      console.log("Fetching fresh data", { preserveFilters });
-      setLoading(true);
-      try {
-        const [
-          subjectsRes,
-          affiliationsRes,
-          regulationTypesRes,
-          subjectTypesRes,
-          examComponentsRes,
-          programCourseRes,
-          classesRes,
-          courseRes,
-          courseTypesRes,
-        ] = await Promise.all([
-          getSubjects(),
-          getAffiliations(),
-          getRegulationTypes(),
-          getSubjectTypes(),
-          getExamComponents(),
-          getProgramCourses(),
-          getAllClasses(),
-          getCourses(),
-          getCourseTypes(),
-        ]);
+  //   const fetchData = useCallback(
+  //     async (preserveFilters = false) => {
+  //       // Always fetch fresh data (no caching)
+  //       console.log("Fetching fresh data", { preserveFilters });
+  //       setLoading(true);
+  //       try {
+  //         const [
+  //           subjectsRes,
+  //           affiliationsRes,
+  //           regulationTypesRes,
+  //           subjectTypesRes,
+  //           examComponentsRes,
+  //           programCourseRes,
+  //           classesRes,
+  //           courseRes,
+  //           courseTypesRes,
+  //         ] = await Promise.all([
+  //           getSubjects(),
+  //           getAffiliations(),
+  //           getRegulationTypes(),
+  //           getSubjectTypes(),
+  //           getExamComponents(),
+  //           getProgramCourses(),
+  //           getAllClasses(),
+  //           getCourses(),
+  //           getCourseTypes(),
+  //         ]);
 
-        //   console.log("API Responses:", {
-        //     subjects: subjectsRes,
-        //     affiliations: affiliationsRes,
-        //     regulationTypes: regulationTypesRes,
-        //     subjectTypes: subjectTypesRes,
-        //     examComponents: examComponentsRes,
-        //     academicYears: academicYearsRes,
-        //     programCourses: programCourseRes,
-        //     classes: classesRes,
-        //     sessions: academicYearRes,
-        //   });
+  //         //   console.log("API Responses:", {
+  //         //     subjects: subjectsRes,
+  //         //     affiliations: affiliationsRes,
+  //         //     regulationTypes: regulationTypesRes,
+  //         //     subjectTypes: subjectTypesRes,
+  //         //     examComponents: examComponentsRes,
+  //         //     academicYears: academicYearsRes,
+  //         //     programCourses: programCourseRes,
+  //         //     classes: classesRes,
+  //         //     sessions: academicYearRes,
+  //         //   });
 
-        console.log("SubjectTypes response details:", {
-          isArray: Array.isArray(subjectTypesRes),
-          length: Array.isArray(subjectTypesRes) ? subjectTypesRes.length : "not array",
-          data: subjectTypesRes,
-        });
+  //         console.log("SubjectTypes response details:", {
+  //           isArray: Array.isArray(subjectTypesRes),
+  //           length: Array.isArray(subjectTypesRes) ? subjectTypesRes.length : "not array",
+  //           data: subjectTypesRes,
+  //         });
 
-        // Handle different response structures
-        setSubjects(Array.isArray(subjectsRes) ? subjectsRes : []);
-        setAffiliations(Array.isArray(affiliationsRes) ? affiliationsRes : []);
-        setRegulationTypes(Array.isArray(regulationTypesRes) ? regulationTypesRes : []);
-        setSubjectTypes(Array.isArray(subjectTypesRes) ? subjectTypesRes : []);
-        setExamComponents(Array.isArray(examComponentsRes) ? examComponentsRes : []);
-        // Academic years now come from Redux state
-        setProgramCourses(Array.isArray(programCourseRes) ? programCourseRes : []);
-        setCourses(Array.isArray(courseRes) ? courseRes : []);
-        setCourseTypes(Array.isArray(courseTypesRes) ? courseTypesRes : []);
-        setClasses(
-          Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
-        );
+  //         // Handle different response structures
+  //         setSubjects(Array.isArray(subjectsRes) ? subjectsRes : []);
+  //         setAffiliations(Array.isArray(affiliationsRes) ? affiliationsRes : []);
+  //         setRegulationTypes(Array.isArray(regulationTypesRes) ? regulationTypesRes : []);
+  //         setSubjectTypes(Array.isArray(subjectTypesRes) ? subjectTypesRes : []);
+  //         setExamComponents(Array.isArray(examComponentsRes) ? examComponentsRes : []);
+  //         // Academic years now come from Redux state
+  //         setProgramCourses(Array.isArray(programCourseRes) ? programCourseRes : []);
+  //         setCourses(Array.isArray(courseRes) ? courseRes : []);
+  //         setCourseTypes(Array.isArray(courseTypesRes) ? courseTypesRes : []);
+  //         setClasses(
+  //           Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
+  //         );
 
-        console.log(
-          "Classes data set:",
-          Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
-        );
-        console.log(
-          "Filtered SEMESTER classes:",
-          Array.isArray(classesRes)
-            ? classesRes.filter((cls: Class) => cls.type === "SEMESTER")
-            : (classesRes as unknown as { payload: Class[] })?.payload?.filter(
-                (cls: Class) => cls.type === "SEMESTER",
-              ) || [],
-        );
+  //         console.log(
+  //           "Classes data set:",
+  //           Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
+  //         );
+  //         console.log(
+  //           "Filtered SEMESTER classes:",
+  //           Array.isArray(classesRes)
+  //             ? classesRes.filter((cls: Class) => cls.type === "SEMESTER")
+  //             : (classesRes as unknown as { payload: Class[] })?.payload?.filter(
+  //                 (cls: Class) => cls.type === "SEMESTER",
+  //               ) || [],
+  //         );
 
-        // Only set filters on initial load, preserve them otherwise
-        if (!preserveFilters) {
-          setFiltersObj({
-            subjectId: null,
-            affiliationId: null,
-            regulationTypeId: null,
-            academicYearId: currentAcademicYear?.id || null, // Default to current academic year
-            classId: null,
-            programCourseId: null,
-            subjectTypeId: null,
-            isOptional: null,
-            autoAssign: null,
-            searchText: "",
-            page: 1,
-            limit: 10,
-          });
-        }
+  //         // Only set filters on initial load, preserve them otherwise
+  //         if (!preserveFilters) {
+  //           setFiltersObj({
+  //             subjectId: null,
+  //             affiliationId: null,
+  //             regulationTypeId: null,
+  //             academicYearId: currentAcademicYear?.id || null, // Default to current academic year
+  //             classId: null,
+  //             programCourseId: null,
+  //             subjectTypeId: null,
+  //             isOptional: null,
+  //             autoAssign: null,
+  //             searchText: "",
+  //             page: 1,
+  //             limit: 10,
+  //           });
+  //         }
 
-        // Fetch all data initially
-        await fetchFilteredData();
+  //         // Fetch all data initially
+  //         await fetchFilteredData();
 
-        setError(null);
-      } catch (err: unknown) {
-        console.error("Error fetching data:", err);
+  //         setError(null);
+  //       } catch (err: unknown) {
+  //         console.error("Error fetching data:", err);
 
-        // Check for authentication error
-        if (err instanceof AxiosError && err.response?.status === 401) {
-          const errorMessage = "Authentication failed. Please log in again.";
-          setError(errorMessage);
-          toast.error(errorMessage);
-        } else {
-          const errorMessage = err instanceof Error ? err.message : "Failed to load data";
-          setError(errorMessage);
-          toast.error("Failed to load data");
-        }
+  //         // Check for authentication error
+  //         if (err instanceof AxiosError && err.response?.status === 401) {
+  //           const errorMessage = "Authentication failed. Please log in again.";
+  //           setError(errorMessage);
+  //           toast.error(errorMessage);
+  //         } else {
+  //           const errorMessage = err instanceof Error ? err.message : "Failed to load data";
+  //           setError(errorMessage);
+  //           toast.error("Failed to load data");
+  //         }
 
-        // Log more details about the error
-        if (err instanceof Error) {
-          console.error("Error name:", err.name);
-          console.error("Error message:", err.message);
-          console.error("Error stack:", err.stack);
-        }
+  //         // Log more details about the error
+  //         if (err instanceof Error) {
+  //           console.error("Error name:", err.name);
+  //           console.error("Error message:", err.message);
+  //           console.error("Error stack:", err.stack);
+  //         }
 
-        // Set empty arrays on error to prevent map errors
-        setPapers([]);
-        setSubjects([]);
-        setAffiliations([]);
-        setRegulationTypes([]);
-        setSubjectTypes([]);
-        setExamComponents([]);
-        // Academic years come from Redux state, don't reset them
-        setProgramCourses([]);
-        setClasses([]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [fetchFilteredData, currentAcademicYear],
-  );
+  //         // Set empty arrays on error to prevent map errors
+  //         setPapers([]);
+  //         setSubjects([]);
+  //         setAffiliations([]);
+  //         setRegulationTypes([]);
+  //         setSubjectTypes([]);
+  //         setExamComponents([]);
+  //         // Academic years come from Redux state, don't reset them
+  //         setProgramCourses([]);
+  //         setClasses([]);
+  //       } finally {
+  //         setLoading(false);
+  //       }
+  //     },
+  //     [fetchFilteredData, currentAcademicYear],
+  //   );
 
   useEffect(() => {
     // Only fetch data when authentication is ready, and only on initial mount
     if (displayFlag && accessToken && !hasInitialized.current) {
       hasInitialized.current = true;
-      fetchData(false); // false = don't preserve filters (initial load)
+      fetchExams(currentPage, itemsPerPage).then((data) => {
+        setExams(data.content);
+        setTotalItems(data.totalElements);
+        setTotalPages(data.totalPages);
+        setCurrentPage(data.page);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayFlag, accessToken]);
+  }, [displayFlag, accessToken, currentPage]);
 
-  const handlePaperEditSubmit = async (data: PaperDto) => {
-    console.log("Paper edit submitted with data:", data);
-    console.log("Selected paper for edit:", selectedPaperForEdit);
-    try {
-      if (!selectedPaperForEdit?.id) {
-        toast.error("Paper ID not found");
-        return;
-      }
+  //   const handlePaperEditSubmit = async (data: PaperDto) => {
+  //     console.log("Paper edit submitted with data:", data);
+  //     console.log("Selected paper for edit:", selectedPaperForEdit);
+  //     try {
+  //       if (!selectedPaperForEdit?.id) {
+  //         toast.error("Paper ID not found");
+  //         return;
+  //       }
 
-      console.log("Calling updatePaperWithComponents with:", {
-        paperId: selectedPaperForEdit.id,
-        data: data,
-      });
+  //       console.log("Calling updatePaperWithComponents with:", {
+  //         paperId: selectedPaperForEdit.id,
+  //         data: data,
+  //       });
 
-      // Transform the data to match the API expected format
-      const updateData: PaperDto = {
-        classId: data.classId,
-        name: data.name,
-        subjectId: data.subjectId,
-        affiliationId: data.affiliationId,
-        regulationTypeId: data.regulationTypeId,
-        academicYearId: data.academicYearId,
-        programCourseId: data.programCourseId,
-        subjectTypeId: data.subjectTypeId,
-        code: data.code,
-        topics: data.topics,
-        isOptional: data.isOptional,
-        autoAssign: (data as unknown as { autoAssign?: boolean }).autoAssign ?? false,
-        isActive: data.isActive,
-        components:
-          data.components
-            ?.filter(
-              (comp: PaperComponentDto) => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null,
-            )
-            .map((comp: PaperComponentDto) => ({
-              paperId: comp.paperId!,
-              examComponent: comp.examComponent!,
-              fullMarks: comp.fullMarks ?? 0,
-              credit: comp.credit ?? 0,
-            })) || [],
-      };
+  //       // Transform the data to match the API expected format
+  //       const updateData: PaperDto = {
+  //         classId: data.classId,
+  //         name: data.name,
+  //         subjectId: data.subjectId,
+  //         affiliationId: data.affiliationId,
+  //         regulationTypeId: data.regulationTypeId,
+  //         academicYearId: data.academicYearId,
+  //         programCourseId: data.programCourseId,
+  //         subjectTypeId: data.subjectTypeId,
+  //         code: data.code,
+  //         topics: data.topics,
+  //         isOptional: data.isOptional,
+  //         autoAssign: (data as unknown as { autoAssign?: boolean }).autoAssign ?? false,
+  //         isActive: data.isActive,
+  //         components:
+  //           data.components
+  //             ?.filter(
+  //               (comp: PaperComponentDto) => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null,
+  //             )
+  //             .map((comp: PaperComponentDto) => ({
+  //               paperId: comp.paperId!,
+  //               examComponent: comp.examComponent!,
+  //               fullMarks: comp.fullMarks ?? 0,
+  //               credit: comp.credit ?? 0,
+  //             })) || [],
+  //       };
 
-      await updatePaperWithComponents(selectedPaperForEdit.id, updateData);
-      toast.success("Paper updated successfully!");
-      setIsPaperEditModalOpen(false);
-      setSelectedPaperForEdit(null);
-      fetchFilteredData(); // Refresh the data
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to update paper";
-      toast.error(`Failed to update paper: ${errorMessage}`);
-      console.error("Full error object:", error);
-    }
-  };
+  //       await updatePaperWithComponents(selectedPaperForEdit.id, updateData);
+  //       toast.success("Paper updated successfully!");
+  //       setIsPaperEditModalOpen(false);
+  //       setSelectedPaperForEdit(null);
+  //       fetchFilteredData(); // Refresh the data
+  //     } catch (error: unknown) {
+  //       const errorMessage = error instanceof Error ? error.message : "Failed to update paper";
+  //       toast.error(`Failed to update paper: ${errorMessage}`);
+  //       console.error("Full error object:", error);
+  //     }
+  //   };
 
-  const handleAddNew = () => {
-    setSelectedPaper(null);
-    setIsFormOpen(true);
-  };
+  //   const handleAddNew = () => {
+  //     setSelectedPaper(null);
+  //     setIsFormOpen(true);
+  //   };
 
-  const handleDownload = async () => {
-    setIsDownloading(true);
-    setDownloadProgress(0);
-    toast.info("Preparing download...");
+  //   const handleDownload = async () => {
+  //     setIsDownloading(true);
+  //     setDownloadProgress(0);
+  //     toast.info("Preparing download...");
 
-    try {
-      // First, get total count to calculate progress
-      console.log("Getting total count for download with filters:", filtersObj);
-      setDownloadProgress(5);
-      toast.info("Calculating total records...");
+  //     try {
+  //       // First, get total count to calculate progress
+  //       console.log("Getting total count for download with filters:", filtersObj);
+  //       setDownloadProgress(5);
+  //       toast.info("Calculating total records...");
 
-      // Use larger page size for initial count to reduce API calls
-      const firstPage = await getPapersPaginated(1, 100, {
-        subjectId: filtersObj.subjectId,
-        affiliationId: filtersObj.affiliationId,
-        regulationTypeId: filtersObj.regulationTypeId,
-        academicYearId: filtersObj.academicYearId,
-        subjectTypeId: filtersObj.subjectTypeId,
-        programCourseId: filtersObj.programCourseId,
-        classId: filtersObj.classId,
-        isOptional: filtersObj.isOptional,
-        searchText: searchText || undefined,
-      });
+  //       // Use larger page size for initial count to reduce API calls
+  //       const firstPage = await getPapersPaginated(1, 100, {
+  //         subjectId: filtersObj.subjectId,
+  //         affiliationId: filtersObj.affiliationId,
+  //         regulationTypeId: filtersObj.regulationTypeId,
+  //         academicYearId: filtersObj.academicYearId,
+  //         subjectTypeId: filtersObj.subjectTypeId,
+  //         programCourseId: filtersObj.programCourseId,
+  //         classId: filtersObj.classId,
+  //         isOptional: filtersObj.isOptional,
+  //         searchText: searchText || undefined,
+  //       });
 
-      const totalRecords = firstPage.totalElements;
-      const totalPages = firstPage.totalPages;
-      const pageSize = 100; // Larger page size for download (10x faster)
+  //       const totalRecords = firstPage.totalElements;
+  //       const totalPages = firstPage.totalPages;
+  //       const pageSize = 100; // Larger page size for download (10x faster)
 
-      console.log(`Total records to download: ${totalRecords} across ${totalPages} pages`);
-      toast.info(`Found ${totalRecords} records across ${totalPages} pages. Starting download...`);
+  //       console.log(`Total records to download: ${totalRecords} across ${totalPages} pages`);
+  //       toast.info(`Found ${totalRecords} records across ${totalPages} pages. Starting download...`);
 
-      // Collect all data with parallel fetching for maximum speed
-      const allData: PaperDto[] = [];
+  //       // Collect all data with parallel fetching for maximum speed
+  //       const allData: PaperDto[] = [];
 
-      // Process pages in batches of 5 for parallel fetching
-      const batchSize = 5;
-      const totalBatches = Math.ceil(totalPages / batchSize);
+  //       // Process pages in batches of 5 for parallel fetching
+  //       const batchSize = 5;
+  //       const totalBatches = Math.ceil(totalPages / batchSize);
 
-      for (let batch = 0; batch < totalBatches; batch++) {
-        const startPage = batch * batchSize + 1;
-        const endPage = Math.min(startPage + batchSize - 1, totalPages);
+  //       for (let batch = 0; batch < totalBatches; batch++) {
+  //         const startPage = batch * batchSize + 1;
+  //         const endPage = Math.min(startPage + batchSize - 1, totalPages);
 
-        const batchProgress = Math.round((batch / totalBatches) * 80) + 5; // 5-85% for data fetching
-        setDownloadProgress(batchProgress);
+  //         const batchProgress = Math.round((batch / totalBatches) * 80) + 5; // 5-85% for data fetching
+  //         setDownloadProgress(batchProgress);
 
-        console.log(`Fetching batch ${batch + 1}/${totalBatches} (pages ${startPage}-${endPage})...`);
-        toast.info(`Fetching batch ${batch + 1}/${totalBatches} (${allData.length}/${totalRecords} records)`);
+  //         console.log(`Fetching batch ${batch + 1}/${totalBatches} (pages ${startPage}-${endPage})...`);
+  //         toast.info(`Fetching batch ${batch + 1}/${totalBatches} (${allData.length}/${totalRecords} records)`);
 
-        // Fetch multiple pages in parallel
-        const pagePromises: Promise<PaginatedResponse<PaperDto>>[] = [];
-        for (let page = startPage; page <= endPage; page++) {
-          pagePromises.push(
-            getPapersPaginated(page, pageSize, {
-              subjectId: filtersObj.subjectId,
-              affiliationId: filtersObj.affiliationId,
-              regulationTypeId: filtersObj.regulationTypeId,
-              academicYearId: filtersObj.academicYearId,
-              subjectTypeId: filtersObj.subjectTypeId,
-              programCourseId: filtersObj.programCourseId,
-              classId: filtersObj.classId,
-              isOptional: filtersObj.isOptional,
-              searchText: searchText || undefined,
-            }),
-          );
-        }
+  //         // Fetch multiple pages in parallel
+  //         const pagePromises: Promise<PaginatedResponse<PaperDto>>[] = [];
+  //         for (let page = startPage; page <= endPage; page++) {
+  //           pagePromises.push(
+  //             getPapersPaginated(page, pageSize, {
+  //               subjectId: filtersObj.subjectId,
+  //               affiliationId: filtersObj.affiliationId,
+  //               regulationTypeId: filtersObj.regulationTypeId,
+  //               academicYearId: filtersObj.academicYearId,
+  //               subjectTypeId: filtersObj.subjectTypeId,
+  //               programCourseId: filtersObj.programCourseId,
+  //               classId: filtersObj.classId,
+  //               isOptional: filtersObj.isOptional,
+  //               searchText: searchText || undefined,
+  //             }),
+  //           );
+  //         }
 
-        // Wait for all pages in this batch to complete
-        const batchResults = await Promise.all(pagePromises);
+  //         // Wait for all pages in this batch to complete
+  //         const batchResults = await Promise.all(pagePromises);
 
-        // Add all results to our data array
-        for (const pageData of batchResults) {
-          allData.push(...pageData.content);
-        }
+  //         // Add all results to our data array
+  //         for (const pageData of batchResults) {
+  //           allData.push(...pageData.content);
+  //         }
 
-        // Small delay between batches to prevent overwhelming the server
-        if (batch < totalBatches - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-      }
+  //         // Small delay between batches to prevent overwhelming the server
+  //         if (batch < totalBatches - 1) {
+  //           await new Promise((resolve) => setTimeout(resolve, 100));
+  //         }
+  //       }
 
-      console.log(`Fetched all data for download: ${allData.length} papers`);
-      setDownloadProgress(85);
-      toast.info(`Fetched ${allData.length} records, preparing Excel...`);
+  //       console.log(`Fetched all data for download: ${allData.length} papers`);
+  //       setDownloadProgress(85);
+  //       toast.info(`Fetched ${allData.length} records, preparing Excel...`);
 
-      // Simulate progress based on actual data processing
-      const progressInterval = setInterval(() => {
-        setDownloadProgress((prev) => {
-          if (prev >= 95) return prev;
-          return prev + Math.random() * 5;
-        });
-      }, 100);
+  //       // Simulate progress based on actual data processing
+  //       const progressInterval = setInterval(() => {
+  //         setDownloadProgress((prev) => {
+  //           if (prev >= 95) return prev;
+  //           return prev + Math.random() * 5;
+  //         });
+  //       }, 100);
 
-      // Prepare Excel data from ALL fetched data
-      const excelData = allData.map((paper, index) => {
-        // Find related data from the already loaded dropdowns
-        const subject = subjects.find((s) => s.id === paper.subjectId);
-        const affiliation = affiliations.find((a) => a.id === paper.affiliationId);
-        const regulationType = regulationTypes.find((rt) => rt.id === paper.regulationTypeId);
-        const academicYear = availableAcademicYears.find((ay) => ay.id === paper.academicYearId);
-        const subjectType = subjectTypes.find((st) => st.id === paper.subjectTypeId);
-        const programCourse = programCourses.find((pc) => pc.id === paper.programCourseId);
-        const classInfo = classes.find((c) => c.id === paper.classId);
+  //       // Prepare Excel data from ALL fetched data
+  //       const excelData = allData.map((paper, index) => {
+  //         // Find related data from the already loaded dropdowns
+  //         const subject = subjects.find((s) => s.id === paper.subjectId);
+  //         const affiliation = affiliations.find((a) => a.id === paper.affiliationId);
+  //         const regulationType = regulationTypes.find((rt) => rt.id === paper.regulationTypeId);
+  //         const academicYear = availableAcademicYears.find((ay) => ay.id === paper.academicYearId);
+  //         const subjectType = subjectTypes.find((st) => st.id === paper.subjectTypeId);
+  //         const programCourse = programCourses.find((pc) => pc.id === paper.programCourseId);
+  //         const classInfo = classes.find((c) => c.id === paper.classId);
 
-        return {
-          "Sr. No.": index + 1,
-          "Program Course": programCourse?.name || "-",
-          "Subject & Paper": paper.name || "-",
-          "Subject Name": subject?.name || "-",
-          "Paper Code": paper.code || "-",
-          "Subject Category": subjectType?.code || "-",
-          "Subject Category Name": subjectType?.name || "-",
-          Semester: classInfo?.name?.split(" ")[1] || "-",
-          "Is Optional": paper.isOptional ? "No" : "Yes",
-          Affiliation: affiliation?.name || "-",
-          "Regulation Type": regulationType?.name || "-",
-          "Academic Year": academicYear?.year || "-",
-          "Exam Components": paper.components?.map((comp) => comp.examComponent?.name).join(", ") || "No components",
-        };
-      });
+  //         return {
+  //           "Sr. No.": index + 1,
+  //           "Program Course": programCourse?.name || "-",
+  //           "Subject & Paper": paper.name || "-",
+  //           "Subject Name": subject?.name || "-",
+  //           "Paper Code": paper.code || "-",
+  //           "Subject Category": subjectType?.code || "-",
+  //           "Subject Category Name": subjectType?.name || "-",
+  //           Semester: classInfo?.name?.split(" ")[1] || "-",
+  //           "Is Optional": paper.isOptional ? "No" : "Yes",
+  //           Affiliation: affiliation?.name || "-",
+  //           "Regulation Type": regulationType?.name || "-",
+  //           "Academic Year": academicYear?.year || "-",
+  //           "Exam Components": paper.components?.map((comp) => comp.examComponent?.name).join(", ") || "No components",
+  //         };
+  //       });
 
-      console.log("Excel data prepared:", excelData.length, "rows");
+  //       console.log("Excel data prepared:", excelData.length, "rows");
 
-      // Create Excel file using XLSX library
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(excelData);
+  //       // Create Excel file using XLSX library
+  //       const wb = XLSX.utils.book_new();
+  //       const ws = XLSX.utils.json_to_sheet(excelData);
 
-      // Set column widths
-      const colWidths = [
-        { wch: 8 }, // Sr. No.
-        { wch: 30 }, // Program Course
-        { wch: 25 }, // Subject & Paper
-        { wch: 25 }, // Subject Name
-        { wch: 15 }, // Paper Code
-        { wch: 15 }, // Subject Category
-        { wch: 20 }, // Subject Category Name
-        { wch: 10 }, // Semester
-        { wch: 12 }, // Is Optional
-        { wch: 20 }, // Affiliation
-        { wch: 15 }, // Regulation Type
-        { wch: 15 }, // Academic Year
-        { wch: 30 }, // Exam Components
-      ];
-      ws["!cols"] = colWidths;
+  //       // Set column widths
+  //       const colWidths = [
+  //         { wch: 8 }, // Sr. No.
+  //         { wch: 30 }, // Program Course
+  //         { wch: 25 }, // Subject & Paper
+  //         { wch: 25 }, // Subject Name
+  //         { wch: 15 }, // Paper Code
+  //         { wch: 15 }, // Subject Category
+  //         { wch: 20 }, // Subject Category Name
+  //         { wch: 10 }, // Semester
+  //         { wch: 12 }, // Is Optional
+  //         { wch: 20 }, // Affiliation
+  //         { wch: 15 }, // Regulation Type
+  //         { wch: 15 }, // Academic Year
+  //         { wch: 30 }, // Exam Components
+  //       ];
+  //       ws["!cols"] = colWidths;
 
-      XLSX.utils.book_append_sheet(wb, ws, "Subject Paper Mapping");
+  //       XLSX.utils.book_append_sheet(wb, ws, "Subject Paper Mapping");
 
-      // Generate buffer
-      console.log("Generating Excel buffer...");
-      const buffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+  //       // Generate buffer
+  //       console.log("Generating Excel buffer...");
+  //       const buffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
 
-      clearInterval(progressInterval);
-      setDownloadProgress(100);
+  //       clearInterval(progressInterval);
+  //       setDownloadProgress(100);
 
-      // Create blob from buffer
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
+  //       // Create blob from buffer
+  //       const blob = new Blob([buffer], {
+  //         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  //       });
 
-      console.log("Blob created, size:", blob.size);
+  //       console.log("Blob created, size:", blob.size);
 
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `subject-paper-mapping-${new Date().toISOString().split("T")[0]}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+  //       // Create download link
+  //       const url = window.URL.createObjectURL(blob);
+  //       const link = document.createElement("a");
+  //       link.href = url;
+  //       link.download = `subject-paper-mapping-${new Date().toISOString().split("T")[0]}.xlsx`;
+  //       document.body.appendChild(link);
+  //       link.click();
+  //       document.body.removeChild(link);
+  //       window.URL.revokeObjectURL(url);
 
-      toast.success(`Download completed! ${allData.length} records exported.`);
-    } catch (error: unknown) {
-      console.error("Download failed:", error);
-      toast.error(`Download failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-    } finally {
-      setTimeout(() => {
-        setIsDownloading(false);
-        setDownloadProgress(0);
-      }, 1000);
-    }
-  };
+  //       toast.success(`Download completed! ${allData.length} records exported.`);
+  //     } catch (error: unknown) {
+  //       console.error("Download failed:", error);
+  //       toast.error(`Download failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+  //     } finally {
+  //       setTimeout(() => {
+  //         setIsDownloading(false);
+  //         setDownloadProgress(0);
+  //       }, 1000);
+  //     }
+  //   };
 
   //   const handleFormSubmit = async (data: Paper) => {
   //     console.log("Form submitted with data:", data);
@@ -598,94 +603,89 @@ const ExamsPage = () => {
   //     }
   //   };
 
-  const handleBulkUpload = async () => {
-    if (!bulkFile) return;
+  //   const handleBulkUpload = async () => {
+  //     if (!bulkFile) return;
 
-    setIsBulkUploading(true);
-    try {
-      const result = await bulkUploadSubjectPapers(bulkFile);
-      setBulkUploadResult(result);
+  //     setIsBulkUploading(true);
+  //     try {
+  //       const result = await bulkUploadSubjectPapers(bulkFile);
+  //       setBulkUploadResult(result);
 
-      if (result.summary.successful > 0) {
-        toast.success(`Successfully uploaded ${result.summary.successful} papers`);
-        // Re-fetch the data to show new papers
-        // You might want to add a fetch function here
-      }
+  //       if (result.summary.successful > 0) {
+  //         toast.success(`Successfully uploaded ${result.summary.successful} papers`);
+  //         // Re-fetch the data to show new papers
+  //         // You might want to add a fetch function here
+  //       }
 
-      if (result.summary.failed > 0) {
-        toast.error(`${result.summary.failed} papers failed to upload`);
-      }
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Bulk upload failed: ${errorMessage}`);
-    } finally {
-      setIsBulkUploading(false);
-    }
-  };
+  //       if (result.summary.failed > 0) {
+  //         toast.error(`${result.summary.failed} papers failed to upload`);
+  //       }
+  //     } catch (error: unknown) {
+  //       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+  //       toast.error(`Bulk upload failed: ${errorMessage}`);
+  //     } finally {
+  //       setIsBulkUploading(false);
+  //     }
+  //   };
 
-  const handleDownloadTemplate = () => {
-    // Create template data with headers
-    const templateData = [
-      {
-        Subject: "",
-        "Subject Type": "",
-        "Applicable programCourses": "",
-        Affiliation: "",
-        Regulation: "",
-        "Academic Year": "",
-        "Course Type": "",
-        Class: "",
-        "Paper Code": "",
-        "Paper Name": "",
-        "Is Optional": "",
-        ...examComponents.reduce(
-          (acc, component) => {
-            acc[`Full Marks ${component.code}`] = "";
-            acc[`Credit ${component.code}`] = "";
-            return acc;
-          },
-          {} as Record<string, string>,
-        ),
-      },
-    ];
+  //   const handleDownloadTemplate = () => {
+  //     // Create template data with headers
+  //     const templateData = [
+  //       {
+  //         Subject: "",
+  //         "Subject Type": "",
+  //         "Applicable programCourses": "",
+  //         Affiliation: "",
+  //         Regulation: "",
+  //         "Academic Year": "",
+  //         "Course Type": "",
+  //         Class: "",
+  //         "Paper Code": "",
+  //         "Paper Name": "",
+  //         "Is Optional": "",
+  //         ...examComponents.reduce(
+  //           (acc, component) => {
+  //             acc[`Full Marks ${component.code}`] = "";
+  //             acc[`Credit ${component.code}`] = "";
+  //             return acc;
+  //           },
+  //           {} as Record<string, string>,
+  //         ),
+  //       },
+  //     ];
 
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(templateData);
+  //     // Create workbook and worksheet
+  //     const wb = XLSX.utils.book_new();
+  //     const ws = XLSX.utils.json_to_sheet(templateData);
 
-    // Set column widths
-    const colWidths = [
-      { wch: 20 }, // Subject
-      { wch: 15 }, // Subject Type
-      { wch: 25 }, // Applicable programCourses
-      { wch: 20 }, // Affiliation
-      { wch: 15 }, // Regulation
-      { wch: 15 }, // Academic Year
-      { wch: 15 }, // Paper Code
-      { wch: 25 }, // Paper Name
-      { wch: 12 }, // Is Optional
-      ...examComponents.flatMap(() => [
-        { wch: 15 }, // Full Marks
-        { wch: 12 }, // Credit
-      ]),
-    ];
-    ws["!cols"] = colWidths;
+  //     // Set column widths
+  //     const colWidths = [
+  //       { wch: 20 }, // Subject
+  //       { wch: 15 }, // Subject Type
+  //       { wch: 25 }, // Applicable programCourses
+  //       { wch: 20 }, // Affiliation
+  //       { wch: 15 }, // Regulation
+  //       { wch: 15 }, // Academic Year
+  //       { wch: 15 }, // Paper Code
+  //       { wch: 25 }, // Paper Name
+  //       { wch: 12 }, // Is Optional
+  //       ...examComponents.flatMap(() => [
+  //         { wch: 15 }, // Full Marks
+  //         { wch: 12 }, // Credit
+  //       ]),
+  //     ];
+  //     ws["!cols"] = colWidths;
 
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, "Subject Paper Mapping Template");
+  //     // Add worksheet to workbook
+  //     XLSX.utils.book_append_sheet(wb, ws, "Subject Paper Mapping Template");
 
-    // Download the file
-    XLSX.writeFile(wb, "subject-paper-mapping-template.xlsx");
-  };
+  //     // Download the file
+  //     XLSX.writeFile(wb, "subject-paper-mapping-template.xlsx");
+  //   };
 
-  useEffect(() => {
-    fetchExams(currentPage, itemsPerPage).then((data) => {
-      setExams(data.content);
-      setTotalItems(data.totalElements);
-      setTotalPages(data.totalPages);
-      setCurrentPage(data.page);
-    });
-  }, [currentPage]);
+  //   useEffect(() => {
+
+  //   }, []);
 
   //   const validateBulkUploadData = (data: BulkUploadRow[]) => {
   //     const errors: BulkUploadError[] = [];
@@ -1193,7 +1193,7 @@ const ExamsPage = () => {
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-40 bg-background p-2 sm:p-4 border-b flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-0">
             <div className="flex flex-wrap gap-2 items-center flex-1">
-              <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+              {/* <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline">Filters</Button>
                 </DialogTrigger>
@@ -1436,10 +1436,10 @@ const ExamsPage = () => {
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+              </Dialog> */}
 
               {/* Active Filters Badges */}
-              <div className="flex flex-wrap items-center gap-2 ml-2">
+              {/* <div className="flex flex-wrap items-center gap-2 ml-2">
                 {filtersObj.affiliationId && (
                   <Badge
                     variant="outline"
@@ -1602,7 +1602,7 @@ const ExamsPage = () => {
                     </button>
                   </Badge>
                 )}
-              </div>
+              </div> */}
             </div>
             <Input
               placeholder="Search..."
@@ -1699,17 +1699,6 @@ const ExamsPage = () => {
                 {loading ? (
                   <div className="flex items-center justify-center p-4 text-center" style={{ minWidth: "950px" }}>
                     Loading...
-                  </div>
-                ) : error ? (
-                  <div
-                    className="flex items-center justify-center p-4 text-center text-red-500"
-                    style={{ minWidth: "950px" }}
-                  >
-                    {error}
-                  </div>
-                ) : !Array.isArray(papers) || papers.length === 0 ? (
-                  <div className="flex items-center justify-center p-4 text-center" style={{ minWidth: "950px" }}>
-                    {!Array.isArray(papers) ? "Error loading data" : "No subject paper mappings found."}
                   </div>
                 ) : (
                   exams.map((exm: ExamDto, idx: number) => (

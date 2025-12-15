@@ -539,6 +539,8 @@ export async function getStudentsByPapers(
     }
   }
 
+  console.log("getStudentsbyPapers(), result:", result.length);
+
   return result;
 }
 
@@ -1022,7 +1024,7 @@ export async function createExamAssignment(dto: ExamDto) {
       }
 
       for (const st of dto.examSubjectTypes) {
-        const paperKey = `${subj.subject.id}|${st.id}`;
+        const paperKey = `${subj.subject.id}|${st.subjectType.id}`;
         const paperId = paperMap.get(paperKey);
 
         if (!paperId) {
@@ -1046,7 +1048,7 @@ export async function createExamAssignment(dto: ExamDto) {
             throw new Error(`Promotion not found for student ${s.uid}`);
           }
 
-          const examSubjectTypeId = examSubjectTypeMap.get(st.id!);
+          const examSubjectTypeId = examSubjectTypeMap.get(st.subjectType.id!);
 
           if (!examSubjectTypeId) {
             throw new Error(
@@ -1067,6 +1069,7 @@ export async function createExamAssignment(dto: ExamDto) {
       }
     }
 
+    console.log("candidateInserts:", candidateInserts.length);
     if (candidateInserts.length > 0) {
       await tx.insert(examCandidateModel).values(candidateInserts);
     }
@@ -1758,6 +1761,8 @@ export async function findExamPapersByExamId(examId: number) {
     .leftJoin(examModel, eq(examCandidateModel.examId, examModel.id))
     .leftJoin(paperModel, eq(examCandidateModel.paperId, paperModel.id))
     .where(eq(examModel.id, examId));
+
+  console.log("ExamPapersWithStats, result:", result);
 
   const papersWithStats: {
     paper: PaperDto;
