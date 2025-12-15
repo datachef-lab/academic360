@@ -15,6 +15,13 @@ export async function fetchExamById(id: number): Promise<ExamDto> {
   return response.data.payload;
 }
 
+export async function triggerExamAdmitCardByExamId(examId: number, uploadSessionId: string): Promise<boolean> {
+  const response = await axiosInstance.get<ApiResponse<boolean>>(
+    `/api/exams/schedule/send-admit-cards?examId=${examId}&uploadSessionId=${uploadSessionId}`,
+  );
+  return response.data.payload;
+}
+
 export async function fetchExamPapersStatsByExamId(id: number): Promise<ExamPapersWithStats[]> {
   const response = await axiosInstance.get<ApiResponse<ExamPapersWithStats[]>>(`/api/exams/schedule/exam-papers/${id}`);
   return response.data.payload;

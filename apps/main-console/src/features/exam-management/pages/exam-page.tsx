@@ -6,10 +6,11 @@ import {
   fetchExamById,
   fetchExamCandidatesByExamId,
   fetchExamPapersStatsByExamId,
+  triggerExamAdmitCardByExamId,
   updateExamSubject,
 } from "@/services/exam.service";
 
-import { IdCard, Trash2, UsersRound } from "lucide-react";
+import { IdCard, Mail, Trash2, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ExamPaperRow from "../components/exam-paper-row";
@@ -153,6 +154,53 @@ export default function ExamPage() {
     }
   };
 
+  const triggerAdmitCard = async () => {
+    // // Extract year from academic year string (e.g., "2025-2026" -> 2025)
+    // const yearMatch = selectedAcademicYear?.year?.match(/^(\d{4})/);
+    // const year = yearMatch?.[1] ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
+
+    // Generate a unique session ID for socket progress tracking
+    const sessionId = `send-exam-admit-card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Update progress for CU registration documents download (Socket.IO will handle live updates)
+    setCurrentProgressUpdate({
+      id: sessionId,
+      userId: user!.id!.toString(),
+      type: "in_progress", // Changed back to download_progress for Socket.IO
+      message: `Sending Admit Cards to the students...`,
+      progress: 0,
+      status: "started",
+      createdAt: new Date(),
+    });
+
+    await triggerExamAdmitCardByExamId(
+      Number(examId),
+      sessionId, // Pass session ID for Socket.IO tracking
+    );
+
+    // Update progress to completed state (this might be overridden by socket updates, but good fallback)
+    setCurrentProgressUpdate({
+      id: sessionId,
+      userId: user!.id!.toString()!,
+      type: "download_progress",
+      message: `All admit-card pdfs documents downloaded successfully!`,
+      progress: 100,
+      status: "completed",
+      //   fileName: result.data?.fileName,
+      //   downloadUrl: result.data?.downloadUrl,
+      createdAt: new Date(),
+    });
+
+    toast.success(`All admit-card pdfs documents sent successfully!`);
+
+    // if (result.success && result.data) {
+    //   // Trigger download
+    //   ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+    // } else {
+    //   throw new Error(result.message || "Download failed");
+    // }
+  };
+
   const handleDownloadAdmitCard = async () => {
     try {
       setIsExporting(true);
@@ -184,6 +232,40 @@ export default function ExamPage() {
       });
       setIsExporting(false);
       toast.error(`Failed to download for admit-card`);
+    }
+  };
+
+  const handleTriggerAdmitCard = async () => {
+    try {
+      setIsExporting(true);
+      setExportProgressOpen(true);
+
+      // Set initial progress
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: user!.id!.toString(),
+        type: "in_progress",
+        message: "Starting admit card trigger process...",
+        progress: 0,
+        status: "started",
+        createdAt: new Date(),
+      });
+
+      await triggerAdmitCard();
+    } catch (error) {
+      console.error(`Download failed for admit-card:`, error);
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: user!.id!.toString(),
+        type: "in_progress",
+        message: "Triggered failed due to an error",
+        progress: 0,
+        status: "error",
+        error: error instanceof Error ? error.message : "Unknown error",
+        createdAt: new Date(),
+      });
+      setIsExporting(false);
+      toast.error(`Failed to send the admit-card`);
     }
   };
 
@@ -344,6 +426,25 @@ export default function ExamPage() {
                   >
                     {/* <Download className="h-4" /> */}
                     <UsersRound />
+                  </Button>
+                </div>
+
+                <div className="flex">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const isConfirmed = confirm(
+                        "Are you sure that you want to send the admit-cards to the students (via email)?",
+                      );
+                      if (isConfirmed) {
+                        handleTriggerAdmitCard();
+                      }
+                    }}
+                    className="p-2"
+                    title="Send Admit Cards"
+                  >
+                    {/* <Download className="h-4" /> */}
+                    <Mail />
                   </Button>
                 </div>
 

@@ -27,6 +27,10 @@ export interface NotificationEventDto extends NotificationEventT {
     meta?: { devOnly?: boolean };
 }
 
+export type EmailAttachment =
+  | { pdfS3Url: string } // legacy S3-based attachment
+  | { fileName: string; contentBase64: Buffer }; // in-memory attachment
+
 export interface NotificationDto {
     userId: number;
     variant: "EMAIL" | "WHATSAPP" | "SMS" | "WEB" | "OTHER";
@@ -38,9 +42,10 @@ export interface NotificationDto {
     content?: Partial<NotificationContentT>[];
     otherUsersEmails?: string[];
     otherUsersWhatsAppNumbers?: string[];
-    emailAttachments?: Array<{
-        pdfS3Url: string;
-    }>;
+    // emailAttachments?: Array<{
+    //     pdfS3Url: string;
+    // }>;
+    emailAttachments?: EmailAttachment[];
 }
 
 export type TemplateScalar = string | number | boolean | null | undefined;

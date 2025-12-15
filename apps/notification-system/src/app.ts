@@ -10,7 +10,8 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-app.use(express.json({ limit: "180kb" }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 app.use(express.urlencoded({ extended: true, limit: "180kb" }));
 

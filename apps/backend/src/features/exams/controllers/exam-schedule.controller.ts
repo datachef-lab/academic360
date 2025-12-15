@@ -11,6 +11,7 @@ import {
   findExamPapersByExamId,
   findExamsByStudentId,
   getStudentsByPapers,
+  sendExamAdmitCardEmails,
   updateExamSubject,
 } from "../services/exam-schedule.service.js";
 import { ApiError } from "@/utils/ApiError.js";
@@ -397,6 +398,51 @@ export const downloadExamCandidatesController = async (
 
     // 🚀 Send buffer
     res.send(Buffer.from(excelBuffer));
+  } catch (error) {
+    console.error("[EXAM-CANDIDATE-DOWNLOAD] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const triggerExamCandidatesEmailController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { examId, uploadSessionId } = req.query;
+
+    if (!examId) {
+      res.status(400).json(new ApiError(400, "examId is required"));
+      return;
+    }
+
+    const examIdNum = Number(examId);
+    if (isNaN(examIdNum)) {
+      res.status(400).json(new ApiError(400, "Invalid examId"));
+      return;
+    }
+
+    console.info("[EXAM-CANDIDATE-DOWNLOAD] Starting Excel download", {
+      examId: examIdNum,
+    });
+
+    await sendExamAdmitCardEmails(
+      examIdNum,
+      (req as any)?.user.id,
+      uploadSessionId! as string,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "OK",
+          true,
+          `Admit Card sent successfully to the students for the given exam id: ${examId}`,
+        ),
+      );
   } catch (error) {
     console.error("[EXAM-CANDIDATE-DOWNLOAD] Error:", error);
     handleError(error, res, next);

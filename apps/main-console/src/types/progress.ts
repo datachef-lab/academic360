@@ -1,7 +1,7 @@
 export interface ProgressUpdate {
   id: string;
   userId: string;
-  type: "export_progress" | "download_progress";
+  type: "export_progress" | "download_progress" | "in_progress";
   message: string;
   progress: number; // 0-100
   status: "started" | "in_progress" | "completed" | "error";

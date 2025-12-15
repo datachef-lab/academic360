@@ -10,6 +10,7 @@ import {
   getExamPapersByExamIdController,
   getExamsByStudentController,
   getStudentsForExam,
+  triggerExamCandidatesEmailController,
   updateExamSubjectHandler,
 } from "../controllers/exam-schedule.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
@@ -23,6 +24,12 @@ router.post("/get-students", verifyJWT, getStudentsForExam);
 router.put("/exam-subject", verifyJWT, updateExamSubjectHandler);
 
 router.get("/download-admit-cards", verifyJWT, downloadAdmitCardsController);
+router.get(
+  "/send-admit-cards",
+  verifyJWT,
+  triggerExamCandidatesEmailController,
+);
+
 router.post("/", verifyJWT, createExamAssignmenthandler);
 router.get("/exam-candidates/download", downloadExamCandidatesController);
 router.get("/", getAllExamsController);

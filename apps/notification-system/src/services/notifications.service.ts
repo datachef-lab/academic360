@@ -137,6 +137,32 @@ export class NotificationsService {
       );
     }
 
+    type NormalizedAttachment = { [key: string]: string };
+
+    const normalizedAttachments: NormalizedAttachment[] | null =
+      dto.emailAttachments
+        ?.map((att): NormalizedAttachment | null => {
+          if (!att) return null;
+
+          console.log("in normalizedAttachments:", att);
+
+          if ("fileName" in att && "contentBase64" in att) {
+            return {
+              fileName: att.fileName,
+              contentBase64: Buffer.isBuffer(att.contentBase64)
+                ? att.contentBase64.toString("base64")
+                : Buffer.from(att.contentBase64).toString("base64"),
+            };
+          } else if ("pdfS3Url" in att) {
+            return {
+              pdfS3Url: att.pdfS3Url,
+            };
+          }
+
+          return null; // unknown shape
+        })
+        .filter((x): x is NormalizedAttachment => x !== null) ?? null;
+
     const insertValues: Notification = {
       userId: resolvedUserId,
       applicationFormId: dto.applicationFormId ?? null,
@@ -148,7 +174,8 @@ export class NotificationsService {
       status: "PENDING",
       otherUsersEmails: dto.otherUsersEmails ?? null,
       otherUsersWhatsAppNumbers: dto.otherUsersWhatsAppNumbers ?? null,
-      emailAttachments: dto.emailAttachments ?? null,
+      // emailAttachments: dto.emailAttachments ?? null,
+      emailAttachments: normalizedAttachments,
     };
     console.log("[notif-sys] enqueue insert values ->", insertValues);
 
