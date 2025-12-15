@@ -8,6 +8,7 @@ import {
   updateProgramCourse,
   deleteProgramCourseSafe,
   bulkUploadProgramCourses,
+  findAllDtos,
 } from "@/features/course-design/services/program-course.service.js";
 import { socketService } from "@/services/socketService.js";
 
@@ -88,6 +89,28 @@ export const getAllProgramCoursesHandler = async (
 ) => {
   try {
     const programCourses = await getAllProgramCourses();
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          programCourses,
+          "All program courses fetched",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const getAllProgramCoursesDtosHandler = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const programCourses = await findAllDtos();
     res
       .status(200)
       .json(

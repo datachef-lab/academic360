@@ -100,19 +100,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             isActive: pathname === "/dashboard/admission-registration",
           },
         ]),
-    // accessControl?.access_exams && {
-    //   title: "Exams",
-    //   url: "/dashboard/exams",
-    //   icon: NotebookPen,
-    //   isActive: pathname === "/dashboard/exams",
-    // },
-    // accessControl?.access_course && {
+    {
+      title: "Exams",
+      url: "/dashboard/exams",
+      icon: NotebookPen,
+      isActive: pathname === "/dashboard/exams",
+    },
+    // {
     //   title: "Course Catalogue",
     //   url: "/dashboard/course-catalogue",
     //   icon: BookOpen,
     //   isActive: pathname === "/dashboard/course-catalogue",
     // },
-    // accessControl?.access_documents && {
+    // {
     //   title: "Documents",
     //   url: "/dashboard/documents",
     //   icon: ScrollText,
@@ -124,7 +124,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     //   icon: IndianRupee,
     //   isActive: pathname === "/dashboard/enrollment-fees",
     // },
-    // accessControl?.access_library && {
+    // {
     //   title: "Library",
     //   url: "/dashboard/library",
     //   icon: Library,

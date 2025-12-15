@@ -1,0 +1,871 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>AdmitCard_1004230028</title>
+    <style type="text/css">
+      * {
+        margin: 0;
+        padding: 0;
+        text-indent: 0;
+      }
+      h1 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 16pt;
+      }
+      .s1 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: normal;
+        text-decoration: none;
+        font-size: 9pt;
+      }
+      h2 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 12pt;
+      }
+      .s2 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 10pt;
+      }
+      .s3 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 9pt;
+      }
+      .s4 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 8pt;
+      }
+      h3 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 10pt;
+      }
+      p {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: normal;
+        text-decoration: none;
+        font-size: 10pt;
+        margin: 0pt;
+      }
+      li {
+        display: block;
+      }
+      #l1 {
+        padding-left: 0pt;
+        counter-reset: c1 1;
+      }
+      #l1 > li > *:first-child:before {
+        counter-increment: c1;
+        content: counter(c1, decimal) ") ";
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: normal;
+        text-decoration: none;
+        font-size: 10pt;
+      }
+      #l1 > li:first-child > *:first-child:before {
+        counter-increment: c1 0;
+      }
+      table,
+      tbody {
+        vertical-align: top;
+        overflow: visible;
+      }
+    </style>
+  </head>
+  <body style="height: 100vh; margin: 0; padding: 0">
+    <header style="height: 10%">
+      <nav
+        style="
+          padding: 24px;
+          display: flex;
+          gap: 10px;
+          justify-content: between;
+          align-items: center;
+        "
+      >
+        <!-- Left Section: College Logo -->
+        <p style="padding: 0; text-indent: 0pt; text-align: left; width: 10%">
+          <span
+            ><img
+              height="80"
+              width="80"
+              alt="image"
+              src="https://besc.academic360.app/api/api/v1/settings/file/4"
+          /></span>
+        </p>
+        <!-- Middle Section: College Name & Address -->
+        <div
+          style="
+            width: 80%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+          "
+        >
+          <h1 style="padding-top: 7pt; text-indent: 0pt; text-align: center">
+            The Bhawanipur Education Society College
+          </h1>
+          <p
+            class="s1"
+            style="
+              padding-top: 4pt;
+              width: 75%;
+              text-indent: 0pt;
+              line-height: 143%;
+              text-align: center;
+            "
+          >
+            A MINORITY RUN COLLEGE. AFFILIATED TO UNIVERSITY OF CALCUTTA
+            RECOGNISED UNDER SECTION 2(F) &amp; 12 (B) OF THE UGC ACT, 1956
+          </p>
+          <p style="text-indent: 0pt; text-align: left"><br /></p>
+        </div>
+        <!-- Right Section: Qrcode containing student's uid -->
+        <p style="text-indent: 0pt; text-align: left; width: 10%">
+          <span
+            ><img
+              height="80"
+              width="80"
+              alt="uid-qrcode"
+              
+              src="<%= qrCodeDataUrl %>"
+          /></span>
+        </p>
+      </nav>
+    </header>
+    <main
+      style="
+        height: 65%;
+        padding-top: 16px;
+        padding-left: 24px;
+        padding-right: 24px;
+      "
+    >
+      <!-- Heading -->
+      <section>
+        <h2 style="padding-top: 5pt; text-indent: 0pt; text-align: center">
+          ADMIT CARD
+        </h2>
+        <h2
+          style="
+            padding-top: 6pt;
+
+            text-indent: 0pt;
+            text-align: center;
+          "
+        >
+         Semester <%= semester %> <%= examType %> - <%= session %>
+        </h2>
+      </section>
+
+      <!-- Info Table -->
+      <section style="width: 100%">
+        <p style="text-indent: 0pt; text-align: left"><br /></p>
+        <table style="border-collapse: collapse; width: 100%" cellspacing="0">
+          <tr style="height: 29pt">
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+                NAME
+              </p>
+            </td>
+            <td
+              style="
+                width: 320pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+              colspan="3"
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+               <%= name %>
+              </p>
+            </td>
+            <td
+              style="
+                width: 135pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+              rowspan="5"
+            >
+              <p style="text-indent: 0pt; text-align: left"><br /></p>
+              <p style="padding-left: 11pt; text-indent: 0pt; text-align: left">
+                <span
+                  ><img
+                    width="153"
+                    height="152"
+                    alt="image"
+                    src="<%= studentImage %>"
+                /></span>
+              </p>
+            </td>
+          </tr>
+          <tr style="height: 29pt">
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+                CU Roll No.
+              </p>
+            </td>
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  width: 100%;
+                  padding-top: 12px;
+                  padding-left: 5px;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+               <%= cuRollNumber %>
+              </p>
+            </td>
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+                CU REG No.
+              </p>
+            </td>
+            <td
+              style="
+                width: 120pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+              <%= cuRegistrationNumber %>
+              </p>
+            </td>
+          </tr>
+          <tr style="height: 29pt">
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+                UID
+              </p>
+            </td>
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+              <%= uid %>
+              </p>
+            </td>
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+                PHONE NUMBER
+              </p>
+            </td>
+            <td
+              style="
+                width: 120pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+              <%= phone %>
+              </p>
+            </td>
+          </tr>
+          <tr style="height: 29pt">
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+                COURSE
+              </p>
+            </td>
+            <td
+              style="
+                width: 320pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+              colspan="3"
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+              <%= programCourseName %>
+              </p>
+            </td>
+          </tr>
+          <tr style="height: 29pt">
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+                SESSION
+              </p>
+            </td>
+            <td
+              style="
+                width: 320pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+              colspan="3"
+            >
+              <p
+                class="s2"
+                style="
+                  padding-top: 8pt;
+                  padding-left: 5pt;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+              <%= shiftName %>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </section>
+
+      <!-- Subjects/Papers Time-Table -->
+      <section style="width: 100%">
+        <p style="text-indent: 0pt; text-align: left"><br /></p>
+        <table style="border-collapse: collapse; width: 100%" cellspacing="0">
+          <tr style="height: 44pt">
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p style="text-indent: 0pt; text-align: left"><br /></p>
+              <p
+                class="s2"
+                style="padding-left: 15pt; text-indent: -1pt; text-align: left"
+              >
+                DATE, TIME OF EXAMINATION
+              </p>
+            </td>
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p style="text-indent: 0pt; text-align: left"><br /></p>
+              <p
+                class="s2"
+                style="padding-left: 15pt; text-indent: 9pt; text-align: left"
+              >
+                VENUE OF EXAMINATION
+              </p>
+            </td>
+            <td
+              style="
+                width: 164pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p style="text-indent: 0pt; text-align: left"><br /></p>
+              <p
+                class="s2"
+                style="
+                  padding-left: 3pt;
+                  padding-right: 2pt;
+                  padding-top: 7px;
+                  text-indent: 0pt;
+                  text-align: center;
+                "
+              >
+                SUBJECT / PAPER
+              </p>
+            </td>
+            <td
+              style="
+                width: 190pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p style="text-indent: 0pt; text-align: left"><br /></p>
+              <p
+                class="s2"
+                style="
+                  padding-left: 14px;
+                  padding-right: 32pt;
+                  text-indent: 12pt;
+                  text-align: left;
+                "
+              >
+                SIGNATURE OF THE INVIGILATOR WITH DATE
+              </p>
+            </td>
+          </tr>
+          <!-- Dynamic entries to be added -->
+          <% examRows.forEach((row) => { %>
+          <tr style="height: 43pt">
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p
+                class="s3"
+                style="
+                  padding-top: 5px;
+                  padding-left: 4px;
+                  text-indent: 0pt;
+                  text-align: left;
+                "
+              >
+              <%= row.date %>
+              </p>
+              <p style="text-indent: 0pt; text-align: left"><br /></p>
+              <p
+                class="s3"
+                style="padding-left: 4px; text-indent: 0pt; text-align: left"
+              >
+              <%= row.time %>
+              </p>
+            </td>
+            <td
+              style="
+                width: 100pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+                padding: 4px;
+              "
+            >
+              <div style="display: flex; width: 100%; justify-content: center">
+                <p
+                  class="s3"
+                  style="
+                    padding-right: 8pt;
+                    text-indent: 2pt;
+                    line-height: 153%;
+
+                    text-align: left;
+                  "
+                >
+                  Room&nbsp; &nbsp;&nbsp; :
+                </p>
+                <p
+                  class="s3"
+                  style="
+                    padding-right: 8pt;
+                    text-indent: 2pt;
+                    line-height: 153%;
+
+                    text-align: left;
+                  "
+                >
+                <%= row.room %>
+                </p>
+              </div>
+              <div style="display: flex; width: 100%; justify-content: center">
+                <p
+                  class="s3"
+                  style="
+                    padding-right: 8pt;
+                    text-indent: 2pt;
+                    line-height: 153%;
+                    text-align: left;
+                  "
+                >
+                  Seat No.:
+                </p>
+                <p
+                  class="s3"
+                  style="
+                    padding-right: 8pt;
+                    text-indent: 2pt;
+                    line-height: 153%;
+
+                    text-align: left;
+                  "
+                >
+                <%= row.seatNo %>
+                </p>
+              </div>
+            </td>
+            <td
+              style="
+                width: 164pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+                padding-top: 12px;
+              "
+            >
+              <p
+                class="s4"
+                style="text-align: left; padding-left: 12px;"
+              >
+              <%= row.subjectName %>
+              </p>
+              <p
+                class="s4"
+                style="text-align: left; padding-left: 12px;"
+              >
+                ( <%= row.subjectCode %> )
+              </p>
+            </td>
+            <td
+              style="
+                width: 190pt;
+                border-top-style: solid;
+                border-top-width: 1pt;
+                border-left-style: solid;
+                border-left-width: 1pt;
+                border-bottom-style: solid;
+                border-bottom-width: 1pt;
+                border-right-style: solid;
+                border-right-width: 1pt;
+              "
+            >
+              <p style="text-indent: 0pt; text-align: left"><br /></p>
+            </td>
+          </tr>
+          <% }) %>
+        </table>
+      </section>
+    </main>
+    <footer style="height: 23%; padding-left: 24px; padding-right: 24px">
+      <!-- Signature -->
+      <section style="width: 100%; padding-bottom: 24px">
+        <p
+          style="
+            text-indent: 0pt;
+            text-align: left;
+            height: 100px;
+            border-bottom: 1px solid;
+            width: 200px;
+          "
+        >
+          <br />
+        </p>
+        <h3 style="padding-top: 7pt; text-indent: 0pt; text-align: left">
+          Signature of Student
+        </h3>
+      </section>
+      <p style="text-indent: 0pt; text-align: left"><br /></p>
+      <p style="text-indent: 0pt; text-align: left">Please Note:</p>
+      <ol id="l1" style="padding-left: 14px; margin-top: 4px">
+        <li data-list-text="1)">
+          <p style="text-indent: -11pt; text-align: left">
+            It is mandatory to carry this Admit Card along with College ID card
+            in the Examination Hall.
+          </p>
+        </li>
+        <li data-list-text="2)">
+          <p style="text-indent: -11pt; text-align: left">
+            Retain this Admit card for the entire Academic year.
+          </p>
+        </li>
+      </ol>
+    </footer>
+  </body>
+</html>

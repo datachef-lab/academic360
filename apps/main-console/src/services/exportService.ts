@@ -271,6 +271,54 @@ export class ExportService {
     }
   }
 
+  static async downloadExamAdmitCardsbyExamId(examId?: number, uploadSessionId?: string): Promise<ExportResponse> {
+    try {
+      const endpoint = `/api/exams/schedule/download-admit-cards?examId=${examId}`;
+
+      // Add session ID as query parameter for socket progress tracking
+      const url = uploadSessionId ? `${endpoint}&?uploadSessionId=${uploadSessionId}` : endpoint;
+
+      const response = await axiosInstance.get(url, {
+        responseType: "blob", // Important for ZIP file downloads
+      });
+
+      // Extract filename from response headers
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = `exam-${examId}-admit-cards.zip`;
+
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+        }
+      }
+
+      // Create download URL
+      const blob = new Blob([response.data], {
+        type: "application/zip",
+      });
+
+      const downloadUrl = URL.createObjectURL(blob);
+
+      return {
+        success: true,
+        message: "Download completed successfully",
+        data: {
+          downloadUrl,
+          fileName,
+          totalRecords: 0, // We don't get this from the response
+        },
+      };
+    } catch (error: unknown) {
+      console.error("CU Registration documents download error:", error);
+
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Download failed",
+      };
+    }
+  }
+
   /**
    * Export student detailed data report
    */

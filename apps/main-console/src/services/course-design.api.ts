@@ -16,6 +16,7 @@ import type {
   Stream,
   PaperDto,
   SubjectGroupingMainDto,
+  ProgramCourseDto,
 } from "@repo/db";
 import { ApiResponse } from "@/types/api-response";
 // import { Stream } from '@/pages/courses-subjects-design/streams/columns';
@@ -356,6 +357,10 @@ export const bulkUploadRegulationTypes = async (file: File): Promise<BulkUploadR
 // Program Courses
 export const getProgramCourses = async () => {
   const res = await axiosInstance.get<ApiResponse<ProgramCourse[]>>(`${BASE}/program-courses`);
+  return res.data.payload;
+};
+export const getProgramCourseDtos = async () => {
+  const res = await axiosInstance.get<ApiResponse<ProgramCourseDto[]>>(`${BASE}/program-courses/dtos`);
   return res.data.payload;
 };
 export const getProgramCourse = (id: number) => axiosInstance.get<ProgramCourse>(`${BASE}/program-courses/${id}`);

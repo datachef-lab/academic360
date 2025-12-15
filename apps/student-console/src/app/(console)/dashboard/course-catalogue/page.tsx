@@ -5,26 +5,11 @@ import { useStudent } from "@/providers/student-provider";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { DbCourseMaterial } from "@/types/academics/course-material";
-import {
-  Download,
-  ExternalLink,
-  Book,
-  BookOpen,
-  GraduationCap,
-  School,
-  X,
-} from "lucide-react";
+import { Download, ExternalLink, Book, BookOpen, GraduationCap, School, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function CourseCataloguePage() {
@@ -34,51 +19,37 @@ export default function CourseCataloguePage() {
   const [materialLinks, setMaterialLinks] = useState<DbCourseMaterial[]>([]);
   const [isLoadingMaterials, setIsLoadingMaterials] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (!accessControl?.access_course) {
-      router.back();
-    }
-  }, [accessControl, router]);
+  //   useEffect(() => {
+  //     if (!accessControl?.access_course) {
+  //       router.back();
+  //     }
+  //   }, [accessControl, router]);
 
   // Fetch materials for all subjects in a batch with a single API call
-  const fetchBatchMaterials = async (
-    batchSubjects: Array<{ subjectId?: number }>
-  ) => {
+  const fetchBatchMaterials = async (batchSubjects: Array<{ subjectId?: number }>) => {
     if (!batchSubjects || batchSubjects.length === 0) return;
 
     try {
       setIsLoadingMaterials(true);
 
       // Extract all subject IDs from the batch
-      const subjectIds = batchSubjects
-        .filter((subject) => subject.subjectId)
-        .map((subject) => subject.subjectId!);
+      const subjectIds = batchSubjects.filter((subject) => subject.subjectId).map((subject) => subject.subjectId!);
 
       if (subjectIds.length === 0) return;
 
       // Create URL with all subject IDs as query parameters
       const queryParams = new URLSearchParams();
-      subjectIds.forEach((id) =>
-        queryParams.append("subjectIds", id.toString())
-      );
+      subjectIds.forEach((id) => queryParams.append("subjectIds", id.toString()));
 
-      console.log(
-        `Fetching materials for ${subjectIds.length} subjects with a single API call`
-      );
-      const response = await fetch(
-        `/api/batch-course-materials?${queryParams.toString()}`
-      );
+      console.log(`Fetching materials for ${subjectIds.length} subjects with a single API call`);
+      const response = await fetch(`/api/batch-course-materials?${queryParams.toString()}`);
 
       if (!response.ok) {
-        throw new Error(
-          `API returned ${response.status}: ${await response.text()}`
-        );
+        throw new Error(`API returned ${response.status}: ${await response.text()}`);
       }
 
       const materials = await response.json();
-      console.log(
-        `Successfully fetched ${materials.length} materials for all subjects`
-      );
+      console.log(`Successfully fetched ${materials.length} materials for all subjects`);
       setMaterialLinks(materials);
     } catch (error) {
       console.error("Error fetching batch materials:", error);
@@ -146,9 +117,7 @@ export default function CourseCataloguePage() {
               <GraduationCap size={36} className="text-white drop-shadow-md" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">
-                Course Catalogue
-              </h1>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">Course Catalogue</h1>
               <p className="text-blue-50 text-lg drop-shadow max-w-2xl">
                 Explore your academic journey and access course materials
               </p>
@@ -161,9 +130,7 @@ export default function CourseCataloguePage() {
         {batches.length === 0 ? (
           <div className="text-center py-12 bg-white/60 backdrop-blur-sm rounded-2xl border border-indigo-100 shadow-lg">
             <School className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <p className="text-lg text-gray-600">
-              No academic information available
-            </p>
+            <p className="text-lg text-gray-600">No academic information available</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -200,8 +167,7 @@ export default function CourseCataloguePage() {
                             {batches[selectedBatch].coursename}
                           </CardTitle>
                           <p className="text-lg text-gray-600 ml-11">
-                            {batches[selectedBatch].classname} (
-                            {batches[selectedBatch].sectionName})
+                            {batches[selectedBatch].classname} ({batches[selectedBatch].sectionName})
                           </p>
                         </div>
                         <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-1 text-sm">
@@ -216,9 +182,7 @@ export default function CourseCataloguePage() {
                           <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
                             <div className="flex flex-col items-center">
                               <div className="animate-spin rounded-full h-10 w-10 border-2 border-indigo-300 border-t-indigo-600 mb-2"></div>
-                              <p className="text-sm text-indigo-600">
-                                Loading course materials...
-                              </p>
+                              <p className="text-sm text-indigo-600">Loading course materials...</p>
                             </div>
                           </div>
                         )}
@@ -227,8 +191,7 @@ export default function CourseCataloguePage() {
                           <Book className="w-5 h-5 mr-2 text-indigo-600" />
                           Subjects & Papers
                         </h3>
-                        {batches[selectedBatch].papers &&
-                        batches[selectedBatch].papers.length > 0 ? (
+                        {batches[selectedBatch].papers && batches[selectedBatch].papers.length > 0 ? (
                           <div
                             className="rounded-xl border border-indigo-100 overflow-hidden bg-white"
                             onClick={(e) => e.stopPropagation()}
@@ -236,116 +199,87 @@ export default function CourseCataloguePage() {
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-indigo-100">
-                                  <TableHead className="w-[25%] text-indigo-900 font-semibold">
-                                    Subject
-                                  </TableHead>
-                                  <TableHead className="w-[25%] text-indigo-900 font-semibold">
-                                    Paper
-                                  </TableHead>
-                                  <TableHead className="w-[20%] text-indigo-900 font-semibold">
-                                    Type
-                                  </TableHead>
-                                  <TableHead className="w-[30%] text-indigo-900 font-semibold">
-                                    Materials
-                                  </TableHead>
+                                  <TableHead className="w-[25%] text-indigo-900 font-semibold">Subject</TableHead>
+                                  <TableHead className="w-[25%] text-indigo-900 font-semibold">Paper</TableHead>
+                                  <TableHead className="w-[20%] text-indigo-900 font-semibold">Type</TableHead>
+                                  <TableHead className="w-[30%] text-indigo-900 font-semibold">Materials</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {batches[selectedBatch].papers.map(
-                                  (paper, index) => (
-                                    <TableRow
-                                      key={index}
-                                      className="hover:bg-gray-50/50"
-                                    >
-                                      <TableCell className="font-medium text-gray-900">
-                                        {paper.subjectname}
-                                      </TableCell>
-                                      <TableCell className="text-gray-700">
-                                        {paper.paperName}
-                                      </TableCell>
-                                      <TableCell>
-                                        <Badge
-                                          variant="outline"
-                                          className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs"
-                                        >
-                                          {paper.subjecttypename}
-                                        </Badge>
-                                      </TableCell>
-                                      <TableCell>
-                                        {paper.subjectId &&
-                                          materialLinks
-                                            .filter(
-                                              (m) =>
-                                                m.subject_id_fk ===
-                                                paper.subjectId
-                                            )
-                                            .map((material, idx) => (
-                                              <motion.div
-                                                key={idx}
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{
-                                                  delay: idx * 0.1,
-                                                }}
-                                                className="flex items-center gap-2 mb-1"
-                                              >
-                                                {material.type === "file" ? (
-                                                  <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-7 px-3 text-blue-700 hover:text-blue-800 hover:bg-blue-50 transition-colors"
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      window.open(
-                                                        `/api/download?filePath=${encodeURIComponent(
-                                                          material.file_path ||
-                                                            ""
-                                                        )}`,
-                                                        "_blank"
-                                                      );
-                                                    }}
-                                                  >
-                                                    <Download className="h-3.5 w-3.5 mr-1.5" />
-                                                    {material.title}
-                                                  </Button>
-                                                ) : (
-                                                  <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-7 px-3 text-purple-700 hover:text-purple-800 hover:bg-purple-50 transition-colors"
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      window.open(
-                                                        material.url,
-                                                        "_blank"
-                                                      );
-                                                    }}
-                                                  >
-                                                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                                                    {material.title}
-                                                  </Button>
-                                                )}
-                                              </motion.div>
-                                            ))}
-                                      </TableCell>
-                                    </TableRow>
-                                  )
-                                )}
+                                {batches[selectedBatch].papers.map((paper, index) => (
+                                  <TableRow key={index} className="hover:bg-gray-50/50">
+                                    <TableCell className="font-medium text-gray-900">{paper.subjectname}</TableCell>
+                                    <TableCell className="text-gray-700">{paper.paperName}</TableCell>
+                                    <TableCell>
+                                      <Badge
+                                        variant="outline"
+                                        className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs"
+                                      >
+                                        {paper.subjecttypename}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      {paper.subjectId &&
+                                        materialLinks
+                                          .filter((m) => m.subject_id_fk === paper.subjectId)
+                                          .map((material, idx) => (
+                                            <motion.div
+                                              key={idx}
+                                              initial={{ opacity: 0, x: -10 }}
+                                              animate={{ opacity: 1, x: 0 }}
+                                              transition={{
+                                                delay: idx * 0.1,
+                                              }}
+                                              className="flex items-center gap-2 mb-1"
+                                            >
+                                              {material.type === "file" ? (
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-7 px-3 text-blue-700 hover:text-blue-800 hover:bg-blue-50 transition-colors"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    window.open(
+                                                      `/api/download?filePath=${encodeURIComponent(
+                                                        material.file_path || "",
+                                                      )}`,
+                                                      "_blank",
+                                                    );
+                                                  }}
+                                                >
+                                                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                                                  {material.title}
+                                                </Button>
+                                              ) : (
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-7 px-3 text-purple-700 hover:text-purple-800 hover:bg-purple-50 transition-colors"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    window.open(material.url, "_blank");
+                                                  }}
+                                                >
+                                                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                                  {material.title}
+                                                </Button>
+                                              )}
+                                            </motion.div>
+                                          ))}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
                               </TableBody>
                             </Table>
                           </div>
                         ) : (
                           <div className="text-center py-8 bg-gray-50/50 rounded-xl border border-dashed border-gray-300">
                             <Book className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                            <p className="text-gray-600">
-                              No papers available for this batch
-                            </p>
+                            <p className="text-gray-600">No papers available for this batch</p>
                           </div>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 text-center mt-6">
-                        Press ESC or click anywhere to close
-                      </p>
+                      <p className="text-sm text-gray-500 text-center mt-6">Press ESC or click anywhere to close</p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -358,11 +292,7 @@ export default function CourseCataloguePage() {
                   key="batch-grid"
                 >
                   {batches.map((batch, index) => (
-                    <motion.div
-                      key={index}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
+                    <motion.div key={index} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Card
                         className="cursor-pointer bg-white hover:bg-white/95 shadow-md hover:shadow-xl transition-all overflow-hidden group rounded-xl"
                         onClick={() => handleCardClick(index)}

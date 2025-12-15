@@ -198,6 +198,13 @@ export async function findById(id: number) {
   return programCourse ? await modelToDto(programCourse) : null;
 }
 
+export async function findAllDtos() {
+  const programCourses = await db.select().from(programCourseModel);
+  return (
+    await Promise.all(programCourses.map(async (pc) => await modelToDto(pc)))
+  ).filter((ele) => ele !== null);
+}
+
 export async function getAllProgramCourses() {
   return db.select().from(programCourseModel);
 }
@@ -596,7 +603,7 @@ export const bulkUploadProgramCourses = async (
   return result;
 };
 
-async function modelToDto(
+export async function modelToDto(
   programCourse: ProgramCourse,
 ): Promise<ProgramCourseDto | null> {
   if (!programCourse) return null;

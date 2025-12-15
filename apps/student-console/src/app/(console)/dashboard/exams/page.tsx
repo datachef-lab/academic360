@@ -33,6 +33,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useStudent } from "@/providers/student-provider";
 import { format, parseISO } from "date-fns";
 import { useRouter } from "next/navigation";
+import { ExamDto } from "@/dtos";
 interface Exam {
   id: number;
   testid: number;
@@ -64,11 +65,11 @@ export default function ExamsContent() {
   const hasInitialFetchRef = React.useRef(false);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    if (!accessControl?.access_course) {
-      router.back();
-    }
-  }, [accessControl, router]);
+  //   useEffect(() => {
+  //     if (!accessControl?.access_course) {
+  //       router.back();
+  //     }
+  //   }, [accessControl, router]);
 
   // Derived exam lists with improved categorization
   const today = new Date();

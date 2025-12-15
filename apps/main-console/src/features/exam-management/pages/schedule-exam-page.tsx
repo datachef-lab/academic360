@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import { getAllExamTypes, type ExamTypeT } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
-import { getProgramCourses, getAffiliations, getRegulationTypes } from "@/services/course-design.api";
+import { getAffiliations, getRegulationTypes, getProgramCourseDtos } from "@/services/course-design.api";
 import { getAllShifts } from "@/services/academic";
 import { getSubjectTypes, getExamComponents } from "@/services/course-design.api";
 import { getPapersPaginated } from "@/services/course-design.api";
@@ -31,7 +31,6 @@ import { countStudentsForExam, getStudentsForExam, type StudentWithSeat } from "
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import type { Class } from "@/types/academics/class";
 import type {
-  ProgramCourse,
   SubjectType,
   PaperDto,
   Affiliation,
@@ -40,6 +39,8 @@ import type {
   ExamSubjectT,
   ExamRoomDto,
   RoomDto,
+  ProgramCourseDto,
+  ExamProgramCourseDto,
 } from "@repo/db";
 import type { Shift } from "@/types/academics/shift";
 import type { Subject } from "@repo/db";
@@ -68,7 +69,7 @@ export default function ScheduleExamPage() {
   // API Data States
   const [examTypes, setExamTypes] = useState<ExamTypeT[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
-  const [programCourses, setProgramCourses] = useState<ProgramCourse[]>([]);
+  const [programCourses, setProgramCourses] = useState<ProgramCourseDto[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [subjectTypes, setSubjectTypes] = useState<SubjectType[]>([]);
   const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
@@ -159,7 +160,7 @@ export default function ScheduleExamPage() {
 
       try {
         setLoading((prev) => ({ ...prev, programCourses: true }));
-        const programCoursesData = await getProgramCourses();
+        const programCoursesData = await getProgramCourseDtos();
         setProgramCourses(Array.isArray(programCoursesData) ? programCoursesData : []);
       } catch (error) {
         console.error("Error fetching program courses:", error);
@@ -608,21 +609,52 @@ export default function ScheduleExamPage() {
 
   const handleAssignExam = async () => {
     const examSubjects: ExamSubjectT[] = [];
-    for (const subjectId in subjectSchedules) {
+    console.log("[SCHEDULE-EXAM] Selected subject IDs:", selectedSubjectIds);
+    console.log("[SCHEDULE-EXAM] Subject schedules:", subjectSchedules);
+    // for (const subjectId in selectedSubjectIds) {
+    //     console.log("[SCHEDULE-EXAM] Subject ID:", selectedSubjectIds[subjectId]);
+
+    //   examSubjects.push({
+    //     subjectId: Number(selectedSubjectIds[subjectId]),
+    //     startTime: new Date(subjectSchedules[selectedSubjectIds[subjectId]!]?.startTime || ""),
+    //     endTime: new Date(subjectSchedules[selectedSubjectIds[subjectId]!]?.endTime || ""),
+    //     examId: 0,
+    //     id: 0,
+    //     createdAt: null,
+    //     updatedAt: null,
+    //   });
+    //   console.log("[SCHEDULE-EXAM] Exam subject:", examSubjects);
+    //   console.log("[SCHEDULE-EXAM] Subject ID:", subjectId);
+    //   console.log("[SCHEDULE-EXAM] Subject start time:", subjectSchedules[subjectId]?.startTime);
+    //   console.log("[SCHEDULE-EXAM] Subject end time:", subjectSchedules[subjectId]?.endTime);
+    // }
+
+    for (const subjectId of selectedSubjectIds) {
       const schedule = subjectSchedules[subjectId];
-      if (schedule && schedule.date && schedule.startTime && schedule.endTime) {
-        const startDate = new Date(`${schedule.date}T${schedule.startTime}`);
-        const endDate = new Date(`${schedule.date}T${schedule.endTime}`);
-        examSubjects.push({
-          subjectId: Number(subjectId),
-          startTime: startDate,
-          endTime: endDate,
-          examId: 0,
-          id: 0,
-          createdAt: null,
-          updatedAt: null,
-        });
+
+      if (!schedule?.date || !schedule?.startTime || !schedule?.endTime) {
+        console.warn(`[SCHEDULE-EXAM] Incomplete schedule for subject ${subjectId}`, schedule);
+        continue;
       }
+
+      const startDateTime = `${schedule.date}T${schedule.startTime}:00+05:30`;
+      const endDateTime = `${schedule.date}T${schedule.endTime}:00+05:30`;
+
+      examSubjects.push({
+        subjectId: subjectId,
+        startTime: new Date(startDateTime),
+        endTime: new Date(endDateTime),
+        examId: 0,
+        id: 0,
+        createdAt: null,
+        updatedAt: null,
+      });
+
+      console.log("[SCHEDULE-EXAM] Exam subject pushed:", {
+        subjectId,
+        startDateTime,
+        endDateTime,
+      });
     }
 
     if (examSubjects.length === 0) {
@@ -690,14 +722,39 @@ export default function ScheduleExamPage() {
 
     const tmpExamAssignment: ExamDto = {
       orderType: assignBy,
-      academicYear,
-      class: classObj,
-      examType: examTypeObj,
-      programCourses: programCourses.filter((pc) => pc.id !== undefined && selectedProgramCourses.includes(pc.id)),
-      shifts: shifts.filter((s) => s.id !== undefined && selectedShifts.includes(s.id)),
-      subjectTypes: subjectTypes.filter((st) => st.id !== undefined && selectedSubjectCategories.includes(st.id)),
+      academicYear: availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)!,
+      class: classes.find((c) => c.id?.toString() === semester)!,
+      examType: examTypes.find((et) => et.id?.toString() === examType)!,
+      examProgramCourses: programCourses
+        .filter((pc) => selectedProgramCourses.includes(pc.id!))
+        .map(
+          (pc): ExamProgramCourseDto => ({
+            examId: 0,
+            programCourse: pc,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            id: 0,
+          }),
+        ),
+      examShifts: shifts
+        .filter((s) => selectedShifts.includes(s.id!))
+        .map((sh) => ({
+          examId: 0,
+          shift: sh,
+        })),
+      // subject: subjects.find(s => s.id === selectedSubjectId)!,
+      // examComponent: examComponents.find(ec => ec.id === selectedExamComponent!) || null,
+      examSubjectTypes: subjectTypes
+        .filter((st) => selectedSubjectCategories.includes(st.id!))
+        .map((st) => ({
+          examId: 0,
+          subjectType: st,
+        })),
       gender: gender,
-      subjects: examSubjects,
+      examSubjects: examSubjects.map((es) => ({
+        ...es,
+        subject: subjects.find((ele) => ele.id === es.subjectId)!,
+      })),
       locations,
       createdAt: new Date(),
       updatedAt: new Date(),

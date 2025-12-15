@@ -110,6 +110,25 @@ export async function findRoomById(id: number) {
   return room ?? null;
 }
 
+export async function findById(id: number) {
+  const [room] = await db.select().from(roomModel).where(eq(roomModel.id, id));
+  return await modelToDto(room);
+}
+
+export async function modelToDto(model: RoomT | null): Promise<RoomDto | null> {
+  if (!model) return null;
+
+  const [foundFloor] = await db
+    .select()
+    .from(floorModel)
+    .where(eq(floorModel.id, model.floorId!));
+
+  return {
+    ...model,
+    floor: foundFloor,
+  };
+}
+
 export async function updateRoom(
   id: number,
   data: Partial<RoomT> | Partial<Room>,

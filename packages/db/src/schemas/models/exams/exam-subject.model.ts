@@ -12,10 +12,15 @@ export const examSubjectModel = pgTable("exam_subjects", {
     subjectId: integer("subject_id_fk")
         .references(() => subjectModel.id)
         .notNull(),
-    startTime: timestamp("start_time").notNull(),
-    endTime: timestamp("end_time").notNull(),
-    createdAt: timestamp().defaultNow(),
-    updatedAt: timestamp().defaultNow().$onUpdate(() => new Date()),
+    startTime: timestamp("start_time", { withTimezone: true }).notNull(),
+    endTime: timestamp("end_time", { withTimezone: true }).notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+        .defaultNow(),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+        .defaultNow()
+        .$onUpdate(() => new Date()),
 });
 
 export const createExamSubjectSchema = createInsertSchema(examSubjectModel);
