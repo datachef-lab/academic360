@@ -1,0 +1,232 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Exam Schedule & Admit Card</title>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: #f8fafc;
+      margin: 0;
+      padding: 20px 0;
+      color: #1f2937;
+    }
+
+    .email-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .email-header {
+      background: linear-gradient(135deg, #2563eb, #1e40af);
+      color: #ffffff;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .email-header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .email-content {
+      padding: 32px;
+    }
+
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .intro-text {
+      font-size: 15px;
+      color: #374151;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .info-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .info-box p {
+      margin: 6px 0;
+      font-size: 14px;
+    }
+
+    .info-box strong {
+      color: #1e40af;
+    }
+
+    .admit-note {
+      background: #ecfdf5;
+      border: 1px solid #10b981;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      color: #065f46;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #1e40af;
+      color: #ffffff;
+      padding: 10px;
+      text-align: left;
+    }
+
+    td {
+      border: 1px solid #e5e7eb;
+      padding: 10px;
+      color: #1f2937;
+    }
+
+    .important {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 24px;
+      color: #991b1b;
+      font-size: 14px;
+    }
+
+    .email-footer {
+      padding: 24px;
+      background: #f8fafc;
+      border-top: 1px solid #e5e7eb;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .signature {
+      margin-top: 16px;
+      color: #374151;
+    }
+
+    @media (max-width: 600px) {
+      .email-content {
+        padding: 20px;
+      }
+      table {
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="email-container">
+
+    <!-- Header -->
+    <div class="email-header">
+      <h1>📘 Examination Schedule Notification</h1>
+    </div>
+
+    <!-- Content -->
+    <div class="email-content">
+
+      <div class="greeting">
+        Dear <%= content.dtoTemplateData.name %>,
+      </div>
+
+      <div class="intro-text">
+        This is to inform you that your <strong><%= content.dtoTemplateData.examType %></strong> examination for
+        <strong><%= content.dtoTemplateData.programCourseName %></strong> (<%= content.dtoTemplateData.semester %>) has been scheduled.
+      </div>
+
+      <!-- Student Info -->
+      <div class="info-box">
+        <p><strong>Session:</strong> <%= content.dtoTemplateData.session %></p>
+        <p><strong>CU Roll Number:</strong> <%= content.dtoTemplateData.cuRollNumber || "—" %></p>
+        <p><strong>CU Registration Number:</strong> <%= content.dtoTemplateData.cuRegistrationNumber || "—" %></p>
+        <p><strong>Shift:</strong> <%= content.dtoTemplateData.shiftName %></p>
+        <p><strong>UID:</strong> <%= content.dtoTemplateData.uid %></p>
+      </div>
+
+      <!-- Admit Card Info -->
+      <div class="admit-note">
+        📎 <strong>Please find your Admit Card attached with this email.</strong><br />
+        You are required to carry a printed copy of the admit card to the examination hall.
+      </div>
+
+      <!-- Exam Table -->
+      <div class="intro-text" style="margin-bottom: 8px;">
+        <strong>Examination Schedule:</strong>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Subject</th>
+            <th>Paper Code</th>
+            <th>Room</th>
+            <th>Seat No</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% content.dtoTemplateData.examRows.forEach(function(row) { %>
+            <tr>
+              <td><%= row.date %></td>
+              <td><%= row.time %></td>
+              <td><%= row.subjectName %></td>
+              <td><%= row.subjectCode %></td>
+              <td><%= row.room %></td>
+              <td><%= row.seatNo %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+      <!-- Important -->
+      <div class="important">
+        <strong>Important Instructions:</strong>
+        <ul style="margin: 8px 0 0 18px;">
+          <li>Reporting time is at least 30 minutes before the exam.</li>
+          <li>Mobile phones and electronic gadgets are strictly prohibited.</li>
+          <li>Carry your College ID card along with the Admit Card.</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="email-footer">
+      <div>
+        Please do not reply to this email. This mailbox is not monitored.
+      </div>
+
+      <div class="signature">
+        <strong>Controller of Examinations</strong><br />
+        The Bhawanipur Education Society College
+      </div>
+
+      <div style="margin-top: 12px; font-size: 12px;">
+        © <%= new Date().getFullYear() %> The Bhawanipur Education Society College
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

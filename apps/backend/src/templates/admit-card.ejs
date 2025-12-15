@@ -105,7 +105,9 @@
     <header style="height: 10%">
       <nav
         style="
-          padding: 24px;
+          padding: 24px 0;
+          margin: 0 24px;
+
           display: flex;
           gap: 10px;
           justify-content: between;
@@ -113,7 +115,7 @@
         "
       >
         <!-- Left Section: College Logo -->
-        <p style="padding: 0; text-indent: 0pt; text-align: left; width: 10%">
+        <p style="padding: 0; text-indent: 0pt; text-align: left; width: 15%">
           <span
             ><img
               height="80"
@@ -125,7 +127,7 @@
         <!-- Middle Section: College Name & Address -->
         <div
           style="
-            width: 80%;
+            width: 70%;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -135,7 +137,7 @@
           <h1 style="padding-top: 7pt; text-indent: 0pt; text-align: center">
             The Bhawanipur Education Society College
           </h1>
-          <p
+          <div
             class="s1"
             style="
               padding-top: 4pt;
@@ -145,13 +147,13 @@
               text-align: center;
             "
           >
-            A MINORITY RUN COLLEGE. AFFILIATED TO UNIVERSITY OF CALCUTTA
-            RECOGNISED UNDER SECTION 2(F) &amp; 12 (B) OF THE UGC ACT, 1956
-          </p>
+            <p style="margin-bottom: 4px;">A MINORITY RUN COLLEGE. AFFILIATED TO UNIVERSITY OF CALCUTTA</p>
+            <p>RECOGNISED UNDER SECTION 2(F) &amp; 12 (B) OF THE UGC ACT, 1956</p>
+          </div>
           <p style="text-indent: 0pt; text-align: left"><br /></p>
         </div>
         <!-- Right Section: Qrcode containing student's uid -->
-        <p style="text-indent: 0pt; text-align: left; width: 10%">
+        <p style="text-indent: 0pt; text-align: right; width: 15%">
           <span
             ><img
               height="80"
@@ -173,7 +175,7 @@
     >
       <!-- Heading -->
       <section>
-        <h2 style="padding-top: 5pt; text-indent: 0pt; text-align: center">
+        <h2 style="padding-top: 24pxt; text-indent: 0pt; text-align: center">
           ADMIT CARD
         </h2>
         <h2
@@ -259,9 +261,10 @@
               rowspan="5"
             >
               <p style="text-indent: 0pt; text-align: left"><br /></p>
-              <p style="padding-left: 11pt; text-indent: 0pt; text-align: left">
+              <p style="padding-left: 11px; text-indent: 0pt; text-align: left; padding-top:6px;">
                 <span
                   ><img
+                  style="border: 1px solid;"
                     width="153"
                     height="152"
                     alt="image"
@@ -287,13 +290,13 @@
               <p
                 class="s2"
                 style="
-                  padding-top: 8pt;
+                  padding-top: 12px;
                   padding-left: 5pt;
                   text-indent: 0pt;
                   text-align: left;
                 "
               >
-                CU Roll No.
+                CU ROLL NO.
               </p>
             </td>
             <td
@@ -338,13 +341,13 @@
               <p
                 class="s2"
                 style="
-                  padding-top: 8pt;
+                  padding-top: 12px;
                   padding-left: 5pt;
                   text-indent: 0pt;
                   text-align: left;
                 "
               >
-                CU REG No.
+                CU REG NO.
               </p>
             </td>
             <td
@@ -363,7 +366,7 @@
               <p
                 class="s2"
                 style="
-                  padding-top: 8pt;
+                  padding-top: 12px;
                   padding-left: 5pt;
                   text-indent: 0pt;
                   text-align: left;
@@ -605,7 +608,7 @@
               <p style="text-indent: 0pt; text-align: left"><br /></p>
               <p
                 class="s2"
-                style="padding-left: 15pt; text-indent: -1pt; text-align: left"
+                style="text-indent: -1pt; text-align: center"
               >
                 DATE, TIME OF EXAMINATION
               </p>
@@ -626,7 +629,7 @@
               <p style="text-indent: 0pt; text-align: left"><br /></p>
               <p
                 class="s2"
-                style="padding-left: 15pt; text-indent: 9pt; text-align: left"
+                style="text-indent: 9pt; text-align: center"
               >
                 VENUE OF EXAMINATION
               </p>
@@ -671,18 +674,22 @@
                 border-right-width: 1pt;
               "
             >
-              <p style="text-indent: 0pt; text-align: left"><br /></p>
-              <p
-                class="s2"
+            <div
                 style="
-                  padding-left: 14px;
-                  padding-right: 32pt;
-                  text-indent: 12pt;
-                  text-align: left;
+                  
+                  height: 100%;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: center;
+                  align-items: center;
+                  padding-top: 18px;
+                  padding-right: 2px;
                 "
               >
-                SIGNATURE OF THE INVIGILATOR WITH DATE
-              </p>
+                <p class="s2" style="text-indent: 0; text-align: center">
+                  SIGNATURE OF THE INVIGILATOR WITH DATE
+                </p>
+              </div>
             </td>
           </tr>
           <!-- Dynamic entries to be added -->
@@ -701,24 +708,26 @@
                 border-right-width: 1pt;
               "
             >
-              <p
-                class="s3"
-                style="
-                  padding-top: 5px;
-                  padding-left: 4px;
-                  text-indent: 0pt;
-                  text-align: left;
-                "
-              >
-              <%= row.date %>
-              </p>
-              <p style="text-indent: 0pt; text-align: left"><br /></p>
-              <p
-                class="s3"
-                style="padding-left: 4px; text-indent: 0pt; text-align: left"
-              >
-              <%= row.time %>
-              </p>
+            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; gap: 4px;  padding: 6px;">
+                <p
+                  class="s3"
+                  style="
+                    padding-top: 5px;
+                    
+                    text-indent: 0pt;
+                    text-align: left;
+                  "
+                >
+                <%= row.date %>
+                </p>
+                <p
+                  class="s3"
+                  style=" text-indent: 0pt; text-align: left; font-size: 11px;"
+                >
+                <%= row.time %>
+                </p>
+
+            </div>
             </td>
             <td
               style="
@@ -731,21 +740,27 @@
                 border-bottom-width: 1pt;
                 border-right-style: solid;
                 border-right-width: 1pt;
-                padding: 4px;
+                padding: 8px;
               "
             >
-              <div style="display: flex; width: 100%; justify-content: center">
+            <div
+                style="
+                  display: flex;
+                  gap: 2px;
+                  width: 100%;
+                  justify-content: center;
+                "
+              >
                 <p
                   class="s3"
                   style="
-                    padding-right: 8pt;
                     text-indent: 2pt;
                     line-height: 153%;
-
-                    text-align: left;
+                    width: 55%;
+                    text-align: right;
                   "
                 >
-                  Room&nbsp; &nbsp;&nbsp; :
+                  Room:
                 </p>
                 <p
                   class="s3"
@@ -753,6 +768,7 @@
                     padding-right: 8pt;
                     text-indent: 2pt;
                     line-height: 153%;
+                    width: 45%;
 
                     text-align: left;
                   "
@@ -760,17 +776,25 @@
                 <%= row.room %>
                 </p>
               </div>
-              <div style="display: flex; width: 100%; justify-content: center">
+              <div
+                style="
+                  display: flex;
+                  gap: 2px;
+                  width: 100%;
+                  justify-content: center;
+                "
+              >
                 <p
                   class="s3"
                   style="
-                    padding-right: 8pt;
+
                     text-indent: 2pt;
                     line-height: 153%;
-                    text-align: left;
+                    width: 55%;
+                    text-align: right;
                   "
                 >
-                  Seat No.:
+                  Seat &nbsp;&nbsp;:
                 </p>
                 <p
                   class="s3"
@@ -778,6 +802,7 @@
                     padding-right: 8pt;
                     text-indent: 2pt;
                     line-height: 153%;
+                    width: 45%;
 
                     text-align: left;
                   "
@@ -802,13 +827,13 @@
             >
               <p
                 class="s4"
-                style="text-align: left; padding-left: 12px;"
+                style="text-align: center; "
               >
               <%= row.subjectName %>
               </p>
               <p
                 class="s4"
-                style="text-align: left; padding-left: 12px;"
+                style="text-align: center;  padding-top: 2px;"
               >
                 ( <%= row.subjectCode %> )
               </p>

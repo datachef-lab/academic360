@@ -8,7 +8,7 @@ import * as shiftService from "@/features/academics/services/shift.service";
 import * as roomServices from "./room.service";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import {
   ExamDto,
   ExamProgramCourseDto,
@@ -36,6 +36,8 @@ import {
   examSubjectTypeModel,
   ExamT,
   examTypeModel,
+  floorModel,
+  notificationMasterModel,
   paperModel,
   programCourseModel,
   promotionModel,
@@ -57,6 +59,7 @@ import { PaginatedResponse } from "@/utils/PaginatedResponse";
 import { socketService } from "@/services/socketService";
 import { PaperDto } from "@repo/db/dtos";
 import { io } from "@/app";
+import { enqueueNotification } from "@/services/notificationClient";
 
 export interface CountStudentsByPapersParams {
   classId: number;
@@ -1236,6 +1239,201 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
   };
 }
 
+// export async function downloadAdmitCardsAsZip(
+//     examId: number,
+//     userId: number,
+//     uploadSessionId?: string,
+// ): Promise<{
+//     zipBuffer: Buffer;
+//     admitCardCount: number;
+// }> {
+//     console.log("examId:", examId);
+//     const result = await db
+//         .select({
+//             semester: classModel.name,
+//             examType: examTypeModel.name,
+//             session: sessionModel.name,
+//             name: userModel.name,
+//             cuRollNumber: studentModel.rollNumber,
+//             cuRegistrationNumber: studentModel.registrationNumber,
+//             uid: studentModel.uid,
+//             phone: userModel.phone,
+//             shiftName: shiftModel.name,
+//             examStartDate: examSubjectModel.startTime,
+//             examEndDate: examSubjectModel.endTime,
+//             seatNo: examCandidateModel.seatNumber,
+//             roomName: roomModel.name,
+//             subjectName: paperModel.name,
+//             subjectCode: paperModel.code,
+//             programCourse: programCourseModel.name,
+//         })
+//         .from(examCandidateModel)
+//         .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+//         .leftJoin(
+//             examSubjectModel,
+//             eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+//         )
+//         .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
+//         .leftJoin(
+//             examRoomModel,
+//             eq(examRoomModel.id, examCandidateModel.examRoomId),
+//         )
+//         .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+//         .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+//         .leftJoin(
+//             promotionModel,
+//             eq(promotionModel.id, examCandidateModel.promotionId),
+//         )
+//         .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+//         .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+//         .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+//         .leftJoin(
+//             programCourseModel,
+//             eq(programCourseModel.id, promotionModel.programCourseId),
+//         )
+//         .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+//         .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+//         .where(eq(examCandidateModel.examId, examId));
+
+//     const zip = new JSZip();
+//     const uidMap = new Map<string, typeof result>();
+
+//     for (const row of result) {
+//         if (!row.uid) continue;
+//         if (!uidMap.has(row.uid)) {
+//             uidMap.set(row.uid, []);
+//         }
+//         uidMap.get(row.uid)!.push(row);
+//     }
+
+//     const totalUniqueUids = uidMap.size;
+
+//     if (io && userId) {
+//         console.log("[CU-REG-DOWNLOAD] Emitting initial progress to user:", userId);
+//         io.to(`user:${userId}`).emit("download_progress", {
+//             id: uploadSessionId || `download-${Date.now()}`,
+//             userId: userId,
+//             type: "download_progress",
+//             message: "Starting document download...",
+//             progress: 0,
+//             status: "started",
+//             createdAt: new Date(),
+//             sessionId: uploadSessionId,
+//             stage: "listing",
+//         });
+//         console.log(
+//             "[EXAM_ADMIT_CARDDOWNLOAD] Initial progress emitted successfully",
+//         );
+//     } else {
+//         console.log(
+//             "[EXAM_ADMIT_CARD-DOWNLOAD] Skipping initial progress emit - io:",
+//             !!io,
+//             "userId:",
+//             userId,
+//         );
+//     }
+
+//     const progressUpdate = socketService.createExportProgressUpdate(
+//         userId.toString(),
+//         "Starting export process...",
+//         0,
+//         "started",
+//     );
+
+//     const doneUids = new Set<string>();
+//     console.log("result.length:", result.length);
+//     let i = 0;
+
+//     // Emit progress for PDF listing
+//     if (io && userId) {
+//         io.to(`user:${userId}`).emit("download_progress", {
+//             id: uploadSessionId || `download-${Date.now()}`,
+//             userId: userId,
+//             type: "download_progress",
+//             message: "Listing PDF files...",
+//             progress: 0,
+//             status: "in_progress",
+//             createdAt: new Date(),
+//             sessionId: uploadSessionId,
+//             stage: "downloading_pdfs",
+//         });
+//     }
+
+//     let processed = 0;
+//     let pdfCount = 0;
+//     for (const [uid, studentRows] of uidMap.entries()) {
+//         processed++;
+
+//         const progress = Math.round((processed / totalUniqueUids) * 100);
+
+//         console.log("processing:", uid);
+
+//         const progressUpdate = socketService.createExportProgressUpdate(
+//             userId.toString(),
+//             "Download in process...",
+//             progress,
+//             "in_progress",
+//         );
+
+//         socketService.sendProgressUpdate(userId.toString(), progressUpdate);
+
+//         // Emit progress for current file
+//         if (io && userId) {
+//             // const progress = Number(((++i * 100) / totalUniqueUids).toFixed(2));
+//             io.to(`user:${userId}`).emit("download_progress", {
+//                 id: uploadSessionId || `download-${Date.now()}`,
+//                 userId: userId,
+//                 type: "download_progress",
+//                 message: `Downloading PDF ${++pdfCount}/${totalUniqueUids}`,
+//                 progress,
+//                 status: "in_progress",
+//                 createdAt: new Date(),
+//                 sessionId: uploadSessionId,
+//                 stage: "downloading_pdfs",
+//                 currentFile: `${pdfCount}/${totalUniqueUids}`,
+//                 pdfCount: pdfCount, // Show current count being processed
+//                 pdfTotal: totalUniqueUids, // Show total count that will be downloaded
+//             });
+//         }
+
+//         const studentRows = result.filter((r) => r.uid === uid);
+
+//         const pdfBuffer = await pdfGenerationService.generateExamAdmitCardPdfBuffer(
+//             {
+//                 semester: studentRows[0]!.semester!.split(" ")[1],
+//                 examType: studentRows[0]!.examType ?? "",
+//                 session: studentRows[0]!.session ?? "",
+//                 name: studentRows[0]!.name!,
+//                 cuRollNumber: studentRows[0]!.cuRollNumber,
+//                 cuRegistrationNumber: studentRows[0]!.cuRegistrationNumber,
+//                 uid: studentRows[0]!.uid!,
+//                 phone: studentRows[0]!.phone!,
+//                 programCourseName: studentRows[0]!.programCourse ?? "",
+//                 shiftName: studentRows[0]!.shiftName ?? "",
+//                 qrCodeDataUrl: null,
+
+//                 examRows: studentRows.map((r) => ({
+//                     subjectName: r.subjectName!,
+//                     subjectCode: r.subjectCode!,
+//                     date: formatExamDateFromTimestamp(r.examStartDate!),
+//                     time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
+//                     seatNo: r.seatNo!,
+//                     room: r.roomName!,
+//                 })),
+//             },
+//         );
+
+//         zip.file(`${uid}_admit_card.pdf`, pdfBuffer);
+//     }
+
+//     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+//     return {
+//         zipBuffer,
+//         admitCardCount: totalUniqueUids,
+//     };
+// }
+
 export async function downloadAdmitCardsAsZip(
   examId: number,
   userId: number,
@@ -1245,6 +1443,7 @@ export async function downloadAdmitCardsAsZip(
   admitCardCount: number;
 }> {
   console.log("examId:", examId);
+
   const result = await db
     .select({
       semester: classModel.name,
@@ -1293,148 +1492,120 @@ export async function downloadAdmitCardsAsZip(
     .where(eq(examCandidateModel.examId, examId));
 
   const zip = new JSZip();
-  const uidMap = new Map<string, typeof result>();
 
+  // ---------- Group by UID ----------
+  const uidMap = new Map<string, typeof result>();
   for (const row of result) {
     if (!row.uid) continue;
-    if (!uidMap.has(row.uid)) {
-      uidMap.set(row.uid, []);
-    }
+    if (!uidMap.has(row.uid)) uidMap.set(row.uid, []);
     uidMap.get(row.uid)!.push(row);
   }
 
-  const totalUniqueUids = uidMap.size;
+  const totalUids = uidMap.size;
+  const uidEntries = Array.from(uidMap.entries());
 
+  // ---------- Initial socket emit ----------
   if (io && userId) {
-    console.log("[CU-REG-DOWNLOAD] Emitting initial progress to user:", userId);
     io.to(`user:${userId}`).emit("download_progress", {
       id: uploadSessionId || `download-${Date.now()}`,
-      userId: userId,
+      userId,
       type: "download_progress",
-      message: "Starting document download...",
+      message: "Generating admit cards...",
       progress: 0,
       status: "started",
       createdAt: new Date(),
       sessionId: uploadSessionId,
-      stage: "listing",
-    });
-    console.log(
-      "[EXAM_ADMIT_CARDDOWNLOAD] Initial progress emitted successfully",
-    );
-  } else {
-    console.log(
-      "[EXAM_ADMIT_CARD-DOWNLOAD] Skipping initial progress emit - io:",
-      !!io,
-      "userId:",
-      userId,
-    );
-  }
-
-  const progressUpdate = socketService.createExportProgressUpdate(
-    userId.toString(),
-    "Starting export process...",
-    0,
-    "started",
-  );
-
-  const doneUids = new Set<string>();
-  console.log("result.length:", result.length);
-  let i = 0;
-
-  // Emit progress for PDF listing
-  if (io && userId) {
-    io.to(`user:${userId}`).emit("download_progress", {
-      id: uploadSessionId || `download-${Date.now()}`,
-      userId: userId,
-      type: "download_progress",
-      message: "Listing PDF files...",
-      progress: 0,
-      status: "in_progress",
-      createdAt: new Date(),
-      sessionId: uploadSessionId,
-      stage: "downloading_pdfs",
+      stage: "pdf_generation",
     });
   }
 
+  // ---------- PARALLEL PDF GENERATION ----------
+  const CONCURRENCY = 4; // 🔥 tune this (3–6 ideal for EC2)
   let processed = 0;
-  let pdfCount = 0;
-  for (const [uid, studentRows] of uidMap.entries()) {
-    processed++;
 
-    const progress = Math.round((processed / totalUniqueUids) * 100);
+  for (let i = 0; i < uidEntries.length; i += CONCURRENCY) {
+    const batch = uidEntries.slice(i, i + CONCURRENCY);
 
-    console.log("processing:", uid);
+    await Promise.all(
+      batch.map(async ([uid, studentRows]) => {
+        const pdfBuffer =
+          await pdfGenerationService.generateExamAdmitCardPdfBuffer({
+            semester: studentRows[0]?.semester ?? "",
+            examType: studentRows[0]?.examType ?? "",
+            session: studentRows[0]?.session ?? "",
+            name: studentRows[0]?.name ?? "",
+            cuRollNumber: studentRows[0]?.cuRollNumber,
+            cuRegistrationNumber: studentRows[0]?.cuRegistrationNumber,
+            uid: studentRows[0]?.uid ?? "",
+            phone: studentRows[0]?.phone ?? "",
+            programCourseName: studentRows[0]?.programCourse ?? "",
+            shiftName: studentRows[0]?.shiftName ?? "",
+            qrCodeDataUrl: null,
 
-    const progressUpdate = socketService.createExportProgressUpdate(
-      userId.toString(),
-      "Download in process...",
-      progress,
-      "in_progress",
+            examRows: studentRows.map((r) => ({
+              subjectName: r.subjectName!,
+              subjectCode: r.subjectCode!,
+              date: formatExamDateFromTimestamp(r.examStartDate!),
+              time: formatExamTimeFromTimestamps(
+                r.examStartDate!,
+                r.examEndDate!,
+              ),
+              seatNo: r.seatNo!,
+              room: r.roomName!,
+            })),
+          });
+
+        zip.file(`${uid}_admit_card.pdf`, pdfBuffer);
+      }),
     );
 
-    socketService.sendProgressUpdate(userId.toString(), progressUpdate);
+    processed += batch.length;
+    const progress = Math.round((processed / totalUids) * 100);
 
-    // Emit progress for current file
+    // ---------- Progress emit (once per batch) ----------
     if (io && userId) {
-      // const progress = Number(((++i * 100) / totalUniqueUids).toFixed(2));
       io.to(`user:${userId}`).emit("download_progress", {
         id: uploadSessionId || `download-${Date.now()}`,
-        userId: userId,
+        userId,
         type: "download_progress",
-        message: `Downloading PDF ${++pdfCount}/${totalUniqueUids}`,
+        message: `Generated ${processed}/${totalUids} admit cards`,
         progress,
         status: "in_progress",
         createdAt: new Date(),
         sessionId: uploadSessionId,
-        stage: "downloading_pdfs",
-        currentFile: `${pdfCount}/${totalUniqueUids}`,
-        pdfCount: pdfCount, // Show current count being processed
-        pdfTotal: totalUniqueUids, // Show total count that will be downloaded
+        stage: "pdf_generation",
+        pdfCount: processed,
+        pdfTotal: totalUids,
       });
     }
+  }
 
-    const studentRows = result.filter((r) => r.uid === uid);
-
-    const pdfBuffer = await pdfGenerationService.generateExamAdmitCardPdfBuffer(
-      {
-        semester: studentRows[0]!.semester!.split(" ")[1],
-        examType: studentRows[0]!.examType ?? "",
-        session: studentRows[0]!.session ?? "",
-        name: studentRows[0]!.name!,
-        cuRollNumber: studentRows[0]!.cuRollNumber,
-        cuRegistrationNumber: studentRows[0]!.cuRegistrationNumber,
-        uid: studentRows[0]!.uid!,
-        phone: studentRows[0]!.phone!,
-        programCourseName: studentRows[0]!.programCourse ?? "",
-        shiftName: studentRows[0]!.shiftName ?? "",
-        qrCodeDataUrl: null,
-
-        examRows: studentRows.map((r) => ({
-          subjectName: r.subjectName!,
-          subjectCode: r.subjectCode!,
-          date: formatExamDateFromTimestamp(r.examStartDate!),
-          time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
-          seatNo: r.seatNo!,
-          room: r.roomName!,
-        })),
-      },
-    );
-
-    zip.file(`${uid}_admit_card.pdf`, pdfBuffer);
+  // ---------- ZIP generation ----------
+  if (io && userId) {
+    io.to(`user:${userId}`).emit("download_progress", {
+      id: uploadSessionId || `download-${Date.now()}`,
+      userId,
+      type: "download_progress",
+      message: "Creating ZIP file...",
+      progress: 100,
+      status: "finalizing",
+      createdAt: new Date(),
+      sessionId: uploadSessionId,
+      stage: "zipping",
+    });
   }
 
   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
   return {
     zipBuffer,
-    admitCardCount: totalUniqueUids,
+    admitCardCount: totalUids,
   };
 }
 
 export async function downloadExamCandidatesbyExamId(examId: number) {
   const result = await db
     .select({
-      examId: examModel.id,
       examType: examTypeModel.name,
       academicYear: academicYearModel.year,
       session: sessionModel.name,
@@ -1443,7 +1614,20 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
       gender: examModel.gender,
       examCreatedAt: examModel.createdAt,
       examUpdatedAt: examModel.updatedAt,
-      studentId: studentModel.id,
+
+      floor: floorModel.name,
+      room: roomModel.name,
+
+      startDate: sql`${examSubjectModel.startTime}::date`.as("startDate"),
+      startTime: sql`
+    TO_CHAR(${examSubjectModel.startTime}, 'HH12:MI AM')
+  `.as("startTime"),
+
+      endDate: sql`${examSubjectModel.endTime}::date`.as("endDate"),
+      endTime: sql`
+    TO_CHAR(${examSubjectModel.endTime}, 'HH12:MI AM')
+  `.as("endTime"),
+
       name: userModel.name,
       uid: studentModel.uid,
       email: userModel.email,
@@ -1459,6 +1643,13 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
       seatNumber: examCandidateModel.seatNumber,
     })
     .from(examCandidateModel)
+
+    .leftJoin(
+      examRoomModel,
+      eq(examRoomModel.id, examCandidateModel.examRoomId),
+    )
+    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
 
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
 
@@ -1823,5 +2014,332 @@ export async function updateExamSubject(
   return {
     subject,
     ...updatedExamSubject,
+  };
+}
+
+export async function fetchExamCandidatesByExamId(examId: number) {
+  const result = await db
+    .select({
+      uid: studentModel.uid,
+      userId: studentModel.userId,
+      userName: userModel.name,
+      userEmail: userModel.email,
+      semester: classModel.name,
+      examType: examTypeModel.name,
+      session: sessionModel.name,
+      shiftName: shiftModel.name,
+      phone: userModel.phone,
+      cuRollNumber: studentModel.rollNumber,
+      cuRegistrationNumber: studentModel.registrationNumber,
+      subjectName: paperModel.name,
+      subjectCode: paperModel.code,
+      examStartDate: examSubjectModel.startTime,
+      examEndDate: examSubjectModel.endTime,
+      seatNo: examCandidateModel.seatNumber,
+      roomName: roomModel.name,
+      programCourse: programCourseModel.name,
+    })
+    .from(examCandidateModel)
+    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .leftJoin(
+      examSubjectModel,
+      eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+    )
+    .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
+    .leftJoin(
+      examRoomModel,
+      eq(examRoomModel.id, examCandidateModel.examRoomId),
+    )
+    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+    .leftJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+    .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+    .leftJoin(
+      programCourseModel,
+      eq(programCourseModel.id, promotionModel.programCourseId),
+    )
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .where(eq(examCandidateModel.examId, examId));
+
+  return result;
+}
+
+/**
+ * Generates PDF buffers for each distinct UID
+ */
+type ExamCandidateRow = Awaited<
+  ReturnType<typeof fetchExamCandidatesByExamId>
+>[number];
+
+export async function generateAdmitCardBuffers(
+  examCandidates: ExamCandidateRow[],
+) {
+  const uidMap = new Map<string, ExamCandidateRow[]>();
+
+  for (const row of examCandidates) {
+    if (!row.uid) continue;
+    if (!uidMap.has(row.uid)) uidMap.set(row.uid, []);
+    uidMap.get(row.uid)!.push(row);
+  }
+
+  const pdfBuffers: AdmitCardEmailPayload[] = [];
+
+  for (const [uid, rows] of uidMap.entries()) {
+    const pdfBuffer = await pdfGenerationService.generateExamAdmitCardPdfBuffer(
+      {
+        semester: rows[0]?.semester ?? "",
+        examType: rows[0]?.examType ?? "",
+        session: rows[0]?.session ?? "",
+        name: rows[0]?.userName ?? "",
+        uid: uid,
+        phone: rows[0]?.phone ?? "",
+        cuRollNumber: rows[0]?.cuRollNumber,
+        cuRegistrationNumber: rows[0]?.cuRegistrationNumber,
+        programCourseName: rows[0]?.programCourse ?? "",
+        shiftName: rows[0]?.shiftName ?? "",
+        qrCodeDataUrl: null,
+        examRows: rows.map((r) => ({
+          subjectName: r.subjectName!,
+          subjectCode: r.subjectCode!,
+          date: formatExamDateFromTimestamp(r.examStartDate!),
+          time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
+          seatNo: r.seatNo!,
+          room: r.roomName!,
+        })),
+      },
+    );
+
+    pdfBuffers.push({
+      uid,
+      buffer: pdfBuffer,
+      programCourseName: rows[0].programCourse!,
+      semester: rows[0].semester!,
+      userId: rows[0]?.userId ?? null,
+      userEmail: rows[0]?.userEmail ?? null,
+      userName: rows[0]?.userName ?? null,
+
+      session: rows[0]?.session ?? "",
+      cuRollNumber: rows[0]?.cuRollNumber ?? null,
+      cuRegistrationNumber: rows[0]?.cuRegistrationNumber ?? null,
+      shiftName: rows[0]?.shiftName ?? "",
+
+      examRows: rows.map((r) => ({
+        subjectName: r.subjectName!,
+        subjectCode: r.subjectCode!,
+        date: formatExamDateFromTimestamp(r.examStartDate!),
+        time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
+        seatNo: r.seatNo!,
+        room: r.roomName!,
+      })),
+    });
+  }
+
+  return pdfBuffers;
+}
+
+// export async function sendExamAdmitCardEmails(examId: number) {
+//     const candidates = await fetchExamCandidatesByExamId(examId);
+//     const pdfBuffers = await generateAdmitCardBuffers(candidates);
+
+//     const [notificationMaster] = await db
+//         .select()
+//         .from(notificationMasterModel)
+//         .where(
+//             and(
+//                 ilike(notificationMasterModel.name, "Exam Admit Card Notification"),
+//                 ilike(notificationMasterModel.template, "exam-admit-card-notification"),
+//                 ilike(notificationMasterModel.variant, "EMAIL")
+//             )
+//         );
+
+//     if (!notificationMaster) throw new Error("Exam Admit Card notification master not found");
+
+//     for (const candidate of pdfBuffers) {
+//         if (!candidate.userId) continue; // safety
+//         await enqueueNotification({
+//             userId: candidate.userId,
+//             variant: "EMAIL",
+//             type: "EXAM",
+//             message: "Your exam admit card is attached.",
+//             notificationMasterId: notificationMaster.id,
+//             emailAttachments: [
+//                 {
+//                     fileName: `${candidate.uid}_Exam_${examId}_Admit_Card.pdf`,
+//                     buffer: candidate.buffer,
+//                 },
+//             ],
+//             notificationEvent: {
+//                 templateData: {
+//                     name: candidate.userName ?? "",
+//                 },
+//             },
+//         });
+//     }
+
+//     return { success: true, sentCount: pdfBuffers.length };
+// }
+
+export type AdmitCardEmailPayload = {
+  uid: string;
+  buffer: Buffer;
+  programCourseName: string;
+  semester: string;
+  userId: number | null;
+  userEmail: string | null;
+  userName: string | null;
+
+  session: string;
+  cuRollNumber: string | null;
+  cuRegistrationNumber: string | null;
+  shiftName: string;
+
+  examRows: {
+    date: string;
+    time: string;
+    subjectName: string;
+    subjectCode: string;
+    room: string;
+    seatNo: string;
+  }[];
+};
+
+export async function sendExamAdmitCardEmails(
+  examId: number,
+  userId: number,
+  uploadSessionId?: string,
+) {
+  const candidates = await fetchExamCandidatesByExamId(examId);
+  const pdfBuffers = await generateAdmitCardBuffers(candidates);
+
+  const total = pdfBuffers.length;
+  let sent = 0;
+  let failed = 0;
+
+  const [notificationMaster] = await db
+    .select()
+    .from(notificationMasterModel)
+    .where(
+      and(
+        ilike(notificationMasterModel.name, "Exam Admit Card Notification"),
+        eq(notificationMasterModel.template, "exam-admit-card-notification"),
+        eq(notificationMasterModel.variant, "EMAIL"),
+      ),
+    );
+
+  if (!notificationMaster)
+    throw new Error("Exam Admit Card notification master not found");
+
+  const sessionId = uploadSessionId || `email-${Date.now()}`;
+
+  // ---------- Initial emit ----------
+  if (io && userId) {
+    io.to(`user:${userId}`).emit("email_progress", {
+      id: sessionId,
+      userId,
+      type: "email_progress",
+      message: "Sending admit cards via email...",
+      progress: 0,
+      status: "started",
+      stage: "email_sending",
+      total,
+      sent: 0,
+      failed: 0,
+      createdAt: new Date(),
+    });
+  }
+
+  const CONCURRENCY = 3; // ⚠️ emails are heavier than PDFs
+
+  for (let i = 0; i < pdfBuffers.length; i += CONCURRENCY) {
+    const batch = pdfBuffers.slice(i, i + CONCURRENCY);
+
+    await Promise.all(
+      batch.map(async (candidate) => {
+        if (!candidate.userId) return;
+
+        try {
+          await enqueueNotification({
+            userId: candidate.userId,
+            variant: "EMAIL",
+            type: "EXAM",
+            message: "Your exam admit card is attached.",
+            notificationMasterId: notificationMaster.id,
+            emailAttachments: [
+              {
+                fileName: `${candidate.uid}_Exam_${examId}_Admit_Card.pdf`,
+                contentBase64: candidate.buffer,
+              },
+            ],
+            notificationEvent: {
+              templateData: {
+                name: candidate.userName ?? "",
+                uid: candidate.uid,
+                programCourseName: candidate.programCourseName,
+                semester: candidate.semester,
+                session: candidate.session,
+                cuRollNumber: candidate.cuRollNumber,
+                cuRegistrationNumber: candidate.cuRegistrationNumber,
+                shiftName: candidate.shiftName,
+                examRows: candidate.examRows, // 🔥 THIS WAS MISSING
+              },
+            },
+          });
+
+          sent++;
+        } catch (err) {
+          failed++;
+          console.error("Email failed for UID:", candidate.uid, err);
+        }
+      }),
+    );
+
+    const progress = Math.round(((sent + failed) / total) * 100);
+
+    // ---------- Progress emit ----------
+    if (io && userId) {
+      io.to(`user:${userId}`).emit("email_progress", {
+        id: sessionId,
+        userId,
+        type: "email_progress",
+        message: `Emails processed: ${sent + failed}/${total}`,
+        progress,
+        status: "in_progress",
+        stage: "email_sending",
+        sent,
+        failed,
+        total,
+        createdAt: new Date(),
+      });
+    }
+  }
+
+  // ---------- Final emit ----------
+  if (io && userId) {
+    io.to(`user:${userId}`).emit("email_progress", {
+      id: sessionId,
+      userId,
+      type: "email_progress",
+      message: "Email sending completed",
+      progress: 100,
+      status: "completed",
+      stage: "done",
+      sent,
+      failed,
+      total,
+      createdAt: new Date(),
+    });
+  }
+
+  return {
+    success: true,
+    total,
+    sent,
+    failed,
   };
 }

@@ -38,6 +38,7 @@ async function prepareEmailAttachments(emailAttachments: any): Promise<
     }>
   | undefined
 > {
+  // console.log("in prepareEmailAttachment(), emailAttachments:", emailAttachments);
   if (
     !emailAttachments ||
     !Array.isArray(emailAttachments) ||
@@ -48,6 +49,7 @@ async function prepareEmailAttachments(emailAttachments: any): Promise<
 
   const attachments: Array<{
     filename: string;
+    name: string;
     contentBase64: string;
     mimeType: string;
   }> = [];
@@ -95,6 +97,7 @@ async function prepareEmailAttachments(emailAttachments: any): Promise<
         });
 
         attachments.push({
+          name: filename,
           filename,
           contentBase64: pdfBase64,
           mimeType: "application/pdf",
@@ -105,8 +108,16 @@ async function prepareEmailAttachments(emailAttachments: any): Promise<
           error,
         );
       }
+    } else if (attachment?.contentBase64) {
+      attachments.push({
+        ...attachment,
+        name: attachment.fileName,
+        mimeType: "application/pdf",
+      });
     }
   }
+
+  // console.log("[email.worker] Final attachments prepared:", attachments);
 
   return attachments.length > 0 ? attachments : undefined;
 }
@@ -204,6 +215,16 @@ async function processBatch() {
         meta: { devOnly: true },
         emailAttachments: await prepareEmailAttachments(notif.emailAttachments),
       } as NotificationEventDto;
+
+      // if (dto.emailAttachments && dto.emailAttachments?.length > 0) {
+      //     for (const att in dto.emailAttachments[0]) {
+      //         console.log("dto.emailAttachement, key:", att);
+      //         if (att === "name") {
+      //             console.log((dto.emailAttachments as any)[0][att] as string)
+      //         }
+      //     }
+      // }
+
       const env = String(process.env.NODE_ENV || "development");
       const devOnlyMeta = Boolean(dto?.meta?.devOnly);
       // Resolve template via notification master (preferred), fallback to dto.emailTemplate
@@ -485,10 +506,10 @@ async function processBatch() {
         ),
       );
       // Log full resolvedContent for debugging
-      console.log(
-        "[email.worker] Full resolvedContent object:",
-        JSON.stringify(resolvedContent, null, 2),
-      );
+      //   console.log(
+      //     "[email.worker] Full resolvedContent object:",
+      //     JSON.stringify(resolvedContent, null, 2),
+      //   );
       // Debug: log subject/template/otp for visibility
       // console.log(
       //     "[email.worker] resolved subject/template/otp ->",
@@ -511,10 +532,12 @@ async function processBatch() {
           console.log(
             `[email.worker] rendering template: email/${templateKey}.ejs`,
           );
+          //   console.log("resolvedContent:", resolvedContent);
+          //   console.log("dtoTemplateData:", dto.templateData);
           html = await renderTemplateFile(`email/${templateKey}.ejs`, {
             notif,
             user,
-            content: resolvedContent,
+            content: { ...resolvedContent, dtoTemplateData: dto.templateData },
           });
           console.log(`[email.worker] template rendered successfully`);
         } catch (templateErr: any) {

@@ -1135,7 +1135,7 @@ export default function ScheduleExamPage() {
           <div className="flex gap-4 w-full">
             {/* Left sidebar: Subjects + schedule + total + assign */}
             <div className="w-[26%] flex-shrink-0">
-              <Card className="h-[calc(100vh-200px)] flex flex-col shadow-lg border-2">
+              <Card className="h-[calc(100vh-200px)] overflow-y-scroll flex flex-col shadow-lg border-2">
                 <CardContent className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
                   {/* Subject list */}
                   <div className="flex-1 min-h-0 flex flex-col">
@@ -1217,7 +1217,7 @@ export default function ScheduleExamPage() {
                         </Select>
                       </div>
                     </div>
-                    <div className="flex-1 min-h-0 border rounded-lg bg-gray-50 p-2 space-y-2 scrollbar-hide">
+                    <div className="flex-1 overflow-auto border rounded-lg bg-gray-50 p-2 space-y-2 scrollbar-hide">
                       {loading.papers ? (
                         <div className="flex items-center justify-center py-8 text-gray-500">
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
