@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { Button } from "@/components/ui/button";
-import type { Subject } from "@repo/db";
+import { Subject } from "@repo/db/schemas";
 import {
   getAllSubjects,
   createSubject,

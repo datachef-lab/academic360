@@ -9,7 +9,7 @@ import {
   RegulationType,
   Subject,
   SubjectType,
-} from "@repo/db";
+} from "@repo/db/index";
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";

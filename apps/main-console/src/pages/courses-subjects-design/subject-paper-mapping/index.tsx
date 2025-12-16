@@ -37,7 +37,7 @@ import {
 } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import type {
+import {
   Subject,
   Affiliation,
   RegulationType,
@@ -50,7 +50,7 @@ import type {
   ProgramCourse,
   Course,
   CourseType,
-} from "@repo/db";
+} from "@repo/db/index";
 import { Class } from "@/types/academics/class";
 import { AxiosError } from "axios";
 import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
@@ -512,7 +512,8 @@ const SubjectPaperMappingPage = () => {
           Affiliation: affiliation?.name || "-",
           "Regulation Type": regulationType?.name || "-",
           "Academic Year": academicYear?.year || "-",
-          "Exam Components": paper.components?.map((comp) => comp.examComponent?.name).join(", ") || "No components",
+          "Exam Components":
+            paper.components?.map((comp: PaperComponentDto) => comp.examComponent?.name).join(", ") || "No components",
         };
       });
 

@@ -16,7 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ProgramCourse, Stream, Course, CourseType, CourseLevel, Affiliation, RegulationType } from "@repo/db";
+import { ProgramCourse, Stream, Course, CourseType, CourseLevel, Affiliation, RegulationType } from "@repo/db/index";
 import {
   getProgramCourses,
   createProgramCourse,

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { CourseType } from "@repo/db";
+import { CourseType } from "@repo/db/index";
 import { Controller } from "react-hook-form";
 
 // Form validation schema

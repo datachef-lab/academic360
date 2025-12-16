@@ -1,5 +1,5 @@
+import { AcademicYear } from "@/schemas";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { AcademicYear } from "@repo/db";
 
 // Define the initial state interface
 export interface AcademicYearState {

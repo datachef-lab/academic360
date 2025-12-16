@@ -55,7 +55,7 @@ import {
   ExamShiftDto,
   ExamSubjectDto,
   ExamSubjectTypeDto,
-} from "@repo/db";
+} from "@repo/db/index";
 // import { Class } from "@/types/academics/class";
 // import { AxiosError } from "axios";
 // import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
@@ -1768,7 +1768,7 @@ const ExamsPage = () => {
                         className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
                         style={{ width: "16%" }}
                       >
-                        {exm.examShifts.map((esh: ExamShiftDto, eshIndex) => (
+                        {exm.examShifts.map((esh: ExamShiftDto, eshIndex: number) => (
                           <p>
                             <Badge
                               key={`pc-index-${eshIndex}`}

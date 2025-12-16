@@ -32,9 +32,9 @@ import {
   RoomDto,
   ProgramCourseDto,
   ExamProgramCourseDto,
-} from "@repo/db";
+} from "@repo/db/index";
 import { Shift } from "@/types/academics/shift";
-import { Subject } from "@repo/db";
+import { Subject } from "@repo/db/index";
 import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
 

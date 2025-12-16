@@ -37,7 +37,7 @@ import {
 import { RelatedSubjectMainDto } from "@repo/db/dtos/subject-selection";
 import { getProgramCourses, getSubjectTypes } from "@/services/course-design.api";
 import { getActiveBoardSubjectNames, type BoardSubjectName } from "@/services/admissions.service";
-import type { ProgramCourse, SubjectType } from "@repo/db";
+import { ProgramCourse, SubjectType } from "@repo/db/index";
 import { toast as sonnerToast } from "sonner";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useAuth } from "@/features/auth/hooks/use-auth";

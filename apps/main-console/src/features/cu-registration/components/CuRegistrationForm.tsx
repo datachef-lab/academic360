@@ -25,8 +25,8 @@ import { getStatesByCountry } from "@/services/state.service";
 import { getCitiesByState } from "@/services/city.service";
 import { getDistrictsByState } from "@/services/address.service";
 import { getAllNationalities } from "@/services/nationalities.service";
-import type { StudentDto, ProfileInfo, FamilyDto, PersonalDetailsDto, PersonDto, AddressDto } from "@repo/db/dtos/user";
-import { genderTypeEnum, cuRegistrationCorrectionRequestStatusEnum } from "@repo/db/enums";
+import { StudentDto, ProfileInfo, FamilyDto, PersonalDetailsDto, PersonDto, AddressDto } from "@repo/db/dtos/user";
+import { genderTypeEnum, cuRegistrationCorrectionRequestStatusEnum } from "@repo/db/index";
 import axiosInstance from "@/utils/api";
 
 interface CuRegistrationFormProps {

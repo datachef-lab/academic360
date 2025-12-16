@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { Save, CheckCircle } from "lucide-react";
 import { getAllAnnualIncomes } from "@/services/annual-income.service";
 import { getAllOccupations } from "@/services/occupation.service";
-import { personTitleType } from "@repo/db/enums";
+import { personTitleType } from "@repo/db/schemas/enums";
 
 interface FamilyDetailsProps {
   studentId: number;
