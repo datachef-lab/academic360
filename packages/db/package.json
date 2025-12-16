@@ -48,6 +48,10 @@
         "./schemas/enums": {
             "types": "./dist/schemas/enums/index.d.ts",
             "import": "./dist/schemas/enums/index.js"
+        },
+        "./schemas/": {
+            "types": "./dist/schemas/index.d.ts",
+            "import": "./dist/schemas/index.js"
         }
     },
     "type": "module",
@@ -69,7 +73,6 @@
     "license": "ISC",
     "packageManager": "pnpm@10.15.0",
     "dependencies": {
-        "dotenv": "^17.2.1",
         "drizzle-orm": "^0.38.4",
         "drizzle-zod": "^0.5.1",
         "pg": "^8.16.3",

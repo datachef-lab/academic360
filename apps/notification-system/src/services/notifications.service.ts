@@ -1,4 +1,3 @@
-import { getDbConnection } from "@repo/db/connection";
 import {
   Notification,
   notificationModel,
@@ -401,7 +400,6 @@ export class NotificationsService {
   }
 
   static async markSent(notificationId: number) {
-    const db = getDbConnection(process.env.DATABASE_URL!);
     await db
       .update(notificationModel)
       .set({ status: "SENT", sentAt: new Date() })
@@ -409,7 +407,6 @@ export class NotificationsService {
   }
 
   static async markFailed(notificationId: number, reason: string) {
-    const db = getDbConnection(process.env.DATABASE_URL!);
     await db
       .update(notificationModel)
       .set({

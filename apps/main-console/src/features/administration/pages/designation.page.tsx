@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClipboardList, Edit, PlusCircle } from "lucide-react";
-import { DesignationT } from "@/schemas";
+import { DesignationT } from "@repo/db/schemas";
 
 import {
   createDesignation,

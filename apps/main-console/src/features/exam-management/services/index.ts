@@ -1,5 +1,5 @@
 import { ExamDto } from "@/dtos";
-import { ExamT } from "@/schemas";
+import { ExamT } from "@repo/db/schemas";
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 

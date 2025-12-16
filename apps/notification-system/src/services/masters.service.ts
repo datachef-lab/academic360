@@ -1,4 +1,4 @@
-import { getDbConnection } from "@repo/db/connection";
+import { db } from "@/db";
 import {
   notificationMasterModel,
   notificationMasterFieldModel,
@@ -8,7 +8,7 @@ import { and, eq } from "drizzle-orm";
 
 export class NotificationMastersService {
   static db() {
-    return getDbConnection(process.env.DATABASE_URL!);
+    return db;
   }
 
   // Masters

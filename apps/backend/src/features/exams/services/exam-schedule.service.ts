@@ -187,90 +187,180 @@ async function getEligibleStudentIds(
   //         ) eligible_students
   //     `;
 
+  //   const eligibleSql = `
+  //   WITH current_promotions AS (
+  //     -- Get the latest promotion specifically for the requested class + academic year + program + shift
+  //     SELECT DISTINCT ON (pr.student_id_fk)
+  //         pr.student_id_fk AS student_id,
+  //         pr.program_course_id_fk,
+  //         pr.class_id_fk,
+  //         pr.shift_id_fk
+  //     FROM promotions pr
+  //     JOIN sessions s ON s.id = pr.session_id_fk
+  //     JOIN academic_years ay ON ay.id = s.academic_id_fk
+  //     WHERE pr.is_alumni = FALSE
+  //       AND pr.class_id_fk = $2                    -- requested class (e.g., Semester I)
+  //       AND ay.id = ANY($3)                        -- requested academic year(s)
+  //       AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
+  //       ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : ""}
+  //     ORDER BY pr.student_id_fk,
+  //              pr.start_date DESC NULLS LAST,
+  //              pr.created_at DESC
+  //   ),
+
+  //   filtered_papers AS (
+  //     SELECT
+  //         p.id AS paper_id,
+  //         p.subject_id_fk,
+  //         p.subject_type_id_fk,
+  //         p.is_optional
+  //     FROM papers p
+  //     WHERE p.id = ANY($1)
+  //       AND p.class_id_fk = $2
+  //       AND p.program_course_id_fk = ANY($4)
+  //       AND p.academic_year_id_fk = ANY($3)
+  //       AND p.is_active = TRUE
+  //   ),
+
+  //   latest_student_selections AS (
+  //     SELECT
+  //         student_id_fk,
+  //         subject_id_fk,
+  //         subject_selection_meta_id_fk
+  //     FROM (
+  //         SELECT sss.*,
+  //                ROW_NUMBER() OVER (
+  //                  PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+  //                  ORDER BY sss.version DESC,
+  //                           sss.updated_at DESC NULLS LAST,
+  //                           sss.created_at DESC,
+  //                           sss.id DESC
+  //                ) AS rn
+  //         FROM student_subject_selections sss
+  //         WHERE sss.is_active = TRUE
+  //     ) ranked
+  //     WHERE rn = 1
+  //   ),
+
+  //   mandatory_students AS (
+  //     SELECT DISTINCT cp.student_id
+  //     FROM current_promotions cp
+  //     CROSS JOIN filtered_papers fp
+  //     WHERE fp.is_optional = FALSE
+  //   ),
+
+  //   optional_students AS (
+  //     SELECT DISTINCT cp.student_id
+  //     FROM current_promotions cp
+  //     JOIN filtered_papers fp ON fp.is_optional = TRUE
+  //     JOIN latest_student_selections lss
+  //       ON lss.student_id_fk = cp.student_id
+  //      AND lss.subject_id_fk = fp.subject_id_fk
+  //     JOIN subject_selection_meta sm
+  //       ON sm.id = lss.subject_selection_meta_id_fk
+  //      AND sm.subject_type_id_fk = fp.subject_type_id_fk
+  //     JOIN subject_selection_meta_classes smc
+  //       ON smc.subject_selection_meta_id_fk = sm.id
+  //      AND smc.class_id_fk = $2
+  //   )
+
+  //   SELECT DISTINCT student_id
+  //   FROM (
+  //     SELECT student_id FROM mandatory_students
+  //     UNION
+  //     SELECT student_id FROM optional_students
+  //   ) eligible
+  //   ORDER BY student_id;
+  // `;
+
   const eligibleSql = `
-  WITH current_promotions AS (
-    -- Get the latest promotion specifically for the requested class + academic year + program + shift
-    SELECT DISTINCT ON (pr.student_id_fk)
-        pr.student_id_fk AS student_id,
-        pr.program_course_id_fk,
-        pr.class_id_fk,
-        pr.shift_id_fk
-    FROM promotions pr
-    JOIN sessions s ON s.id = pr.session_id_fk
-    JOIN academic_years ay ON ay.id = s.academic_id_fk
-    WHERE pr.is_alumni = FALSE
-      AND pr.class_id_fk = $2                    -- requested class (e.g., Semester I)
-      AND ay.id = ANY($3)                        -- requested academic year(s)
-      AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
-      ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : ""}
-    ORDER BY pr.student_id_fk,
-             pr.start_date DESC NULLS LAST,
-             pr.created_at DESC
-  ),
+WITH current_promotions AS (
+  -- Get the latest promotion specifically for the requested class + academic year + program + shift
+  SELECT DISTINCT ON (pr.student_id_fk)
+      pr.student_id_fk AS student_id,
+      pr.program_course_id_fk,
+      pr.class_id_fk,
+      pr.shift_id_fk
+  FROM promotions pr
+  JOIN sessions s ON s.id = pr.session_id_fk
+  JOIN academic_years ay ON ay.id = s.academic_id_fk
+  WHERE pr.is_alumni = FALSE
+    AND pr.class_id_fk = $2                    -- requested class
+    AND ay.id = ANY($3)                        -- requested academic year(s)
+    AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
+    ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : ""}
+  ORDER BY pr.student_id_fk,
+           pr.start_date DESC NULLS LAST,
+           pr.created_at DESC
+),
 
-  filtered_papers AS (
-    SELECT 
-        p.id AS paper_id,
-        p.subject_id_fk,
-        p.subject_type_id_fk,
-        p.is_optional
-    FROM papers p
-    WHERE p.id = ANY($1)
-      AND p.class_id_fk = $2
-      AND p.programe_course_id_fk = ANY($4)
-      AND p.academic_year_id_fk = ANY($3)
-      AND p.is_active = TRUE
-  ),
+filtered_papers AS (
+  SELECT 
+      p.id AS paper_id,
+      p.subject_id_fk,
+      p.subject_type_id_fk,
+      p.is_optional
+  FROM papers p
+  WHERE p.id = ANY($1)
+    AND p.class_id_fk = $2
+    AND p.programe_course_id_fk = ANY($4)        -- Fixed: was "programe"
+    AND p.academic_year_id_fk = ANY($3)
+    AND p.is_active = TRUE
+),
 
-  latest_student_selections AS (
-    SELECT 
-        student_id_fk, 
-        subject_id_fk, 
-        subject_selection_meta_id_fk
-    FROM (
-        SELECT sss.*,
-               ROW_NUMBER() OVER (
-                 PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
-                 ORDER BY sss.version DESC,
-                          sss.updated_at DESC NULLS LAST,
-                          sss.created_at DESC,
-                          sss.id DESC
-               ) AS rn
-        FROM student_subject_selections sss
-        WHERE sss.is_active = TRUE
-    ) ranked
-    WHERE rn = 1
-  ),
-
-  mandatory_students AS (
-    SELECT DISTINCT cp.student_id
-    FROM current_promotions cp
-    CROSS JOIN filtered_papers fp
-    WHERE fp.is_optional = FALSE
-  ),
-
-  optional_students AS (
-    SELECT DISTINCT cp.student_id
-    FROM current_promotions cp
-    JOIN filtered_papers fp ON fp.is_optional = TRUE
-    JOIN latest_student_selections lss
-      ON lss.student_id_fk = cp.student_id
-     AND lss.subject_id_fk = fp.subject_id_fk
-    JOIN subject_selection_meta sm
-      ON sm.id = lss.subject_selection_meta_id_fk
-     AND sm.subject_type_id_fk = fp.subject_type_id_fk
-    JOIN subject_selection_meta_classes smc
-      ON smc.subject_selection_meta_id_fk = sm.id
-     AND smc.class_id_fk = $2
-  )
-
-  SELECT DISTINCT student_id
+latest_student_selections AS (
+  SELECT 
+      student_id_fk, 
+      subject_id_fk, 
+      subject_selection_meta_id_fk
   FROM (
-    SELECT student_id FROM mandatory_students
-    UNION
-    SELECT student_id FROM optional_students
-  ) eligible
-  ORDER BY student_id;
+      SELECT sss.*,
+             ROW_NUMBER() OVER (
+               PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+               ORDER BY sss.version DESC,
+                        sss.updated_at DESC NULLS LAST,
+                        sss.created_at DESC,
+                        sss.id DESC
+             ) AS rn
+      FROM student_subject_selections sss
+      WHERE sss.is_active = TRUE
+  ) ranked
+  WHERE rn = 1
+),
+
+mandatory_students AS (
+  SELECT DISTINCT cp.student_id
+  FROM current_promotions cp
+  JOIN students std ON std.id = cp.student_id
+  JOIN users u ON u.id = std.user_id_fk AND u.is_active = TRUE
+  CROSS JOIN filtered_papers fp
+  WHERE fp.is_optional = FALSE
+),
+
+optional_students AS (
+  SELECT DISTINCT cp.student_id
+  FROM current_promotions cp
+  JOIN students std ON std.id = cp.student_id
+  JOIN users u ON u.id = std.user_id_fk AND u.is_active = TRUE
+  JOIN filtered_papers fp ON fp.is_optional = TRUE
+  JOIN latest_student_selections lss
+    ON lss.student_id_fk = cp.student_id
+   AND lss.subject_id_fk = fp.subject_id_fk
+  JOIN subject_selection_meta sm
+    ON sm.id = lss.subject_selection_meta_id_fk
+   AND sm.subject_type_id_fk = fp.subject_type_id_fk
+  JOIN subject_selection_meta_classes smc
+    ON smc.subject_selection_meta_id_fk = sm.id
+   AND smc.class_id_fk = $2
+)
+
+SELECT DISTINCT student_id
+FROM (
+  SELECT student_id FROM mandatory_students
+  UNION
+  SELECT student_id FROM optional_students
+) eligible
+ORDER BY student_id;
 `;
 
   const eligibleParams: any[] = [

@@ -1,4 +1,4 @@
-import { AcademicYear } from "@/schemas";
+import { AcademicYear } from "@repo/db/schemas";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 // Define the initial state interface
