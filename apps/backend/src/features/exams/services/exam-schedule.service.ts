@@ -2102,7 +2102,7 @@ export async function generateAdmitCardBuffers(
   for (const [uid, rows] of uidMap.entries()) {
     const pdfBuffer = await pdfGenerationService.generateExamAdmitCardPdfBuffer(
       {
-        semester: rows[0]?.semester ?? "",
+        semester: rows[0]?.semester!.split(" ")[1] ?? "",
         examType: rows[0]?.examType ?? "",
         session: rows[0]?.session ?? "",
         name: rows[0]?.userName ?? "",
