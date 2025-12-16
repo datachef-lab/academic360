@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { AcademicYear } from "@repo/db/index";
+import type { AcademicYear } from "@repo/db/index";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { getAllAcademicYears } from "@/services/academic-year-api";
 import { useAuth } from "@/features/auth/providers/auth-provider";

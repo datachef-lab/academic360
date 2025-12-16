@@ -33,16 +33,16 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    optimizeDeps: {
-      exclude: ["pg", "drizzle-orm", "dotenv"], // do not pre-bundle Node-only packages
-    },
-    build: {
-      rollupOptions: {
-        external: ["pg", "drizzle-orm", "dotenv"], // mark Node modules as external
-      },
-    },
-    define: {
-      "process.env": {}, // optional fallback
-    },
+    // optimizeDeps: {
+    //   exclude: ["pg", "dotenv"], // do not pre-bundle Node-only packages
+    // },
+    // build: {
+    //   rollupOptions: {
+    //     external: ["pg", "dotenv"], // mark Node modules as external
+    //   },
+    // },
+    // define: {
+    //   "process.env": {}, // optional fallback
+    // },
   };
 });

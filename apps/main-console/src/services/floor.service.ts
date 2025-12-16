@@ -1,5 +1,5 @@
 import { ApiResponse } from "@/types/api-response";
-import { FloorT } from "@repo/db/schemas/models/exams";
+import type { FloorT } from "@repo/db/schemas/models/exams";
 import axiosInstance from "@/utils/api";
 
 export type { FloorT };

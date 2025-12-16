@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AddressDto, PersonalDetailsDto } from "@repo/db/dtos";
+import type { AddressDto, PersonalDetailsDto } from "@repo/db/dtos";
 import type { ReligionT as UiReligion, CategoryT as UiCategory, NationalityT as UiNationality } from "@repo/db/schemas";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Disability } from "@/types/enums";

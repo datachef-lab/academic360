@@ -5,7 +5,7 @@
 // import { findStudentByEmail, findStudentByUid } from './student.service';
 // import { ApplicationFormDto } from '@/types/admissions';
 // import { axiosInstance } from '../utils';
-import { UserDto } from "@repo/db/dtos/user";
+import type { UserDto } from "@repo/db/dtos/user";
 import { ApiResponse } from "@/types/api-response";
 import { ingaxiosInstance as axiosInstance } from "@/lib/utils";
 

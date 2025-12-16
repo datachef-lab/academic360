@@ -1,5 +1,5 @@
 import React from "react";
-import { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@repo/db/dtos/user";
 import { Calendar } from "lucide-react";
 import Image from "next/image";
 import NotificationCorner from "./NotificationCorner";

@@ -12,6 +12,7 @@ async function getOrigins() {
   return [
     "http://localhost:3000",
     "http://localhost:5173",
+    "http://localhost:4173",
     "http://13.235.168.107:3003",
     "http://localhost:3003",
     "https://academic360.app",

@@ -1,4 +1,4 @@
-import { ProcessControl, NewProcessControl } from "@repo/db/schemas/models/process-control";
+import type { ProcessControl, NewProcessControl } from "@repo/db/schemas/models/process-control";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 

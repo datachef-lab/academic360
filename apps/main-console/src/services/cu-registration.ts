@@ -13,8 +13,8 @@ export async function getStudentCuCorrectionRequests(studentId: number) {
       params: { studentId },
     });
     console.info(`[CU-REG MAIN-CONSOLE] Correction requests response:`, res.data);
-    const p = res.data.payload as any;
-    const result = (Array.isArray(p) ? p : p?.content || p?.requests) as CuRegistrationCorrectionRequestDto[];
+    const p = res.data.payload;
+    const result = (Array.isArray(p) ? p : p?.content) as CuRegistrationCorrectionRequestDto[];
     console.info(`[CU-REG MAIN-CONSOLE] Parsed correction requests:`, result);
     return result;
   } catch (error) {

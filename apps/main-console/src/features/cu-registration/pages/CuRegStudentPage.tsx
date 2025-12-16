@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import SubjectSelectionForm from "../components/SubjectSelectionForm";
 import CuRegistrationForm from "../components/CuRegistrationForm";
 import { fetchStudentByUid } from "@/services/student";
-import { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@repo/db/dtos/user";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { getUserById } from "@/services/user";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

@@ -17,7 +17,7 @@ import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
 import { ExamComponentForm } from "./exam-component-form";
-import { ExamComponent } from "@repo/db/index";
+import type { ExamComponent } from "@repo/db/index";
 import { getAllExamComponent } from "@/services/exam-component.service";
 import {
   createExamComponent,

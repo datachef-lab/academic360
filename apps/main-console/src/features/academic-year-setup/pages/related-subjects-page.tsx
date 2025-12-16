@@ -34,10 +34,10 @@ import {
   type CreateRelatedSubjectMainInput,
   type UpdateRelatedSubjectMainInput,
 } from "@/services/subject-selection.api";
-import { RelatedSubjectMainDto } from "@repo/db/dtos/subject-selection";
+import type { RelatedSubjectMainDto } from "@repo/db/dtos/subject-selection";
 import { getProgramCourses, getSubjectTypes } from "@/services/course-design.api";
 import { getActiveBoardSubjectNames, type BoardSubjectName } from "@/services/admissions.service";
-import { ProgramCourse, SubjectType } from "@repo/db/index";
+import type { ProgramCourse, SubjectType } from "@repo/db/index";
 import { toast as sonnerToast } from "sonner";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useAuth } from "@/features/auth/hooks/use-auth";

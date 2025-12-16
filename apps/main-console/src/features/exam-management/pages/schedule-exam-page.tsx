@@ -21,7 +21,7 @@ import { getAllFloors, FloorT } from "@/services/floor.service";
 import { countStudentsForExam, getStudentsForExam, StudentWithSeat } from "@/services/exam-schedule.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { Class } from "@/types/academics/class";
-import {
+import type {
   SubjectType,
   PaperDto,
   Affiliation,
@@ -34,7 +34,7 @@ import {
   ExamProgramCourseDto,
 } from "@repo/db/index";
 import { Shift } from "@/types/academics/shift";
-import { Subject } from "@repo/db/index";
+import type { Subject } from "@repo/db/index";
 import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
 

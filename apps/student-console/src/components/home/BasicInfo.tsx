@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { BatchCustom } from "@/types/academics/batch";
-import { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@repo/db/dtos/user";
 
 export default function BasicInfo({ student }: { student: StudentDto | null }) {
   return (

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FC } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HealthDto } from "@repo/db/dtos/user";
-import { BloodGroupDto } from "@repo/db/dtos/resources";
+import type { HealthDto } from "@repo/db/dtos/user";
+import type { BloodGroupDto } from "@repo/db/dtos/resources";
 import { getHealthDetailById, createHealthDetail, updateHealthDetail } from "@/services/health-details.service";
 import { getAllBloodGroups } from "@/services/blood-group.service";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";

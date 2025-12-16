@@ -25,7 +25,7 @@ import {
   lookupUsersByPrefix,
 } from "@/lib/services/auth.service";
 import { adminBypassOtpLogin } from "@/lib/services/auth.service";
-import { UserDto } from "@repo/db/dtos/user";
+import type { UserDto } from "@repo/db/dtos/user";
 
 export default function SignInPage() {
   const [uid, setUid] = useState("");

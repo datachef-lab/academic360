@@ -37,7 +37,7 @@ import { Input } from "@/components/ui/input";
 // } from "@/services/course-design.api";
 // import { getAllClasses } from "@/services/classes.service";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import {
+import type {
   //   Subject,
   //   Affiliation,
   //   RegulationType,

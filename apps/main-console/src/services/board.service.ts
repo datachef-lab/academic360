@@ -1,5 +1,5 @@
 import axiosInstance from "@/utils/api";
-import { City, State, Country } from "@repo/db/schemas";
+import type { City, State, Country } from "@repo/db/schemas";
 
 export interface BoardDto {
   id: number;
@@ -101,11 +101,11 @@ export const boardService = {
       boardsCache.set(cacheKey, { data: result, timestamp: Date.now() });
 
       return result;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching boards:", error);
 
       // Retry logic for timeout errors
-      if (error.code === "ECONNABORTED" && retryCount < 2) {
+      if ((error as { code: string }).code === "ECONNABORTED" && retryCount < 2) {
         console.log(`Retrying boards request (attempt ${retryCount + 1})`);
         await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
         return this.getAllBoards(page, pageSize, search, degreeId, retryCount + 1);

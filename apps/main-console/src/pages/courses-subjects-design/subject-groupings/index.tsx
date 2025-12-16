@@ -13,7 +13,7 @@ import {
   getSubjectTypes,
   getSubjects,
 } from "@/services/course-design.api";
-import {
+import type {
   Affiliation,
   ProgramCourse,
   RegulationType,

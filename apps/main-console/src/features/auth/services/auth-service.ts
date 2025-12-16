@@ -1,6 +1,6 @@
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
-import { UserDto } from "@repo/db/dtos/user";
+import type { UserDto } from "@repo/db/dtos/user";
 
 export async function login(credential: { email: string; password: string }) {
   const response = await axiosInstance.post<ApiResponse<{ accessToken: string; user: UserDto }>>(

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ProfileInfo } from "@repo/db/dtos/user";
+import type { ProfileInfo } from "@repo/db/dtos/user";
 import { useAuth } from "./use-auth";
 
 import { ingaxiosInstance as axiosInstance } from "@/lib/utils";

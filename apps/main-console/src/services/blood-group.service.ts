@@ -1,7 +1,7 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
 import { BloodGroup, CreateBloodGroupPayload, UpdateBloodGroupPayload } from "@/types/resources/blood-group.types";
-import { BloodGroupDto } from "@repo/db/dtos/resources";
+import type { BloodGroupDto } from "@repo/db/dtos/resources";
 
 // ============================================================================
 // BLOOD GROUP SERVICE

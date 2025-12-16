@@ -14,7 +14,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Affiliation } from "@repo/db/index";
+import type { Affiliation } from "@repo/db/index";
 import {
   getAffiliations,
   createAffiliation,

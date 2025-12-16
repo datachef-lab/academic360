@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 
 import { ApiResponse } from "@/types/api-response";
-import { UserDto } from "@repo/db/dtos/user";
+import type { UserDto } from "@repo/db/dtos/user";
 export interface AuthContextType {
   user: UserDto | null;
   login: (accessToken: string, userData: UserDto) => void;

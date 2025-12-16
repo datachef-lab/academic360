@@ -1,4 +1,4 @@
-import { SubDepartmentT } from "@repo/db/schemas";
+import type { SubDepartmentT } from "@repo/db/schemas";
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 

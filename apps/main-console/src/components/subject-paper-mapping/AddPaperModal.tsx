@@ -1,5 +1,5 @@
 import { Class } from "@/types/academics/class";
-import {
+import type {
   Affiliation,
   Course,
   ExamComponent,

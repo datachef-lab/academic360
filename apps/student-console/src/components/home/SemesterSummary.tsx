@@ -4,7 +4,7 @@ import { GraduationCap } from "lucide-react";
 import { MarksheetSummary, SubjectMetadataType } from "@/types/academics/marksheet-summary";
 import { SemesterSummaryTable } from "./SemesterSummaryTable";
 import { getSemesterSummary } from "@/lib/services/semester-summary.service";
-import { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@repo/db/dtos/user";
 import BacklogDialog from "./BacklogDialog";
 
 export default function SemesterSummary({ student }: { student: StudentDto }) {

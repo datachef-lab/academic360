@@ -35,9 +35,9 @@ import {
 import Image from "next/image";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
-import { UserDto, ProfileInfo, FamilyDto } from "@repo/db/dtos/user";
+import type { UserDto, ProfileInfo, FamilyDto } from "@repo/db/dtos/user";
 import { useStudent } from "@/providers/student-provider";
-import { StudentAcademicSubjectsDto } from "@repo/db/dtos/admissions";
+import type { StudentAcademicSubjectsDto } from "@repo/db/dtos/admissions";
 
 export default function ProfileContent() {
   const { user } = useAuth();

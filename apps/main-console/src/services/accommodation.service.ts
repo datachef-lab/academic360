@@ -1,5 +1,5 @@
 import { ApiResponse } from "@/types/api-response";
-import { AccommodationDto } from "@repo/db/dtos/user";
+import type { AccommodationDto } from "@repo/db/dtos/user";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/accommodations";
@@ -26,8 +26,8 @@ export async function getAccommodationByStudentId(studentId: number): Promise<Ap
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
-  } catch (err: any) {
-    if (err?.response?.status === 404) {
+  } catch (err) {
+    if ((err as { response?: { status: number } })?.response?.status === 404) {
       return { payload: null } as ApiResponse<AccommodationDto | null>;
     }
     throw new Error(`Failed to fetch accommodation for studentId ${studentId}`);

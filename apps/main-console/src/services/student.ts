@@ -1,4 +1,4 @@
-import { StudentDto, ProfileInfo } from "@repo/db/dtos/user";
+import type { StudentDto, ProfileInfo } from "@repo/db/dtos/user";
 import axiosInstance from "@/utils/api";
 
 export async function fetchStudentByUid(uid: string): Promise<StudentDto> {

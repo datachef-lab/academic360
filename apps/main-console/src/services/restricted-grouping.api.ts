@@ -1,7 +1,7 @@
 import { ApiResponse } from "@/types/api-response";
 import type { PaginatedResponse } from "@/types/pagination";
 import api from "@/utils/api";
-import { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
+import type { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
 
 export type CreateRestrictedGroupingMainInput = {
   subjectType: { id: number };

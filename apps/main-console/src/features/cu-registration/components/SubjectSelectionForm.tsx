@@ -12,7 +12,7 @@ import {
 } from "@/services/student-subject-selection";
 import { fetchRestrictedGroupings } from "@/services/restricted-grouping";
 import { fetchStudentByUid } from "@/services/student";
-import { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@repo/db/dtos/user";
 
 interface SubjectSelectionFormProps {
   uid: string;
