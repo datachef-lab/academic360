@@ -895,7 +895,10 @@ export default function ScheduleExamPage() {
 
     try {
       console.log("Before calling doAssignExam with:", tmpExamAssignment);
-      const response = await doAssignExam(tmpExamAssignment);
+      const response = await doAssignExam({
+        ...tmpExamAssignment,
+        gender: (tmpExamAssignment.gender as string) === "ALL" ? null : tmpExamAssignment.gender,
+      });
       console.log("In exam assignment post api, response:", response);
 
       toast.success(`Successfully assigned exam to the students`);
@@ -1582,9 +1585,9 @@ export default function ScheduleExamPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 flex flex-col h-full">
+                    <div className="flex-1 flex flex-col overflow-scroll h-full">
                       {/* Students table */}
-                      <div className="flex-1 min-h-0 p-4">
+                      <div className="flex-1 min-h-0 overflow-scroll p-4">
                         {loadingStudents ? (
                           <div className="flex items-center justify-center py-12">
                             <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
