@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Users, AlertCircle, CheckCircle2, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { getAllExamTypes, type ExamTypeT } from "@/services/exam-type.service";
+import { getAllExamTypes, ExamTypeT } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
 import { getAffiliations, getRegulationTypes, getProgramCourseDtos } from "@/services/course-design.api";
 import { getAllShifts } from "@/services/academic";
@@ -17,11 +17,11 @@ import { getSubjectTypes, getExamComponents } from "@/services/course-design.api
 import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
 import { getAllRooms } from "@/services/room.service";
-import { getAllFloors, type FloorT } from "@/services/floor.service";
-import { countStudentsForExam, getStudentsForExam, type StudentWithSeat } from "@/services/exam-schedule.service";
+import { getAllFloors, FloorT } from "@/services/floor.service";
+import { countStudentsForExam, getStudentsForExam, StudentWithSeat } from "@/services/exam-schedule.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import type { Class } from "@/types/academics/class";
-import type {
+import { Class } from "@/types/academics/class";
+import {
   SubjectType,
   PaperDto,
   Affiliation,
@@ -33,9 +33,9 @@ import type {
   ProgramCourseDto,
   ExamProgramCourseDto,
 } from "@repo/db";
-import type { Shift } from "@/types/academics/shift";
-import type { Subject } from "@repo/db";
-import type { ExamComponent } from "@/types/course-design";
+import { Shift } from "@/types/academics/shift";
+import { Subject } from "@repo/db";
+import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
 
 interface SelectedRoom extends RoomDto {

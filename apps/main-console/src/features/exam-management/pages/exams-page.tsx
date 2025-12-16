@@ -37,7 +37,7 @@ import { Input } from "@/components/ui/input";
 // } from "@/services/course-design.api";
 // import { getAllClasses } from "@/services/classes.service";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import type {
+import {
   //   Subject,
   //   Affiliation,
   //   RegulationType,
@@ -51,7 +51,10 @@ import type {
   //   Course,
   //   CourseType,
   ExamDto,
+  ExamProgramCourseDto,
+  ExamShiftDto,
   ExamSubjectDto,
+  ExamSubjectTypeDto,
 } from "@repo/db";
 // import { Class } from "@/types/academics/class";
 // import { AxiosError } from "axios";
@@ -1725,7 +1728,7 @@ const ExamsPage = () => {
                         className="flex-shrink-0 p-3 border-r flex gap-1 flex-col items-center"
                         style={{ width: "14%" }}
                       >
-                        {exm.examProgramCourses.map((pc, pcIndex) => (
+                        {exm.examProgramCourses.map((pc: ExamProgramCourseDto, pcIndex: number) => (
                           <p>
                             <Badge
                               key={`pc-index-${pcIndex}`}
@@ -1749,7 +1752,7 @@ const ExamsPage = () => {
                           )} */}
                         </p>
                         <div className="mt-1 flex flex-col gap-1">
-                          {exm.examSubjects.map((es) => (
+                          {exm.examSubjects.map((es: ExamSubjectDto) => (
                             <p>
                               <Badge
                                 variant="outline"
@@ -1765,7 +1768,7 @@ const ExamsPage = () => {
                         className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
                         style={{ width: "16%" }}
                       >
-                        {exm.examShifts.map((esh, eshIndex) => (
+                        {exm.examShifts.map((esh: ExamShiftDto, eshIndex) => (
                           <p>
                             <Badge
                               key={`pc-index-${eshIndex}`}
@@ -1781,7 +1784,7 @@ const ExamsPage = () => {
                         className="flex-shrink-0 p-3 border-r flex gap-1 flex-col items-center justify-center"
                         style={{ width: "12%" }}
                       >
-                        {exm.examSubjectTypes.map((est) => (
+                        {exm.examSubjectTypes.map((est: ExamSubjectTypeDto) => (
                           <p>
                             <Badge
                               variant="outline"

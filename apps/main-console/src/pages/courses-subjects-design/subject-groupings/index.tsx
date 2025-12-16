@@ -13,21 +13,14 @@ import {
   getSubjectTypes,
   getSubjects,
 } from "@/services/course-design.api";
-import type {
-  Affiliation,
-  ProgramCourse,
-  RegulationType,
-  Subject,
-  SubjectGroupingMainDto,
-  SubjectType,
-} from "@repo/db";
+import { Affiliation, ProgramCourse, RegulationType, Subject, SubjectGroupingMainDto, SubjectType } from "@repo/db";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { Edit, FileText, PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import type { AcademicYear } from "@/types/academics/academic-year";
+import { AcademicYear } from "@/types/academics/academic-year";
 
 interface UISubjectGroupingRow {
   id: number;
