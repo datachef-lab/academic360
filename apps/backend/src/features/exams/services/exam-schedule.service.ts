@@ -8,7 +8,7 @@ import * as shiftService from "@/features/academics/services/shift.service";
 import * as roomServices from "./room.service";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
-import { and, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import {
   ExamDto,
   ExamProgramCourseDto,
@@ -1434,6 +1434,13 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
 //     };
 // }
 
+function sanitizeWorksheetName(name: string): string {
+  return name
+    .replace(/[*?:\\/\[\]]/g, "-") // replace invalid chars
+    .substring(0, 31) // Excel max length = 31
+    .trim();
+}
+
 export async function downloadAdmitCardsAsZip(
   examId: number,
   userId: number,
@@ -1489,7 +1496,8 @@ export async function downloadAdmitCardsAsZip(
     )
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .where(eq(examCandidateModel.examId, examId));
+    .where(eq(examCandidateModel.examId, examId))
+    .orderBy(asc(examSubjectModel.startTime));
 
   const zip = new JSZip();
 
@@ -1530,7 +1538,7 @@ export async function downloadAdmitCardsAsZip(
       batch.map(async ([uid, studentRows]) => {
         const pdfBuffer =
           await pdfGenerationService.generateExamAdmitCardPdfBuffer({
-            semester: studentRows[0]?.semester ?? "",
+            semester: studentRows[0]?.semester?.split(" ")[1] ?? "",
             examType: studentRows[0]?.examType ?? "",
             session: studentRows[0]?.session ?? "",
             name: studentRows[0]?.name ?? "",
@@ -1730,7 +1738,7 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
   const workbook = new ExcelJS.Workbook();
 
   for (const [subjectKey, rows] of groupedBySubject) {
-    const sheet = workbook.addWorksheet(subjectKey.substring(0, 31));
+    const sheet = workbook.addWorksheet(sanitizeWorksheetName(subjectKey));
 
     // 🔥 AUTO-GENERATE COLUMNS FROM RESULT KEYS
     const columns = Object.keys(rows[0]).map((key) => ({
@@ -2065,7 +2073,8 @@ export async function fetchExamCandidatesByExamId(examId: number) {
     )
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .where(eq(examCandidateModel.examId, examId));
+    .where(eq(examCandidateModel.examId, examId))
+    .orderBy(asc(examSubjectModel.startTime));
 
   return result;
 }
@@ -2123,7 +2132,7 @@ export async function generateAdmitCardBuffers(
       userId: rows[0]?.userId ?? null,
       userEmail: rows[0]?.userEmail ?? null,
       userName: rows[0]?.userName ?? null,
-
+      examType: rows[0]?.examType!,
       session: rows[0]?.session ?? "",
       cuRollNumber: rows[0]?.cuRollNumber ?? null,
       cuRegistrationNumber: rows[0]?.cuRegistrationNumber ?? null,
@@ -2193,7 +2202,7 @@ export type AdmitCardEmailPayload = {
   userId: number | null;
   userEmail: string | null;
   userName: string | null;
-
+  examType: string;
   session: string;
   cuRollNumber: string | null;
   cuRegistrationNumber: string | null;
@@ -2277,6 +2286,7 @@ export async function sendExamAdmitCardEmails(
               },
             ],
             notificationEvent: {
+              subject: `Semester ${candidate.semester.split(" ")[1]} | ${candidate.examType} | Schedule Exam Notification`,
               templateData: {
                 name: candidate.userName ?? "",
                 uid: candidate.uid,
@@ -2287,6 +2297,7 @@ export async function sendExamAdmitCardEmails(
                 cuRegistrationNumber: candidate.cuRegistrationNumber,
                 shiftName: candidate.shiftName,
                 examRows: candidate.examRows, // 🔥 THIS WAS MISSING
+                subject: `Semester ${candidate.semester.split(" ")[1]} | ${candidate.examType} | Schedule Exam Notification`,
               },
             },
           });

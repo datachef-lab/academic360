@@ -218,7 +218,7 @@ export class PdfGenerationService {
       // Set content and wait for resources to load
       await page.setContent(htmlContent, {
         // waitUntil: "networkidle0",
-        waitUntil: "domcontentloaded",
+        waitUntil: "networkidle0",
       });
 
       // Generate PDF with specific settings for A4 format
@@ -314,7 +314,7 @@ export class PdfGenerationService {
 
       // Set content and wait for resources to load
       await page.setContent(htmlContent, {
-        waitUntil: "domcontentloaded",
+        waitUntil: "networkidle0",
       });
 
       // Generate PDF buffer
@@ -406,7 +406,7 @@ export class PdfGenerationService {
 
       // Set content and wait for resources to load
       await page.setContent(htmlContent, {
-        waitUntil: "domcontentloaded",
+        waitUntil: "networkidle0",
       });
 
       // Generate PDF buffer
