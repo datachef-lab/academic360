@@ -38,7 +38,7 @@ export function MultiSelect({ label, options, selected, onChange, placeholder = 
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-purple-200 shadow-lg z-50"
+          className="w-[var(--radix-popover-trigger-width)] p-0 bg-white border border-purple-200 shadow-lg z-50 max-h-60 overflow-auto multiselect-scrollbar"
           align="start"
         >
           <div className="py-1">

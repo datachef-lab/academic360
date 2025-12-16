@@ -1128,7 +1128,7 @@ export default function ScheduleExamPage() {
                 <SelectTrigger className="w-full bg-white border-purple-200">
                   <SelectValue placeholder="Select Academic Year" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50 max-h-60 overflow-auto">
                   {availableAcademicYears.map((ay) => (
                     <SelectItem key={ay.id} value={ay.id?.toString() || ""}>
                       {ay.year}
@@ -1148,7 +1148,7 @@ export default function ScheduleExamPage() {
                 <SelectTrigger className="w-full bg-white border-purple-200">
                   <SelectValue placeholder={loading.affiliations ? "Loading..." : "Select Affiliation"} />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50 max-h-60 overflow-auto">
                   {affiliations.map((aff) => (
                     <SelectItem key={aff.id} value={aff.id?.toString() || ""}>
                       {aff.name}
@@ -1168,7 +1168,7 @@ export default function ScheduleExamPage() {
                 <SelectTrigger className="w-full bg-white border-purple-200">
                   <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Select Regulation"} />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50 max-h-60 overflow-auto">
                   {regulationTypes.map((reg) => (
                     <SelectItem key={reg.id} value={reg.id?.toString() || ""}>
                       {reg.name}
@@ -1184,7 +1184,7 @@ export default function ScheduleExamPage() {
                 <SelectTrigger className="w-full bg-white border-purple-200">
                   <SelectValue placeholder={loading.examTypes ? "Loading..." : "Select Exam Type"} />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50 max-h-60 overflow-auto">
                   {examTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id?.toString() || ""}>
                       {type.name}
@@ -1200,7 +1200,7 @@ export default function ScheduleExamPage() {
                 <SelectTrigger className="w-full bg-white border-purple-200">
                   <SelectValue placeholder={loading.classes ? "Loading..." : "Select Semester"} />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50 max-h-60 overflow-auto">
                   {classes.map((cls) => (
                     <SelectItem key={cls.id} value={cls.id?.toString() || ""}>
                       {cls.name}
@@ -1264,7 +1264,7 @@ export default function ScheduleExamPage() {
                 <SelectTrigger className="w-full bg-white border-purple-200">
                   <SelectValue placeholder={loading.examComponents ? "Loading..." : "Select Component"} />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50 max-h-60 overflow-auto">
                   <SelectItem value="all">All</SelectItem>
                   {examComponents
                     .filter((comp) => !comp.disabled)
@@ -1340,7 +1340,7 @@ export default function ScheduleExamPage() {
                   <SelectTrigger className="w-full bg-white border-purple-200">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                  <SelectContent className="bg-white border-purple-200 shadow-lg z-50 max-h-60 overflow-auto">
                     <SelectItem value="UID">UID</SelectItem>
                     <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
                     <SelectItem value="CU_ROLL_NUMBER">CU Roll Number</SelectItem>
@@ -1478,7 +1478,7 @@ export default function ScheduleExamPage() {
               <span className="ml-2 text-gray-600">Loading students...</span>
             </div>
           ) : studentsWithSeats.length > 0 ? (
-            <div className="overflow-x-auto -mx-5 px-5">
+            <div className="overflow-x-auto overflow-y-auto -mx-5 px-5 max-h-[40vh]">
               <Table className="min-w-[800px]">
                 <TableHeader>
                   <TableRow className="border-b border-purple-200">
