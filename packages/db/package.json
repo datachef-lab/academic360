@@ -41,6 +41,11 @@
             "types": "./dist/dtos/subject-selection/index.d.ts",
             "import": "./dist/dtos/subject-selection/index.js"
         },
+        "./dtos/exams": {
+            "types": "./dist/dtos/exams/index.d.ts",
+            "import": "./dist/dtos/exams/index.js"
+        },
+
         "./enums": {
             "types": "./dist/schemas/enums/index.d.ts",
             "import": "./dist/schemas/enums/index.js"
