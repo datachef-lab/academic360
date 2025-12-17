@@ -1,7 +1,7 @@
 /** @type { import('next').NextConfig } */
 
 const NODE_ENV = process.env.NEXT_PUBLIC_APP_ENV;
-
+console.log("NODE_ENV:", NODE_ENV);
 const baseConfig =
   !NODE_ENV || NODE_ENV === "development"
     ? {}
@@ -29,6 +29,12 @@ const nextConfig = {
         protocol: "http",
         hostname: "localhost",
         port: "3000",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "3008", // Add this
         pathname: "/**",
       },
       {
