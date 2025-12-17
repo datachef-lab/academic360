@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1096,14 +1097,14 @@ export default function ScheduleExamPage() {
               <Play className="w-4 h-4" />
               <span className="hidden sm:inline">Assign</span>
             </Button>
-            <Button
+            {/* <Button
               onClick={exportCSV}
               className="gap-2 bg-green-500 text-white hover:bg-green-600"
               disabled={studentsWithSeats.length === 0}
             >
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Export CSV</span>
-            </Button>
+            </Button> */}
           </div>
         </div>
       </header>
