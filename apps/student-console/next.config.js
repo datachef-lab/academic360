@@ -1,6 +1,6 @@
 /** @type { import('next').NextConfig } */
 
-const NODE_ENV = process.env.NODE_ENV;
+const NODE_ENV = process.env.NEXT_PUBLIC_APP_ENV;
 
 const baseConfig =
   !NODE_ENV || NODE_ENV === "development"
