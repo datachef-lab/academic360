@@ -48,8 +48,8 @@ import type { ExamComponent } from "@/types/course-design";
 import type { ExamComponent as ExamComponentDb } from "@repo/db";
 import { doAssignExam } from "../services";
 import { AccordionSection } from "../components/AccordionSection";
-import { MultiSelect } from "../components/MultiSelect";
 import { RoomsModal } from "../components/RoomsModal";
+import { MultiSelect as MultiSelectAdvance, type MultiSelectAdvanceOption } from "@/components/ui/MultiSelectAdvance";
 
 interface SelectedRoom extends RoomDto {
   capacity: number;
@@ -1055,29 +1055,28 @@ export default function ScheduleExamPage() {
     link.click();
   };
 
-  // Convert arrays to string arrays for MultiSelect
-  const programCourseNames = programCourses.filter((c) => c.isActive !== false).map((c) => c.name || `Course ${c.id}`);
-
-  const shiftNames = shifts.map((s) => s.name || `Shift ${s.id}`);
-
-  const subjectCategoryNames = subjectTypes
+  // Options for advanced multiselects (value = id as string)
+  const programCourseOptions: MultiSelectAdvanceOption[] = programCourses
     .filter((c) => c.isActive !== false)
-    .map((c) => (c.code && c.code.trim() ? c.code : c.name) || `Category ${c.id}`);
+    .map((c) => ({
+      label: c.name || `Course ${c.id}`,
+      value: String(c.id),
+    }));
 
-  const selectedProgramCourseNames = selectedProgramCourses
-    .map((id) => programCourses.find((c) => c.id === id)?.name)
-    .filter((name): name is string => !!name);
+  const shiftOptions: MultiSelectAdvanceOption[] = shifts.map((s) => ({
+    label: s.name || `Shift ${s.id}`,
+    value: String(s.id),
+  }));
 
-  const selectedShiftNames = selectedShifts
-    .map((id) => shifts.find((s) => s.id === id)?.name)
-    .filter((name): name is string => !!name);
-
-  const selectedSubjectCategoryNames = selectedSubjectCategories
-    .map((id) => {
-      const cat = subjectTypes.find((c) => c.id === id);
-      return cat?.code && cat.code.trim() ? cat.code : cat?.name;
-    })
-    .filter((name): name is string => !!name);
+  const subjectCategoryOptions: MultiSelectAdvanceOption[] = subjectTypes
+    .filter((c) => c.isActive !== false)
+    .map((c) => {
+      const label = (c.code && c.code.trim() ? c.code : c.name) || `Category ${c.id}`;
+      return {
+        label,
+        value: String(c.id),
+      };
+    });
 
   return (
     <div className="min-h-screen bg-white">
@@ -1210,47 +1209,56 @@ export default function ScheduleExamPage() {
               </Select>
             </div>
 
-            <MultiSelect
-              label="Program Course"
-              options={programCourseNames}
-              selected={selectedProgramCourseNames}
-              onChange={(selected) => {
-                const ids = selected
-                  .map((name) => programCourses.find((c) => c.name === name)?.id)
-                  .filter((id): id is number => id !== undefined);
-                setSelectedProgramCourses(ids);
-              }}
-              placeholder="Select Courses"
-            />
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Program Course</Label>
+              <MultiSelectAdvance
+                options={programCourseOptions}
+                maxCount={2}
+                responsive={false}
+                defaultValue={selectedProgramCourses.map((id) => String(id))}
+                onValueChange={(values) => {
+                  const ids = values.map((v) => Number(v)).filter((id) => !Number.isNaN(id));
+                  setSelectedProgramCourses(ids);
+                }}
+                placeholder="Select Courses"
+                className="w-full bg-white border-purple-200"
+                autoSize={false}
+              />
+            </div>
 
-            <MultiSelect
-              label="Shift"
-              options={shiftNames}
-              selected={selectedShiftNames}
-              onChange={(selected) => {
-                const ids = selected
-                  .map((name) => shifts.find((s) => s.name === name)?.id)
-                  .filter((id): id is number => id !== undefined);
-                setSelectedShifts(ids);
-              }}
-              placeholder="Select Shifts"
-            />
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Shift</Label>
+              <MultiSelectAdvance
+                options={shiftOptions}
+                maxCount={2}
+                responsive={false}
+                defaultValue={selectedShifts.map((id) => String(id))}
+                onValueChange={(values) => {
+                  const ids = values.map((v) => Number(v)).filter((id) => !Number.isNaN(id));
+                  setSelectedShifts(ids);
+                }}
+                placeholder="Select Shifts"
+                className="w-full bg-white border-purple-200"
+                autoSize={false}
+              />
+            </div>
 
-            <MultiSelect
-              label="Subject Category"
-              options={subjectCategoryNames}
-              selected={selectedSubjectCategoryNames}
-              onChange={(selected) => {
-                const ids = selected
-                  .map((name) => {
-                    const cat = subjectTypes.find((c) => (c.code && c.code.trim() ? c.code : c.name) === name);
-                    return cat?.id;
-                  })
-                  .filter((id): id is number => id !== undefined);
-                setSelectedSubjectCategories(ids);
-              }}
-              placeholder="Select Categories"
-            />
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Subject Category</Label>
+              <MultiSelectAdvance
+                options={subjectCategoryOptions}
+                maxCount={2}
+                responsive={false}
+                defaultValue={selectedSubjectCategories.map((id) => String(id))}
+                onValueChange={(values) => {
+                  const ids = values.map((v) => Number(v)).filter((id) => !Number.isNaN(id));
+                  setSelectedSubjectCategories(ids);
+                }}
+                placeholder="Select Categories"
+                className="w-full bg-white border-purple-200"
+                autoSize={false}
+              />
+            </div>
 
             <div>
               <Label className="block text-sm font-medium text-gray-900 mb-1.5">Subject Component</Label>
