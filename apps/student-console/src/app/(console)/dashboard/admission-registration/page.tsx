@@ -93,6 +93,14 @@ export default function CURegistrationPage() {
   const [instructionsConfirmed, setInstructionsConfirmed] = useState(false);
   const hasAutoNavigatedRef = React.useRef(false);
 
+  // Navigate user back as Registration process is closed
+  useEffect(() => {
+    const isNestedIframe = window.self !== window.top;
+    if (!isNestedIframe) {
+      router.replace("/dashboard");
+    }
+  }, []);
+
   // Debug activeTab changes
   useEffect(() => {
     console.info("[CU-REG FRONTEND] activeTab changed to:", activeTab);
