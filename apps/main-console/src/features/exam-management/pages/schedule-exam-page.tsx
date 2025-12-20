@@ -120,7 +120,7 @@ export default function ScheduleExamPage() {
   //   const [examAssignment, setExamAssignment] = useState<ExamDto | null>(null);
 
   // Step 2: Room Selection
-  const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | null>(null);
+  const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
   const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
   const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
   const [totalCapacity, setTotalCapacity] = useState(0);
@@ -529,6 +529,7 @@ export default function ScheduleExamPage() {
           paperIds,
           academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+          gender: gender === "ALL" ? null : gender,
         });
 
         console.log("[SCHEDULE-EXAM] Student count response:", response);
@@ -555,6 +556,7 @@ export default function ScheduleExamPage() {
     currentAcademicYear,
     getPapersForSelectedSubject,
     selectedAcademicYearId,
+    gender,
   ]);
 
   useEffect(() => {
@@ -618,6 +620,7 @@ export default function ScheduleExamPage() {
           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
           assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
           roomAssignments,
+          gender: gender == "ALL" ? null : gender,
         });
 
         if (response.httpStatus === "SUCCESS" && response.payload) {
@@ -644,6 +647,7 @@ export default function ScheduleExamPage() {
     currentAcademicYear,
     assignBy,
     floors,
+    gender,
     getPapersForSelectedSubject,
     selectedAcademicYearId,
   ]);
@@ -881,7 +885,7 @@ export default function ScheduleExamPage() {
           examId: 0,
           subjectType: st,
         })),
-      gender: gender,
+      gender: gender === "ALL" ? null : gender,
       examSubjects: examSubjects.map((es) => ({
         ...es,
         subject: subjects.find((ele) => ele.id === es.subjectId)!,
@@ -1372,6 +1376,7 @@ export default function ScheduleExamPage() {
                           <SelectContent>
                             <SelectItem value="UID">UID</SelectItem>
                             <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
+                            <SelectItem value="CU_ROLL_NUMBER">CU Roll Number</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

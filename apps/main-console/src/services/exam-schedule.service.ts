@@ -7,6 +7,7 @@ export interface CountStudentsParams {
   paperIds: number[];
   academicYearIds: number[];
   shiftIds?: number[];
+  gender: "MALE" | "FEMALE" | "OTHER" | null;
 }
 
 export interface CountStudentsResponse {

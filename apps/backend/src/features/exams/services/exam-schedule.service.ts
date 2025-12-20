@@ -67,6 +67,7 @@ export interface CountStudentsByPapersParams {
   paperIds: number[];
   academicYearIds: number[];
   shiftIds?: number[];
+  gender: "MALE" | "FEMALE" | "OTHER" | null;
 }
 
 /**
@@ -79,8 +80,14 @@ export interface CountStudentsByPapersParams {
 async function getEligibleStudentIds(
   params: CountStudentsByPapersParams,
 ): Promise<number[]> {
-  const { classId, programCourseIds, paperIds, academicYearIds, shiftIds } =
-    params;
+  const {
+    classId,
+    programCourseIds,
+    paperIds,
+    academicYearIds,
+    shiftIds,
+    gender,
+  } = params;
 
   console.log("[EXAM-SCHEDULE] Getting eligible student IDs:", params);
 
@@ -284,10 +291,14 @@ WITH current_promotions AS (
   FROM promotions pr
   JOIN sessions s ON s.id = pr.session_id_fk
   JOIN academic_years ay ON ay.id = s.academic_id_fk
+  JOIN students std ON std.id = pr.student_id_fk
+  JOIN users u ON u.id = std.user_id_fk
+  JOIN personal_details pd ON pd.user_id_fk = u.id
   WHERE pr.is_alumni = FALSE
     AND pr.class_id_fk = $2                    -- requested class
     AND ay.id = ANY($3)                        -- requested academic year(s)
     AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
+    ${gender && gender.length > 1 ? "AND pd.gender = ANY($6)" : ""} 
     ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : ""}
   ORDER BY pr.student_id_fk,
            pr.start_date DESC NULLS LAST,
@@ -371,7 +382,10 @@ ORDER BY student_id;
   ];
 
   if (shiftIds && shiftIds.length > 0) {
-    eligibleParams.push(shiftIds);
+    eligibleParams.push(shiftIds); // $5
+  }
+  if (gender) {
+    eligibleParams.push([gender]); // $6
   }
 
   const { rows } = await pool.query(eligibleSql, eligibleParams);
@@ -389,7 +403,7 @@ export async function countStudentsByPapers(
 }
 
 export interface GetStudentsByPapersParams extends CountStudentsByPapersParams {
-  assignBy: "UID" | "CU Reg. No.";
+  assignBy: "CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER";
 }
 
 export interface StudentWithSeat {
@@ -573,6 +587,7 @@ export async function getStudentsByPapers(
       userWhatsappPhone: userModel.whatsappNumber,
       cuRegistrationApplicationNumber:
         cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+      cuRollNumber: studentModel.rollNumber,
     })
     .from(studentModel)
     .innerJoin(
@@ -593,9 +608,11 @@ export async function getStudentsByPapers(
   students.sort((a, b) =>
     params.assignBy === "UID"
       ? (a.uid || "").localeCompare(b.uid || "")
-      : (a.cuRegistrationApplicationNumber || "").localeCompare(
-          b.cuRegistrationApplicationNumber || "",
-        ),
+      : params.assignBy === "CU_REGISTRATION_NUMBER"
+        ? (a.cuRegistrationApplicationNumber || "").localeCompare(
+            b.cuRegistrationApplicationNumber || "",
+          )
+        : (a.cuRollNumber || "").localeCompare(b.cuRollNumber || ""),
   );
 
   const result: StudentWithSeat[] = [];
@@ -936,7 +953,8 @@ export async function createExamAssignment(dto: ExamDto) {
       paperIds: Array.from(paperMap.values()),
       academicYearIds: [dto.academicYear.id!],
       shiftIds: shiftIdsArr.length > 0 ? shiftIdsArr : undefined,
-      assignBy: dto.orderType === "UID" ? "UID" : "CU Reg. No.",
+      assignBy: dto.orderType!,
+      gender: dto.gender,
     };
     console.log("[EXAM-SCHEDULE] Seat parameters:", seatParams);
     const roomAssignments = dto.locations.map((l) => ({

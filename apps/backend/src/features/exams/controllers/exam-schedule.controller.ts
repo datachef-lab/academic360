@@ -19,8 +19,14 @@ import { handleError } from "@/utils/handleError.js";
 
 export const countStudentsForExam = async (req: Request, res: Response) => {
   try {
-    const { classId, programCourseIds, paperIds, academicYearIds, shiftIds } =
-      req.body;
+    const {
+      classId,
+      programCourseIds,
+      paperIds,
+      academicYearIds,
+      shiftIds,
+      gender,
+    } = req.body;
 
     console.log("[EXAM-SCHEDULE-CONTROLLER] Received request:", {
       classId,
@@ -28,6 +34,7 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
       paperIds,
       academicYearIds,
       shiftIds,
+      gender,
     });
 
     if (
@@ -70,6 +77,7 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
       shiftIds: shiftIds
         ? shiftIds.map((id: unknown) => Number(id))
         : undefined,
+      gender,
     };
 
     console.log(
@@ -108,6 +116,7 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
       shiftIds,
       assignBy,
       roomAssignments,
+      gender,
     } = req.body;
 
     console.log("[EXAM-SCHEDULE-CONTROLLER] Received get students request:", {
@@ -170,7 +179,8 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
       shiftIds: shiftIds
         ? shiftIds.map((id: unknown) => Number(id))
         : undefined,
-      assignBy: assignBy as "UID" | "CU Reg. No.",
+      assignBy: assignBy as "CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER",
+      gender,
     };
 
     const students = await getStudentsByPapers(params, roomAssignments);
