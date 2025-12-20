@@ -14,6 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useFeesSlabs } from "@/hooks/useFees";
+import { toast } from "sonner";
 import { FeesSlab as FeesSlabType } from "@/types/fees";
 
 const FeesSlabPage: React.FC = () => {
@@ -29,13 +30,11 @@ const FeesSlabPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filteredData, setFilteredData] = useState<FeesSlabType[]>([]);
 
-  const { 
-    feesSlabs, 
-    loading, 
-    addFeesSlab, 
-    updateFeesSlabById, 
-    deleteFeesSlabById 
-  } = useFeesSlabs();
+  // UI state for async actions
+  const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const { feesSlabs, loading, addFeesSlab, updateFeesSlabById, deleteFeesSlabById } = useFeesSlabs();
 
   useEffect(() => {
     let updated = feesSlabs;
@@ -69,14 +68,20 @@ const FeesSlabPage: React.FC = () => {
     if (!form.name.trim()) return;
 
     try {
+      setIsSaving(true);
       if (editingItem) {
         await updateFeesSlabById(editingItem.id!, form);
+        toast.success("Fees slab updated successfully.");
       } else {
         await addFeesSlab(form);
+        toast.success("Fees slab created successfully.");
       }
       handleClose();
     } catch (error) {
       console.error("Error saving fees slab:", error);
+      toast.error("Failed to save fees slab.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -97,8 +102,20 @@ const FeesSlabPage: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this fees slab?")) {
-      await deleteFeesSlabById(id);
+    if (!window.confirm("Are you sure you want to delete this fees slab?")) return;
+    try {
+      setDeletingId(id);
+      const success = await deleteFeesSlabById(id);
+      if (success) {
+        toast.success("Fees slab deleted successfully.");
+      } else {
+        toast.error("Fees slab not found or already deleted.");
+      }
+    } catch (error) {
+      console.error("Failed to delete fees slab:", error);
+      toast.error("Failed to delete fees slab.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -171,7 +188,13 @@ const FeesSlabPage: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => {
+                // default sequence is max existing sequence + 1
+                const maxSeq = feesSlabs.length ? Math.max(...feesSlabs.map((s) => s.sequence || 0)) : 0;
+                setEditingItem(null);
+                setForm({ name: "", description: "", sequence: maxSeq + 1 });
+                setShowModal(true);
+              }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
             >
               <PlusCircle className="h-3.5 w-3.5" />
@@ -206,7 +229,7 @@ const FeesSlabPage: React.FC = () => {
                 <TableRow key={row.id} className="hover:bg-gray-50">
                   <TableCell className="text-center font-medium">{idx + 1}</TableCell>
                   <TableCell className="text-center">{row.name}</TableCell>
-                  <TableCell className="text-center">{row.description || '-'}</TableCell>
+                  <TableCell className="text-center">{row.description || "-"}</TableCell>
                   <TableCell className="text-center">{row.sequence}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
@@ -214,6 +237,7 @@ const FeesSlabPage: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEdit(row)}
+                        disabled={isSaving || deletingId !== null}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -221,8 +245,28 @@ const FeesSlabPage: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(row.id!)}
+                        disabled={isSaving || deletingId === row.id}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {deletingId === row.id ? (
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                          </svg>
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </TableCell>
@@ -287,11 +331,28 @@ const FeesSlabPage: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={handleClose}>
+            <Button variant="secondary" onClick={handleClose} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit}>
-              {editingItem ? "Update" : "Save"}
+            <Button onClick={handleSubmit} disabled={isSaving || !form.name.trim()}>
+              {isSaving ? (
+                <span className="flex items-center gap-2">
+                  <svg
+                    className="animate-spin h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                  {editingItem ? "Updating" : "Saving"}
+                </span>
+              ) : editingItem ? (
+                "Update"
+              ) : (
+                "Save"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
