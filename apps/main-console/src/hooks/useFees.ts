@@ -208,21 +208,34 @@ export const useFeesStructuresByAcademicYearAndCourse = (academicYearId: number 
 
 export const useFeesHeads = () => {
   const [feesHeads, setFeesHeads] = useState<FeesHead[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
   const { showError } = useError();
 
-  const fetchFeesHeads = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await getAllFeesHeads();
-      console.log("Fees Heads API response:", response);
-      setFeesHeads(response || []);
-    } catch {
-      showError({ message: "Failed to fetch fees heads" });
-    } finally {
-      setLoading(false);
-    }
-  }, [showError]);
+  const fetchFeesHeads = useCallback(
+    async (pageArg = page, pageSizeArg = pageSize) => {
+      try {
+        setLoading(true);
+        const response = await getAllFeesHeads({
+          page: pageArg,
+          pageSize: pageSizeArg,
+        });
+        setFeesHeads(response?.content || []);
+        setPage(response.page);
+        setPageSize(response.pageSize);
+        setTotalPages(response.totalPages);
+        setTotalElements(response.totalElements);
+      } catch {
+        showError({ message: "Failed to fetch fees heads" });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [page, pageSize, showError],
+  );
 
   const addFeesHead = useCallback(
     async (newFeesHead: FeesHead) => {
@@ -256,29 +269,44 @@ export const useFeesHeads = () => {
     async (id: number) => {
       try {
         await deleteFeesHead(id);
-        await fetchFeesHeads();
+        // Refetch current page; if no records remain on the page, move back one page.
+        await fetchFeesHeads(page);
         return true;
       } catch {
         showError({ message: "Failed to delete fees head" });
         return false;
       }
     },
-    [fetchFeesHeads, showError],
+    [fetchFeesHeads, page, showError],
   );
 
   useEffect(() => {
     fetchFeesHeads();
   }, [fetchFeesHeads]);
 
-  console.log("Fees Heads data:", feesHeads);
+  const goToPage = (nextPage: number) => {
+    const target = Math.max(1, Math.min(nextPage, totalPages || 1));
+    fetchFeesHeads(target, pageSize);
+  };
+
+  const changePageSize = (size: number) => {
+    const safeSize = Math.min(Math.max(1, size), 100);
+    fetchFeesHeads(1, safeSize);
+  };
 
   return {
     feesHeads,
     loading,
+    page,
+    pageSize,
+    totalPages,
+    totalElements,
     fetchFeesHeads,
     addFeesHead,
     updateFeesHeadById,
     deleteFeesHeadById,
+    goToPage,
+    changePageSize,
   };
 };
 

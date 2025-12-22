@@ -16,7 +16,19 @@ const FeeHeadsPage: React.FC = () => {
     remarks: "",
   });
 
-  const { feesHeads, loading, addFeesHead, updateFeesHeadById, deleteFeesHeadById } = useFeesHeads();
+  const {
+    feesHeads,
+    loading,
+    addFeesHead,
+    updateFeesHeadById,
+    deleteFeesHeadById,
+    page,
+    pageSize,
+    totalPages,
+    totalElements,
+    goToPage,
+    changePageSize,
+  } = useFeesHeads();
 
   const handleSubmit = async () => {
     if (!form.name.trim()) return;
@@ -118,7 +130,7 @@ const FeeHeadsPage: React.FC = () => {
             {feesHeads.length ? (
               feesHeads.map((row, idx) => (
                 <TableRow key={row.id} className="hover:bg-gray-50">
-                  <TableCell className="text-center font-medium">{idx + 1}</TableCell>
+                  <TableCell className="text-center font-medium">{(page - 1) * pageSize + idx + 1}</TableCell>
                   <TableCell className="text-center">{row.name}</TableCell>
                   <TableCell className="text-center">{row.sequence}</TableCell>
                   <TableCell className="text-center">{row.remarks || "-"}</TableCell>
@@ -143,6 +155,34 @@ const FeeHeadsPage: React.FC = () => {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="text-sm text-gray-600">
+          Showing {(page - 1) * pageSize + 1}-{(page - 1) * pageSize + feesHeads.length} of {totalElements} records
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Rows per page:</span>
+          <Input
+            type="number"
+            className="w-20"
+            min={1}
+            max={100}
+            value={pageSize}
+            onChange={(e) => changePageSize(parseInt(e.target.value) || 10)}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+            Previous
+          </Button>
+          <div className="text-sm">
+            Page {totalPages === 0 ? 0 : page} of {totalPages}
+          </div>
+          <Button variant="outline" disabled={page >= totalPages} onClick={() => goToPage(page + 1)}>
+            Next
+          </Button>
+        </div>
       </div>
     </div>
   );

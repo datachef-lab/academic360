@@ -12,6 +12,14 @@ import {
   CreateFeesStructureDto,
 } from "@/types/fees";
 
+export interface PaginatedResponse<T> {
+  content: T[];
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalElements: number;
+}
+
 const BASE_PATH = "/api/v1/fees";
 
 // ==================== FEES STRUCTURE APIs ====================
@@ -90,10 +98,16 @@ export interface NewFeesHead {
   remarks?: string | null;
 }
 
+export interface FeesHeadQuery {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
 // Get all fees heads
-export async function getAllFeesHeads(): Promise<FeesHead[]> {
-  const response = await axiosInstance.get(`${BASE_PATH}/heads`);
-  return response.data;
+export async function getAllFeesHeads(params?: FeesHeadQuery): Promise<PaginatedResponse<FeesHead>> {
+  const response = await axiosInstance.get<ApiResponse<PaginatedResponse<FeesHead>>>(`${BASE_PATH}/heads`, { params });
+  return response.data.payload;
 }
 
 // Get a single fees head
