@@ -1,4 +1,4 @@
-import { getDbConnection } from "@repo/db/connection";
+import { db } from "@/db";
 import {
   notificationContentModel,
   notificationModel,
@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 
 export class NotificationsCrudService {
   static db() {
-    return getDbConnection(process.env.DATABASE_URL!);
+    return db;
   }
 
   // notifications

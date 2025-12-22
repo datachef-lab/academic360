@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { app } from "@/app.js";
-import { getDbConnection } from "@repo/db/connection";
+
 import { db } from "./db";
 import { userModel } from "@repo/db/schemas";
 

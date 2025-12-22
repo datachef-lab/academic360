@@ -1,15 +1,16 @@
 import { ApiResponse } from "@/types/api-response";
-import { RoomT } from "@repo/db/schemas/models/exams";
+import type { RoomT } from "@repo/db/schemas/models/exams";
 import axiosInstance from "@/utils/api";
+import { RoomDto } from "@/dtos";
 
 export type { RoomT };
 
 const BASE_URL = "/api/exams/rooms";
 
 // Get all rooms
-export async function getAllRooms(): Promise<ApiResponse<RoomT[]>> {
+export async function getAllRooms(): Promise<ApiResponse<RoomDto[]>> {
   try {
-    const response = await axiosInstance.get<ApiResponse<RoomT[]>>(BASE_URL);
+    const response = await axiosInstance.get<ApiResponse<RoomDto[]>>(BASE_URL);
     return response.data;
   } catch {
     throw new Error("Failed to fetch all rooms");

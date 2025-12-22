@@ -41,15 +41,25 @@
             "types": "./dist/dtos/subject-selection/index.d.ts",
             "import": "./dist/dtos/subject-selection/index.js"
         },
-        "./enums": {
+        "./dtos/exams": {
+            "types": "./dist/dtos/exams/index.d.ts",
+            "import": "./dist/dtos/exams/index.js"
+        },
+        "./schemas/enums": {
             "types": "./dist/schemas/enums/index.d.ts",
             "import": "./dist/schemas/enums/index.js"
+        },
+        "./schemas/": {
+            "types": "./dist/schemas/index.d.ts",
+            "import": "./dist/schemas/index.js"
         }
     },
     "type": "module",
     "scripts": {
-        "clean": "rimraf dist",
-        "build": "tsc && tsc-alias",
+        "clean": "rimraf dist tsconfig.tsbuildinfo",
+        "build:ts": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+        "build:add-js": "ts-add-js-extension --dir=dist",
+        "build": "pnpm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json && mkdir -p dist && ts-add-js-extension --dir=dist",
         "dev": "tsc --watch",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
@@ -63,7 +73,6 @@
     "license": "ISC",
     "packageManager": "pnpm@10.15.0",
     "dependencies": {
-        "dotenv": "^17.2.1",
         "drizzle-orm": "^0.38.4",
         "drizzle-zod": "^0.5.1",
         "pg": "^8.16.3",

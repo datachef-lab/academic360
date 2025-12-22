@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AccommodationDto, AddressDto } from "@repo/db/dtos/user";
+import type { AccommodationDto, AddressDto } from "@repo/db/dtos/user";
 import { PlaceOfStay } from "@/types/enums";
 import { getAccommodationById, createAccommodation, updateAccommodation } from "@/services/accommodation.service";
 import { Button } from "@/components/ui/button";

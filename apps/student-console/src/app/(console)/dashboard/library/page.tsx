@@ -28,21 +28,17 @@ export default function LibraryPage() {
   const [visits, setVisits] = useState<LibraryVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"current" | "history" | "visits">(
-    "current"
-  );
+  const [activeTab, setActiveTab] = useState<"current" | "history" | "visits">("current");
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedBook, setSelectedBook] = useState<IssuedBookDetails | null>(
-    null
-  );
+  const [selectedBook, setSelectedBook] = useState<IssuedBookDetails | null>(null);
 
-  useEffect(() => {
-    if (!accessControl?.access_course) {
-      router.back();
-    }
-  }, [accessControl, router]);
+  //   useEffect(() => {
+  //     if (!accessControl?.access_course) {
+  //       router.back();
+  //     }
+  //   }, [accessControl, router]);
 
   useEffect(() => {
     fetchLibraryData();
@@ -54,9 +50,7 @@ export default function LibraryPage() {
 
     try {
       setLoading(true);
-      const response = await fetch(
-        `/api/student/library?studentId=${student.id}`
-      );
+      const response = await fetch(`/api/student/library?studentId=${student.id}`);
       if (!response.ok) {
         throw new Error("Failed to fetch library data");
       }
@@ -74,9 +68,7 @@ export default function LibraryPage() {
 
     try {
       setLoading(true);
-      const response = await fetch(
-        `/api/student/library/visit?studentId=${student.id}`
-      );
+      const response = await fetch(`/api/student/library/visit?studentId=${student.id}`);
       if (!response.ok) {
         throw new Error("Failed to fetch library data");
       }
@@ -96,21 +88,12 @@ export default function LibraryPage() {
   const calculateDueDays = (dueDate: string) => {
     const returnDate = new Date(dueDate);
     const today = new Date();
-    const diffDays = Math.ceil(
-      (returnDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const diffDays = Math.ceil((returnDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
     // Return status object with days remaining and status level
     return {
       days: diffDays,
-      status:
-        diffDays <= 0
-          ? "overdue"
-          : diffDays <= 3
-          ? "critical"
-          : diffDays <= 7
-          ? "warning"
-          : "normal",
+      status: diffDays <= 0 ? "overdue" : diffDays <= 3 ? "critical" : diffDays <= 7 ? "warning" : "normal",
     };
   };
 
@@ -157,8 +140,7 @@ export default function LibraryPage() {
 
           // Calculate total seconds
           const inTotalSeconds = inHours * 3600 + inMinutes * 60 + inSeconds;
-          const outTotalSeconds =
-            outHours * 3600 + outMinutes * 60 + outSeconds;
+          const outTotalSeconds = outHours * 3600 + outMinutes * 60 + outSeconds;
 
           // Calculate difference
           const diffSeconds = outTotalSeconds - inTotalSeconds;
@@ -180,8 +162,7 @@ export default function LibraryPage() {
 
   const totalTimeSpent = calculateTotalTime();
   const totalVisits = visits.length;
-  const averageTimePerVisit =
-    totalVisits > 0 ? totalTimeSpent / totalVisits : 0;
+  const averageTimePerVisit = totalVisits > 0 ? totalTimeSpent / totalVisits : 0;
 
   // Function to open details modal
   const openBookDetails = (book: IssuedBookDetails) => {
@@ -227,12 +208,8 @@ export default function LibraryPage() {
               <Library size={36} className="text-white" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">
-                College Library
-              </h1>
-              <p className="text-blue-50 text-lg drop-shadow">
-                Your digital gateway to knowledge and discovery
-              </p>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">College Library</h1>
+              <p className="text-blue-50 text-lg drop-shadow">Your digital gateway to knowledge and discovery</p>
             </div>
           </div>
         </div>
@@ -261,16 +238,10 @@ export default function LibraryPage() {
             <div className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-blue-700 font-medium mb-1">
-                    Books Borrowed
-                  </p>
+                  <p className="text-sm text-blue-700 font-medium mb-1">Books Borrowed</p>
                   <div className="flex items-center">
-                    <p className="text-3xl font-bold text-blue-700">
-                      {activeBooks}
-                    </p>
-                    <span className="ml-2 text-xs text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
-                      Active
-                    </span>
+                    <p className="text-3xl font-bold text-blue-700">{activeBooks}</p>
+                    <span className="ml-2 text-xs text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Active</span>
                   </div>
                 </div>
                 <div className="bg-blue-200 p-3 rounded-xl group-hover:bg-blue-300/70 transition-all">
@@ -305,26 +276,21 @@ export default function LibraryPage() {
                 <div
                   className="h-full bg-amber-500"
                   style={{
-                    width: `${
-                      activeBooks > 0 ? (dueSoonBooks / activeBooks) * 100 : 0
-                    }%`,
+                    width: `${activeBooks > 0 ? (dueSoonBooks / activeBooks) * 100 : 0}%`,
                   }}
                 ></div>
                 {overdueBooks > 0 && (
                   <div
                     className="h-full bg-red-500 -mt-2"
                     style={{
-                      width: `${
-                        activeBooks > 0 ? (overdueBooks / activeBooks) * 100 : 0
-                      }%`,
+                      width: `${activeBooks > 0 ? (overdueBooks / activeBooks) * 100 : 0}%`,
                     }}
                   ></div>
                 )}
               </div>
               <p className="mt-2 text-xs text-gray-500 pb-4">
-                {dueSoonBooks} due soon,{" "}
-                {overdueBooks > 0 ? `${overdueBooks} overdue` : "none overdue"}{" "}
-                of {activeBooks} active books
+                {dueSoonBooks} due soon, {overdueBooks > 0 ? `${overdueBooks} overdue` : "none overdue"} of{" "}
+                {activeBooks} active books
               </p>
             </div>
             <div className="px-6 py-3 bg-gradient-to-r from-amber-50 to-amber-100/30">
@@ -339,16 +305,10 @@ export default function LibraryPage() {
             <div className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-purple-700 font-medium mb-1">
-                    Returned Books
-                  </p>
+                  <p className="text-sm text-purple-700 font-medium mb-1">Returned Books</p>
                   <div className="flex items-center">
-                    <p className="text-3xl font-bold text-purple-700">
-                      {returnedBooks}
-                    </p>
-                    <span className="ml-2 text-xs text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
-                      History
-                    </span>
+                    <p className="text-3xl font-bold text-purple-700">{returnedBooks}</p>
+                    <span className="ml-2 text-xs text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">History</span>
                   </div>
                 </div>
                 <div className="bg-purple-200 p-3 rounded-xl group-hover:bg-purple-300/70 transition-all">
@@ -362,16 +322,10 @@ export default function LibraryPage() {
             <div className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-indigo-700 font-medium mb-1">
-                    Library Visits
-                  </p>
+                  <p className="text-sm text-indigo-700 font-medium mb-1">Library Visits</p>
                   <div className="flex items-center">
-                    <p className="text-3xl font-bold text-indigo-700">
-                      {totalVisits}
-                    </p>
-                    <span className="ml-2 text-xs text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
-                      Total
-                    </span>
+                    <p className="text-3xl font-bold text-indigo-700">{totalVisits}</p>
+                    <span className="ml-2 text-xs text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">Total</span>
                   </div>
                 </div>
                 <div className="bg-indigo-200 p-3 rounded-xl group-hover:bg-indigo-300/70 transition-all">
@@ -385,20 +339,12 @@ export default function LibraryPage() {
             <div className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-emerald-700 font-medium mb-1">
-                    Fine Amount
-                  </p>
+                  <p className="text-sm text-emerald-700 font-medium mb-1">Fine Amount</p>
                   <div className="flex items-center">
                     <p className="text-3xl font-bold text-emerald-700">
-                      ₹
-                      {issuedBooks.reduce(
-                        (sum, book) => sum + (book.fine || 0),
-                        0
-                      )}
+                      ₹{issuedBooks.reduce((sum, book) => sum + (book.fine || 0), 0)}
                     </p>
-                    <span className="ml-2 text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                      Total
-                    </span>
+                    <span className="ml-2 text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Total</span>
                   </div>
                 </div>
                 <div className="bg-emerald-200 p-3 rounded-xl group-hover:bg-emerald-300/70 transition-all">
@@ -412,16 +358,10 @@ export default function LibraryPage() {
             <div className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-orange-700 font-medium mb-1">
-                    Hours Spent
-                  </p>
+                  <p className="text-sm text-orange-700 font-medium mb-1">Hours Spent</p>
                   <div className="flex items-center">
-                    <p className="text-3xl font-bold text-orange-700">
-                      {totalTimeSpent.toFixed(1)}
-                    </p>
-                    <span className="ml-2 text-xs text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
-                      Hours
-                    </span>
+                    <p className="text-3xl font-bold text-orange-700">{totalTimeSpent.toFixed(1)}</p>
+                    <span className="ml-2 text-xs text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">Hours</span>
                   </div>
                 </div>
                 <div className="bg-orange-200 p-3 rounded-xl group-hover:bg-orange-300/70 transition-all">
@@ -446,9 +386,7 @@ export default function LibraryPage() {
               <div className="flex items-center justify-center">
                 <BookOpen className="mr-2 h-5 w-5" />
                 Current Loans
-                <span className="ml-2 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
-                  {activeBooks}
-                </span>
+                <span className="ml-2 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">{activeBooks}</span>
               </div>
             </button>
             <button
@@ -523,25 +461,18 @@ export default function LibraryPage() {
                                   {book.mainTitle}
                                 </h3>
                                 {(() => {
-                                  const dueStatus = calculateDueDays(
-                                    book.returnDate
-                                  );
+                                  const dueStatus = calculateDueDays(book.returnDate);
                                   let statusColor = "";
                                   let statusText = "";
 
                                   if (dueStatus.status === "overdue") {
-                                    statusColor =
-                                      "bg-red-100 text-red-700 border border-red-200";
+                                    statusColor = "bg-red-100 text-red-700 border border-red-200";
                                     statusText = "Overdue";
                                   } else if (dueStatus.status === "critical") {
-                                    statusColor =
-                                      "bg-amber-100 text-amber-700 border border-amber-200";
-                                    statusText = `Due in ${dueStatus.days} day${
-                                      dueStatus.days !== 1 ? "s" : ""
-                                    }`;
+                                    statusColor = "bg-amber-100 text-amber-700 border border-amber-200";
+                                    statusText = `Due in ${dueStatus.days} day${dueStatus.days !== 1 ? "s" : ""}`;
                                   } else if (dueStatus.status === "warning") {
-                                    statusColor =
-                                      "bg-yellow-100 text-yellow-700 border border-yellow-200";
+                                    statusColor = "bg-yellow-100 text-yellow-700 border border-yellow-200";
                                     statusText = `Due Soon`;
                                   } else {
                                     statusColor = "bg-blue-100 text-blue-700";
@@ -558,11 +489,7 @@ export default function LibraryPage() {
                                   );
                                 })()}
                               </div>
-                              {book.subTitle && (
-                                <p className="text-gray-600 text-sm mt-1.5 ml-7">
-                                  {book.subTitle}
-                                </p>
-                              )}
+                              {book.subTitle && <p className="text-gray-600 text-sm mt-1.5 ml-7">{book.subTitle}</p>}
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -571,12 +498,8 @@ export default function LibraryPage() {
                                   <User className="w-4 h-4 text-indigo-600" />
                                 </div>
                                 <div className="ml-2">
-                                  <p className="text-xs text-gray-500">
-                                    Author/Publisher
-                                  </p>
-                                  <p className="text-sm font-medium text-gray-700">
-                                    {book.publisherName}
-                                  </p>
+                                  <p className="text-xs text-gray-500">Author/Publisher</p>
+                                  <p className="text-sm font-medium text-gray-700">{book.publisherName}</p>
                                 </div>
                               </div>
                               <div className="flex items-center">
@@ -585,9 +508,7 @@ export default function LibraryPage() {
                                 </div>
                                 <div className="ml-2">
                                   <p className="text-xs text-gray-500">ISBN</p>
-                                  <p className="text-sm font-medium text-gray-700">
-                                    {book.isbn || "Not available"}
-                                  </p>
+                                  <p className="text-sm font-medium text-gray-700">{book.isbn || "Not available"}</p>
                                 </div>
                               </div>
                               <div className="flex items-center">
@@ -595,22 +516,12 @@ export default function LibraryPage() {
                                   <MapPin className="w-4 h-4 text-amber-600" />
                                 </div>
                                 <div className="ml-2">
-                                  <p className="text-xs text-gray-500">
-                                    Location
-                                  </p>
+                                  <p className="text-xs text-gray-500">Location</p>
                                   <p className="text-sm font-medium text-gray-700">
-                                    {book.rackName
-                                      ? `Rack ${book.rackName}`
-                                      : ""}
-                                    {book.rackName && book.shelfName
-                                      ? ", "
-                                      : ""}
-                                    {book.shelfName
-                                      ? `Shelf ${book.shelfName}`
-                                      : ""}
-                                    {!book.rackName &&
-                                      !book.shelfName &&
-                                      "Not specified"}
+                                    {book.rackName ? `Rack ${book.rackName}` : ""}
+                                    {book.rackName && book.shelfName ? ", " : ""}
+                                    {book.shelfName ? `Shelf ${book.shelfName}` : ""}
+                                    {!book.rackName && !book.shelfName && "Not specified"}
                                   </p>
                                 </div>
                               </div>
@@ -618,23 +529,14 @@ export default function LibraryPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
                               <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded-md flex items-center">
-                                <span className="font-medium mr-1">
-                                  Edition:
-                                </span>{" "}
-                                {book.edition}{" "}
+                                <span className="font-medium mr-1">Edition:</span> {book.edition}{" "}
                                 {book.editionYear && `(${book.editionYear})`}
                               </div>
                               <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded-md flex items-center">
-                                <span className="font-medium mr-1">
-                                  Language:
-                                </span>{" "}
-                                {book.languageName}
+                                <span className="font-medium mr-1">Language:</span> {book.languageName}
                               </div>
                               <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded-md flex items-center">
-                                <span className="font-medium mr-1">
-                                  Call No:
-                                </span>{" "}
-                                {book.callNo}
+                                <span className="font-medium mr-1">Call No:</span> {book.callNo}
                               </div>
                             </div>
 
@@ -644,22 +546,14 @@ export default function LibraryPage() {
                                   <Calendar className="h-4 w-4 mr-1.5 text-blue-500" />
                                   <span>
                                     Borrowed:{" "}
-                                    <span className="font-medium">
-                                      {new Date(
-                                        book.issueDate
-                                      ).toLocaleDateString()}
-                                    </span>
+                                    <span className="font-medium">{new Date(book.issueDate).toLocaleDateString()}</span>
                                   </span>
                                 </div>
                                 <div className="flex items-center text-sm font-medium text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
                                   <Clock className="h-4 w-4 mr-1.5 text-amber-500" />
                                   <span>
                                     Due:{" "}
-                                    <span className="font-bold">
-                                      {new Date(
-                                        book.returnDate
-                                      ).toLocaleDateString()}
-                                    </span>
+                                    <span className="font-bold">{new Date(book.returnDate).toLocaleDateString()}</span>
                                   </span>
                                 </div>
                               </div>
@@ -691,13 +585,8 @@ export default function LibraryPage() {
                     <div className="bg-blue-100 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4">
                       <BookOpen className="h-8 w-8 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-800 mb-2">
-                      No Active Loans
-                    </h3>
-                    <p className="text-gray-500">
-                      You don&apos;t have any books currently borrowed from the
-                      library.
-                    </p>
+                    <h3 className="text-lg font-medium text-gray-800 mb-2">No Active Loans</h3>
+                    <p className="text-gray-500">You don&apos;t have any books currently borrowed from the library.</p>
                     <button className="mt-4 bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition-all flex items-center mx-auto">
                       <Search className="mr-1.5 h-4 w-4" />
                       Browse Books
@@ -750,11 +639,7 @@ export default function LibraryPage() {
                                   Returned
                                 </span>
                               </div>
-                              {book.subTitle && (
-                                <p className="text-gray-600 text-sm mt-1.5 ml-7">
-                                  {book.subTitle}
-                                </p>
-                              )}
+                              {book.subTitle && <p className="text-gray-600 text-sm mt-1.5 ml-7">{book.subTitle}</p>}
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -763,12 +648,8 @@ export default function LibraryPage() {
                                   <User className="w-4 h-4 text-indigo-600" />
                                 </div>
                                 <div className="ml-2">
-                                  <p className="text-xs text-gray-500">
-                                    Author/Publisher
-                                  </p>
-                                  <p className="text-sm font-medium text-gray-700">
-                                    {book.publisherName}
-                                  </p>
+                                  <p className="text-xs text-gray-500">Author/Publisher</p>
+                                  <p className="text-sm font-medium text-gray-700">{book.publisherName}</p>
                                 </div>
                               </div>
                               <div className="flex items-center">
@@ -777,9 +658,7 @@ export default function LibraryPage() {
                                 </div>
                                 <div className="ml-2">
                                   <p className="text-xs text-gray-500">ISBN</p>
-                                  <p className="text-sm font-medium text-gray-700">
-                                    {book.isbn || "Not available"}
-                                  </p>
+                                  <p className="text-sm font-medium text-gray-700">{book.isbn || "Not available"}</p>
                                 </div>
                               </div>
                               <div className="flex items-center">
@@ -787,22 +666,12 @@ export default function LibraryPage() {
                                   <MapPin className="w-4 h-4 text-amber-600" />
                                 </div>
                                 <div className="ml-2">
-                                  <p className="text-xs text-gray-500">
-                                    Location
-                                  </p>
+                                  <p className="text-xs text-gray-500">Location</p>
                                   <p className="text-sm font-medium text-gray-700">
-                                    {book.rackName
-                                      ? `Rack ${book.rackName}`
-                                      : ""}
-                                    {book.rackName && book.shelfName
-                                      ? ", "
-                                      : ""}
-                                    {book.shelfName
-                                      ? `Shelf ${book.shelfName}`
-                                      : ""}
-                                    {!book.rackName &&
-                                      !book.shelfName &&
-                                      "Not specified"}
+                                    {book.rackName ? `Rack ${book.rackName}` : ""}
+                                    {book.rackName && book.shelfName ? ", " : ""}
+                                    {book.shelfName ? `Shelf ${book.shelfName}` : ""}
+                                    {!book.rackName && !book.shelfName && "Not specified"}
                                   </p>
                                 </div>
                               </div>
@@ -810,23 +679,14 @@ export default function LibraryPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
                               <div className="text-xs text-gray-600 bg-purple-50 p-2 rounded-md flex items-center">
-                                <span className="font-medium mr-1">
-                                  Edition:
-                                </span>{" "}
-                                {book.edition}{" "}
+                                <span className="font-medium mr-1">Edition:</span> {book.edition}{" "}
                                 {book.editionYear && `(${book.editionYear})`}
                               </div>
                               <div className="text-xs text-gray-600 bg-purple-50 p-2 rounded-md flex items-center">
-                                <span className="font-medium mr-1">
-                                  Language:
-                                </span>{" "}
-                                {book.languageName}
+                                <span className="font-medium mr-1">Language:</span> {book.languageName}
                               </div>
                               <div className="text-xs text-gray-600 bg-purple-50 p-2 rounded-md flex items-center">
-                                <span className="font-medium mr-1">
-                                  Call No:
-                                </span>{" "}
-                                {book.callNo}
+                                <span className="font-medium mr-1">Call No:</span> {book.callNo}
                               </div>
                             </div>
 
@@ -836,11 +696,7 @@ export default function LibraryPage() {
                                   <Calendar className="h-4 w-4 mr-1.5 text-purple-500" />
                                   <span>
                                     Borrowed:{" "}
-                                    <span className="font-medium">
-                                      {new Date(
-                                        book.issueDate
-                                      ).toLocaleDateString()}
-                                    </span>
+                                    <span className="font-medium">{new Date(book.issueDate).toLocaleDateString()}</span>
                                   </span>
                                 </div>
                                 <div className="flex items-center text-sm font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
@@ -848,11 +704,7 @@ export default function LibraryPage() {
                                   <span>
                                     Returned:{" "}
                                     <span className="font-bold">
-                                      {book.actualRetDate
-                                        ? new Date(
-                                            book.actualRetDate
-                                          ).toLocaleDateString()
-                                        : "-"}
+                                      {book.actualRetDate ? new Date(book.actualRetDate).toLocaleDateString() : "-"}
                                     </span>
                                   </span>
                                 </div>
@@ -888,12 +740,8 @@ export default function LibraryPage() {
                     <div className="bg-purple-100 w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4">
                       <History className="h-8 w-8 text-purple-600" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-800 mb-2">
-                      No Borrowing History
-                    </h3>
-                    <p className="text-gray-500">
-                      You haven&apos;t returned any books yet.
-                    </p>
+                    <h3 className="text-lg font-medium text-gray-800 mb-2">No Borrowing History</h3>
+                    <p className="text-gray-500">You haven&apos;t returned any books yet.</p>
                     <button className="mt-4 bg-purple-50 text-purple-700 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-100 transition-all flex items-center mx-auto">
                       <Search className="mr-1.5 h-4 w-4" />
                       Browse Books
@@ -938,13 +786,10 @@ export default function LibraryPage() {
                               let displayDate = "Unknown";
                               try {
                                 if (visit?.entrydt) {
-                                  const dateOnly = String(visit.entrydt).split(
-                                    " "
-                                  )[0];
+                                  const dateOnly = String(visit.entrydt).split(" ")[0];
                                   const entryDate = new Date(dateOnly);
                                   if (!isNaN(entryDate.getTime())) {
-                                    displayDate =
-                                      entryDate.toLocaleDateString();
+                                    displayDate = entryDate.toLocaleDateString();
                                   }
                                 }
                               } catch {
@@ -958,10 +803,7 @@ export default function LibraryPage() {
                                   inTimeStr = String(visit.entrytime);
                                 }
                               } catch {
-                                console.error(
-                                  "Error parsing entry time:",
-                                  visit
-                                );
+                                console.error("Error parsing entry time:", visit);
                               }
 
                               // Parse exit time - handle time-only format
@@ -971,75 +813,36 @@ export default function LibraryPage() {
                                   outTimeStr = String(visit.exittime);
                                 }
                               } catch {
-                                console.error(
-                                  "Error parsing exit time:",
-                                  visit
-                                );
+                                console.error("Error parsing exit time:", visit);
                               }
 
                               // Calculate duration from time strings
                               let duration = "Still in library";
-                              if (
-                                inTimeStr &&
-                                outTimeStr &&
-                                outTimeStr !== "(null)"
-                              ) {
+                              if (inTimeStr && outTimeStr && outTimeStr !== "(null)") {
                                 try {
                                   // Parse HH:MM:SS time format
                                   const inTimeParts = inTimeStr.split(":");
                                   const outTimeParts = outTimeStr.split(":");
 
-                                  if (
-                                    inTimeParts.length === 3 &&
-                                    outTimeParts.length === 3
-                                  ) {
-                                    const inHours = parseInt(
-                                      inTimeParts[0],
-                                      10
-                                    );
-                                    const inMinutes = parseInt(
-                                      inTimeParts[1],
-                                      10
-                                    );
-                                    const inSeconds = parseInt(
-                                      inTimeParts[2],
-                                      10
-                                    );
+                                  if (inTimeParts.length === 3 && outTimeParts.length === 3) {
+                                    const inHours = parseInt(inTimeParts[0], 10);
+                                    const inMinutes = parseInt(inTimeParts[1], 10);
+                                    const inSeconds = parseInt(inTimeParts[2], 10);
 
-                                    const outHours = parseInt(
-                                      outTimeParts[0],
-                                      10
-                                    );
-                                    const outMinutes = parseInt(
-                                      outTimeParts[1],
-                                      10
-                                    );
-                                    const outSeconds = parseInt(
-                                      outTimeParts[2],
-                                      10
-                                    );
+                                    const outHours = parseInt(outTimeParts[0], 10);
+                                    const outMinutes = parseInt(outTimeParts[1], 10);
+                                    const outSeconds = parseInt(outTimeParts[2], 10);
 
                                     // Calculate total seconds
-                                    const inTotalSeconds =
-                                      inHours * 3600 +
-                                      inMinutes * 60 +
-                                      inSeconds;
-                                    const outTotalSeconds =
-                                      outHours * 3600 +
-                                      outMinutes * 60 +
-                                      outSeconds;
+                                    const inTotalSeconds = inHours * 3600 + inMinutes * 60 + inSeconds;
+                                    const outTotalSeconds = outHours * 3600 + outMinutes * 60 + outSeconds;
 
                                     // Calculate difference
-                                    const diffSeconds =
-                                      outTotalSeconds - inTotalSeconds;
+                                    const diffSeconds = outTotalSeconds - inTotalSeconds;
 
                                     // Convert to hours and minutes
-                                    const hours = Math.floor(
-                                      diffSeconds / 3600
-                                    );
-                                    const minutes = Math.floor(
-                                      (diffSeconds % 3600) / 60
-                                    );
+                                    const hours = Math.floor(diffSeconds / 3600);
+                                    const minutes = Math.floor((diffSeconds % 3600) / 60);
 
                                     // Format duration - show only minutes if less than 1 hour
                                     if (hours === 0) {
@@ -1059,35 +862,25 @@ export default function LibraryPage() {
                                 <tr
                                   key={visit.id}
                                   className={`hover:bg-orange-50 transition-colors ${
-                                    index % 2 === 0
-                                      ? "bg-white"
-                                      : "bg-orange-50/30"
+                                    index % 2 === 0 ? "bg-white" : "bg-orange-50/30"
                                   }`}
                                 >
-                                  <td className="py-3 px-4 text-sm text-gray-700">
-                                    {displayDate}
-                                  </td>
+                                  <td className="py-3 px-4 text-sm text-gray-700">{displayDate}</td>
                                   <td className="py-3 px-4">
                                     {inTimeStr ? (
                                       <div className="flex items-center">
                                         <Clock className="h-3.5 w-3.5 text-emerald-500 mr-1.5" />
-                                        <span className="text-sm text-gray-700">
-                                          {inTimeStr}
-                                        </span>
+                                        <span className="text-sm text-gray-700">{inTimeStr}</span>
                                       </div>
                                     ) : (
-                                      <span className="text-sm text-gray-500 italic">
-                                        Invalid time
-                                      </span>
+                                      <span className="text-sm text-gray-500 italic">Invalid time</span>
                                     )}
                                   </td>
                                   <td className="py-3 px-4">
                                     {outTimeStr && outTimeStr !== "(null)" ? (
                                       <div className="flex items-center">
                                         <Clock className="h-3.5 w-3.5 text-red-500 mr-1.5" />
-                                        <span className="text-sm text-gray-700">
-                                          {outTimeStr}
-                                        </span>
+                                        <span className="text-sm text-gray-700">{outTimeStr}</span>
                                       </div>
                                     ) : (
                                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -1098,9 +891,7 @@ export default function LibraryPage() {
                                   <td className="py-3 px-4">
                                     <div className="flex items-center">
                                       <Timer className="h-3.5 w-3.5 text-orange-500 mr-1.5" />
-                                      <span className="text-sm text-gray-700">
-                                        {duration}
-                                      </span>
+                                      <span className="text-sm text-gray-700">{duration}</span>
                                     </div>
                                   </td>
                                   <td className="py-3 px-4">
@@ -1120,9 +911,7 @@ export default function LibraryPage() {
                     </div>
 
                     <div className="mt-8 bg-orange-50 rounded-lg p-6 shadow-sm border border-orange-100">
-                      <h3 className="text-lg font-medium text-orange-800 mb-3">
-                        Library Usage Summary
-                      </h3>
+                      <h3 className="text-lg font-medium text-orange-800 mb-3">Library Usage Summary</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="bg-white p-4 rounded-lg shadow-sm border border-orange-100">
                           <div className="flex items-center">
@@ -1130,12 +919,8 @@ export default function LibraryPage() {
                               <MapPin className="h-6 w-6 text-orange-600" />
                             </div>
                             <div>
-                              <p className="text-sm text-gray-500">
-                                Total Visits
-                              </p>
-                              <p className="text-xl font-semibold text-gray-800">
-                                {totalVisits || 0}
-                              </p>
+                              <p className="text-sm text-gray-500">Total Visits</p>
+                              <p className="text-xl font-semibold text-gray-800">{totalVisits || 0}</p>
                             </div>
                           </div>
                         </div>
@@ -1145,12 +930,8 @@ export default function LibraryPage() {
                               <Timer className="h-6 w-6 text-orange-600" />
                             </div>
                             <div>
-                              <p className="text-sm text-gray-500">
-                                Total Time
-                              </p>
-                              <p className="text-xl font-semibold text-gray-800">
-                                {totalTimeSpent.toFixed(1)} hours
-                              </p>
+                              <p className="text-sm text-gray-500">Total Time</p>
+                              <p className="text-xl font-semibold text-gray-800">{totalTimeSpent.toFixed(1)} hours</p>
                             </div>
                           </div>
                         </div>
@@ -1160,9 +941,7 @@ export default function LibraryPage() {
                               <Clock className="h-6 w-6 text-orange-600" />
                             </div>
                             <div>
-                              <p className="text-sm text-gray-500">
-                                Average Visit
-                              </p>
+                              <p className="text-sm text-gray-500">Average Visit</p>
                               <p className="text-xl font-semibold text-gray-800">
                                 {averageTimePerVisit.toFixed(1)} hours
                               </p>
@@ -1176,12 +955,9 @@ export default function LibraryPage() {
                   <div className="text-center py-12">
                     <div className="bg-orange-50 rounded-xl p-8 max-w-md mx-auto">
                       <MapPin className="h-12 w-12 text-orange-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-800 mb-2">
-                        No Library Visits
-                      </h3>
+                      <h3 className="text-lg font-medium text-gray-800 mb-2">No Library Visits</h3>
                       <p className="text-gray-500">
-                        You haven&apos;t visited the library yet or no records
-                        were found.
+                        You haven&apos;t visited the library yet or no records were found.
                       </p>
                     </div>
                   </div>
@@ -1226,27 +1002,20 @@ export default function LibraryPage() {
                       Location
                     </h3>
                     <p className="text-sm">
-                      <span className="font-medium">Rack:</span>{" "}
-                      {selectedBook.rackName || "Not specified"}
+                      <span className="font-medium">Rack:</span> {selectedBook.rackName || "Not specified"}
                     </p>
                     <p className="text-sm mt-1">
-                      <span className="font-medium">Shelf:</span>{" "}
-                      {selectedBook.shelfName || "Not specified"}
+                      <span className="font-medium">Shelf:</span> {selectedBook.shelfName || "Not specified"}
                     </p>
                     <p className="text-sm mt-1">
-                      <span className="font-medium">Call No:</span>{" "}
-                      {selectedBook.callNo}
+                      <span className="font-medium">Call No:</span> {selectedBook.callNo}
                     </p>
                   </div>
                 </div>
 
                 {/* Book Details */}
                 <div className="flex-1">
-                  {selectedBook.subTitle && (
-                    <p className="text-gray-600 text-lg mb-4">
-                      {selectedBook.subTitle}
-                    </p>
-                  )}
+                  {selectedBook.subTitle && <p className="text-gray-600 text-lg mb-4">{selectedBook.subTitle}</p>}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                     <div className="flex items-center">
@@ -1254,12 +1023,8 @@ export default function LibraryPage() {
                         <User className="w-5 h-5 text-blue-600" />
                       </div>
                       <div className="ml-3">
-                        <p className="text-xs text-gray-500">
-                          Author/Publisher
-                        </p>
-                        <p className="font-medium">
-                          {selectedBook.publisherName}
-                        </p>
+                        <p className="text-xs text-gray-500">Author/Publisher</p>
+                        <p className="font-medium">{selectedBook.publisherName}</p>
                       </div>
                     </div>
 
@@ -1270,9 +1035,7 @@ export default function LibraryPage() {
                       <div className="ml-3">
                         <p className="text-xs text-gray-500">Edition</p>
                         <p className="font-medium">
-                          {selectedBook.edition}{" "}
-                          {selectedBook.editionYear &&
-                            `(${selectedBook.editionYear})`}
+                          {selectedBook.edition} {selectedBook.editionYear && `(${selectedBook.editionYear})`}
                         </p>
                       </div>
                     </div>
@@ -1283,9 +1046,7 @@ export default function LibraryPage() {
                       </div>
                       <div className="ml-3">
                         <p className="text-xs text-gray-500">ISBN</p>
-                        <p className="font-medium">
-                          {selectedBook.isbn || "Not available"}
-                        </p>
+                        <p className="font-medium">{selectedBook.isbn || "Not available"}</p>
                       </div>
                     </div>
 
@@ -1295,25 +1056,19 @@ export default function LibraryPage() {
                       </div>
                       <div className="ml-3">
                         <p className="text-xs text-gray-500">Language</p>
-                        <p className="font-medium">
-                          {selectedBook.languageName}
-                        </p>
+                        <p className="font-medium">{selectedBook.languageName}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="border-t border-b border-gray-200 py-4 my-4">
-                    <h3 className="font-medium text-gray-800 mb-3">
-                      Loan Information
-                    </h3>
+                    <h3 className="font-medium text-gray-800 mb-3">Loan Information</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4">
                       <div>
                         <p className="text-xs text-gray-500">Issue Date</p>
                         <p className="font-medium flex items-center">
                           <Calendar className="w-4 h-4 mr-1.5 text-blue-500" />
-                          {new Date(
-                            selectedBook.issueDate
-                          ).toLocaleDateString()}
+                          {new Date(selectedBook.issueDate).toLocaleDateString()}
                         </p>
                       </div>
 
@@ -1321,9 +1076,7 @@ export default function LibraryPage() {
                         <p className="text-xs text-gray-500">Due Date</p>
                         <p className="font-medium flex items-center">
                           <Clock className="w-4 h-4 mr-1.5 text-amber-500" />
-                          {new Date(
-                            selectedBook.returnDate
-                          ).toLocaleDateString()}
+                          {new Date(selectedBook.returnDate).toLocaleDateString()}
                         </p>
                       </div>
 
@@ -1334,21 +1087,16 @@ export default function LibraryPage() {
                             <p className="font-medium flex items-center">
                               <History className="w-4 h-4 mr-1.5 text-green-500" />
                               {selectedBook.actualRetDate
-                                ? new Date(
-                                    selectedBook.actualRetDate
-                                  ).toLocaleDateString()
+                                ? new Date(selectedBook.actualRetDate).toLocaleDateString()
                                 : "Not returned"}
                             </p>
                           </div>
 
                           {selectedBook.fine > 0 && (
                             <div>
-                              <p className="text-xs text-gray-500">
-                                Fine Amount
-                              </p>
+                              <p className="text-xs text-gray-500">Fine Amount</p>
                               <p className="font-medium text-red-600 flex items-center">
-                                <BarChart className="w-4 h-4 mr-1.5 text-red-500" />
-                                ₹{selectedBook.fine}
+                                <BarChart className="w-4 h-4 mr-1.5 text-red-500" />₹{selectedBook.fine}
                               </p>
                             </div>
                           )}
@@ -1360,9 +1108,7 @@ export default function LibraryPage() {
                           <p className="text-xs text-gray-500">Status</p>
                           <p className="font-medium">
                             {(() => {
-                              const dueStatus = calculateDueDays(
-                                selectedBook.returnDate
-                              );
+                              const dueStatus = calculateDueDays(selectedBook.returnDate);
                               if (dueStatus.status === "overdue") {
                                 return (
                                   <span className="text-red-600 flex items-center">
@@ -1418,11 +1164,7 @@ export default function LibraryPage() {
 
       <style jsx global>{`
         .book-cover-shadow {
-          background: radial-gradient(
-            ellipse at center,
-            rgba(0, 0, 0, 0.4) 0%,
-            rgba(0, 0, 0, 0) 70%
-          );
+          background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 70%);
           transform: translateY(10px) rotateX(60deg);
           filter: blur(5px);
         }

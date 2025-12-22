@@ -1,4 +1,4 @@
-import { StudentAcademicSubjectsDto } from "@repo/db/dtos/admissions";
+import type { StudentAcademicSubjectsDto } from "@repo/db/dtos/admissions";
 
 /**
  * Calculate Best of Four percentage from subject marks

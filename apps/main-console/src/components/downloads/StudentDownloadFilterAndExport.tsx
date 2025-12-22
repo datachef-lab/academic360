@@ -22,7 +22,7 @@ import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Specialization } from "@/types/resources/specialization";
 import { Community, Level, Shift } from "@/types/enums";
 import { findAllDegrees } from "@/services/degree.service";
-import { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@repo/db/dtos/user";
 
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
 type Framework = "CCF" | "CBCS";

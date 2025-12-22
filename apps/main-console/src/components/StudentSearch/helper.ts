@@ -44,7 +44,7 @@
 
 import { Student } from "@/types/user/student";
 import { StudentSearchType } from "../tables/users/student-search-column";
-import { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@repo/db/dtos/user";
 import { StudentSearchItem } from "@/services/student";
 // import { Religion } from "@/types/resources/religion.types";
 // import { Category } from "@/types/resources/category.types";

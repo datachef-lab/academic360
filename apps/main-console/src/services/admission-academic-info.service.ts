@@ -1,6 +1,6 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
-import { AdmissionAcademicInfoDto } from "@repo/db/dtos/admissions";
+import type { AdmissionAcademicInfoDto } from "@repo/db/dtos/admissions";
 
 const BASE_URL = "/api/admissions/academic-info";
 

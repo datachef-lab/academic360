@@ -449,6 +449,34 @@
       "when": 1764142235344,
       "tag": "0063_unknown_thunderbolts",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1764873267548,
+      "tag": "0064_mute_roland_deschain",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1764877192575,
+      "tag": "0065_lonely_darkhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1764879035095,
+      "tag": "0066_wandering_runaways",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1765618020432,
+      "tag": "0067_chemical_punisher",
+      "breakpoints": true
     }
   ]
 }

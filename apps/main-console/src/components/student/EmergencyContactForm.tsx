@@ -5,7 +5,7 @@ import {
   createEmergencyContact,
   updateEmergencyContact,
 } from "@/services/emergency-contact.service";
-import { EmergencyContactT as EmergencyContact } from "@repo/db/schemas/models";
+import type { EmergencyContactT as EmergencyContact } from "@repo/db/schemas/models";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";

@@ -26,6 +26,7 @@ export async function sendZeptoMail(
   name?: string,
   attachments?: Array<{
     filename: string;
+    name?: string;
     contentBase64: string;
     mimeType: string;
   }>,
@@ -48,13 +49,23 @@ export async function sendZeptoMail(
     subject,
     htmlbody: htmlBody,
   };
+  //   console.log("in zepto-provider, attachments:", attachments);
   if (attachments && attachments.length > 0) {
     payload.attachments = attachments.map((a) => ({
-      name: a.filename,
+      name: (a.filename || a.name)!,
       mime_type: a.mimeType,
       content: a.contentBase64,
     }));
+
+    // for(let i = 0; i < payload.attachments?.length; i++) {
+    //     for (let key in payload.attachments[i]) {
+    //         console.log(key);
+    //     }
+    // }
   }
+
+  //   console.log(payload);
+
   try {
     await client.sendMail(payload);
     return { ok: true };

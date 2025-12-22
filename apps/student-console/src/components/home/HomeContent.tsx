@@ -11,7 +11,7 @@ import DailyNotices from "./DailyNotices";
 import SubjectSelectionCard from "./SubjectSelectionCard";
 import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
-import { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@repo/db/dtos/user";
 
 export default function HomeContent() {
   const { student, loading, batches, error, refetch } = useStudent();

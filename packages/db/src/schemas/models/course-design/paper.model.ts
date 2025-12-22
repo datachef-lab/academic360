@@ -8,6 +8,7 @@ import {
     timestamp,
     varchar,
     index,
+    AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 import { academicYearModel, classModel } from "@/schemas/models/academics";
@@ -48,6 +49,8 @@ export const paperModel = pgTable("papers", {
     sequence: integer(),
     isActive: boolean().default(true),
     autoAssign: boolean().default(false),
+    previousPaperId: integer("previous_paper_id_fk")
+        .references((): AnyPgColumn => paperModel.id),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp()
         .notNull()

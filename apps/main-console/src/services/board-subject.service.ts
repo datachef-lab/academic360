@@ -1,5 +1,5 @@
 import axiosInstance from "@/utils/api";
-import { City, State, Country } from "@repo/db/schemas";
+import type { City, State, Country } from "@repo/db/schemas";
 
 export interface BoardSubjectDto {
   id: number;

@@ -1,4 +1,4 @@
-import { getDbConnection } from "@repo/db/connection";
+import { db } from "@/db";
 import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
 import { eq } from "drizzle-orm";
 
@@ -8,7 +8,6 @@ export async function getNotificationMasterIdByName(
   name: string,
 ): Promise<number> {
   if (cache.has(name)) return cache.get(name)!;
-  const db = getDbConnection(process.env.DATABASE_URL!);
   const [row] = await db
     .select({
       id: notificationMasterModel.id,
@@ -30,7 +29,6 @@ export async function getNotificationMasterIdByNameAndVariant(
 ): Promise<number> {
   const key = `${name}::${variant}`;
   if (cacheByVariant.has(key)) return cacheByVariant.get(key)!;
-  const db = getDbConnection(process.env.DATABASE_URL!);
   const [row] = await db
     .select({ id: notificationMasterModel.id })
     .from(notificationMasterModel)

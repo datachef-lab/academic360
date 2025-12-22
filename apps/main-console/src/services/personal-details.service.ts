@@ -1,6 +1,6 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
-import { PersonalDetailsDto } from "@repo/db/dtos/user";
+import type { PersonalDetailsDto } from "@repo/db/dtos/user";
 
 // Type for API payloads without auto-generated fields
 // Allow flexible payload shape from DTO mapping

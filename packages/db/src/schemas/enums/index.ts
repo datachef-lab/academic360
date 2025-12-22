@@ -334,5 +334,6 @@ export const cuRegistrationCorrectionRequestStatusEnum = pgEnum("cu_registration
 
 export const examOrderTypeEnum = pgEnum("exam_order_type", [
     "CU_ROLL_NUMBER",
+    "CU_REGISTRATION_NUMBER",
     "UID",
 ]);

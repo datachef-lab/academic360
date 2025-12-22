@@ -1,4 +1,5 @@
 import { db } from "@/db/index.js";
+import { RoomDto } from "@repo/db/dtos";
 import {
   Room,
   RoomT,
@@ -82,12 +83,50 @@ export async function createRoom(data: Room) {
 }
 
 export async function getAllRooms() {
-  return db.select().from(roomModel);
+  const rooms = await db.select().from(roomModel);
+
+  const dtos: RoomDto[] = [];
+  for (let room of rooms) {
+    let floor = null;
+    if (room.floorId) {
+      const [foundFloor] = await db
+        .select()
+        .from(floorModel)
+        .where(eq(floorModel.id, room.floorId));
+      floor = foundFloor || null;
+    }
+
+    dtos.push({
+      ...room,
+      floor: floor!,
+    });
+  }
+
+  return dtos;
 }
 
 export async function findRoomById(id: number) {
   const [room] = await db.select().from(roomModel).where(eq(roomModel.id, id));
   return room ?? null;
+}
+
+export async function findById(id: number) {
+  const [room] = await db.select().from(roomModel).where(eq(roomModel.id, id));
+  return await modelToDto(room);
+}
+
+export async function modelToDto(model: RoomT | null): Promise<RoomDto | null> {
+  if (!model) return null;
+
+  const [foundFloor] = await db
+    .select()
+    .from(floorModel)
+    .where(eq(floorModel.id, model.floorId!));
+
+  return {
+    ...model,
+    floor: foundFloor,
+  };
 }
 
 export async function updateRoom(

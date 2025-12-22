@@ -21,7 +21,7 @@ import * as z from "zod";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Controller } from "react-hook-form";
-import type { ExamComponent } from "@repo/db";
+import type { ExamComponent } from "@repo/db/index";
 import { getAllExamComponent } from "@/services/exam-component.service";
 import {
   createExamComponent,

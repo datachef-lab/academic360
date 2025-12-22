@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays } from "lucide-react";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { useAuth } from "@/features/auth/providers/auth-provider";
-import { AcademicYear } from "@repo/db";
+import type { AcademicYear } from "@repo/db/index";
 
 interface AcademicYearSelectorProps {
   onAcademicYearChange?: (academicYear: AcademicYear | null) => void;

@@ -11,11 +11,11 @@ import { Toaster } from "sonner";
 // Initialize database shutdown handlers in Node.js environment
 // This is wrapped in a try-catch because it will error in
 // environments that don't support process listeners
-try {
-  setupDatabaseShutdownHandlers();
-} catch (error) {
-  console.warn("Could not set up database shutdown handlers:", error);
-}
+// try {
+//   setupDatabaseShutdownHandlers();
+// } catch (error) {
+//   console.warn("Could not set up database shutdown handlers:", error);
+// }
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

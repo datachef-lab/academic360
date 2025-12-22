@@ -50,7 +50,7 @@ import type {
   ProgramCourse,
   Course,
   CourseType,
-} from "@repo/db";
+} from "@repo/db/index";
 import { Class } from "@/types/academics/class";
 import { AxiosError } from "axios";
 import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
@@ -512,7 +512,8 @@ const SubjectPaperMappingPage = () => {
           Affiliation: affiliation?.name || "-",
           "Regulation Type": regulationType?.name || "-",
           "Academic Year": academicYear?.year || "-",
-          "Exam Components": paper.components?.map((comp) => comp.examComponent?.name).join(", ") || "No components",
+          "Exam Components":
+            paper.components?.map((comp: PaperComponentDto) => comp.examComponent?.name).join(", ") || "No components",
         };
       });
 

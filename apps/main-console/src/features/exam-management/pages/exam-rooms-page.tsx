@@ -16,6 +16,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { toast } from "sonner";
 import { getAllRooms, createRoom, updateRoom, deleteRoom, type RoomT } from "@/services/room.service";
 import { getAllFloors, type FloorT } from "@/services/floor.service";
+import { RoomDto } from "@/dtos";
 
 type RoomFormValues = {
   name: string;
@@ -27,7 +28,7 @@ type RoomFormValues = {
 };
 
 type RoomFormProps = {
-  initialData?: RoomT;
+  initialData?: RoomDto;
   onSubmit: (data: RoomFormValues) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
@@ -39,7 +40,7 @@ function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floor
   const [shortName, setShortName] = useState(initialData?.shortName ?? "");
   const [numberOfBenches, setNumberOfBenches] = useState<number>(initialData?.numberOfBenches ?? 0);
   const [maxStudentsPerBench, setMaxStudentsPerBench] = useState<number>(initialData?.maxStudentsPerBench ?? 0);
-  const [floorId, setFloorId] = useState<number | undefined>(initialData?.floorId ?? undefined);
+  const [floorId, setFloorId] = useState<number | undefined>(initialData?.floor.id ?? undefined);
   const [isActive, setIsActive] = useState<boolean>(initialData?.isActive ?? true);
 
   useEffect(() => {
@@ -48,7 +49,7 @@ function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floor
       setShortName(initialData.shortName ?? "");
       setNumberOfBenches(initialData.numberOfBenches ?? 0);
       setMaxStudentsPerBench(initialData.maxStudentsPerBench ?? 0);
-      setFloorId(initialData.floorId ?? undefined);
+      setFloorId(initialData.floor.id ?? undefined);
       setIsActive(initialData.isActive ?? true);
     } else {
       setName("");
@@ -161,11 +162,11 @@ function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floor
 }
 
 export default function ExamRoomsPage() {
-  const [rooms, setRooms] = useState<RoomT[]>([]);
+  const [rooms, setRooms] = useState<RoomDto[]>([]);
   const [floors, setFloors] = useState<FloorT[]>([]);
   const [searchText, setSearchText] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState<RoomT | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<RoomDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -218,7 +219,7 @@ export default function ExamRoomsPage() {
         room.id?.toString() ?? "",
         room.name ?? "",
         room.shortName ?? "",
-        floorLookup.get(room.floorId ?? -1) ?? "",
+        floorLookup.get(room.floor.id ?? -1) ?? "",
       ];
       return candidates.some((value) => value.toLowerCase().includes(query));
     });
@@ -229,7 +230,7 @@ export default function ExamRoomsPage() {
     setIsFormOpen(true);
   };
 
-  const handleEdit = (room: RoomT) => {
+  const handleEdit = (room: RoomDto) => {
     setSelectedRoom(room);
     setIsFormOpen(true);
   };
@@ -408,7 +409,7 @@ export default function ExamRoomsPage() {
                   </div>
                 ) : (
                   filteredRooms.map((room, index) => {
-                    const floorName = room.floorId ? (floorLookup.get(room.floorId) ?? "-") : "-";
+                    const floorName = room.floor.id ? (floorLookup.get(room.floor.id) ?? "-") : "-";
                     return (
                       <div
                         key={room.id ?? `${room.name}-${index}`}

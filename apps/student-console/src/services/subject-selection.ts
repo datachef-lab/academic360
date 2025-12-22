@@ -1,5 +1,5 @@
 // Import DTOs from shared package
-import {
+import type {
   SubjectSelectionMetaDto,
   StudentSubjectSelectionDto as DbStudentSubjectSelectionDto,
 } from "@repo/db/dtos/subject-selection";
