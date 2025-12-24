@@ -4,9 +4,9 @@ import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-cor
 
 import { addonModel } from "@/schemas/models/fees";
 
-export const feesReceiptTypeModel = pgTable("fees_receipt_types", {
+export const feeReceiptTypeModel = pgTable("fee_receipt_types", {
     id: serial().primaryKey(),
-    legacyFeesReceiptTypeId: integer(),
+    legacyFeeReceiptTypeId: integer(),
     name: varchar({ length: 255 }).notNull(),
     chk: varchar({ length: 255 }),
     chkMisc: varchar({ length: 255 }),
@@ -20,8 +20,8 @@ export const feesReceiptTypeModel = pgTable("fees_receipt_types", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createFeesReceiptTypeSchema = createInsertSchema(feesReceiptTypeModel);
+export const createFeeReceiptTypeSchema = createInsertSchema(feeReceiptTypeModel);
 
-export type FeesReceiptType = z.infer<typeof createFeesReceiptTypeSchema>;
+export type FeeReceiptType = z.infer<typeof createFeeReceiptTypeSchema>;
 
-export type FeesReceiptTypeT = typeof createFeesReceiptTypeSchema._type;
+export type FeeReceiptTypeT = typeof createFeeReceiptTypeSchema._type;

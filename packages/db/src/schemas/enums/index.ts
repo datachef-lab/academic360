@@ -105,9 +105,9 @@ export const paymentModeEnum = pgEnum("payment_mode", [
     "ONLINE",
 ]);
 
-export const studentFeesMappingEnum = pgEnum("student_fees_mapping_type", [
+export const studentFeesMappingEnum = pgEnum("student_fee_mapping_type", [
     "FULL",
-    "INSTALMENT"
+    "INSTALLMENT"
 ]);
 
 
