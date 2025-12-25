@@ -1,18 +1,18 @@
-import { Router } from "express";
-import {
-  getFeesHeadsHandler,
-  getFeesHeadByIdHandler,
-  createFeesHeadHandler,
-  updateFeesHeadHandler,
-  deleteFeesHeadHandler,
-} from "../controllers/fees-head.controller.js";
+// import { Router } from "express";
+// import {
+//   getFeesHeadsHandler,
+//   getFeesHeadByIdHandler,
+//   createFeesHeadHandler,
+//   updateFeesHeadHandler,
+//   deleteFeesHeadHandler,
+// } from "../controllers/fees-head.controller.js";
 
-const feesHeadRouter = Router();
+// const feesHeadRouter = Router();
 
-feesHeadRouter.get("/", getFeesHeadsHandler);
-feesHeadRouter.get("/:id", getFeesHeadByIdHandler);
-feesHeadRouter.post("/", createFeesHeadHandler);
-feesHeadRouter.put("/:id", updateFeesHeadHandler);
-feesHeadRouter.delete("/:id", deleteFeesHeadHandler);
+// feesHeadRouter.get("/", getFeesHeadsHandler);
+// feesHeadRouter.get("/:id", getFeesHeadByIdHandler);
+// feesHeadRouter.post("/", createFeesHeadHandler);
+// feesHeadRouter.put("/:id", updateFeesHeadHandler);
+// feesHeadRouter.delete("/:id", deleteFeesHeadHandler);
 
-export default feesHeadRouter;
+// export default feesHeadRouter;
