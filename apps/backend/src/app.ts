@@ -65,11 +65,11 @@ import {
   familyRouter,
   healthRouter,
   personalDetailsRouter,
-  feesComponentRouter,
-  addonRouter,
-  feesHeadRouter,
-  feesReceiptTypeRouter,
-  feesSlabYearMappingRouter,
+  //   feesComponentRouter,
+  //   addonRouter,
+  //   feesHeadRouter,
+  //   feesReceiptTypeRouter,
+  //   feesSlabYearMappingRouter,
   personRouter,
   floorRouter,
   roomRouter,
@@ -84,8 +84,8 @@ import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 import { shiftRouter } from "@/features/academics/routes/index.js";
 import feesSlabRouter from "@/features/fees/routes/index.js";
-import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
-import studentFeesMappingRouter from "./features/fees/routes/student-fees-mapping.route.js";
+// import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
+// import studentFeesMappingRouter from "./features/fees/routes/student-fees-mapping.route.js";
 import feesRouter from "./features/fees/routes/index.js";
 import {
   admissionRouter,
@@ -412,17 +412,17 @@ app.use("/api/health", healthRouter);
 app.use("/api/reports", reportRouter);
 app.use("/api/classes", classRouter);
 
-app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
+// app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
 app.use("/api/v1/shifts", shiftRouter);
 app.use("/api/v1/academics", academicYearRouter);
-app.use("/api/v1/fees/structure", feesStructureRouter);
-app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
+// app.use("/api/v1/fees/structure", feesStructureRouter);
+// app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
 app.use("/api/v1/fees", feesRouter);
 app.use("/api/v1/courses", courseRouter);
-app.use("/api/v1/fees/components", feesComponentRouter);
-app.use("/api/v1/fees/addons", addonRouter);
-app.use("/api/v1/fees/heads", feesHeadRouter);
-app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
+// app.use("/api/v1/fees/components", feesComponentRouter);
+// app.use("/api/v1/fees/addons", addonRouter);
+// app.use("/api/v1/fees/heads", feesHeadRouter);
+// app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 app.use("/api/exams/floors", floorRouter);
 app.use("/api/exams/rooms", roomRouter);
 app.use("/api/exams/exam-types", examTypeRouter);
@@ -758,27 +758,27 @@ app.use("/api/reports", reportRouter);
 
 app.use("/api/classes", classRouter);
 
-app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
+// app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
 
 app.use("/api/v1/shifts", shiftRouter);
 
 app.use("/api/v1/academics", academicYearRouter);
 
-app.use("/api/v1/fees/structure", feesStructureRouter);
+// app.use("/api/v1/fees/structure", feesStructureRouter);
 
-app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
+// app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
 
 app.use("/api/v1/fees", feesRouter);
 
 app.use("/api/v1/courses", courseRouter);
 
-app.use("/api/v1/fees/components", feesComponentRouter);
+// app.use("/api/v1/fees/components", feesComponentRouter);
 
-app.use("/api/v1/fees/addons", addonRouter);
+// app.use("/api/v1/fees/addons", addonRouter);
 
-app.use("/api/v1/fees/heads", feesHeadRouter);
+// app.use("/api/v1/fees/heads", feesHeadRouter);
 
-app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
+// app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 

@@ -37,14 +37,14 @@ import {
   transportDetailsRouter,
   userRouter,
 } from "./user/routes/index.js";
-import feesComponentRouter from "./fees/routes/feesComponent.route.js";
-import addonRouter from "./fees/routes/addon.route.js";
-import feesHeadRouter from "./fees/routes/fees-head.route.js";
-import feesReceiptTypeRouter from "./fees/routes/fees-receipt-type.route.js";
-import feesSlabRouter from "./fees/routes/fees-slab.route.js";
-import feesStructureRouter from "./fees/routes/fees-structure.route.js";
-import studentFeesMappingRouter from "./fees/routes/student-fees-mapping.route.js";
-import feesSlabYearMappingRouter from "./fees/routes/fees-slab-mapping.route.js";
+// import feesComponentRouter from "./fees/routes/feesComponent.route.js";
+// import addonRouter from "./fees/routes/addon.route.js";
+// import feesHeadRouter from "./fees/routes/fees-head.route.js";
+// import feesReceiptTypeRouter from "./fees/routes/fees-receipt-type.route.js";
+// import feesSlabRouter from "./fees/routes/fees-slab.route.js";
+// import feesStructureRouter from "./fees/routes/fees-structure.route.js";
+// import studentFeesMappingRouter from "./fees/routes/student-fees-mapping.route.js";
+// import feesSlabYearMappingRouter from "./fees/routes/fees-slab-mapping.route.js";
 import {
   courseRouter,
   paperRouter,
@@ -114,14 +114,14 @@ export {
   studentApaarUpdateRouter,
   userRouter,
   batchRouter,
-  feesComponentRouter,
-  addonRouter,
-  feesHeadRouter,
-  feesReceiptTypeRouter,
-  feesSlabRouter,
-  feesStructureRouter,
-  studentFeesMappingRouter,
-  feesSlabYearMappingRouter,
+  //   feesComponentRouter,
+  //   addonRouter,
+  //   feesHeadRouter,
+  //   feesReceiptTypeRouter,
+  //   feesSlabRouter,
+  //   feesStructureRouter,
+  //   studentFeesMappingRouter,
+  //   feesSlabYearMappingRouter,
   courseRouter,
   paperRouter,
   subjectRouter,
