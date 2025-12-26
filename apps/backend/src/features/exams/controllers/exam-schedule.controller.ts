@@ -1,3 +1,6 @@
+import * as XLSX from "xlsx";
+import fs from "fs";
+
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import {
@@ -69,6 +72,38 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
         );
     }
 
+    // Parse Excel file if provided (assuming multer middleware handles file upload and attaches to req.file)
+    let excelStudents: { foil_number: string; uid: string }[] = [];
+    if (req.file) {
+      if (!req.file.mimetype || !req.file.mimetype.includes("spreadsheetml")) {
+        console.warn("[EXAM-SCHEDULE-CONTROLLER] Invalid file type for Excel");
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "ERROR",
+              null,
+              "Invalid file type. Please upload a valid XLSX file.",
+            ),
+          );
+      }
+
+      const buffer = fs.readFileSync(req.file.path);
+
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        throw new Error("No sheets found in Excel file");
+      }
+      const sheet = workbook.Sheets[sheetName];
+      excelStudents = XLSX.utils.sheet_to_json(sheet) as {
+        foil_number: string;
+        uid: string;
+      }[];
+    }
+
     const params = {
       classId: Number(classId),
       programCourseIds: programCourseIds.map((id: unknown) => Number(id)),
@@ -78,6 +113,7 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
         ? shiftIds.map((id: unknown) => Number(id))
         : undefined,
       gender,
+      excelStudents,
     };
 
     console.log(
@@ -171,6 +207,38 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
         );
     }
 
+    // Parse Excel file if provided (assuming multer middleware handles file upload and attaches to req.file)
+    let excelStudents: { foil_number: string; uid: string }[] = [];
+    if (req.file) {
+      if (!req.file.mimetype || !req.file.mimetype.includes("spreadsheetml")) {
+        console.warn("[EXAM-SCHEDULE-CONTROLLER] Invalid file type for Excel");
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "ERROR",
+              null,
+              "Invalid file type. Please upload a valid XLSX file.",
+            ),
+          );
+      }
+
+      const buffer = fs.readFileSync(req.file.path);
+
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        throw new Error("No sheets found in Excel file");
+      }
+      const sheet = workbook.Sheets[sheetName];
+      excelStudents = XLSX.utils.sheet_to_json(sheet) as {
+        foil_number: string;
+        uid: string;
+      }[];
+    }
+
     const params = {
       classId: Number(classId),
       programCourseIds: programCourseIds.map((id: unknown) => Number(id)),
@@ -181,6 +249,7 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
         : undefined,
       assignBy: assignBy as "CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER",
       gender,
+      excelStudents,
     };
 
     const students = await getStudentsByPapers(params, roomAssignments);
@@ -296,7 +365,39 @@ export const createExamAssignmenthandler = async (
     //   assignBy: assignBy as "UID" | "CU Reg. No.",
     // };
 
-    const students = await createExamAssignment(req.body);
+    // Parse Excel file if provided (assuming multer middleware handles file upload and attaches to req.file)
+    let excelStudents: { foil_number: string; uid: string }[] = [];
+    if (req.file) {
+      if (!req.file.mimetype || !req.file.mimetype.includes("spreadsheetml")) {
+        console.warn("[EXAM-SCHEDULE-CONTROLLER] Invalid file type for Excel");
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "ERROR",
+              null,
+              "Invalid file type. Please upload a valid XLSX file.",
+            ),
+          );
+      }
+
+      const buffer = fs.readFileSync(req.file.path);
+
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        throw new Error("No sheets found in Excel file");
+      }
+      const sheet = workbook.Sheets[sheetName];
+      excelStudents = XLSX.utils.sheet_to_json(sheet) as {
+        foil_number: string;
+        uid: string;
+      }[];
+    }
+
+    const students = await createExamAssignment(req.body, excelStudents);
 
     // console.log(
     //     "[EXAM-SCHEDULE-CONTROLLER] Service returned students:",

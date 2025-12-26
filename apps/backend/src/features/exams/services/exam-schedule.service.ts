@@ -68,6 +68,7 @@ export interface CountStudentsByPapersParams {
   academicYearIds: number[];
   shiftIds?: number[];
   gender: "MALE" | "FEMALE" | "OTHER" | null;
+  excelStudents: { foil_number: string; uid: string }[];
 }
 
 /**
@@ -77,6 +78,353 @@ export interface CountStudentsByPapersParams {
  * - Only count active students (user.isActive = true)
  * - Get student IDs from latest promotions
  */
+// async function getEligibleStudentIds(
+//     params: CountStudentsByPapersParams,
+// ): Promise<number[]> {
+//     const {
+//         classId,
+//         programCourseIds,
+//         paperIds,
+//         academicYearIds,
+//         shiftIds,
+//         gender,
+//         excelStudents
+//     } = params;
+
+//     console.log("[EXAM-SCHEDULE] Getting eligible student IDs:", params);
+
+//     if (
+//         paperIds.length === 0 ||
+//         programCourseIds.length === 0 ||
+//         academicYearIds.length === 0
+//     ) {
+//         return [];
+//     }
+
+//     const shiftFilter =
+//         shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : "";
+
+//     //   const eligibleSql = `
+//     //         WITH filtered_papers AS (
+//     //             SELECT
+//     //                 p.id,
+//     //                 p.subject_id_fk,
+//     //                 p.subject_type_id_fk,
+//     //                 p.class_id_fk,
+//     //                 p.programe_course_id_fk,
+//     //                 p.academic_year_id_fk,
+//     //                 p.is_optional
+//     //             FROM papers p
+//     //             WHERE p.id = ANY($1)
+//     //               AND p.class_id_fk = $2
+//     //               AND p.programe_course_id_fk = ANY($3)
+//     //               AND p.academic_year_id_fk = ANY($4)
+//     //               AND p.is_active = TRUE
+//     //         ),
+//     //         latest_promotions AS (
+//     //             SELECT DISTINCT ON (pr.student_id_fk)
+//     //                    pr.student_id_fk,
+//     //                    pr.program_course_id_fk,
+//     //                    pr.session_id_fk,
+//     //                    pr.class_id_fk
+//     //             FROM promotions pr
+//     //             INNER JOIN sessions sess ON sess.id = pr.session_id_fk
+//     //             WHERE pr.class_id_fk = $2
+//     //               AND pr.program_course_id_fk = ANY($3)
+//     //               AND sess.academic_id_fk = ANY($4)
+//     //               ${shiftFilter}
+//     //             ORDER BY pr.student_id_fk,
+//     //                      pr.start_date DESC NULLS LAST,
+//     //                      pr.created_at DESC,
+//     //                      pr.id DESC
+//     //         ),
+//     //         latest_student_selections AS (
+//     //             SELECT id,
+//     //                    student_id_fk,
+//     //                    subject_id_fk,
+//     //                    subject_selection_meta_id_fk
+//     //             FROM (
+//     //                 SELECT sss.*,
+//     //                        ROW_NUMBER() OVER (
+//     //                          PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+//     //                          ORDER BY sss.version DESC,
+//     //                                   sss.updated_at DESC NULLS LAST,
+//     //                                   sss.created_at DESC,
+//     //                                   sss.id DESC
+//     //                        ) AS rn
+//     //                 FROM student_subject_selections sss
+//     //                 WHERE sss.is_active = TRUE
+//     //             ) ranked
+//     //             WHERE rn = 1
+//     //         ),
+//     //         mandatory AS (
+//     //             SELECT DISTINCT std.id AS student_id
+//     //             FROM filtered_papers fp
+//     //             JOIN latest_promotions pr
+//     //               ON pr.program_course_id_fk = fp.programe_course_id_fk
+//     //              AND pr.class_id_fk = fp.class_id_fk
+//     //             JOIN students std ON std.id = pr.student_id_fk
+//     //             JOIN users u ON u.id = std.user_id_fk
+//     //             WHERE fp.is_optional = FALSE
+//     //               AND u.is_active = TRUE
+//     //         ),
+//     //         optional AS (
+//     //             SELECT DISTINCT std.id AS student_id
+//     //             FROM filtered_papers fp
+//     //             JOIN latest_promotions pr
+//     //               ON pr.program_course_id_fk = fp.programe_course_id_fk
+//     //              AND pr.class_id_fk = fp.class_id_fk
+//     //             JOIN students std ON std.id = pr.student_id_fk
+//     //             JOIN users u ON u.id = std.user_id_fk
+//     //             JOIN latest_student_selections lss
+//     //               ON lss.student_id_fk = std.id
+//     //              AND lss.subject_id_fk = fp.subject_id_fk
+//     //             JOIN subject_selection_meta sm
+//     //               ON sm.id = lss.subject_selection_meta_id_fk
+//     //              AND sm.subject_type_id_fk = fp.subject_type_id_fk
+//     //             JOIN subject_selection_meta_classes smc
+//     //               ON smc.subject_selection_meta_id_fk = sm.id
+//     //              AND smc.class_id_fk = fp.class_id_fk
+//     //             WHERE fp.is_optional = TRUE
+//     //               AND u.is_active = TRUE
+//     //         )
+//     //         SELECT DISTINCT student_id
+//     //         FROM (
+//     //             SELECT * FROM mandatory
+//     //             UNION ALL
+//     //             SELECT * FROM optional
+//     //         ) eligible_students
+//     //     `;
+
+//     //   const eligibleSql = `
+//     //   WITH current_promotions AS (
+//     //     -- Get the latest promotion specifically for the requested class + academic year + program + shift
+//     //     SELECT DISTINCT ON (pr.student_id_fk)
+//     //         pr.student_id_fk AS student_id,
+//     //         pr.program_course_id_fk,
+//     //         pr.class_id_fk,
+//     //         pr.shift_id_fk
+//     //     FROM promotions pr
+//     //     JOIN sessions s ON s.id = pr.session_id_fk
+//     //     JOIN academic_years ay ON ay.id = s.academic_id_fk
+//     //     WHERE pr.is_alumni = FALSE
+//     //       AND pr.class_id_fk = $2                    -- requested class (e.g., Semester I)
+//     //       AND ay.id = ANY($3)                        -- requested academic year(s)
+//     //       AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
+//     //       ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : ""}
+//     //     ORDER BY pr.student_id_fk,
+//     //              pr.start_date DESC NULLS LAST,
+//     //              pr.created_at DESC
+//     //   ),
+
+//     //   filtered_papers AS (
+//     //     SELECT
+//     //         p.id AS paper_id,
+//     //         p.subject_id_fk,
+//     //         p.subject_type_id_fk,
+//     //         p.is_optional
+//     //     FROM papers p
+//     //     WHERE p.id = ANY($1)
+//     //       AND p.class_id_fk = $2
+//     //       AND p.program_course_id_fk = ANY($4)
+//     //       AND p.academic_year_id_fk = ANY($3)
+//     //       AND p.is_active = TRUE
+//     //   ),
+
+//     //   latest_student_selections AS (
+//     //     SELECT
+//     //         student_id_fk,
+//     //         subject_id_fk,
+//     //         subject_selection_meta_id_fk
+//     //     FROM (
+//     //         SELECT sss.*,
+//     //                ROW_NUMBER() OVER (
+//     //                  PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+//     //                  ORDER BY sss.version DESC,
+//     //                           sss.updated_at DESC NULLS LAST,
+//     //                           sss.created_at DESC,
+//     //                           sss.id DESC
+//     //                ) AS rn
+//     //         FROM student_subject_selections sss
+//     //         WHERE sss.is_active = TRUE
+//     //     ) ranked
+//     //     WHERE rn = 1
+//     //   ),
+
+//     //   mandatory_students AS (
+//     //     SELECT DISTINCT cp.student_id
+//     //     FROM current_promotions cp
+//     //     CROSS JOIN filtered_papers fp
+//     //     WHERE fp.is_optional = FALSE
+//     //   ),
+
+//     //   optional_students AS (
+//     //     SELECT DISTINCT cp.student_id
+//     //     FROM current_promotions cp
+//     //     JOIN filtered_papers fp ON fp.is_optional = TRUE
+//     //     JOIN latest_student_selections lss
+//     //       ON lss.student_id_fk = cp.student_id
+//     //      AND lss.subject_id_fk = fp.subject_id_fk
+//     //     JOIN subject_selection_meta sm
+//     //       ON sm.id = lss.subject_selection_meta_id_fk
+//     //      AND sm.subject_type_id_fk = fp.subject_type_id_fk
+//     //     JOIN subject_selection_meta_classes smc
+//     //       ON smc.subject_selection_meta_id_fk = sm.id
+//     //      AND smc.class_id_fk = $2
+//     //   )
+
+//     //   SELECT DISTINCT student_id
+//     //   FROM (
+//     //     SELECT student_id FROM mandatory_students
+//     //     UNION
+//     //     SELECT student_id FROM optional_students
+//     //   ) eligible
+//     //   ORDER BY student_id;
+//     // `;
+
+// //     ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY(COALESCE($5::int[], ARRAY[]::int[]))" : ""}
+// //   ${gender && gender.trim() !== '' && gender.length > 1 ? "AND pd.gender = ANY(COALESCE($6::text[], ARRAY[]::text[]))" : ""}
+// //   ${excelStudents.length > 0 ? "AND std.uid = ANY(COALESCE($7::text[], ARRAY[]::text[]))" : ""}
+
+//     const eligibleSql = `
+// WITH current_promotions AS (
+//   -- Get the latest promotion specifically for the requested class + academic year + program + shift
+//   SELECT DISTINCT ON (pr.student_id_fk)
+//       pr.student_id_fk AS student_id,
+//       pr.program_course_id_fk,
+//       pr.class_id_fk,
+//       pr.shift_id_fk
+//   FROM promotions pr
+//   JOIN sessions s ON s.id = pr.session_id_fk
+//   JOIN academic_years ay ON ay.id = s.academic_id_fk
+//   JOIN students std ON std.id = pr.student_id_fk
+//   JOIN users u ON u.id = std.user_id_fk
+//   JOIN personal_details pd ON pd.user_id_fk = u.id
+//   WHERE pr.is_alumni = FALSE
+//     AND pr.class_id_fk = $2                    -- requested class
+//     AND ay.id = ANY($3)                        -- requested academic year(s)
+//     AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
+
+//    -- OPTIONAL FILTERS (SAFE)
+//   AND pr.shift_id_fk = ANY($5::int[])
+//   AND pd.gender::text = ANY($6::text[])
+//   AND std.uid = ANY($7::text[])
+//   ORDER BY pr.student_id_fk,
+//            pr.start_date DESC NULLS LAST,
+//            pr.created_at DESC
+// ),
+
+// filtered_papers AS (
+//   SELECT
+//       p.id AS paper_id,
+//       p.subject_id_fk,
+//       p.subject_type_id_fk,
+//       p.is_optional
+//   FROM papers p
+//   WHERE p.id = ANY($1)
+//     AND p.class_id_fk = $2
+//     AND p.programe_course_id_fk = ANY($4)        -- Fixed: was "programe"
+//     AND p.academic_year_id_fk = ANY($3)
+//     AND p.is_active = TRUE
+// ),
+
+// latest_student_selections AS (
+//   SELECT
+//       student_id_fk,
+//       subject_id_fk,
+//       subject_selection_meta_id_fk
+//   FROM (
+//       SELECT sss.*,
+//              ROW_NUMBER() OVER (
+//                PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+//                ORDER BY sss.version DESC,
+//                         sss.updated_at DESC NULLS LAST,
+//                         sss.created_at DESC,
+//                         sss.id DESC
+//              ) AS rn
+//       FROM student_subject_selections sss
+//       WHERE sss.is_active = TRUE
+//   ) ranked
+//   WHERE rn = 1
+// ),
+
+// mandatory_students AS (
+//   SELECT DISTINCT cp.student_id
+//   FROM current_promotions cp
+//   JOIN students std ON std.id = cp.student_id
+//   ${excelStudents.length === 0 ? 'JOIN users u ON u.id = std.user_id_fk AND u.is_active = TRUE' : ''}
+//   CROSS JOIN filtered_papers fp
+//   WHERE fp.is_optional = FALSE
+// ),
+
+// optional_students AS (
+//   SELECT DISTINCT cp.student_id
+//   FROM current_promotions cp
+//   JOIN students std ON std.id = cp.student_id
+//   ${excelStudents.length === 0 ? 'JOIN users u ON u.id = std.user_id_fk AND u.is_active = TRUE' : ''}
+//   JOIN filtered_papers fp ON fp.is_optional = TRUE
+//   JOIN latest_student_selections lss
+//     ON lss.student_id_fk = cp.student_id
+//    AND lss.subject_id_fk = fp.subject_id_fk
+//   JOIN subject_selection_meta sm
+//     ON sm.id = lss.subject_selection_meta_id_fk
+//    AND sm.subject_type_id_fk = fp.subject_type_id_fk
+//   JOIN subject_selection_meta_classes smc
+//     ON smc.subject_selection_meta_id_fk = sm.id
+//    AND smc.class_id_fk = $2
+// )
+
+// SELECT DISTINCT student_id
+// FROM (
+//   SELECT student_id FROM mandatory_students
+//   UNION
+//   SELECT student_id FROM optional_students
+// ) eligible
+// ORDER BY student_id;
+// `;
+
+//     const eligibleParams: any[] = [
+//         paperIds, // $1
+//         classId, // $2
+//         academicYearIds, // $3
+//         programCourseIds, // $4
+//     ];
+
+//     if (shiftIds && shiftIds.length > 0) {
+//         eligibleParams.push(shiftIds); // $5
+//     }
+//     if (gender) {
+//         if (gender.trim() !== '') {
+//             eligibleParams.push([gender]); // $6
+//         }
+//     }
+
+//     if (excelStudents.length > 0) {
+//         const uids = excelStudents.map(e => e.uid)
+//         eligibleParams.push(uids); // $7
+//     }
+
+//     const eligibleParamsU = [
+//         paperIds,                                 // $1 int[]
+//         classId,                                  // $2 int
+//         academicYearIds,                          // $3 int[]
+//         programCourseIds,                         // $4 int[]
+//         shiftIds && shiftIds.length ? shiftIds : [], // $5 int[]
+//         gender && gender.trim() ? [gender] : [],     // $6 text[]
+//         excelStudents.length
+//           ? excelStudents.map(e => e.uid)
+//           : []                                     // $7 text[]
+//       ];
+
+//     console.log(eligibleParamsU)
+
+//     const { rows } = await pool.query(eligibleSql, eligibleParamsU);
+
+//     return rows
+//         .map((row: { student_id: number }) => Number(row.student_id))
+//         .filter((id: number) => !Number.isNaN(id));
+// }
+
 async function getEligibleStudentIds(
   params: CountStudentsByPapersParams,
 ): Promise<number[]> {
@@ -85,8 +433,9 @@ async function getEligibleStudentIds(
     programCourseIds,
     paperIds,
     academicYearIds,
-    shiftIds,
-    gender,
+    shiftIds = [],
+    gender = "",
+    excelStudents = [],
   } = params;
 
   console.log("[EXAM-SCHEDULE] Getting eligible student IDs:", params);
@@ -99,190 +448,39 @@ async function getEligibleStudentIds(
     return [];
   }
 
-  const shiftFilter =
-    shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : "";
+  // Build dynamic WHERE conditions safely
+  const conditions: string[] = [];
+  const values: any[] = [
+    paperIds, // $1
+    classId, // $2
+    academicYearIds, // $3
+    programCourseIds, // $4
+  ];
+  let paramIndex = 5;
 
-  //   const eligibleSql = `
-  //         WITH filtered_papers AS (
-  //             SELECT
-  //                 p.id,
-  //                 p.subject_id_fk,
-  //                 p.subject_type_id_fk,
-  //                 p.class_id_fk,
-  //                 p.programe_course_id_fk,
-  //                 p.academic_year_id_fk,
-  //                 p.is_optional
-  //             FROM papers p
-  //             WHERE p.id = ANY($1)
-  //               AND p.class_id_fk = $2
-  //               AND p.programe_course_id_fk = ANY($3)
-  //               AND p.academic_year_id_fk = ANY($4)
-  //               AND p.is_active = TRUE
-  //         ),
-  //         latest_promotions AS (
-  //             SELECT DISTINCT ON (pr.student_id_fk)
-  //                    pr.student_id_fk,
-  //                    pr.program_course_id_fk,
-  //                    pr.session_id_fk,
-  //                    pr.class_id_fk
-  //             FROM promotions pr
-  //             INNER JOIN sessions sess ON sess.id = pr.session_id_fk
-  //             WHERE pr.class_id_fk = $2
-  //               AND pr.program_course_id_fk = ANY($3)
-  //               AND sess.academic_id_fk = ANY($4)
-  //               ${shiftFilter}
-  //             ORDER BY pr.student_id_fk,
-  //                      pr.start_date DESC NULLS LAST,
-  //                      pr.created_at DESC,
-  //                      pr.id DESC
-  //         ),
-  //         latest_student_selections AS (
-  //             SELECT id,
-  //                    student_id_fk,
-  //                    subject_id_fk,
-  //                    subject_selection_meta_id_fk
-  //             FROM (
-  //                 SELECT sss.*,
-  //                        ROW_NUMBER() OVER (
-  //                          PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
-  //                          ORDER BY sss.version DESC,
-  //                                   sss.updated_at DESC NULLS LAST,
-  //                                   sss.created_at DESC,
-  //                                   sss.id DESC
-  //                        ) AS rn
-  //                 FROM student_subject_selections sss
-  //                 WHERE sss.is_active = TRUE
-  //             ) ranked
-  //             WHERE rn = 1
-  //         ),
-  //         mandatory AS (
-  //             SELECT DISTINCT std.id AS student_id
-  //             FROM filtered_papers fp
-  //             JOIN latest_promotions pr
-  //               ON pr.program_course_id_fk = fp.programe_course_id_fk
-  //              AND pr.class_id_fk = fp.class_id_fk
-  //             JOIN students std ON std.id = pr.student_id_fk
-  //             JOIN users u ON u.id = std.user_id_fk
-  //             WHERE fp.is_optional = FALSE
-  //               AND u.is_active = TRUE
-  //         ),
-  //         optional AS (
-  //             SELECT DISTINCT std.id AS student_id
-  //             FROM filtered_papers fp
-  //             JOIN latest_promotions pr
-  //               ON pr.program_course_id_fk = fp.programe_course_id_fk
-  //              AND pr.class_id_fk = fp.class_id_fk
-  //             JOIN students std ON std.id = pr.student_id_fk
-  //             JOIN users u ON u.id = std.user_id_fk
-  //             JOIN latest_student_selections lss
-  //               ON lss.student_id_fk = std.id
-  //              AND lss.subject_id_fk = fp.subject_id_fk
-  //             JOIN subject_selection_meta sm
-  //               ON sm.id = lss.subject_selection_meta_id_fk
-  //              AND sm.subject_type_id_fk = fp.subject_type_id_fk
-  //             JOIN subject_selection_meta_classes smc
-  //               ON smc.subject_selection_meta_id_fk = sm.id
-  //              AND smc.class_id_fk = fp.class_id_fk
-  //             WHERE fp.is_optional = TRUE
-  //               AND u.is_active = TRUE
-  //         )
-  //         SELECT DISTINCT student_id
-  //         FROM (
-  //             SELECT * FROM mandatory
-  //             UNION ALL
-  //             SELECT * FROM optional
-  //         ) eligible_students
-  //     `;
+  if (shiftIds.length > 0) {
+    conditions.push(`AND pr.shift_id_fk = ANY($${paramIndex})`);
+    values.push(shiftIds);
+    paramIndex++;
+  }
 
-  //   const eligibleSql = `
-  //   WITH current_promotions AS (
-  //     -- Get the latest promotion specifically for the requested class + academic year + program + shift
-  //     SELECT DISTINCT ON (pr.student_id_fk)
-  //         pr.student_id_fk AS student_id,
-  //         pr.program_course_id_fk,
-  //         pr.class_id_fk,
-  //         pr.shift_id_fk
-  //     FROM promotions pr
-  //     JOIN sessions s ON s.id = pr.session_id_fk
-  //     JOIN academic_years ay ON ay.id = s.academic_id_fk
-  //     WHERE pr.is_alumni = FALSE
-  //       AND pr.class_id_fk = $2                    -- requested class (e.g., Semester I)
-  //       AND ay.id = ANY($3)                        -- requested academic year(s)
-  //       AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
-  //       ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : ""}
-  //     ORDER BY pr.student_id_fk,
-  //              pr.start_date DESC NULLS LAST,
-  //              pr.created_at DESC
-  //   ),
+  if (gender && gender.trim() !== "") {
+    conditions.push(`AND pd.gender = ANY($${paramIndex})`);
+    values.push([gender]);
+    paramIndex++;
+  }
 
-  //   filtered_papers AS (
-  //     SELECT
-  //         p.id AS paper_id,
-  //         p.subject_id_fk,
-  //         p.subject_type_id_fk,
-  //         p.is_optional
-  //     FROM papers p
-  //     WHERE p.id = ANY($1)
-  //       AND p.class_id_fk = $2
-  //       AND p.program_course_id_fk = ANY($4)
-  //       AND p.academic_year_id_fk = ANY($3)
-  //       AND p.is_active = TRUE
-  //   ),
+  if (excelStudents.length > 0) {
+    const uids = excelStudents.map((s) => s.uid);
+    conditions.push(`AND std.uid = ANY($${paramIndex})`);
+    values.push(uids);
+    paramIndex++;
+  }
 
-  //   latest_student_selections AS (
-  //     SELECT
-  //         student_id_fk,
-  //         subject_id_fk,
-  //         subject_selection_meta_id_fk
-  //     FROM (
-  //         SELECT sss.*,
-  //                ROW_NUMBER() OVER (
-  //                  PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
-  //                  ORDER BY sss.version DESC,
-  //                           sss.updated_at DESC NULLS LAST,
-  //                           sss.created_at DESC,
-  //                           sss.id DESC
-  //                ) AS rn
-  //         FROM student_subject_selections sss
-  //         WHERE sss.is_active = TRUE
-  //     ) ranked
-  //     WHERE rn = 1
-  //   ),
-
-  //   mandatory_students AS (
-  //     SELECT DISTINCT cp.student_id
-  //     FROM current_promotions cp
-  //     CROSS JOIN filtered_papers fp
-  //     WHERE fp.is_optional = FALSE
-  //   ),
-
-  //   optional_students AS (
-  //     SELECT DISTINCT cp.student_id
-  //     FROM current_promotions cp
-  //     JOIN filtered_papers fp ON fp.is_optional = TRUE
-  //     JOIN latest_student_selections lss
-  //       ON lss.student_id_fk = cp.student_id
-  //      AND lss.subject_id_fk = fp.subject_id_fk
-  //     JOIN subject_selection_meta sm
-  //       ON sm.id = lss.subject_selection_meta_id_fk
-  //      AND sm.subject_type_id_fk = fp.subject_type_id_fk
-  //     JOIN subject_selection_meta_classes smc
-  //       ON smc.subject_selection_meta_id_fk = sm.id
-  //      AND smc.class_id_fk = $2
-  //   )
-
-  //   SELECT DISTINCT student_id
-  //   FROM (
-  //     SELECT student_id FROM mandatory_students
-  //     UNION
-  //     SELECT student_id FROM optional_students
-  //   ) eligible
-  //   ORDER BY student_id;
-  // `;
+  const whereClause = conditions.length > 0 ? conditions.join("\n    ") : "";
 
   const eligibleSql = `
 WITH current_promotions AS (
-  -- Get the latest promotion specifically for the requested class + academic year + program + shift
   SELECT DISTINCT ON (pr.student_id_fk)
       pr.student_id_fk AS student_id,
       pr.program_course_id_fk,
@@ -295,18 +493,17 @@ WITH current_promotions AS (
   JOIN users u ON u.id = std.user_id_fk
   JOIN personal_details pd ON pd.user_id_fk = u.id
   WHERE pr.is_alumni = FALSE
-    AND pr.class_id_fk = $2                    -- requested class
-    AND ay.id = ANY($3)                        -- requested academic year(s)
-    AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
-    ${gender && gender.length > 1 ? "AND pd.gender = ANY($6)" : ""} 
-    ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : ""}
+    AND pr.class_id_fk = $2
+    AND ay.id = ANY($3)
+    ${excelStudents.length === 0 ? "AND u.is_active = TRUE" : ""}
+    AND pr.program_course_id_fk = ANY($4)
+    ${whereClause}
   ORDER BY pr.student_id_fk,
            pr.start_date DESC NULLS LAST,
            pr.created_at DESC
 ),
-
 filtered_papers AS (
-  SELECT 
+  SELECT
       p.id AS paper_id,
       p.subject_id_fk,
       p.subject_type_id_fk,
@@ -314,15 +511,14 @@ filtered_papers AS (
   FROM papers p
   WHERE p.id = ANY($1)
     AND p.class_id_fk = $2
-    AND p.programe_course_id_fk = ANY($4)        -- Fixed: was "programe"
+    AND p.programe_course_id_fk = ANY($4)
     AND p.academic_year_id_fk = ANY($3)
     AND p.is_active = TRUE
 ),
-
 latest_student_selections AS (
-  SELECT 
-      student_id_fk, 
-      subject_id_fk, 
+  SELECT
+      student_id_fk,
+      subject_id_fk,
       subject_selection_meta_id_fk
   FROM (
       SELECT sss.*,
@@ -338,21 +534,17 @@ latest_student_selections AS (
   ) ranked
   WHERE rn = 1
 ),
-
 mandatory_students AS (
   SELECT DISTINCT cp.student_id
   FROM current_promotions cp
-  JOIN students std ON std.id = cp.student_id
-  JOIN users u ON u.id = std.user_id_fk AND u.is_active = TRUE
+
   CROSS JOIN filtered_papers fp
   WHERE fp.is_optional = FALSE
 ),
-
 optional_students AS (
   SELECT DISTINCT cp.student_id
   FROM current_promotions cp
-  JOIN students std ON std.id = cp.student_id
-  JOIN users u ON u.id = std.user_id_fk AND u.is_active = TRUE
+  
   JOIN filtered_papers fp ON fp.is_optional = TRUE
   JOIN latest_student_selections lss
     ON lss.student_id_fk = cp.student_id
@@ -364,7 +556,6 @@ optional_students AS (
     ON smc.subject_selection_meta_id_fk = sm.id
    AND smc.class_id_fk = $2
 )
-
 SELECT DISTINCT student_id
 FROM (
   SELECT student_id FROM mandatory_students
@@ -374,25 +565,13 @@ FROM (
 ORDER BY student_id;
 `;
 
-  const eligibleParams: any[] = [
-    paperIds, // $1
-    classId, // $2
-    academicYearIds, // $3
-    programCourseIds, // $4
-  ];
+  console.log("[EXAM-SCHEDULE] Executing SQL with params:", values);
 
-  if (shiftIds && shiftIds.length > 0) {
-    eligibleParams.push(shiftIds); // $5
-  }
-  if (gender) {
-    eligibleParams.push([gender]); // $6
-  }
-
-  const { rows } = await pool.query(eligibleSql, eligibleParams);
+  const { rows } = await pool.query(eligibleSql, values);
 
   return rows
     .map((row: { student_id: number }) => Number(row.student_id))
-    .filter((id: number) => !Number.isNaN(id));
+    .filter((id) => !Number.isNaN(id));
 }
 
 export async function countStudentsByPapers(
@@ -715,7 +894,10 @@ function generateSeatPositions(maxStudentsPerBench: number): string[] {
   return positions;
 }
 
-export async function createExamAssignment(dto: ExamDto) {
+export async function createExamAssignment(
+  dto: ExamDto,
+  excelStudents: { foil_number: string; uid: string }[],
+) {
   return await db.transaction(async (tx) => {
     console.log(
       "[EXAM-SCHEDULE:createExamAssignment] Creating exam assignment:",
@@ -949,6 +1131,7 @@ export async function createExamAssignment(dto: ExamDto) {
     // 6. Prepare seat assignment
     const seatParams: GetStudentsByPapersParams = {
       classId: dto.class.id!,
+      excelStudents,
       programCourseIds: programCourseIdsArr, // ← now always array
       paperIds: Array.from(paperMap.values()),
       academicYearIds: [dto.academicYear.id!],

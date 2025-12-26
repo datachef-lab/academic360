@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Users, AlertCircle, CheckCircle2, Trash2, Loader2 } from "lucide-react";
+import { Users, AlertCircle, CheckCircle2, Trash2, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { getAllExamTypes, ExamTypeT } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
@@ -128,6 +128,10 @@ export default function ScheduleExamPage() {
   // Step 3: Exam Schedule (keyed by subjectId)
   const [subjectSchedules, setSubjectSchedules] = useState<Record<string, Schedule>>({});
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
+
+  // Excel file upload state
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Assignments (kept for potential future use)
 
@@ -286,26 +290,50 @@ export default function ScheduleExamPage() {
     void fetchInitialData();
   }, [loadAcademicYears]);
 
-  // Fetch papers when filters change
+  // Handle Excel file upload
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.name.toLowerCase().match(/\.(xlsx|xls)$/)) {
+        toast.error("Please upload a valid Excel file (.xlsx or .xls)");
+        event.target.value = "";
+        return;
+      }
+      if (file.size > 100 * 1024 * 1024) {
+        // 100MB limit
+        toast.error("File size must be less than 100MB");
+        event.target.value = "";
+        return;
+      }
+      setExcelFile(file);
+      toast.success(`Uploaded: ${file.name}`);
+    }
+  };
+
+  const removeExcelFile = () => {
+    setExcelFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    toast.info("Excel file removed");
+  };
+  // change Fetch papers when filters change
   const fetchPapers = useCallback(async () => {
     if (selectedProgramCourses.length === 0 || !semester) {
       setPapers([]);
       return;
     }
-
     try {
       setLoading((prev) => ({ ...prev, papers: true }));
       const classObj = classes.find((c) => c.id?.toString() === semester);
       const classId = classObj?.id;
-
       // Since API only accepts single values, we need to make multiple calls
       // for each combination of program course and subject type
       const allPapers: PaperDto[] = [];
       const seenPaperIds = new Set<number>();
-
       // If no subject categories selected, fetch for all program courses
       const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
-
       // If no subject types selected, fetch papers for all program courses with class filter
       if (subjectTypesToUse.length === 0) {
         for (const programCourseId of selectedProgramCourses) {
@@ -318,7 +346,6 @@ export default function ScheduleExamPage() {
               classId: classId ?? null,
               subjectTypeId: null,
             });
-
             if (papersData?.content) {
               for (const paper of papersData.content) {
                 if (paper.id && !seenPaperIds.has(paper.id)) {
@@ -344,7 +371,6 @@ export default function ScheduleExamPage() {
                 classId: classId ?? null,
                 subjectTypeId: subjectTypeId,
               });
-
               if (papersData?.content) {
                 for (const paper of papersData.content) {
                   if (paper.id && !seenPaperIds.has(paper.id)) {
@@ -362,7 +388,6 @@ export default function ScheduleExamPage() {
           }
         }
       }
-
       setPapers(allPapers);
     } catch (error) {
       console.error("Error fetching papers:", error);
@@ -381,6 +406,102 @@ export default function ScheduleExamPage() {
     selectedRegulationTypeId,
     currentAcademicYear?.id,
   ]);
+
+  // Fetch papers when filters change
+  //   const fetchPapers = useCallback(async () => {
+  //     if (selectedProgramCourses.length === 0 || !semester) {
+  //       setPapers([]);
+  //       return;
+  //     }
+
+  //     try {
+  //       setLoading((prev) => ({ ...prev, papers: true }));
+  //       const classObj = classes.find((c) => c.id?.toString() === semester);
+  //       const classId = classObj?.id;
+
+  //       // Since API only accepts single values, we need to make multiple calls
+  //       // for each combination of program course and subject type
+  //       const allPapers: PaperDto[] = [];
+  //       const seenPaperIds = new Set<number>();
+
+  //       // If no subject categories selected, fetch for all program courses
+  //       const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
+
+  //       // If no subject types selected, fetch papers for all program courses with class filter
+  //       if (subjectTypesToUse.length === 0) {
+  //         for (const programCourseId of selectedProgramCourses) {
+  //           try {
+  //             const papersData = await getPapersPaginated(1, 1000, {
+  //               academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
+  //               affiliationId: selectedAffiliationId ?? null,
+  //               regulationTypeId: selectedRegulationTypeId ?? null,
+  //               programCourseId: programCourseId,
+  //               classId: classId ?? null,
+  //               subjectTypeId: null,
+  //             });
+
+  //             if (papersData?.content) {
+  //               for (const paper of papersData.content) {
+  //                 if (paper.id && !seenPaperIds.has(paper.id)) {
+  //                   seenPaperIds.add(paper.id);
+  //                   allPapers.push(paper);
+  //                 }
+  //               }
+  //             }
+  //           } catch (error) {
+  //             console.error(`Error fetching papers for program course ${programCourseId}:`, error);
+  //           }
+  //         }
+  //       } else {
+  //         // Fetch papers for each combination of program course and subject type
+  //         for (const programCourseId of selectedProgramCourses) {
+  //           for (const subjectTypeId of subjectTypesToUse) {
+  //             try {
+  //               const papersData = await getPapersPaginated(1, 1000, {
+  //                 academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
+  //                 affiliationId: selectedAffiliationId ?? null,
+  //                 regulationTypeId: selectedRegulationTypeId ?? null,
+  //                 programCourseId: programCourseId,
+  //                 classId: classId ?? null,
+  //                 subjectTypeId: subjectTypeId,
+  //               });
+
+  //               if (papersData?.content) {
+  //                 for (const paper of papersData.content) {
+  //                   if (paper.id && !seenPaperIds.has(paper.id)) {
+  //                     seenPaperIds.add(paper.id);
+  //                     allPapers.push(paper);
+  //                   }
+  //                 }
+  //               }
+  //             } catch (error) {
+  //               console.error(
+  //                 `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
+  //                 error,
+  //               );
+  //             }
+  //           }
+  //         }
+  //       }
+
+  //       setPapers(allPapers);
+  //     } catch (error) {
+  //       console.error("Error fetching papers:", error);
+  //       toast.error("Failed to load papers");
+  //       setPapers([]);
+  //     } finally {
+  //       setLoading((prev) => ({ ...prev, papers: false }));
+  //     }
+  //   }, [
+  //     selectedProgramCourses,
+  //     semester,
+  //     selectedSubjectCategories,
+  //     classes,
+  //     selectedAcademicYearId,
+  //     selectedAffiliationId,
+  //     selectedRegulationTypeId,
+  //     currentAcademicYear?.id,
+  //   ]);
 
   useEffect(() => {
     void fetchPapers();
@@ -485,6 +606,23 @@ export default function ScheduleExamPage() {
     return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
   }, [selectedSubjectId, getAvailablePapers]);
 
+  //   const createFormData = useCallback((params: any) => {
+  //     const formData = new FormData();
+  //     Object.entries(params).forEach(([key, value]) => {
+  //       if (value !== undefined && value !== null) {
+  //         if (Array.isArray(value)) {
+  //           value.forEach((item) => formData.append(`${key}[]`, item.toString()));
+  //         } else {
+  //           formData.append(key, value.toString());
+  //         }
+  //       }
+  //     });
+  //     if (excelFile) {
+  //       formData.append("file", excelFile);
+  //     }
+  //     return formData;
+  //   }, [excelFile]);
+
   // Fetch student count from API based on selected subject
   useEffect(() => {
     const fetchStudentCount = async () => {
@@ -523,14 +661,18 @@ export default function ScheduleExamPage() {
           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
         });
 
-        const response = await countStudentsForExam({
-          classId: classObj.id,
-          programCourseIds: selectedProgramCourses,
-          paperIds,
-          academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-          gender: gender === "ALL" ? null : gender,
-        });
+        const response = await countStudentsForExam(
+          {
+            classId: classObj.id,
+            programCourseIds: selectedProgramCourses,
+            paperIds,
+            academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
+            shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+            gender: gender === "ALL" ? null : gender,
+            // Pass file if present; services should use FormData if file exists
+          },
+          excelFile,
+        );
 
         console.log("[SCHEDULE-EXAM] Student count response:", response);
 
@@ -612,16 +754,19 @@ export default function ScheduleExamPage() {
           };
         });
 
-        const response = await getStudentsForExam({
-          classId: classObj.id,
-          programCourseIds: selectedProgramCourses,
-          paperIds,
-          academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-          assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
-          roomAssignments,
-          gender: gender == "ALL" ? null : gender,
-        });
+        const response = await getStudentsForExam(
+          {
+            classId: classObj.id,
+            programCourseIds: selectedProgramCourses,
+            paperIds,
+            academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
+            shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+            assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
+            roomAssignments,
+            gender: gender == "ALL" ? null : gender,
+          },
+          excelFile,
+        );
 
         if (response.httpStatus === "SUCCESS" && response.payload) {
           setStudentsWithSeats(response.payload.students);
@@ -650,6 +795,7 @@ export default function ScheduleExamPage() {
     gender,
     getPapersForSelectedSubject,
     selectedAcademicYearId,
+    excelFile,
   ]);
 
   const handleProgramCourseToggle = (courseId: number) => {
@@ -899,10 +1045,13 @@ export default function ScheduleExamPage() {
 
     try {
       console.log("Before calling doAssignExam with:", tmpExamAssignment);
-      const response = await doAssignExam({
-        ...tmpExamAssignment,
-        gender: (tmpExamAssignment.gender as string) === "ALL" ? null : tmpExamAssignment.gender,
-      });
+      const response = await doAssignExam(
+        {
+          ...tmpExamAssignment,
+          gender: (tmpExamAssignment.gender as string) === "ALL" ? null : tmpExamAssignment.gender,
+        },
+        excelFile,
+      );
       console.log("In exam assignment post api, response:", response);
 
       toast.success(`Successfully assigned exam to the students`);
@@ -1134,6 +1283,56 @@ export default function ScheduleExamPage() {
                     </PopoverContent>
                   </Popover>
                 </div>
+                {/* Excel File Upload */}
+
+                {examType && examTypes.find((e) => e.id.toString() === examType && e.name === "Test Exam") && (
+                  <div className="flex items-center">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="h-9 w-44 justify-between border-purple-300">
+                          <Upload className="w-4 h-4 mr-1" />
+                          {excelFile
+                            ? `File: ${excelFile.name.slice(0, 20)}${excelFile.name.length > 20 ? "..." : ""}`
+                            : "Upload Excel"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-4" align="start">
+                        <div className="space-y-3">
+                          <Input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".xlsx,.xls"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Choose Excel File (foil_number, uid)
+                          </Button>
+                          {excelFile && (
+                            <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
+                              <span className="text-sm text-green-700">{excelFile.name}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={removeExcelFile}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-500">Upload XLSX with columns: foil_number, uid</p>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
