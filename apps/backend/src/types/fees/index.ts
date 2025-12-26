@@ -7,11 +7,10 @@ import { FeesSlabMapping } from "@repo/db/schemas/models/fees";
 import { FeesStructure } from "@/features/fees/models/fees-structure.model.js";
 import { Instalment } from "@repo/db/schemas/models/fees";
 
-export interface FeesStructureDto
-  extends Omit<
-    FeesStructure,
-    "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"
-  > {
+export interface FeesStructureDto extends Omit<
+  FeesStructure,
+  "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"
+> {
   shift?: Shift;
   academicYear: AcademicYear;
   course: Course;
@@ -22,11 +21,10 @@ export interface FeesStructureDto
   instalments: Instalment[];
 }
 
-export interface CreateFeesStructureDto
-  extends Omit<
-    FeesStructure,
-    "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"
-  > {
+export interface CreateFeesStructureDto extends Omit<
+  FeesStructure,
+  "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"
+> {
   shift?: Shift;
   academicYear: AcademicYear;
   courses: Course[];

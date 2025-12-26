@@ -1356,9 +1356,8 @@ export async function createStudentSubjectSelectionsWithValidation(
       "🔍 Debug - No metas found, attempting to load default metas...",
     );
     try {
-      const { loadDefaultSubjectSelectionMetas } = await import(
-        "./subject-selection-meta.service.js"
-      );
+      const { loadDefaultSubjectSelectionMetas } =
+        await import("./subject-selection-meta.service.js");
       await loadDefaultSubjectSelectionMetas();
       console.log("🔍 Debug - Default metas loaded successfully");
 
@@ -1587,12 +1586,10 @@ export async function createStudentSubjectSelectionsWithValidation(
       // Build per-field content rows from notification master meta
       let contentRows: Array<{ whatsappFieldId: number; content: string }> = [];
       if (emailMasterId) {
-        const { notificationMasterMetaModel } = await import(
-          "@repo/db/schemas/models/notifications/notification-master-meta.model"
-        );
-        const { notificationMasterFieldModel } = await import(
-          "@repo/db/schemas/models/notifications/notification-master-field.model"
-        );
+        const { notificationMasterMetaModel } =
+          await import("@repo/db/schemas/models/notifications/notification-master-meta.model");
+        const { notificationMasterFieldModel } =
+          await import("@repo/db/schemas/models/notifications/notification-master-field.model");
 
         console.log("[backend] notification master ID:", emailMasterId);
         console.log(
@@ -2648,12 +2645,10 @@ export async function updateStudentSubjectSelectionsEfficiently(
         let contentRows: Array<{ whatsappFieldId: number; content: string }> =
           [];
         if (masterId) {
-          const { notificationMasterMetaModel } = await import(
-            "@repo/db/schemas/models/notifications/notification-master-meta.model"
-          );
-          const { notificationMasterFieldModel } = await import(
-            "@repo/db/schemas/models/notifications/notification-master-field.model"
-          );
+          const { notificationMasterMetaModel } =
+            await import("@repo/db/schemas/models/notifications/notification-master-meta.model");
+          const { notificationMasterFieldModel } =
+            await import("@repo/db/schemas/models/notifications/notification-master-field.model");
 
           console.log(
             "[backend] notification master ID (no-change):",
@@ -3186,12 +3181,10 @@ export async function updateStudentSubjectSelectionsEfficiently(
       // Build per-field content rows from notification master meta
       let contentRows: Array<{ whatsappFieldId: number; content: string }> = [];
       if (emailMasterId) {
-        const { notificationMasterMetaModel } = await import(
-          "@repo/db/schemas/models/notifications/notification-master-meta.model"
-        );
-        const { notificationMasterFieldModel } = await import(
-          "@repo/db/schemas/models/notifications/notification-master-field.model"
-        );
+        const { notificationMasterMetaModel } =
+          await import("@repo/db/schemas/models/notifications/notification-master-meta.model");
+        const { notificationMasterFieldModel } =
+          await import("@repo/db/schemas/models/notifications/notification-master-field.model");
 
         const metas = await db
           .select({
