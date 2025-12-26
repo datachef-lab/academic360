@@ -1,3 +1,48 @@
+import { db } from "@/db/index.js";
+import { receiptTypeModel, ReceiptType } from "@repo/db/schemas/models/fees";
+import { eq } from "drizzle-orm";
+
+export const createReceiptType = async (
+  data: Omit<ReceiptType, "id" | "createdAt" | "updatedAt">,
+) => {
+  const [created] = await db
+    .insert(receiptTypeModel)
+    .values(data as any)
+    .returning();
+  return created || null;
+};
+
+export const getAllReceiptTypes = async () => {
+  return db.select().from(receiptTypeModel);
+};
+
+export const getReceiptTypeById = async (id: number) => {
+  const [found] = await db
+    .select()
+    .from(receiptTypeModel)
+    .where(eq(receiptTypeModel.id, id));
+  return found || null;
+};
+
+export const updateReceiptType = async (
+  id: number,
+  data: Partial<ReceiptType>,
+) => {
+  const [updated] = await db
+    .update(receiptTypeModel)
+    .set(data)
+    .where(eq(receiptTypeModel.id, id))
+    .returning();
+  return updated || null;
+};
+
+export const deleteReceiptType = async (id: number) => {
+  const [deleted] = await db
+    .delete(receiptTypeModel)
+    .where(eq(receiptTypeModel.id, id))
+    .returning();
+  return deleted || null;
+};
 // import { db } from "@/db/index.js";
 // import {
 //   feesReceiptTypeModel,

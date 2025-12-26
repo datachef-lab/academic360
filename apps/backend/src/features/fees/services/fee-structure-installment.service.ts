@@ -1,54 +1,57 @@
-// import { db } from "@/db/index.js";
-// import { instalmentModel, Instalment } from "../models/instalment.model.js";
-// import { eq } from "drizzle-orm";
+import { db } from "@/db/index.js";
+import {
+  feeStructureInstallmentModel,
+  FeeStructureInstallment,
+} from "@repo/db/schemas/models/fees";
+import { eq } from "drizzle-orm";
 
-// export const createInstalment = async (
-//   instalment: Omit<Instalment, "id">,
-// ): Promise<Instalment | null> => {
-//   const [created] = await db
-//     .insert(instalmentModel)
-//     .values(instalment)
-//     .returning();
-//   return created || null;
-// };
+export const createFeeStructureInstallment = async (
+  instalment: Omit<FeeStructureInstallment, "id">,
+) => {
+  const [created] = await db
+    .insert(feeStructureInstallmentModel)
+    .values(instalment)
+    .returning();
+  return created || null;
+};
 
-// export const getInstalmentById = async (
-//   id: number,
-// ): Promise<Instalment | null> => {
-//   const [instalment] = await db
-//     .select()
-//     .from(instalmentModel)
-//     .where(eq(instalmentModel.id, id));
-//   return instalment || null;
-// };
+export const getFeeStructureInstallmentById = async (id: number) => {
+  const [instalment] = await db
+    .select()
+    .from(feeStructureInstallmentModel)
+    .where(eq(feeStructureInstallmentModel.id, id));
+  return instalment || null;
+};
 
-// export const getInstalmentsByFeesStructureId = async (
-//   feesStructureId: number,
-// ): Promise<Instalment[]> => {
-//   return db
-//     .select()
-//     .from(instalmentModel)
-//     .where(eq(instalmentModel.feesStructureId, feesStructureId));
-// };
+export const getFeeStructureInstallmentsByFeeStructureId = async (
+  feeStructureId: number,
+) => {
+  return db
+    .select()
+    .from(feeStructureInstallmentModel)
+    .where(eq(feeStructureInstallmentModel.feeStructureId, feeStructureId));
+};
 
-// export const updateInstalment = async (
-//   id: number,
-//   data: Partial<Instalment>,
-// ): Promise<Instalment | null> => {
-//   const [updated] = await db
-//     .update(instalmentModel)
-//     .set(data)
-//     .where(eq(instalmentModel.id, id))
-//     .returning();
-//   return updated || null;
-// };
+export const updateFeeStructureInstallment = async (
+  id: number,
+  data: Partial<FeeStructureInstallment>,
+) => {
+  const [updated] = await db
+    .update(feeStructureInstallmentModel)
+    .set(data)
+    .where(eq(feeStructureInstallmentModel.id, id))
+    .returning();
+  return updated || null;
+};
 
-// export const deleteInstalment = async (
-//   id: number,
-// ): Promise<Instalment | null> => {
-//   const [deleted] = await db
-//     .delete(instalmentModel)
-//     .where(eq(instalmentModel.id, id))
-//     .returning();
-//   return deleted || null;
-// };
+export const deleteFeeStructureInstallment = async (id: number) => {
+  const [deleted] = await db
+    .delete(feeStructureInstallmentModel)
+    .where(eq(feeStructureInstallmentModel.id, id))
+    .returning();
+  return deleted || null;
+};
+
+export const getAllFeeStructureInstallments = async () => {
+  return db.select().from(feeStructureInstallmentModel);
+};

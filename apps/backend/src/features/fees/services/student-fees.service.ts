@@ -1,3 +1,48 @@
+import { db } from "@/db/index.js";
+import { studentFeeModel, StudentFee } from "@repo/db/schemas/models/fees";
+import { eq } from "drizzle-orm";
+
+export const createStudentFee = async (
+  data: Omit<StudentFee, "id" | "createdAt" | "updatedAt">,
+) => {
+  const [created] = await db
+    .insert(studentFeeModel)
+    .values(data as any)
+    .returning();
+  return created || null;
+};
+
+export const getAllStudentFees = async () => {
+  return db.select().from(studentFeeModel);
+};
+
+export const getStudentFeeById = async (id: number) => {
+  const [found] = await db
+    .select()
+    .from(studentFeeModel)
+    .where(eq(studentFeeModel.id, id));
+  return found || null;
+};
+
+export const updateStudentFee = async (
+  id: number,
+  data: Partial<StudentFee>,
+) => {
+  const [updated] = await db
+    .update(studentFeeModel)
+    .set(data)
+    .where(eq(studentFeeModel.id, id))
+    .returning();
+  return updated || null;
+};
+
+export const deleteStudentFee = async (id: number) => {
+  const [deleted] = await db
+    .delete(studentFeeModel)
+    .where(eq(studentFeeModel.id, id))
+    .returning();
+  return deleted || null;
+};
 // import { db } from "@/db/index.js";
 // import {
 //   studentFeesMappingModel,
