@@ -2,7 +2,7 @@ import { AcademicYearT, ClassT, FeeConcessionSlabT, FeeHeadT, FeeStructureCompon
 import { ProgramCourseDto } from "../course-design";
 
 export interface FeeStructureComponentDto extends Omit<FeeStructureComponentT, "feeHeadId"> {
-    feeHead: FeeHeadT;
+    feeHead: FeeHeadT | null;
 }
 
 export interface FeeStructureConcessionSlabDto extends Omit<FeeStructureConcessionSlabT, "feeConcessionSlabId"> {

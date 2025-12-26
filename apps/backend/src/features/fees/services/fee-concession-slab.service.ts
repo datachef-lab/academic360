@@ -1,57 +1,155 @@
-// import { db } from "@/db/index.js";
+import { db } from "@/db";
+import {
+  FeeConcessionSlab,
+  feeConcessionSlabModel,
+  createFeeConcessionSlabSchema,
+} from "@repo/db/schemas";
+import { eq } from "drizzle-orm";
 
-// // import { FeesSlab } from "../types/fees-slab";
-// import { eq } from "drizzle-orm";
-// import { feeConcessionSlabModel } from "@repo/db/index.js";
+export type ServiceResult<T> = {
+  success: boolean;
+  message: string;
+  data?: T;
+  error?: unknown;
+};
 
-// export async function getAllFeesSlabs(): Promise<FeesSlab[]> {
-//   return db.select().from(feesSlabModel);
-// }
+export const createFeeConcessionSlab = async (
+  data: FeeConcessionSlab,
+): Promise<ServiceResult<typeof feeConcessionSlabModel.$inferSelect>> => {
+  try {
+    // Validate input using the drizzle-zod schema
+    createFeeConcessionSlabSchema.parse(data);
 
-// export async function getFeesSlabById(id: number): Promise<FeesSlab | null> {
-//   const [foundSlab] = await db
-//     .select()
-//     .from(feesSlabModel)
-//     .where(eq(feesSlabModel.id, id));
-//   return foundSlab || null;
-// }
+    const [created] = await db
+      .insert(feeConcessionSlabModel)
+      .values(data)
+      .returning();
 
-// export async function createFeesSlab(
-//   data: Omit<FeesSlab, "id" | "createdAt" | "updatedAt">,
-// ): Promise<FeesSlab> {
-//   const [created] = await db.insert(feesSlabModel).values(data).returning();
-//   return created;
-// }
+    return {
+      success: true,
+      message: "Fee concession slab created successfully",
+      data: created,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Failed to create fee concession slab",
+      error,
+    };
+  }
+};
 
-// export async function updateFeesSlab(
-//   id: number,
-//   data: Partial<Omit<FeesSlab, "id" | "createdAt" | "updatedAt">>,
-// ): Promise<FeesSlab | null> {
-//   const [updated] = await db
-//     .update(feesSlabModel)
-//     .set({ ...data, updatedAt: new Date() })
-//     .where(eq(feesSlabModel.id, id))
-//     .returning();
-//   return updated || null;
-// }
+export const getAllFeeConcessionSlabs = async (): Promise<
+  ServiceResult<(typeof feeConcessionSlabModel.$inferSelect)[]>
+> => {
+  try {
+    const slabs = await db.select().from(feeConcessionSlabModel);
+    return {
+      success: true,
+      message: "Fee concession slabs retrieved successfully",
+      data: slabs,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Failed to retrieve fee concession slabs",
+      error,
+    };
+  }
+};
 
-// export async function deleteFeesSlab(id: number): Promise<boolean> {
-//   const deleted = await db
-//     .delete(feesSlabModel)
-//     .where(eq(feesSlabModel.id, id))
-//     .returning();
-//   return deleted.length > 0;
-// }
+export const getFeeConcessionSlabById = async (
+  id: number,
+): Promise<ServiceResult<typeof feeConcessionSlabModel.$inferSelect>> => {
+  try {
+    const [slab] = await db
+      .select()
+      .from(feeConcessionSlabModel)
+      .where(eq(feeConcessionSlabModel.id, id));
 
-// export const getFeesSlabsByAcademicYear = async (feesStructureId: number) => {
-//   try {
-//     const slabs = await db
-//       .select()
-//       .from(feesSlabMappingModel)
-//       .where(eq(feesSlabMappingModel.feesStructureId, feesStructureId));
-//     return slabs;
-//   } catch (error) {
-//     console.error("Error getting slabs by fees structure:", error);
-//     return null;
-//   }
-// };
+    if (!slab) {
+      return {
+        success: false,
+        message: `Fee concession slab with ID ${id} not found`,
+      };
+    }
+
+    return {
+      success: true,
+      message: "Fee concession slab retrieved successfully",
+      data: slab,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error retrieving fee concession slab",
+      error,
+    };
+  }
+};
+
+export const updateFeeConcessionSlab = async (
+  id: number,
+  data: Partial<FeeConcessionSlab>,
+): Promise<ServiceResult<typeof feeConcessionSlabModel.$inferSelect>> => {
+  try {
+    // Use partial schema for validation
+    const partialSchema = createFeeConcessionSlabSchema.partial();
+    partialSchema.parse(data);
+
+    const [updated] = await db
+      .update(feeConcessionSlabModel)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(feeConcessionSlabModel.id, id))
+      .returning();
+
+    if (!updated) {
+      return {
+        success: false,
+        message: `Fee concession slab with ID ${id} not found`,
+      };
+    }
+
+    return {
+      success: true,
+      message: "Fee concession slab updated successfully",
+      data: updated,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Failed to update fee concession slab",
+      error,
+    };
+  }
+};
+
+export const deleteFeeConcessionSlab = async (
+  id: number,
+): Promise<ServiceResult<typeof feeConcessionSlabModel.$inferSelect>> => {
+  try {
+    const [deleted] = await db
+      .delete(feeConcessionSlabModel)
+      .where(eq(feeConcessionSlabModel.id, id))
+      .returning();
+
+    if (!deleted) {
+      return {
+        success: false,
+        message: `Fee concession slab with ID ${id} not found`,
+      };
+    }
+
+    return {
+      success: true,
+      message: "Fee concession slab deleted successfully",
+      data: deleted,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Failed to delete fee concession slab",
+      error,
+    };
+  }
+};

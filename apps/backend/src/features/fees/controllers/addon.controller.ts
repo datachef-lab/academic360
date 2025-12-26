@@ -89,3 +89,119 @@
 //     handleError(error, res);
 //   }
 // };
+
+import { Request, Response } from "express";
+import { AddOn } from "@repo/db/schemas";
+import * as addonService from "../services/addon.service";
+import { handleError } from "@/utils";
+
+/**
+ * Create a new addon
+ */
+export async function createAddonHandler(req: Request, res: Response) {
+  try {
+    const body = req.body as AddOn;
+    const result = await addonService.createAddon(body);
+
+    if (!result.success) {
+      return res.status(500).json(result);
+    }
+
+    return res.status(201).json(result);
+  } catch (error) {
+    return handleError(error, res);
+  }
+}
+
+/**
+ * Get all addons
+ */
+export async function getAllAddonsHandler(_req: Request, res: Response) {
+  try {
+    const result = await addonService.getAllAddons();
+
+    if (!result.success) {
+      return res.status(500).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(error, res);
+  }
+}
+
+/**
+ * Get addon by id
+ */
+export async function getAddonByIdHandler(req: Request, res: Response) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format" });
+    }
+
+    const result = await addonService.getAddonById(id);
+
+    if (!result.success) {
+      const isNotFound = result.message.includes("not found");
+      return res.status(isNotFound ? 404 : 500).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(error, res);
+  }
+}
+
+/**
+ * Update addon by id
+ */
+export async function updateAddonHandler(req: Request, res: Response) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format" });
+    }
+
+    const body = req.body as Partial<AddOn>;
+    const result = await addonService.updateAddon(id, body);
+
+    if (!result.success) {
+      const isNotFound = result.message.includes("not found");
+      return res.status(isNotFound ? 404 : 500).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(error, res);
+  }
+}
+
+/**
+ * Delete addon by id
+ */
+export async function deleteAddonHandler(req: Request, res: Response) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format" });
+    }
+
+    const result = await addonService.deleteAddon(id);
+
+    if (!result.success) {
+      const isNotFound = result.message.includes("not found");
+      return res.status(isNotFound ? 404 : 500).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(error, res);
+  }
+}

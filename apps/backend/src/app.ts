@@ -66,7 +66,8 @@ import {
   healthRouter,
   personalDetailsRouter,
   //   feesComponentRouter,
-  //   addonRouter,
+  addonRouter,
+  feeConcessionSlabRouter,
   //   feesHeadRouter,
   //   feesReceiptTypeRouter,
   //   feesSlabYearMappingRouter,
@@ -78,6 +79,8 @@ import {
   departmentRouter,
   designationRouter,
   subDepartmentRouter,
+  feeHeadRouter,
+  feeStructureComponentRouter,
 } from "@/features/index.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
@@ -420,8 +423,10 @@ app.use("/api/v1/academics", academicYearRouter);
 app.use("/api/v1/fees", feesRouter);
 app.use("/api/v1/courses", courseRouter);
 // app.use("/api/v1/fees/components", feesComponentRouter);
-// app.use("/api/v1/fees/addons", addonRouter);
-// app.use("/api/v1/fees/heads", feesHeadRouter);
+app.use("/api/v1/fees/addons", addonRouter);
+app.use("/api/v1/fees/concession-slabs", feeConcessionSlabRouter);
+app.use("/api/v1/fees/heads", feeHeadRouter);
+app.use("/api/v1/fees/components", feeStructureComponentRouter);
 // app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 app.use("/api/exams/floors", floorRouter);
 app.use("/api/exams/rooms", roomRouter);
