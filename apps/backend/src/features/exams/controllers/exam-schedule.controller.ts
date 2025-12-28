@@ -397,7 +397,12 @@ export const createExamAssignmenthandler = async (
       }[];
     }
 
-    const students = await createExamAssignment(req.body, excelStudents);
+    const dto =
+      typeof req.body.dto === "string"
+        ? JSON.parse(req.body.dto)
+        : req.body.dto;
+
+    const students = await createExamAssignment(dto, excelStudents);
 
     // console.log(
     //     "[EXAM-SCHEDULE-CONTROLLER] Service returned students:",

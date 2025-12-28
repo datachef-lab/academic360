@@ -16,32 +16,60 @@ const BASE_URL = "/api/exams/schedule";
 //   }
 // }
 
+// export async function doAssignExam(dto: ExamDto, file: File | null): Promise<ApiResponse<ExamT>> {
+//   try {
+//     const formData = new FormData();
+
+//     console.log("in ui, doAssignExam(), service api call:", dto);
+
+//     // Append DTO fields
+//     Object.entries(dto).forEach(([key, value]) => {
+//       if (Array.isArray(value)) {
+//         value.forEach((v, i) => {
+//           if (typeof v === "object") {
+//             Object.entries(v).forEach(([k, val]) => {
+//               formData.append(`${key}[${i}][${k}]`, String(val ?? ""));
+//             });
+//           } else {
+//             formData.append(`${key}[]`, String(v));
+//           }
+//         });
+//       } else if (value !== undefined && value !== null) {
+//         formData.append(key, String(value));
+//       }
+//     });
+
+//     // Append Excel file
+//     if (file) {
+//       formData.append("file", file); // 🔑 MUST be "file"
+//     }
+
+//     const response = await axiosInstance.post(BASE_URL, formData, {
+//       headers: {
+//         "Content-Type": "multipart/form-data",
+//       },
+//     });
+
+//     console.log("In doAssignExam(), response:", response);
+//     return response.data;
+//   } catch (error) {
+//     console.error("Error assigning exam:", error);
+//     throw new Error("Failed to assign exam");
+//   }
+// }
+
 export async function doAssignExam(dto: ExamDto, file: File | null): Promise<ApiResponse<ExamT>> {
   try {
     const formData = new FormData();
 
-    console.log("in ui, doAssignExam(), service api call:", dto);
+    console.log("in ui, doAssignExam(), sending dto + file:", dto);
 
-    // Append DTO fields
-    Object.entries(dto).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        value.forEach((v, i) => {
-          if (typeof v === "object") {
-            Object.entries(v).forEach(([k, val]) => {
-              formData.append(`${key}[${i}][${k}]`, String(val ?? ""));
-            });
-          } else {
-            formData.append(`${key}[]`, String(v));
-          }
-        });
-      } else if (value !== undefined && value !== null) {
-        formData.append(key, String(value));
-      }
-    });
+    // ✅ Send DTO as JSON (single field)
+    formData.append("dto", JSON.stringify(dto));
 
-    // Append Excel file
+    // ✅ Send file
     if (file) {
-      formData.append("file", file); // 🔑 MUST be "file"
+      formData.append("file", file);
     }
 
     const response = await axiosInstance.post(BASE_URL, formData, {

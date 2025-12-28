@@ -903,6 +903,11 @@ export async function createExamAssignment(
       "[EXAM-SCHEDULE:createExamAssignment] Creating exam assignment:",
       dto,
     );
+
+    console.log(dto.academicYear);
+    console.log(dto.class);
+    console.log(dto.examType);
+    console.log(dto.examSubjects);
     // 1. Create exam record
     const [exam] = await tx
       .insert(examModel)
@@ -1309,6 +1314,8 @@ export async function createExamAssignment(
 
     const candidateInserts: ExamCandidate[] = [];
 
+    console.log("dto.examSubjects:", dto.examSubjects);
+
     for (const subj of dto.examSubjects) {
       const examSubjectId = subjectToExamSubject.get(subj.subject.id!);
       if (!examSubjectId) {
@@ -1350,6 +1357,11 @@ export async function createExamAssignment(
             );
           }
 
+          const foilNumber =
+            excelStudents.find((es) => es.uid == s.uid)?.foil_number || null;
+
+          console.log("in exam-candidate insert, foil_number:", foilNumber);
+
           candidateInserts.push({
             examId: exam.id!,
             promotionId,
@@ -1358,6 +1370,7 @@ export async function createExamAssignment(
             examSubjectId, // 🔥 correct subject
             paperId, // 🔥 correct paper
             seatNumber: s.seatNumber,
+            foilNumber,
           });
         }
       }
