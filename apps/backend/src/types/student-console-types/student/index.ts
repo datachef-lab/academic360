@@ -11,28 +11,31 @@ import { Family } from "@repo/db/schemas/models/user";
 import { PersonalDetails } from "@repo/db/schemas/models/user";
 // import { AcademicHistory } from "@repo/db/schemas/models/user";
 
-export interface AddressDto
-  extends Omit<Address, "countryId" | "stateId" | "cityId"> {
+export interface AddressDto extends Omit<
+  Address,
+  "countryId" | "stateId" | "cityId"
+> {
   country: Country | null;
   state: State | null;
   city: City | null;
 }
 
-export interface PersonDto
-  extends Omit<Person, "qualificationId" | "occupationId" | "officeAddresId"> {
+export interface PersonDto extends Omit<
+  Person,
+  "qualificationId" | "occupationId" | "officeAddresId"
+> {
   qualification: Qualification | null;
   occupation: Occupation | null;
   officeAddress: AddressDto | null;
 }
 
-export interface FamilyDetailDto
-  extends Omit<
-    Family,
-    | "fatherDetailsPersonId"
-    | "motherDetailsPersonId"
-    | "guardianDetailsPersonId"
-    | "annualIncomeId"
-  > {
+export interface FamilyDetailDto extends Omit<
+  Family,
+  | "fatherDetailsPersonId"
+  | "motherDetailsPersonId"
+  | "guardianDetailsPersonId"
+  | "annualIncomeId"
+> {
   father: PersonDto;
   mother: PersonDto;
   guardian: PersonDto;

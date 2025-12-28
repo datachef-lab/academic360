@@ -745,12 +745,12 @@ export async function updateCuRegistrationCorrectionRequest(
     if (typeof (updateData as any).personalInfoDeclaration !== "undefined")
       setData.personalInfoDeclaration = Boolean(
         existing.personalInfoDeclaration ||
-          (updateData as any).personalInfoDeclaration,
+        (updateData as any).personalInfoDeclaration,
       );
     if (typeof (updateData as any).addressInfoDeclaration !== "undefined")
       setData.addressInfoDeclaration = Boolean(
         existing.addressInfoDeclaration ||
-          (updateData as any).addressInfoDeclaration,
+        (updateData as any).addressInfoDeclaration,
       );
     if (typeof (updateData as any).subjectsDeclaration !== "undefined")
       setData.subjectsDeclaration = Boolean(
@@ -759,7 +759,7 @@ export async function updateCuRegistrationCorrectionRequest(
     if (typeof (updateData as any).documentsDeclaration !== "undefined")
       setData.documentsDeclaration = Boolean(
         existing.documentsDeclaration ||
-          (updateData as any).documentsDeclaration,
+        (updateData as any).documentsDeclaration,
       );
 
     // Handle correction request flags directly
@@ -1524,9 +1524,8 @@ export async function updateCuRegistrationCorrectionRequest(
       );
 
       // Import the PDF integration service
-      const { CuRegistrationPdfIntegrationService } = await import(
-        "@/services/cu-registration-pdf-integration.service.js"
-      );
+      const { CuRegistrationPdfIntegrationService } =
+        await import("@/services/cu-registration-pdf-integration.service.js");
 
       // Regenerate PDF with latest student data but SAME application number
       // The PDF will contain updated student information but the form number stays the same
@@ -2756,9 +2755,8 @@ export const sendAdmissionRegistrationNotification = async (
     // Get student details with user info, personal details, board, and category (studentId -> student -> user -> personal details -> admission academic info -> board/category/nationality)
     const { personalDetailsModel, boardModel, admissionAcademicInfoModel } =
       await import("@repo/db/schemas/models");
-    const { categoryModel, nationalityModel } = await import(
-      "@repo/db/schemas/models/resources"
-    );
+    const { categoryModel, nationalityModel } =
+      await import("@repo/db/schemas/models/resources");
     const [studentData] = await db
       .select({
         studentId: studentModel.id,
@@ -4330,9 +4328,8 @@ async function tmptriggerNotif(
     );
 
     // Import the PDF integration service
-    const { CuRegistrationPdfIntegrationService } = await import(
-      "@/services/cu-registration-pdf-integration.service.js"
-    );
+    const { CuRegistrationPdfIntegrationService } =
+      await import("@/services/cu-registration-pdf-integration.service.js");
 
     // Regenerate PDF with latest student data but SAME application number
     // The PDF will contain updated student information but the form number stays the same

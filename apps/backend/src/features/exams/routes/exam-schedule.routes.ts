@@ -15,11 +15,22 @@ import {
 } from "../controllers/exam-schedule.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import { createExamAssignment } from "../services/exam-schedule.service.js";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = Router();
 
-router.post("/count-students", verifyJWT, countStudentsForExam);
-router.post("/get-students", verifyJWT, getStudentsForExam);
+router.post(
+  "/count-students",
+  verifyJWT,
+  uploadExcelMiddleware,
+  countStudentsForExam,
+);
+router.post(
+  "/get-students",
+  verifyJWT,
+  uploadExcelMiddleware,
+  getStudentsForExam,
+);
 
 router.put("/exam-subject", verifyJWT, updateExamSubjectHandler);
 
@@ -30,7 +41,7 @@ router.get(
   triggerExamCandidatesEmailController,
 );
 
-router.post("/", verifyJWT, createExamAssignmenthandler);
+router.post("/", verifyJWT, uploadExcelMiddleware, createExamAssignmenthandler);
 router.get("/exam-candidates/download", downloadExamCandidatesController);
 router.get("/", getAllExamsController);
 router.get("/admit-card/download/single", downloadSingleAdmitCardController);
