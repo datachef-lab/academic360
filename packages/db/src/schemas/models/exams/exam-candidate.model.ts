@@ -29,6 +29,7 @@ export const examCandidateModel = pgTable("exam_candidates", {
         .references(() => paperModel.id)
         .notNull(),
     seatNumber: varchar({ length: 255 }).notNull(),
+    foilNumber: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
