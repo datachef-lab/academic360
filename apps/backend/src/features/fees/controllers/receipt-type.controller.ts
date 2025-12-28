@@ -1,0 +1,176 @@
+import { Request, Response, NextFunction } from "express";
+import * as receiptTypeService from "../services/receipt-type.service.js";
+import {
+  createReceiptTypeSchema,
+  ReceiptType,
+} from "@repo/db/schemas/models/fees";
+import { handleError } from "@/utils/handleError.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+
+export const createReceiptType = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const parse = createReceiptTypeSchema.safeParse(req.body as any);
+    if (!parse.success) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "VALIDATION_ERROR",
+            null,
+            JSON.stringify(parse.error.flatten()),
+          ),
+        );
+      return;
+    }
+    const body = parse.data as Omit<ReceiptType, "id">;
+    const created = await receiptTypeService.createReceiptType(body as any);
+    if (!created) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(400, "ERROR", null, "Failed to create receipt type"),
+        );
+      return;
+    }
+    res
+      .status(201)
+      .json(new ApiResponse(201, "CREATED", created, "Receipt type created"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const getAllReceiptTypes = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const all = await receiptTypeService.getAllReceiptTypes();
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", all, "Fetched receipt types"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const getReceiptTypeById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
+      return;
+    }
+    const found = await receiptTypeService.getReceiptTypeById(id);
+    if (!found) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(404, "NOT_FOUND", null, "Receipt type not found"),
+        );
+      return;
+    }
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", found, "Fetched receipt type"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const updateReceiptType = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
+      return;
+    }
+    const parse = createReceiptTypeSchema.partial().safeParse(req.body as any);
+    if (!parse.success) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "VALIDATION_ERROR",
+            null,
+            JSON.stringify(parse.error.flatten()),
+          ),
+        );
+      return;
+    }
+    const body = parse.data as Partial<ReceiptType>;
+    const updated = await receiptTypeService.updateReceiptType(id, body as any);
+    if (!updated) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Receipt type not found or update failed",
+          ),
+        );
+      return;
+    }
+    res
+      .status(200)
+      .json(new ApiResponse(200, "UPDATED", updated, "Receipt type updated"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const deleteReceiptType = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
+      return;
+    }
+    const deleted = await receiptTypeService.deleteReceiptType(id);
+    if (!deleted) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Receipt type not found or delete failed",
+          ),
+        );
+      return;
+    }
+    res
+      .status(200)
+      .json(new ApiResponse(200, "DELETED", deleted, "Receipt type deleted"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};

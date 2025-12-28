@@ -82,11 +82,16 @@ import {
   feeHeadRouter,
   feeStructureComponentRouter,
 } from "@/features/index.js";
+import instalmentRouter from "@/features/fees/routes/instalment.route.js";
+import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
+import studentFeesRouter from "@/features/fees/routes/student-fees.route.js";
+import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 import { shiftRouter } from "@/features/academics/routes/index.js";
 import feesSlabRouter from "@/features/fees/routes/index.js";
+
 // import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
 // import studentFeesMappingRouter from "./features/fees/routes/student-fees-mapping.route.js";
 import feesRouter from "./features/fees/routes/index.js";
@@ -418,9 +423,10 @@ app.use("/api/classes", classRouter);
 // app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
 app.use("/api/v1/shifts", shiftRouter);
 app.use("/api/v1/academics", academicYearRouter);
-// app.use("/api/v1/fees/structure", feesStructureRouter);
+app.use("/api/v1/fees/structure", feesStructureRouter);
 // app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
 app.use("/api/v1/fees", feesRouter);
+app.use("/api/v1/fees/receipt-types", receiptTypeRouter);
 app.use("/api/v1/courses", courseRouter);
 // app.use("/api/v1/fees/components", feesComponentRouter);
 app.use("/api/v1/fees/addons", addonRouter);
@@ -776,6 +782,9 @@ app.use("/api/v1/academics", academicYearRouter);
 app.use("/api/v1/fees", feesRouter);
 
 app.use("/api/v1/courses", courseRouter);
+
+app.use("/api/v1/fees/structure-instalments", instalmentRouter);
+app.use("/api/v1/fees/student-fees", studentFeesRouter);
 
 // app.use("/api/v1/fees/components", feesComponentRouter);
 

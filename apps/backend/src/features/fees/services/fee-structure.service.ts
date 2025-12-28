@@ -1,123 +1,48 @@
-// import { db } from "@/db/index.js";
-// import {
-//     feesStructureModel,
-//     FeesStructure,
-// } from "../models/fees-structure.model.js";
-// import { and, countDistinct, desc, eq, inArray, sql } from "drizzle-orm";
-// import {
-//     CreateFeesStructureDto,
-//     FeesStructureDto,
-// } from "@/types/fees/index.js";
-// import {
-//     academicYearModel,
-//     AcademicYear,
-// } from "@repo/db/schemas/models/academics";
-// import { Course, courseModel } from "@repo/db/schemas/models/course-design";
-// import {
-//     feesComponentModel,
-//     type FeesComponent,
-// } from "../models/fees-component.model.js";
-// import { alias } from "drizzle-orm/pg-core";
-// import { FeesDesignAbstractLevel } from "@/types/fees/index.js";
-// import { batchModel } from "@repo/db/schemas/models/academics";
-// import { shiftModel } from "@repo/db/schemas/models/academics";
-// import type { Shift } from "@repo/db/schemas/models/academics";
-// import {
-//     createFeesSlabMapping,
-//     getFeesSlabMappingsByFeesStructureId,
-// } from "./fee-structure-concession-slab.service.js";
-// import { feesSlabMappingModel } from "../models/fees-slab-mapping.model.js";
-// import { classModel } from "@repo/db/schemas/models/academics";
-// import { findClassById } from "@/features/academics/services/class.service.js";
-// import { instalmentModel, Instalment } from "../models/instalment.model.js";
+import { db } from "@/db/index.js";
+import { feeStructureModel, FeeStructure } from "@repo/db/schemas/models/fees";
+import { eq } from "drizzle-orm";
 
-// export const getFeesStructures = async (): Promise<
-//     FeesStructureDto[] | null
-// > => {
-//     try {
-//         const advanceCourse = alias(courseModel, "advanceCourse");
-//         const feesStructures = await db
-//             .select({
-//                 id: feesStructureModel.id,
-//                 closingDate: feesStructureModel.closingDate,
-//                 academicYearId: feesStructureModel.academicYearId,
-//                 courseId: feesStructureModel.courseId,
-//                 semester: classModel.name,
-//                 advanceForCourseId: feesStructureModel.advanceForCourseId,
-//                 advanceForSemester: feesStructureModel.advanceForSemester,
-//                 startDate: feesStructureModel.startDate,
-//                 endDate: feesStructureModel.endDate,
-//                 onlineStartDate: feesStructureModel.onlineStartDate,
-//                 onlineEndDate: feesStructureModel.onlineEndDate,
-//                 numberOfInstalments: feesStructureModel.numberOfInstalments,
-//                 // instalmentStartDate: feesStructureModel.instalmentStartDate,
-//                 // instalmentEndDate: feesStructureModel.instalmentEndDate,
-//                 createdAt: feesStructureModel.createdAt,
-//                 updatedAt: feesStructureModel.updatedAt,
-//                 academicYear: academicYearModel,
-//                 course: courseModel,
-//                 advanceForCourse: advanceCourse,
-//                 shiftId: feesStructureModel.shiftId,
-//             })
-//             .from(feesStructureModel)
-//             .leftJoin(
-//                 academicYearModel,
-//                 eq(feesStructureModel.academicYearId, academicYearModel.id),
-//             )
-//             .leftJoin(classModel, eq(classModel.id, feesStructureModel.classId))
-//             .leftJoin(courseModel, eq(feesStructureModel.courseId, courseModel.id))
-//             .leftJoin(
-//                 advanceCourse,
-//                 eq(feesStructureModel.advanceForCourseId, advanceCourse.id),
-//             );
+export const createFeeStructure = async (
+  data: Omit<FeeStructure, "id" | "createdAt" | "updatedAt">,
+) => {
+  const [created] = await db
+    .insert(feeStructureModel)
+    .values(data as any)
+    .returning();
+  return created || null;
+};
 
-//         const feesStructureDtos: FeesStructureDto[] = [];
-//         for (const feesStructure of feesStructures) {
-//             const components = await db
-//                 .select()
-//                 .from(feesComponentModel)
-//                 .where(eq(feesComponentModel.feesStructureId, feesStructure.id));
-//             let shift: Shift | undefined = undefined;
-//             if (feesStructure.shiftId) {
-//                 const [foundShift] = await db
-//                     .select()
-//                     .from(shiftModel)
-//                     .where(eq(shiftModel.id, feesStructure.shiftId));
-//                 shift = foundShift;
-//             }
-//             const [foundClass] = await db
-//                 .select()
-//                 .from(classModel)
-//                 .where(eq(classModel.name, feesStructure.semester!));
+export const getAllFeeStructures = async () => {
+  return db.select().from(feeStructureModel);
+};
 
-//             // Fetch instalments for this feesStructure
-//             const instalments: Instalment[] = await db
-//                 .select()
-//                 .from(instalmentModel)
-//                 .where(eq(instalmentModel.feesStructureId, feesStructure.id));
+export const getFeeStructureById = async (id: number) => {
+  const [found] = await db
+    .select()
+    .from(feeStructureModel)
+    .where(eq(feeStructureModel.id, id));
+  return found || null;
+};
 
-//             if (feesStructure.academicYear && feesStructure.course) {
-//                 const feesSlabMappings = await getFeesSlabMappingsByFeesStructureId(
-//                     feesStructure.id!,
-//                 );
-//                 feesStructureDtos.push({
-//                     ...feesStructure,
-//                     class: foundClass,
-//                     feesSlabMappings,
-//                     academicYear: feesStructure.academicYear,
-//                     course: feesStructure.course,
-//                     advanceForCourse: feesStructure.advanceForCourse,
-//                     components,
-//                     shift,
-//                     instalments,
-//                 });
-//             }
-//         }
-//         return feesStructureDtos;
-//     } catch (error) {
-//         return null;
-//     }
-// };
+export const updateFeeStructure = async (
+  id: number,
+  data: Partial<FeeStructure>,
+) => {
+  const [updated] = await db
+    .update(feeStructureModel)
+    .set(data)
+    .where(eq(feeStructureModel.id, id))
+    .returning();
+  return updated || null;
+};
+
+export const deleteFeeStructure = async (id: number) => {
+  const [deleted] = await db
+    .delete(feeStructureModel)
+    .where(eq(feeStructureModel.id, id))
+    .returning();
+  return deleted || null;
+};
 
 // export const getFeesStructureById = async (
 //     id: number,

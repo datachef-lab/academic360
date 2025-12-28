@@ -147,7 +147,7 @@ export default function ReportsPage() {
       createdAt: new Date(),
     });
 
-    const result = await ExportService.exportStudentSubjectsInventory(Number(selectedAcademicYearId));
+    const result = await ExportService.exportStudentSubjectSelections(1);
 
     if (result.success && result.data) {
       // Trigger download

@@ -1,3 +1,15 @@
+import { Router } from "express";
+import * as feesStructureController from "../controllers/fees-structure.controller.js";
+
+const router = Router();
+
+router.post("/", feesStructureController.createFeeStructure);
+router.get("/", feesStructureController.getAllFeeStructures);
+router.get("/:id", feesStructureController.getFeeStructureById);
+router.put("/:id", feesStructureController.updateFeeStructure);
+router.delete("/:id", feesStructureController.deleteFeeStructure);
+
+export default router;
 // import { Router } from "express";
 // import {
 //   getFeesStructuresHandler,

@@ -80,9 +80,8 @@ export const getAllPapersHandler = async (
     );
 
     if (page > 0 && pageSize > 0) {
-      const { getPapersPaginated, getPapersFilteredPaginated } = await import(
-        "@/features/course-design/services/paper.service.js"
-      );
+      const { getPapersPaginated, getPapersFilteredPaginated } =
+        await import("@/features/course-design/services/paper.service.js");
 
       const filters = {
         subjectId: req.query.subjectId
@@ -256,36 +255,28 @@ export const downloadPapersHandler = async (
     // Fallback: if no papers found, try to get some basic data
     if (!papers || papers.length === 0) {
       console.log("No papers found with filters, trying to get all papers...");
-      const { getAllPapers } = await import(
-        "@/features/course-design/services/paper.service.js"
-      );
+      const { getAllPapers } =
+        await import("@/features/course-design/services/paper.service.js");
       const allPapers = await getAllPapers();
       console.log("All papers fetched:", allPapers.length);
       papers = allPapers.slice(0, 100); // Limit to 100 for download
     }
 
     // Import required services to get related data
-    const { getAllSubjects } = await import(
-      "@/features/course-design/services/subject.service.js"
-    );
-    const { getAllAffiliations } = await import(
-      "@/features/course-design/services/affiliation.service.js"
-    );
-    const { getAllRegulationTypes } = await import(
-      "@/features/course-design/services/regulation-type.service.js"
-    );
-    const { findAllAcademicYears } = await import(
-      "@/features/academics/services/academic-year.service.js"
-    );
-    const { getAllSubjectTypes } = await import(
-      "@/features/course-design/services/subject-type.service.js"
-    );
-    const { getAllProgramCourses } = await import(
-      "@/features/course-design/services/program-course.service.js"
-    );
-    const { getAllClasses } = await import(
-      "@/features/academics/services/class.service.js"
-    );
+    const { getAllSubjects } =
+      await import("@/features/course-design/services/subject.service.js");
+    const { getAllAffiliations } =
+      await import("@/features/course-design/services/affiliation.service.js");
+    const { getAllRegulationTypes } =
+      await import("@/features/course-design/services/regulation-type.service.js");
+    const { findAllAcademicYears } =
+      await import("@/features/academics/services/academic-year.service.js");
+    const { getAllSubjectTypes } =
+      await import("@/features/course-design/services/subject-type.service.js");
+    const { getAllProgramCourses } =
+      await import("@/features/course-design/services/program-course.service.js");
+    const { getAllClasses } =
+      await import("@/features/academics/services/class.service.js");
 
     const [
       subjects,

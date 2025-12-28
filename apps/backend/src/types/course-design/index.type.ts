@@ -15,8 +15,10 @@ export interface CourseDto extends Omit<Course, "degreeId"> {
   degree: Degree | null;
 }
 
-export interface PaperComponentDto
-  extends Omit<PaperComponent, "examComponentId"> {
+export interface PaperComponentDto extends Omit<
+  PaperComponent,
+  "examComponentId"
+> {
   examComponent: ExamComponent;
 }
 

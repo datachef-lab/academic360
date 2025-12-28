@@ -1,3 +1,206 @@
+import { Request, Response, NextFunction } from "express";
+import * as feeStructureService from "../services/fee-structure.service.js";
+import {
+  FeeStructure,
+  createFeeStructureSchema,
+} from "@repo/db/schemas/models/fees";
+import { handleError } from "@/utils/handleError.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+
+function toDate(val: any): Date | null {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (typeof val === "string" || typeof val === "number") return new Date(val);
+  return val;
+}
+
+function convertDates(obj: Record<string, any>) {
+  const dateFields = [
+    "startDate",
+    "endDate",
+    "closingDate",
+    "onlineStartDate",
+    "onlineEndDate",
+    "createdAt",
+    "updatedAt",
+  ];
+  for (const f of dateFields) {
+    if (obj[f]) obj[f] = toDate(obj[f]);
+  }
+}
+
+export const createFeeStructure = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const parse = createFeeStructureSchema.safeParse(req.body as any);
+    if (!parse.success) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "VALIDATION_ERROR",
+            null,
+            JSON.stringify(parse.error.flatten()),
+          ),
+        );
+      return;
+    }
+    const body = parse.data as Omit<FeeStructure, "id">;
+    convertDates(body as any);
+    const created = await feeStructureService.createFeeStructure(body as any);
+    if (!created) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(400, "ERROR", null, "Failed to create fee structure"),
+        );
+      return;
+    }
+    res
+      .status(201)
+      .json(new ApiResponse(201, "CREATED", created, "Fee structure created"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const getAllFeeStructures = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const all = await feeStructureService.getAllFeeStructures();
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", all, "Fetched fee structures"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const getFeeStructureById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
+      return;
+    }
+    const found = await feeStructureService.getFeeStructureById(id);
+    if (!found) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(404, "NOT_FOUND", null, "Fee structure not found"),
+        );
+      return;
+    }
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", found, "Fetched fee structure"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const updateFeeStructure = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
+      return;
+    }
+    const parse = createFeeStructureSchema.partial().safeParse(req.body as any);
+    if (!parse.success) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "VALIDATION_ERROR",
+            null,
+            JSON.stringify(parse.error.flatten()),
+          ),
+        );
+      return;
+    }
+    const body = parse.data as Partial<FeeStructure>;
+    convertDates(body as any);
+    const updated = await feeStructureService.updateFeeStructure(
+      id,
+      body as any,
+    );
+    if (!updated) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Fee structure not found or update failed",
+          ),
+        );
+      return;
+    }
+    res
+      .status(200)
+      .json(new ApiResponse(200, "UPDATED", updated, "Fee structure updated"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const deleteFeeStructure = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
+      return;
+    }
+    const deleted = await feeStructureService.deleteFeeStructure(id);
+    if (!deleted) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Fee structure not found or delete failed",
+          ),
+        );
+      return;
+    }
+    res
+      .status(200)
+      .json(new ApiResponse(200, "DELETED", deleted, "Fee structure deleted"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
 // import { Request, Response } from "express";
 // import {
 //   getFeesStructures,

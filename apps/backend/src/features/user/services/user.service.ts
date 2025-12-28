@@ -1218,9 +1218,8 @@ export async function requestPasswordReset(
         .from(userModel)
         .where(eq(userModel.email, email));
 
-      const { enqueueNotification } = await import(
-        "@/services/notificationClient.js"
-      );
+      const { enqueueNotification } =
+        await import("@/services/notificationClient.js");
 
       await enqueueNotification({
         userId: foundUser?.id || 0,
@@ -1340,9 +1339,8 @@ export async function resetPassword(
 
     try {
       // Send password change confirmation email (no sensitive data)
-      const { enqueueNotification } = await import(
-        "@/services/notificationClient.js"
-      );
+      const { enqueueNotification } =
+        await import("@/services/notificationClient.js");
       const [userRow] = await db
         .select({ id: userModel.id, name: userModel.name })
         .from(userModel)
@@ -1482,9 +1480,8 @@ export async function resetPasswordWithEmailOtp(
     }
 
     try {
-      const { enqueueNotification } = await import(
-        "@/services/notificationClient.js"
-      );
+      const { enqueueNotification } =
+        await import("@/services/notificationClient.js");
       const [userRow] = await db
         .select({ id: userModel.id, name: userModel.name })
         .from(userModel)
