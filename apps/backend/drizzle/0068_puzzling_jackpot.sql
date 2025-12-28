@@ -1,1 +1,0 @@
-ALTER TABLE "exam_candidates" ADD COLUMN "foil_number" varchar(255);

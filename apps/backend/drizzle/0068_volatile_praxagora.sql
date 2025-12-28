@@ -139,3 +139,4 @@ ALTER TABLE "student_fees" ADD CONSTRAINT "student_fees_fee_structure_id_fk_fee_
 ALTER TABLE "student_fees" ADD CONSTRAINT "student_fees_fee_structure_installment_id_fk_fee_structure_installments_id_fk" FOREIGN KEY ("fee_structure_installment_id_fk") REFERENCES "public"."fee_structure_installments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "student_fees" ADD CONSTRAINT "student_fees_fee_concession_slab_id_fk_fee_concession_slabs_id_fk" FOREIGN KEY ("fee_concession_slab_id_fk") REFERENCES "public"."fee_concession_slabs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 DROP TYPE "public"."student_fees_mapping_type";
+ALTER TABLE "exam_candidates" ADD COLUMN "foil_number" varchar(255);
