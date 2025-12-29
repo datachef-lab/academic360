@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import * as studentFeeService from "../services/student-fees.service.js";
 import {
   createStudentFeeSchema,
@@ -7,17 +8,21 @@ import {
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 
-function toDate(val: any): Date | null {
+function toDate(val: unknown): Date | null {
   if (!val) return null;
   if (val instanceof Date) return val;
   if (typeof val === "string" || typeof val === "number") return new Date(val);
-  return val;
+  return null;
 }
 
-function convertDates(obj: Record<string, any>) {
-  const dateFields = ["transactionDate", "createdAt", "updatedAt"];
+function convertDates(obj: Partial<StudentFee> | Record<string, unknown>) {
+  const dateFields = ["transactionDate", "createdAt", "updatedAt"] as const;
+  const objRecord = obj as Record<string, unknown>;
   for (const f of dateFields) {
-    if (obj[f]) obj[f] = toDate(obj[f]);
+    const value = objRecord[f];
+    if (value) {
+      objRecord[f] = toDate(value);
+    }
   }
 }
 
@@ -27,7 +32,9 @@ export const createStudentFee = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const parse = createStudentFeeSchema.safeParse(req.body as any);
+    const parse = createStudentFeeSchema.safeParse(
+      req.body as z.input<typeof createStudentFeeSchema>,
+    );
     if (!parse.success) {
       res
         .status(400)
@@ -41,9 +48,12 @@ export const createStudentFee = async (
         );
       return;
     }
-    const body = parse.data as Omit<StudentFee, "id">;
-    convertDates(body as any);
-    const created = await studentFeeService.createStudentFee(body as any);
+    const body = parse.data as Omit<
+      StudentFee,
+      "id" | "createdAt" | "updatedAt"
+    >;
+    convertDates(body);
+    const created = await studentFeeService.createStudentFee(body);
     if (!created) {
       res
         .status(400)
@@ -116,7 +126,10 @@ export const updateStudentFee = async (
         .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
       return;
     }
-    const parse = createStudentFeeSchema.partial().safeParse(req.body as any);
+    const partialSchema = createStudentFeeSchema.partial();
+    const parse = partialSchema.safeParse(
+      req.body as z.input<typeof partialSchema>,
+    );
     if (!parse.success) {
       res
         .status(400)
@@ -131,8 +144,8 @@ export const updateStudentFee = async (
       return;
     }
     const body = parse.data as Partial<StudentFee>;
-    convertDates(body as any);
-    const updated = await studentFeeService.updateStudentFee(id, body as any);
+    convertDates(body);
+    const updated = await studentFeeService.updateStudentFee(id, body);
     if (!updated) {
       res
         .status(404)

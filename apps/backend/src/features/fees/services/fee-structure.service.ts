@@ -2,13 +2,12 @@ import { db } from "@/db/index.js";
 import { feeStructureModel, FeeStructure } from "@repo/db/schemas/models/fees";
 import { eq } from "drizzle-orm";
 
+type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
+
 export const createFeeStructure = async (
-  data: Omit<FeeStructure, "id" | "createdAt" | "updatedAt">,
+  data: Omit<FeeStructureInsert, "id" | "createdAt" | "updatedAt">,
 ) => {
-  const [created] = await db
-    .insert(feeStructureModel)
-    .values(data as any)
-    .returning();
+  const [created] = await db.insert(feeStructureModel).values(data).returning();
   return created || null;
 };
 

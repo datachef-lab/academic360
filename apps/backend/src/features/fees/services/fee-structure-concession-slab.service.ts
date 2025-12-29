@@ -1,110 +1,154 @@
-// import { db } from "@/db/index.js";
-// import {
-//   feesSlabMappingModel,
-//   FeesSlabMapping,
-// } from "../models/fees-slab-mapping.model.js";
-// // import { FeesSlabMapping } from "../types/fees-slab-Mapping-mapping";
-// import { and, eq } from "drizzle-orm";
+import { db } from "@/db/index.js";
+import {
+  feeStructureConcessionSlabModel,
+  createFeeStructureConcessionSlabSchema,
+  feeConcessionSlabModel,
+  FeeStructureConcessionSlab,
+} from "@repo/db/schemas/models/fees";
+import { eq, inArray } from "drizzle-orm";
+import type { FeeStructureConcessionSlabDto } from "@repo/db/dtos/fees";
 
-// export const getFeesSlabMapping = async () => {
-//   try {
-//     const mappings = await db.select().from(feesSlabMappingModel);
-//     return mappings;
-//   } catch (error) {
-//     return null;
-//   }
-// };
+type FeeStructureConcessionSlabInsert =
+  typeof feeStructureConcessionSlabModel.$inferInsert;
 
-// export const getFeesSlabMappingsByFeesStructureId = async (
-//   fessStructureId: number,
-// ): Promise<FeesSlabMapping[]> => {
-//   try {
-//     const mappings = await db
-//       .select()
-//       .from(feesSlabMappingModel)
-//       .where(eq(feesSlabMappingModel.feesStructureId, fessStructureId));
-//     return mappings.filter((ele) => ele);
-//   } catch (error) {
-//     return [];
-//   }
-// };
+export const createFeeStructureConcessionSlab = async (
+  data: Omit<
+    FeeStructureConcessionSlabInsert,
+    "id" | "createdAt" | "updatedAt"
+  >,
+): Promise<FeeStructureConcessionSlabDto | null> => {
+  const [created] = await db
+    .insert(feeStructureConcessionSlabModel)
+    .values(data)
+    .returning();
+  if (!created) return null;
 
-// export const getFeesSlabMappingById = async (id: number) => {
-//   try {
-//     const mapping = await db
-//       .select()
-//       .from(feesSlabMappingModel)
-//       .where(eq(feesSlabMappingModel.id, id));
-//     return mapping[0];
-//   } catch (error) {
-//     return null;
-//   }
-// };
+  const [feeConcessionSlab] = await db
+    .select()
+    .from(feeConcessionSlabModel)
+    .where(eq(feeConcessionSlabModel.id, created.feeConcessionSlabId));
 
-// export const createFeesSlabMapping = async (mapping: FeesSlabMapping) => {
-//   try {
-//     const [existing] = await db
-//       .select()
-//       .from(feesSlabMappingModel)
-//       .where(
-//         and(
-//           eq(feesSlabMappingModel.feesSlabId, mapping.feesSlabId),
-//           eq(feesSlabMappingModel.feesStructureId, mapping.feesStructureId),
-//         ),
-//       );
+  if (!feeConcessionSlab) return null;
 
-//     if (existing) {
-//       console.log("existing fees-slab mapping:", existing);
-//       return null;
-//     }
-//     const newMapping = await db
-//       .insert(feesSlabMappingModel)
-//       .values(mapping)
-//       .returning();
-//     return newMapping[0];
-//   } catch (error) {
-//     console.log(error);
-//     return null;
-//   }
-// };
+  const { feeConcessionSlabId, ...rest } = created;
+  const dto: FeeStructureConcessionSlabDto = {
+    ...rest,
+    feeConcessionSlab:
+      feeConcessionSlab as typeof feeConcessionSlabModel.$inferSelect,
+  };
 
-// export const updateFeesSlabMapping = async (
-//   id: number,
-//   mapping: FeesSlabMapping,
-// ) => {
-//   try {
-//     const updatedMapping = await db
-//       .update(feesSlabMappingModel)
-//       .set(mapping)
-//       .where(eq(feesSlabMappingModel.id, id))
-//       .returning();
-//     return updatedMapping[0];
-//   } catch (error) {
-//     return null;
-//   }
-// };
+  return dto;
+};
 
-// export const deleteFeesSlabMapping = async (id: number) => {
-//   try {
-//     const deletedMapping = await db
-//       .delete(feesSlabMappingModel)
-//       .where(eq(feesSlabMappingModel.id, id))
-//       .returning();
-//     return deletedMapping[0];
-//   } catch (error) {
-//     return null;
-//   }
-// };
+export const getAllFeeStructureConcessionSlabs = async (): Promise<
+  FeeStructureConcessionSlabDto[]
+> => {
+  const slabs = await db.select().from(feeStructureConcessionSlabModel);
 
-// export const checkSlabsExistForMapping = async (feesStructureId: number) => {
-//   try {
-//     const mappings = await db
-//       .select()
-//       .from(feesSlabMappingModel)
-//       .where(eq(feesSlabMappingModel.feesStructureId, feesStructureId));
-//     return { exists: mappings.length > 0 };
-//   } catch (error) {
-//     console.error("Error checking slabs existence:", error);
-//     return { exists: false };
-//   }
-// };
+  const feeConcessionSlabIds = Array.from(
+    new Set(slabs.map((s) => s.feeConcessionSlabId).filter(Boolean)),
+  );
+  const concessionSlabs = feeConcessionSlabIds.length
+    ? await db
+        .select()
+        .from(feeConcessionSlabModel)
+        .where(inArray(feeConcessionSlabModel.id, feeConcessionSlabIds))
+    : [];
+
+  const concessionSlabsMap = new Map(concessionSlabs.map((cs) => [cs.id, cs]));
+
+  const dto: FeeStructureConcessionSlabDto[] = [];
+  for (const s of slabs) {
+    const feeConcessionSlab = concessionSlabsMap.get(s.feeConcessionSlabId);
+    if (feeConcessionSlab) {
+      const { feeConcessionSlabId, ...rest } = s;
+      dto.push({
+        ...rest,
+        feeConcessionSlab:
+          feeConcessionSlab as typeof feeConcessionSlabModel.$inferSelect,
+      });
+    }
+  }
+
+  return dto;
+};
+
+export const getFeeStructureConcessionSlabById = async (
+  id: number,
+): Promise<FeeStructureConcessionSlabDto | null> => {
+  const [slab] = await db
+    .select()
+    .from(feeStructureConcessionSlabModel)
+    .where(eq(feeStructureConcessionSlabModel.id, id));
+  if (!slab) return null;
+
+  const [feeConcessionSlab] = await db
+    .select()
+    .from(feeConcessionSlabModel)
+    .where(eq(feeConcessionSlabModel.id, slab.feeConcessionSlabId));
+
+  if (!feeConcessionSlab) return null;
+
+  const { feeConcessionSlabId, ...rest } = slab;
+  const dto: FeeStructureConcessionSlabDto = {
+    ...rest,
+    feeConcessionSlab:
+      feeConcessionSlab as typeof feeConcessionSlabModel.$inferSelect,
+  };
+
+  return dto;
+};
+
+export const updateFeeStructureConcessionSlab = async (
+  id: number,
+  data: Partial<FeeStructureConcessionSlab>,
+): Promise<FeeStructureConcessionSlabDto | null> => {
+  const [updated] = await db
+    .update(feeStructureConcessionSlabModel)
+    .set(data)
+    .where(eq(feeStructureConcessionSlabModel.id, id))
+    .returning();
+  if (!updated) return null;
+
+  const [feeConcessionSlab] = await db
+    .select()
+    .from(feeConcessionSlabModel)
+    .where(eq(feeConcessionSlabModel.id, updated.feeConcessionSlabId));
+
+  if (!feeConcessionSlab) return null;
+
+  const { feeConcessionSlabId, ...rest } = updated;
+  const dto: FeeStructureConcessionSlabDto = {
+    ...rest,
+    feeConcessionSlab:
+      feeConcessionSlab as typeof feeConcessionSlabModel.$inferSelect,
+  };
+
+  return dto;
+};
+
+export const deleteFeeStructureConcessionSlab = async (
+  id: number,
+): Promise<FeeStructureConcessionSlabDto | null> => {
+  const [deleted] = await db
+    .delete(feeStructureConcessionSlabModel)
+    .where(eq(feeStructureConcessionSlabModel.id, id))
+    .returning();
+  if (!deleted) return null;
+
+  const [feeConcessionSlab] = await db
+    .select()
+    .from(feeConcessionSlabModel)
+    .where(eq(feeConcessionSlabModel.id, deleted.feeConcessionSlabId));
+
+  if (!feeConcessionSlab) return null;
+
+  const { feeConcessionSlabId, ...rest } = deleted;
+  const dto: FeeStructureConcessionSlabDto = {
+    ...rest,
+    feeConcessionSlab:
+      feeConcessionSlab as typeof feeConcessionSlabModel.$inferSelect,
+  };
+
+  return dto;
+};
