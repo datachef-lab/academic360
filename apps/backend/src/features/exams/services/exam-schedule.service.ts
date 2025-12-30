@@ -60,6 +60,7 @@ import { socketService } from "@/services/socketService";
 import { PaperDto } from "@repo/db/dtos";
 import { io } from "@/app";
 import { enqueueNotification } from "@/services/notificationClient";
+import pLimit from "p-limit";
 
 export interface CountStudentsByPapersParams {
   classId: number;
@@ -1963,15 +1964,16 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
       uid: studentModel.uid,
       email: userModel.email,
       phone: userModel.phone,
-      whatsappNumber: userModel.whatsappNumber,
-      programCourse: programCourseModel.name,
+      whatsapp_number: userModel.whatsappNumber,
+      program_course: programCourseModel.name,
       section: sectionModel.name,
       shift: shiftModel.name,
       subject: subjectModel.code,
-      subjectType: subjectTypeModel.code,
+      subject_type: subjectTypeModel.code,
       paper: paperModel.name,
-      paperCode: paperModel.code,
-      seatNumber: examCandidateModel.seatNumber,
+      paper_code: paperModel.code,
+      seat: examCandidateModel.seatNumber,
+      foilNumber: examCandidateModel.foilNumber,
     })
     .from(examCandidateModel)
 
@@ -2050,7 +2052,7 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
   const groupedBySubject = new Map<string, typeof result>();
 
   for (const row of result) {
-    const key = row.paperCode ?? row.subject ?? "UNKNOWN";
+    const key = row.paper_code ?? row.subject ?? "UNKNOWN";
     if (!groupedBySubject.has(key)) {
       groupedBySubject.set(key, []);
     }
@@ -2708,4 +2710,381 @@ export async function getExamCandidatesByStudentIdAndExamId(
       };
     }),
   );
+}
+
+// export async function downloadAttendanceSheetsByExamId(
+//     examId: number,
+//     userId: number,
+//     uploadSessionId?: string,
+// ): Promise<{
+//     zipBuffer: Buffer;
+//     roomCount: number;
+// }> {
+//     const result = await db
+//         .select({
+//             examType: examTypeModel.name,
+//             class: classModel.name,
+//             academicYear: academicYearModel.year,
+//             name: userModel.name,
+//             uid: studentModel.uid,
+//             rollNumber: studentModel.rollNumber,
+//             paperName: paperModel.name,
+//             paperCode: paperModel.code,
+//             floor: floorModel.name,
+//             orderType: examModel.orderType,
+//             room: roomModel.name,
+//             seatNumber: examCandidateModel.seatNumber,
+//             examStartTime: examSubjectModel.startTime,
+//             examEndTime: examSubjectModel.endTime,
+//         })
+//         .from(examCandidateModel)
+//         .leftJoin(examModel, eq(examCandidateModel.examId, examModel.id))
+//         .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
+//         .leftJoin(classModel, eq(classModel.id, examModel.classId))
+//         .leftJoin(academicYearModel, eq(academicYearModel.id, examModel.academicYearId))
+//         .leftJoin(examRoomModel, eq(examCandidateModel.examRoomId, examRoomModel.id))
+//         .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+//         .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+//         .leftJoin(promotionModel, eq(promotionModel.id, examCandidateModel.promotionId))
+//         .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+//         .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+//         .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+//         .leftJoin(examSubjectModel, eq(examSubjectModel.id, examCandidateModel.examSubjectId))
+//         .where(eq(examCandidateModel.examId, examId))
+//         .orderBy(
+//             asc(examSubjectModel.startTime),
+//             asc(floorModel.name),
+//             asc(roomModel.name),
+//             asc(examCandidateModel.seatNumber),
+//         );
+
+//     const zip = new JSZip();
+
+//     // ---------- Initial socket emit ----------
+//     if (io && userId) {
+//         io.to(`user:${userId}`).emit("download_progress", {
+//             id: uploadSessionId || `download-${Date.now()}`,
+//             userId,
+//             type: "download_progress",
+//             message: "Generating attendance dr sheet...",
+//             progress: 0,
+//             status: "started",
+//             createdAt: new Date(),
+//             sessionId: uploadSessionId,
+//             stage: "pdf_generation",
+//         });
+//     }
+
+//     const rooms = new Set<string>(result.map(r => r.room!));
+
+//     for (let r = 0; r < rooms.size; r++) {
+//         const filteredResult = result.filter(res => res.room === Array.from(rooms)[r]);
+//         const pdfBuffer = await pdfGenerationService.generateExamAttendanceSheetPdfBuffer({
+//             semester: filteredResult[0].class!.split(" ")[1],
+//             examType: filteredResult[0].examType!,
+//             session: filteredResult[0].academicYear!,
+//             roomNumber: filteredResult[0].room!,
+//             examDates: [
+//                 ...new Set(
+//                     filteredResult.map(item => {
+//                         const d = item.examStartTime;
+
+//                         if (d) {
+//                             const day = String(d.getDate()).padStart(2, "0");
+//                             const month = String(d.getMonth() + 1).padStart(2, "0");
+//                             const year = d?.getFullYear();
+
+//                             return `${day}/${month}/${year}`;
+//                         }
+
+//                         return '';
+
+//                     })
+//                 )
+//             ],
+//             examTimings: [
+//                 ...new Set(
+//                     filteredResult.map(item => {
+//                         const d = item.examStartTime;
+
+//                         if (d) {
+
+//                             let hours = d.getHours();
+//                             const minutes = String(d.getMinutes()).padStart(2, "0");
+//                             const ampm = hours >= 12 ? "PM" : "AM";
+
+//                             hours = hours % 12 || 12;
+//                             return `${hours}:${minutes} ${ampm}`;
+//                         }
+
+//                         return '';
+//                     })
+//                 )
+//             ],
+//             examPapersCodes: [
+//                 ...new Set(
+//                     filteredResult.map(item => item.paperCode!)
+//                 )
+//             ],
+//             examCandidates: filteredResult.map(r => ({
+//                 name: r.name!,
+//                 identifier: (r.orderType === "UID" ? r.uid! : r.rollNumber)!,
+//                 seatNumber: r.seatNumber!,
+//             })),
+//         });
+
+//         const fileDate = filteredResult[0].examStartTime
+//             ? filteredResult[0].examStartTime.toISOString().split("T")[0]
+//             : "date";
+
+//         zip.file(
+//             `${filteredResult[0].examType}_${filteredResult[0].class}_${filteredResult[0].room}_${fileDate}.pdf`,
+//             pdfBuffer
+//         );
+
+//     }
+
+//     // ---------- ZIP generation ----------
+//     if (io && userId) {
+//         io.to(`user:${userId}`).emit("download_progress", {
+//             id: uploadSessionId || `download-${Date.now()}`,
+//             userId,
+//             type: "download_progress",
+//             message: "Creating ZIP file...",
+//             progress: 100,
+//             status: "finalizing",
+//             createdAt: new Date(),
+//             sessionId: uploadSessionId,
+//             stage: "zipping",
+//         });
+//     }
+
+//     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+//     return {
+//         zipBuffer,
+//         roomCount: rooms.size,
+//     };
+// }
+
+export async function downloadAttendanceSheetsByExamId(
+  examId: number,
+  userId: number,
+  uploadSessionId?: string,
+): Promise<{
+  zipBuffer: Buffer;
+  roomCount: number;
+}> {
+  const result = await db
+    .select({
+      examType: examTypeModel.name,
+      class: classModel.name,
+      academicYear: academicYearModel.year,
+      name: userModel.name,
+      uid: studentModel.uid,
+      rollNumber: studentModel.rollNumber,
+      paperName: paperModel.name,
+      paperCode: paperModel.code,
+      floor: floorModel.name,
+      orderType: examModel.orderType,
+      room: roomModel.name,
+      seatNumber: examCandidateModel.seatNumber,
+      examStartTime: examSubjectModel.startTime,
+      examEndTime: examSubjectModel.endTime,
+    })
+    .from(examCandidateModel)
+    .leftJoin(examModel, eq(examCandidateModel.examId, examModel.id))
+    .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
+    .leftJoin(classModel, eq(classModel.id, examModel.classId))
+    .leftJoin(
+      academicYearModel,
+      eq(academicYearModel.id, examModel.academicYearId),
+    )
+    .leftJoin(
+      examRoomModel,
+      eq(examCandidateModel.examRoomId, examRoomModel.id),
+    )
+    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+    .leftJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+    .leftJoin(
+      examSubjectModel,
+      eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+    )
+    .where(eq(examCandidateModel.examId, examId))
+    .orderBy(
+      asc(examSubjectModel.startTime),
+      asc(examCandidateModel.seatNumber),
+      asc(floorModel.name),
+      asc(roomModel.name),
+    );
+
+  const zip = new JSZip();
+
+  // ---------- SOCKET START ----------
+  if (io && userId) {
+    io.to(`user:${userId}`).emit("download_progress", {
+      id: uploadSessionId,
+      userId,
+      message: "Generating attendance sheets...",
+      progress: 0,
+      status: "started",
+      stage: "pdf_generation",
+    });
+  }
+
+  // ---------- GROUP ROOMS ----------
+  const rooms = Array.from(new Set(result.map((r) => r.room!).filter(Boolean)));
+  const paperCodes = Array.from(
+    new Set(result.map((r) => r.paperCode!).filter(Boolean)),
+  );
+  const totalRooms = rooms.length;
+
+  const limit = pLimit(5); // max 5 parallel PDFs
+  let completed = 0;
+
+  await Promise.all(
+    rooms.map((room) =>
+      limit(async () => {
+        const filteredResult = result
+          .filter((r) => r.room === room)
+          .sort((a, b) => {
+            // Sort by seat number
+            const seatA = a.seatNumber || "";
+            const seatB = b.seatNumber || "";
+            return seatA.localeCompare(seatB, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            });
+          });
+
+        if (!filteredResult.length) return;
+
+        // ---------- ENSURE DATE-TIME-PAPER SEQUENCE ----------
+        const examSlots: {
+          date: string;
+          time: string;
+          paperCode: string;
+        }[] = [];
+
+        const seen = new Set<string>();
+
+        for (const item of filteredResult) {
+          if (!item.examStartTime) continue;
+
+          const d = item.examStartTime;
+
+          const date = `${String(d.getDate()).padStart(2, "0")}/${String(
+            d.getMonth() + 1,
+          ).padStart(2, "0")}/${d.getFullYear()}`;
+
+          let hours = d.getHours();
+          const minutes = String(d.getMinutes()).padStart(2, "0");
+          const ampm = hours >= 12 ? "PM" : "AM";
+          hours = hours % 12 || 12;
+
+          const time = `${hours}:${minutes} ${ampm}`;
+          const paperCode = item.paperCode!;
+
+          const key = `${date}|${time}|${paperCode}`;
+
+          if (!seen.has(key)) {
+            seen.add(key);
+            examSlots.push({ date, time, paperCode });
+          }
+        }
+
+        // ---------- PDF GENERATION ----------
+        console.log({
+          semester: filteredResult[0].class!.split(" ")[1],
+          examType: filteredResult[0].examType!,
+          session: filteredResult[0].academicYear!,
+          roomNumber: room!,
+          examDates: examSlots.map((s) => s.date),
+          examTimings: examSlots.map((s) => s.time),
+          examPapersCodes: examSlots.map((s) => s.paperCode),
+          examCandidates: filteredResult.map((r) => ({
+            name: r.name!,
+            identifier: r.orderType === "UID" ? r.uid! : r.rollNumber!,
+            seatNumber: r.seatNumber!,
+          })),
+        });
+
+        const uniqueCandidates = new Map<string, any>();
+
+        filteredResult.forEach((r) => {
+          // Use the most reliable unique identifier
+          const key = r.orderType === "UID" ? r.uid : r.rollNumber;
+
+          if (key && !uniqueCandidates.has(key)) {
+            uniqueCandidates.set(key, {
+              name: r.name!,
+              identifier: r.orderType === "UID" ? r.uid! : r.rollNumber!,
+              seatNumber: r.seatNumber!,
+            });
+          }
+        });
+
+        const pdfBuffer =
+          await pdfGenerationService.generateExamAttendanceSheetPdfBuffer({
+            semester: filteredResult[0].class!.split(" ")[1],
+            examType: filteredResult[0].examType!,
+            session: filteredResult[0].academicYear!,
+            roomNumber: room!,
+            examDates: examSlots.map((s) => s.date),
+            examTimings: examSlots.map((s) => s.time),
+            examPapersCodes: examSlots.map((s) => s.paperCode),
+            examCandidates: Array.from(uniqueCandidates.values()),
+          });
+
+        const fileDate = filteredResult[0].examStartTime
+          ? filteredResult[0].examStartTime.toISOString().split("T")[0]
+          : "date";
+
+        zip.file(
+          `${filteredResult[0].examType}_${filteredResult[0].class}_room_${room}_${fileDate}.pdf`,
+          pdfBuffer,
+        );
+
+        // ---------- SOCKET PROGRESS ----------
+        completed++;
+
+        if (io && userId) {
+          io.to(`user:${userId}`).emit("download_progress", {
+            id: uploadSessionId,
+            userId,
+            message: `Generated ${completed}/${totalRooms} PDFs`,
+            progress: Math.round((completed / totalRooms) * 100),
+            status: "processing",
+            stage: "pdf_generation",
+          });
+        }
+      }),
+    ),
+  );
+
+  // ---------- ZIP FINALIZE ----------
+  if (io && userId) {
+    io.to(`user:${userId}`).emit("download_progress", {
+      id: uploadSessionId,
+      userId,
+      message: "Creating ZIP file...",
+      progress: 100,
+      status: "finalizing",
+      stage: "zipping",
+    });
+  }
+
+  const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+  return {
+    zipBuffer,
+    roomCount: totalRooms,
+  };
 }

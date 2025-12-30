@@ -3,6 +3,7 @@ import {
   countStudentsForExam,
   createExamAssignmenthandler,
   downloadAdmitCardsController,
+  downloadAttendanceSheetsByExamIdController,
   downloadExamCandidatesController,
   downloadSingleAdmitCardController,
   getAllExamsController,
@@ -36,6 +37,11 @@ router.post(
 router.put("/exam-subject", verifyJWT, updateExamSubjectHandler);
 
 router.get("/download-admit-cards", verifyJWT, downloadAdmitCardsController);
+router.get(
+  "/download-attendance-sheets",
+  verifyJWT,
+  downloadAttendanceSheetsByExamIdController,
+);
 router.get(
   "/send-admit-cards",
   verifyJWT,

@@ -1,0 +1,612 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Exam Attendance DR-Sheet</title>
+    <style type="text/css">
+      * {
+        margin: 0;
+        padding: 0;
+        text-indent: 0;
+        font-family: Arial, sans-serif;
+      }
+      h1 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 16pt;
+      }
+      .s1 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: normal;
+        text-decoration: none;
+        font-size: 9pt;
+      }
+      h2 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 12pt;
+      }
+      .s2 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 10pt;
+      }
+      .s3 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 9pt;
+      }
+      .s4 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 8pt;
+      }
+      h3 {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: bold;
+        text-decoration: none;
+        font-size: 10pt;
+      }
+      p {
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: normal;
+        text-decoration: none;
+        font-size: 10pt;
+        margin: 0pt;
+      }
+      li {
+        display: block;
+      }
+      #l1 {
+        padding-left: 0pt;
+        counter-reset: c1 1;
+      }
+      #l1 > li > *:first-child:before {
+        counter-increment: c1;
+        content: counter(c1, decimal) ") ";
+        color: black;
+        font-family: Arial, sans-serif;
+        font-style: normal;
+        font-weight: normal;
+        text-decoration: none;
+        font-size: 10pt;
+      }
+      #l1 > li:first-child > *:first-child:before {
+        counter-increment: c1 0;
+      }
+      table,
+      tbody {
+        vertical-align: top;
+        overflow: visible;
+      }
+
+      .paper-cell {
+        flex: 1;
+        border-right: 1pt solid black;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+      }
+
+      .paper-cell:last-child {
+        border-right: none;
+      }
+
+      .col {
+        border-right: 1pt solid black;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 9pt;
+        font-weight: bold;
+      }
+
+      .col:last-child {
+        border-right: none;
+      }
+
+      .col.sr {
+        width: 60pt;
+      }
+
+      .col.name {
+        width: 180pt;
+      }
+
+      .col.uid {
+        width: 140pt;
+      }
+
+      .col.seat {
+        width: 90pt;
+      }
+
+      .col.paper {
+        flex: 1;
+      }
+
+      /* PDF Page Control */
+@media print {
+  .no-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+}
+
+    </style>
+  </head>
+  <body style="margin: 0; padding: 0">
+    <header style="height: 10%">
+      <nav
+        style="
+          padding: 24px 0 12px;
+          margin: 0 24px;
+
+          display: flex;
+          gap: 10px;
+          justify-content: between;
+          align-items: center;
+        "
+      >
+        <!-- Left Section: College Logo -->
+        <p style="padding: 0; text-indent: 0pt; text-align: left; width: 15%">
+          <span
+            ><img
+              height="80"
+              width="80"
+              alt="image"
+              src="https://besc.academic360.app/api/api/v1/settings/file/4"
+          /></span>
+        </p>
+        <!-- Middle Section: College Name & Address -->
+        <div
+          style="
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+          "
+        >
+          <h1 style="padding-top: 7pt; text-indent: 0pt; text-align: center">
+            The Bhawanipur Education Society College
+          </h1>
+          <div
+            class="s1"
+            style="
+              padding-top: 4pt;
+              width: 75%;
+              text-indent: 0pt;
+              line-height: 143%;
+              text-align: center;
+            "
+          >
+            <p style="margin-bottom: 2px; font-size: 10px">
+              A MINORITY RUN COLLEGE. AFFILIATED TO UNIVERSITY OF CALCUTTA
+            </p>
+            <p style="font-size: 9px">
+              RECOGNISED UNDER SECTION 2(F) &amp; 12 (B) OF THE UGC ACT, 1956
+            </p>
+          </div>
+          <p style="text-indent: 0pt; text-align: left"><br /></p>
+        </div>
+        <!-- Right Section: Qrcode containing student's uid -->
+        <p style="text-indent: 0pt; text-align: right; width: 15%">
+        </p>
+      </nav>
+    </header>
+    <main style="padding-left: 24px; padding-right: 24px">
+
+      <!-- Heading -->
+      <section>
+        <h2 style="text-indent: 0pt; text-align: center">
+          Attendance DR-Sheet
+        </h2>
+        <h2 style="padding-top: 6pt; text-indent: 0pt; text-align: center">
+          Semester <%= semester %> <%= examType %> - <%= session %>
+        </h2>
+      </section>
+
+      <!-- Attendance / Invigilator Signature Sheet (Flexbox) -->
+      <section>
+        <!-- Table Header -->
+        <div style="display: flex; padding-top: 24px">
+          <div style="width: 40%; height: 100%">
+            <div style="border: 1px solid; border-bottom: transparent">
+              <div
+                style="
+                  height: 67px;
+                  font-weight: bold;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                "
+              >
+                Room No.: <%= roomNumber %>
+              </div>
+              <div style="display: flex; width: 100%; height: 55px">
+                <p
+                  style="
+                    width: 15%;
+                    font-weight: bold;
+                    border: 1px solid;
+                    border-left: transparent;
+                    border-right: transparent;
+                    font-size: 12px;
+                    text-align: center;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                  "
+                >
+                  Sr. No.
+                </p>
+                <p
+                  style="
+                    width: 35%;
+                    font-weight: bold;
+                    border: 1px solid;
+                    border-right: transparent;
+                    font-size: 12px;
+                    text-align: center;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                  "
+                >
+                  Student's Name
+                </p>
+                <p
+                  style="
+                    width: 35%;
+                    font-weight: bold;
+                    border: 1px solid;
+                    border-right: transparent;
+                    font-size: 12px;
+                    text-align: center;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                  "
+                >
+                  UID / CU Roll No.
+                </p>
+                <p
+                  style="
+                    width: 15%;
+                    font-weight: bold;
+                    border: 1px solid;
+                    border-right: transparent;
+                    font-size: 12px;
+                    text-align: center;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                  "
+                >
+                  Seat
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            style="
+              width: 60%;
+              height: 100%;
+              border-left: transparent;
+              border-bottom: transparent;
+            "
+          >
+            <div
+              style="
+                border: 1px solid;
+
+                border-left: transparent;
+                border-right: transparent;
+                border-bottom: transparent;
+              "
+            >
+              <div
+                style="
+                  height: 67px;
+                  font-weight: bold;
+                  display: flex;
+                  flex-direction: column;
+                "
+              >
+                <p
+                  style="
+                    font-weight: bold;
+                    height: 30%;
+                    padding-top: 2px;
+                    padding-bottom: 2px;
+                    border-right: 1px solid;
+                    text-align: center;
+                  "
+                >
+                  Invigilator's Signature (paper wise):
+                </p>
+                <!-- Dynamic Exam Dates -->
+                <div style="display: flex; width: 100%; height: 35%">
+                    <% const width = 100 / examDates.length; %> 
+                  <% examDates.forEach(date => { %>
+                  <p
+                    style="
+                      width: <%= width %>%;
+                      font-weight: bold;
+                      border: 1px solid;
+                      border-left: transparent;
+                      font-size: 12px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      text-align: center;
+                    "
+                  >
+                  <%= date %>
+                  </p>
+                  <% }) %>
+                </div>
+
+                <div style="display: flex; width: 100%; height: 35%">
+                  <!-- Dynamic Exam Timings -->
+                  <% examTimings.forEach(time => { %>
+                  <p
+                    style="
+                      width: <%= width %>%;
+                      font-weight: bold;
+                      border: 1px solid;
+                      border-left: transparent;
+                      font-size: 12px;
+                      border-top: transparent;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      text-align: center;
+                    "
+                  >
+                  <%= time %>
+                  </p>
+                  <% }) %>
+                </div>
+              </div>
+              <div style="display: flex; width: 100%; height: 55px">
+                <div style="display: flex; width: 100%">
+                  <!-- Dynamic Paper Code -->
+                  <% examPapersCodes.forEach(paperCode => { %>
+                  <p
+                    style="
+                   width: <%= width %>%;
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                      font-weight: bold;
+                      border: 1px solid;
+                      border-top: transparent;
+                      border-left: transparent;
+                      font-size: 12px;
+                      text-align: center;
+                    "
+                  >
+                  <%= paperCode %>
+                  </p>
+                  <% }) %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Table Body -->
+        <div
+          style="
+
+            border-top: transparent;
+            border-bottom: transparent;
+          "
+        >
+          <!-- Table Rows: Here we will loop all the students who are appearing for the exam -->
+          <% examCandidates.forEach((examCandidate, index) => { %>  
+            <% if (index + 1 === 13) { %>
+                <div style="padding: 32px; "></div>
+            <% } %>
+           
+            <div class="no-break" 
+                style="
+                    display: flex; 
+                    min-height: 64px;
+                    
+            ">
+                <div
+                  style="
+                    width: 40%;
+                    border: 1px solid;
+                    border-left: transparent;
+                    border-top: transparent;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
+                >
+                  <p
+                    style="
+                      width: 15%;
+    
+                      font-weight: bold;
+                      border: 1px solid;
+                      border-bottom: transparent;
+
+                      /* padding-top: 7px;
+                      padding-bottom: 7px; */
+                      font-size: 12px;
+                      text-align: center;
+                      height: 100%;
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                    "
+                  >
+                  <%= index + 1 %>.
+                  </p>
+                  <p
+                    style="
+                      width: 35%;
+                      height: 100%;
+                      font-weight: bold;
+                      /* padding-top: 7px;
+                      padding-bottom: 7px; */
+                      border: 1px solid;
+                      border-left: transparent;
+                      border-right: transparent;
+                      font-size: 12px;
+                      text-align: center;
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                    "
+                  >
+                    <%= examCandidate.name %>
+                  </p>
+                  <p
+                    style="
+                      width: 35%;
+                      height: 100%;
+                      font-weight: bold;
+                      border: 1px solid;
+    
+                      border-right: transparent;
+                      font-size: 12px;
+                      text-align: center;
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                    "
+                  >
+                  <%= examCandidate.identifier %>
+                  </p>
+                  <p
+                    style="
+                      width: 15%;
+                      height: 100%;
+                      font-weight: bold;
+                      border: 1px solid;
+    
+                      border-right: transparent;
+                      font-size: 12px;
+                      text-align: center;
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+                    "
+                  >
+                  <%= examCandidate.seatNumber %>
+                  </p>
+                </div>
+                <div
+                  style="
+                    width: 60%;
+                    border: 1px solid;
+                    border-right: transparent;
+                    border-left: transparent;
+                    border-top: transparent;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "
+                >
+                    <!-- Dynamic Empty Cells for signature for students -->
+                    <% examDates.forEach((_, examDateIndex) => { %>
+                        <p
+                          style="
+                            width: <%= width %>%;
+                            height: 100%;
+                            font-weight: bold;
+                            border: 1px solid;
+                            border-left: transparent;
+                            border-right: '1px solid black';
+                            font-size: 12px;
+                            text-align: center;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                          "
+                        ></p>
+                      <% }) %>
+                      
+                </div>
+              </div>  
+             
+
+              <% if (index + 1 !== 12 && index + 1 !== examCandidates.length && (index + 1) % 16 === 12) { %>
+                <div style="padding: 32px; "></div>
+            <% } %>
+            <% }) %>
+
+
+          
+        </div>
+      </section>
+    </main>
+    <!-- Signature -->
+    <!-- <footer style="height: 23%; padding-left: 24px; padding-right: 24px">
+      <section style="width: 100%; padding-bottom: 24px">
+        <p
+          style="
+            text-indent: 0pt;
+            text-align: left;
+            height: 100px;
+            border-bottom: 1px solid;
+            width: 200px;
+          "
+        >
+          <br />
+        </p>
+        <h3 style="padding-top: 7pt; text-indent: 0pt; text-align: left">
+          Signature of Student
+        </h3>
+      </section>
+      <p style="text-indent: 0pt; text-align: left"><br /></p>
+      <p style="text-indent: 0pt; text-align: left">Please Note:</p>
+      <ol id="l1" style="padding-left: 14px; margin-top: 4px">
+        <li data-list-text="1)">
+          <p style="text-indent: -11pt; text-align: left">
+            It is mandatory to carry this Admit Card along with College ID card
+            in the Examination Hall.
+          </p>
+        </li>
+        <li data-list-text="2)">
+          <p style="text-indent: -11pt; text-align: left">
+            Retain this Admit card for the entire Academic year.
+          </p>
+        </li>
+      </ol>
+    </footer> -->
+  </body>
+</html>

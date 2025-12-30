@@ -10,7 +10,7 @@ import {
   updateExamSubject,
 } from "@/services/exam.service";
 
-import { IdCard, Mail, Trash2, UsersRound } from "lucide-react";
+import { IdCard, Mail, Sheet, Trash2, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ExamPaperRow from "../components/exam-paper-row";
@@ -154,6 +154,53 @@ export default function ExamPage() {
     }
   };
 
+  const downloadAttendanceSheets = async () => {
+    // // Extract year from academic year string (e.g., "2025-2026" -> 2025)
+    // const yearMatch = selectedAcademicYear?.year?.match(/^(\d{4})/);
+    // const year = yearMatch?.[1] ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
+
+    // Generate a unique session ID for socket progress tracking
+    const sessionId = `download-attendance-sheets-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Update progress for CU registration documents download (Socket.IO will handle live updates)
+    setCurrentProgressUpdate({
+      id: sessionId,
+      userId: user!.id!.toString(),
+      type: "download_progress", // Changed back to download_progress for Socket.IO
+      message: `Starting Attendance Downloading...`,
+      progress: 0,
+      status: "started",
+      createdAt: new Date(),
+    });
+
+    const result = await ExportService.downloadExamAttendanceSheetsbyExamId(
+      Number(examId),
+      sessionId, // Pass session ID for Socket.IO tracking
+    );
+
+    if (result.success && result.data) {
+      // Trigger download
+      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+
+      // Update progress to completed state (this might be overridden by socket updates, but good fallback)
+      setCurrentProgressUpdate({
+        id: sessionId,
+        userId: user!.id!.toString()!,
+        type: "download_progress",
+        message: `All attendance-sheets pdfs documents downloaded successfully!`,
+        progress: 100,
+        status: "completed",
+        fileName: result.data?.fileName,
+        downloadUrl: result.data?.downloadUrl,
+        createdAt: new Date(),
+      });
+
+      toast.success(`All attendance-sheets pdfs documents downloaded successfully!`);
+    } else {
+      throw new Error(result.message || "Download failed");
+    }
+  };
+
   const triggerAdmitCard = async () => {
     // // Extract year from academic year string (e.g., "2025-2026" -> 2025)
     // const yearMatch = selectedAcademicYear?.year?.match(/^(\d{4})/);
@@ -218,6 +265,40 @@ export default function ExamPage() {
       });
 
       await downloadAdmitCard();
+    } catch (error) {
+      console.error(`Download failed for admit-card:`, error);
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: user!.id!.toString(),
+        type: "export_progress",
+        message: "Export failed due to an error",
+        progress: 0,
+        status: "error",
+        error: error instanceof Error ? error.message : "Unknown error",
+        createdAt: new Date(),
+      });
+      setIsExporting(false);
+      toast.error(`Failed to download for admit-card`);
+    }
+  };
+
+  const handleDownloadAttendanceSheets = async () => {
+    try {
+      setIsExporting(true);
+      setExportProgressOpen(true);
+
+      // Set initial progress
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: user!.id!.toString(),
+        type: "export_progress",
+        message: "Starting export process...",
+        progress: 0,
+        status: "started",
+        createdAt: new Date(),
+      });
+
+      await downloadAttendanceSheets();
     } catch (error) {
       console.error(`Download failed for admit-card:`, error);
       setCurrentProgressUpdate({
@@ -409,6 +490,17 @@ export default function ExamPage() {
                   >
                     {/* <Download className="h-4" /> */}
                     <IdCard className="h-10 w-10 p-0" size={21} />
+                  </Button>
+                </div>
+                <div className="flex">
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadAttendanceSheets}
+                    //   className="h-5 w-5 p-0"
+                    title="Download Attendance Sheets"
+                  >
+                    {/* <Download className="h-4" /> */}
+                    <Sheet className="h-10 w-10 p-0" size={21} />
                   </Button>
                 </div>
 
