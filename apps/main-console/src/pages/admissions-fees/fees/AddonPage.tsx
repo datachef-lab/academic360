@@ -1,63 +1,140 @@
-import React, { useState, } from "react";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { PlusCircle, Edit, Trash2, FileDown } from "lucide-react";
 import Header from "@/components/common/PageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useAddons } from "@/hooks/useFees";
 import { AddOn } from "@/types/fees";
+import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
+import { toast } from "sonner";
 
 const AddonPage: React.FC = () => {
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<AddOn | null>(null);
+  const [editingItem, setEditingItem] = useState<AddOn | null>(null);
   const [form, setForm] = useState<{ name: string }>({ name: "" });
 
-  const { 
-    addons, 
-    loading, 
-    addAddon, 
-    updateAddonById, 
-    deleteAddonById 
-  } = useAddons();
+  const { addons, loading, addAddon, updateAddonById, deleteAddonById } = useAddons();
+
+  const handleExport = () => {
+    if (!addons || addons.length === 0) {
+      toast.warning("No data to export");
+      return;
+    }
+
+    const csvContent = [
+      ["ID", "Addon Name", "Created At", "Updated At"],
+      ...addons.map((a) => [
+        a.id || "",
+        a.name || "",
+        a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "",
+        a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : "",
+      ]),
+    ]
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `addons_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) return;
-    
-    try {
-      if (editingId) {
-        await updateAddonById(editingId, form);
-        setEditingId(null);
-      } else {
-        await addAddon(form);
+    const trimmedName = form.name.trim();
+
+    if (!trimmedName) {
+      toast.warning("Please enter an addon name");
+      return;
+    }
+
+    // Check for duplicate names (excluding current item if editing)
+    if (addons && addons.length > 0) {
+      const duplicate = addons.find(
+        (a) => a.name.toLowerCase() === trimmedName.toLowerCase() && a.id !== editingItem?.id,
+      );
+      if (duplicate) {
+        toast.warning("An addon with this name already exists. Please use a different name.");
+        return;
       }
-      setForm({ name: "" });
-      setShowForm(false);
+    }
+
+    try {
+      if (editingItem) {
+        const result = await updateAddonById(editingItem.id!, { name: trimmedName });
+        if (!result) {
+          toast.error("Failed to update addon. Please try again.");
+          return;
+        }
+        toast.success("Addon updated successfully");
+      } else {
+        const result = await addAddon({ name: trimmedName } as AddOn);
+        if (!result) {
+          toast.error("Failed to create addon. Please try again.");
+          return;
+        }
+        toast.success("Addon created successfully");
+      }
+      handleClose();
     } catch (error) {
       console.error("Error saving addon:", error);
+      toast.error("Failed to save addon. Please try again.");
     }
+  };
+
+  const handleClose = () => {
+    setShowModal(false);
+    setEditingItem(null);
+    setForm({ name: "" });
   };
 
   const handleEdit = (addon: AddOn) => {
-    setEditingId(addon.id!);
+    setEditingItem(addon);
     setForm({ name: addon.name });
-    setShowForm(true);
+    setShowModal(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this addon?")) {
-      await deleteAddonById(id);
+  const handleDeleteClick = (addon: AddOn) => {
+    setDeletingItem(addon);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingItem) return;
+
+    try {
+      const result = await deleteAddonById(deletingItem.id!);
+      if (result) {
+        setDeletingItem(null);
+      }
+      // Error message is already shown by the hook via showError
+    } catch (error) {
+      console.error("Error deleting addon:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete addon. Please try again.";
+      toast.error(errorMessage);
+      throw error; // Re-throw to prevent modal from closing
     }
-  };
-
-  const handleCancel = () => {
-    setForm({ name: "" });
-    setEditingId(null);
-    setShowForm(false);
   };
 
   if (loading) {
     return (
-      <div className="min-h-[80vh] bg-gradient-to-br from-purple-50 to-white p-4">
+      <div className="min-h-[80vh] bg-white p-4">
         <Header title="Addon Fees" subtitle="Manage addon fees details" icon={PlusCircle} />
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">Loading addons...</div>
@@ -67,64 +144,45 @@ const AddonPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[80vh] bg-gradient-to-br from-purple-50 to-white p-4">
-      <Header title="Addon Fees" subtitle="Manage addon fees details" icon={PlusCircle} />
-
-      <div className="flex justify-end my-4">
-        <Button onClick={() => setShowForm(true)}>
-          + Add New
-        </Button>
-      </div>
-
-      {showForm && (
-        <div className="border rounded-lg p-4 mb-6 bg-white shadow-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input
-              placeholder="Addon Name"
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            />
-            <div className="col-span-full flex gap-2 justify-end">
-              <Button variant="secondary" onClick={handleCancel}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmit}>
-                {editingId ? 'Update' : 'Save'}
-              </Button>
-            </div>
+    <div className="min-h-[80vh] bg-white p-4">
+      <Header
+        title="Addon Fees"
+        subtitle="Manage addon fees details"
+        icon={PlusCircle}
+        actions={
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => setShowModal(true)}>
+              + Add New
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleExport} disabled={!addons || addons.length === 0}>
+              <FileDown className="h-4 w-4 mr-1" />
+              Export
+            </Button>
           </div>
-        </div>
-      )}
+        }
+      />
 
-      <div className="overflow-x-auto rounded-xl shadow-md bg-white">
+      <div className="overflow-x-auto rounded-xl shadow-md bg-white mt-6">
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-100">
-              <TableHead className="text-center">#</TableHead>
+              <TableHead className="text-center">S.No</TableHead>
               <TableHead className="text-center">Addon Name</TableHead>
               <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {addons.length ? (
+            {addons && addons.length > 0 ? (
               addons.map((row, idx) => (
                 <TableRow key={row.id} className="hover:bg-gray-50">
                   <TableCell className="text-center font-medium">{idx + 1}</TableCell>
                   <TableCell className="text-center">{row.name}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(row)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(row)} title="Edit addon">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(row.id!)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(row)} title="Delete addon">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -141,6 +199,79 @@ const AddonPage: React.FC = () => {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog
+        open={showModal}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleClose();
+          } else {
+            setShowModal(true);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Edit Addon" : "Add New Addon"}</DialogTitle>
+            <DialogDescription>
+              {editingItem ? "Update the addon name below." : "Enter the addon name to create a new addon."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name *
+              </Label>
+              <Input
+                id="name"
+                value={form.name}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Prevent leading/trailing spaces but allow spaces in between
+                  if (value.length > 0 && value[0] === " ") {
+                    return; // Prevent leading space
+                  }
+                  setForm({ name: value });
+                }}
+                className="col-span-3"
+                placeholder="Enter addon name"
+                maxLength={255}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && form.name.trim()) {
+                    handleSubmit();
+                  }
+                  if (e.key === "Escape") {
+                    handleClose();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={!form.name.trim()}>
+              {editingItem ? "Update" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        open={showDeleteModal}
+        onOpenChange={(open) => {
+          setShowDeleteModal(open);
+          if (!open) {
+            setDeletingItem(null);
+          }
+        }}
+        title="Delete Addon"
+        itemName={deletingItem?.name || ""}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 };

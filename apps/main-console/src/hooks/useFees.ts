@@ -12,6 +12,7 @@ import {
   createFeesHead,
   updateFeesHead,
   deleteFeesHead,
+  NewFeesHead,
 
   // Fees Slabs
   getAllFeesSlabs,
@@ -24,12 +25,19 @@ import {
   createFeesReceiptType,
   updateFeesReceiptType,
   deleteFeesReceiptType,
+  NewFeesReceiptType,
 
   // Addons
   getAllAddons,
   createAddon,
   updateAddon,
   deleteAddon,
+
+  // Fee Concession Slabs
+  getAllFeeConcessionSlabs,
+  createFeeConcessionSlab,
+  updateFeeConcessionSlab,
+  deleteFeeConcessionSlab,
 
   // Student Fees Mapping
   getAllStudentFeesMappings,
@@ -45,6 +53,7 @@ import {
   FeesSlab,
   FeesReceiptType,
   AddOn,
+  FeeConcessionSlab,
   StudentFeesMapping,
   FeesSlabMapping,
   CreateFeesStructureDto,
@@ -225,7 +234,7 @@ export const useFeesHeads = () => {
   }, [showError]);
 
   const addFeesHead = useCallback(
-    async (newFeesHead: FeesHead) => {
+    async (newFeesHead: NewFeesHead) => {
       try {
         const response = await createFeesHead(newFeesHead);
         await fetchFeesHeads();
@@ -239,7 +248,7 @@ export const useFeesHeads = () => {
   );
 
   const updateFeesHeadById = useCallback(
-    async (id: number, feesHead: Partial<FeesHead>) => {
+    async (id: number, feesHead: Partial<NewFeesHead>) => {
       try {
         const response = await updateFeesHead(id, feesHead);
         await fetchFeesHeads();
@@ -377,7 +386,7 @@ export const useFeesReceiptTypes = () => {
   }, [showError]);
 
   const addFeesReceiptType = useCallback(
-    async (newFeesReceiptType: FeesReceiptType) => {
+    async (newFeesReceiptType: NewFeesReceiptType) => {
       try {
         const response = await createFeesReceiptType(newFeesReceiptType);
         await fetchFeesReceiptTypes();
@@ -391,7 +400,7 @@ export const useFeesReceiptTypes = () => {
   );
 
   const updateFeesReceiptTypeById = useCallback(
-    async (id: number, feesReceiptType: Partial<FeesReceiptType>) => {
+    async (id: number, feesReceiptType: Partial<NewFeesReceiptType>) => {
       try {
         const response = await updateFeesReceiptType(id, feesReceiptType);
         await fetchFeesReceiptTypes();
@@ -482,11 +491,17 @@ export const useAddons = () => {
   const deleteAddonById = useCallback(
     async (id: number) => {
       try {
-        await deleteAddon(id);
-        await fetchAddons();
-        return true;
-      } catch {
-        showError({ message: "Failed to delete addon" });
+        const response = await deleteAddon(id);
+        if (response.httpStatusCode === 200) {
+          await fetchAddons();
+          return true;
+        }
+        showError({ message: response.message || "Failed to delete addon" });
+        return false;
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to delete addon";
+        showError({ message: errorMessage });
+        console.error("Error deleting addon:", error);
         return false;
       }
     },
@@ -622,5 +637,86 @@ export const useFeesSlabMappings = () => {
     loading,
     fetchFeesSlabMappings,
     addFeesSlabMappings,
+  };
+};
+
+// ==================== FEE CONCESSION SLABS HOOKS ====================
+
+export const useFeeConcessionSlabs = () => {
+  const [concessionSlabs, setConcessionSlabs] = useState<FeeConcessionSlab[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { showError } = useError();
+
+  const fetchFeeConcessionSlabs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getAllFeeConcessionSlabs();
+      if (response.payload) {
+        setConcessionSlabs(response.payload);
+      } else {
+        setConcessionSlabs([]);
+      }
+    } catch (error) {
+      console.error("Error fetching fee concession slabs:", error);
+      showError({ message: "Failed to fetch fee concession slabs" });
+      setConcessionSlabs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [showError]);
+
+  const addFeeConcessionSlab = useCallback(
+    async (newSlab: FeeConcessionSlab) => {
+      try {
+        const response = await createFeeConcessionSlab(newSlab);
+        await fetchFeeConcessionSlabs();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to create fee concession slab" });
+        return null;
+      }
+    },
+    [fetchFeeConcessionSlabs, showError],
+  );
+
+  const updateFeeConcessionSlabById = useCallback(
+    async (id: number, slab: Partial<FeeConcessionSlab>) => {
+      try {
+        const response = await updateFeeConcessionSlab(id, slab);
+        await fetchFeeConcessionSlabs();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to update fee concession slab" });
+        return null;
+      }
+    },
+    [fetchFeeConcessionSlabs, showError],
+  );
+
+  const deleteFeeConcessionSlabById = useCallback(
+    async (id: number) => {
+      try {
+        await deleteFeeConcessionSlab(id);
+        await fetchFeeConcessionSlabs();
+        return true;
+      } catch {
+        showError({ message: "Failed to delete fee concession slab" });
+        return false;
+      }
+    },
+    [fetchFeeConcessionSlabs, showError],
+  );
+
+  useEffect(() => {
+    fetchFeeConcessionSlabs();
+  }, [fetchFeeConcessionSlabs]);
+
+  return {
+    concessionSlabs: concessionSlabs,
+    loading,
+    fetchFeeConcessionSlabs,
+    addFeeConcessionSlab,
+    updateFeeConcessionSlabById,
+    deleteFeeConcessionSlabById,
   };
 };

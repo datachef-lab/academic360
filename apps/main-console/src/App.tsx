@@ -298,6 +298,9 @@ const router = createBrowserRouter(
             { path: "structure", element: <admissionFeesModule.feesModule.FeesStructurePage /> },
             { path: "slabs", element: <admissionFeesModule.feesModule.FeesSlabPage /> },
             { path: "heads", element: <admissionFeesModule.feesModule.FeeHeadsPage /> },
+            { path: "fee-concession-slab", element: <admissionFeesModule.feesModule.FeeConcessionSlabPage /> },
+            { path: "fee-receipts", element: <admissionFeesModule.feesModule.FeesReceiptTypePage /> },
+            { path: "addon", element: <admissionFeesModule.feesModule.AddonPage /> },
           ],
         },
         {

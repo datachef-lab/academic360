@@ -2,21 +2,22 @@ import { db } from "@/db/index.js";
 import { studentFeeModel, StudentFee } from "@repo/db/schemas/models/fees";
 import { eq } from "drizzle-orm";
 
+type StudentFeeInsert = typeof studentFeeModel.$inferInsert;
+
 export const createStudentFee = async (
-  data: Omit<StudentFee, "id" | "createdAt" | "updatedAt">,
-) => {
-  const [created] = await db
-    .insert(studentFeeModel)
-    .values(data as any)
-    .returning();
+  data: Omit<StudentFeeInsert, "id" | "createdAt" | "updatedAt">,
+): Promise<StudentFee | null> => {
+  const [created] = await db.insert(studentFeeModel).values(data).returning();
   return created || null;
 };
 
-export const getAllStudentFees = async () => {
+export const getAllStudentFees = async (): Promise<StudentFee[]> => {
   return db.select().from(studentFeeModel);
 };
 
-export const getStudentFeeById = async (id: number) => {
+export const getStudentFeeById = async (
+  id: number,
+): Promise<StudentFee | null> => {
   const [found] = await db
     .select()
     .from(studentFeeModel)
@@ -27,7 +28,7 @@ export const getStudentFeeById = async (id: number) => {
 export const updateStudentFee = async (
   id: number,
   data: Partial<StudentFee>,
-) => {
+): Promise<StudentFee | null> => {
   const [updated] = await db
     .update(studentFeeModel)
     .set(data)
@@ -36,7 +37,9 @@ export const updateStudentFee = async (
   return updated || null;
 };
 
-export const deleteStudentFee = async (id: number) => {
+export const deleteStudentFee = async (
+  id: number,
+): Promise<StudentFee | null> => {
   const [deleted] = await db
     .delete(studentFeeModel)
     .where(eq(studentFeeModel.id, id))

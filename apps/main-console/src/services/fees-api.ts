@@ -10,6 +10,7 @@ import {
   StudentFeesMapping,
   FeesSlabMapping,
   CreateFeesStructureDto,
+  FeeConcessionSlab,
 } from "@/types/fees";
 
 const BASE_PATH = "/api/v1/fees";
@@ -93,7 +94,8 @@ export interface NewFeesHead {
 // Get all fees heads
 export async function getAllFeesHeads(): Promise<FeesHead[]> {
   const response = await axiosInstance.get(`${BASE_PATH}/heads`);
-  return response.data;
+  // Backend returns ServiceResult with { success, message, data }
+  return response.data?.data || response.data || [];
 }
 
 // Get a single fees head
@@ -182,7 +184,8 @@ export interface NewFeesReceiptType {
 // Get all fees receipt types
 export async function getAllFeesReceiptTypes(): Promise<FeesReceiptType[]> {
   const response = await axiosInstance.get(`${BASE_PATH}/receipt-types`);
-  return response.data;
+  // Backend returns ApiResponse with { httpStatusCode, status, payload, message }
+  return response.data?.payload || response.data || [];
 }
 
 // Get a single fees receipt type
@@ -223,31 +226,226 @@ export interface NewAddOn {
 // Get all addons
 export async function getAllAddons(): Promise<ApiResponse<AddOn[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/addons`);
-  return response.data;
+
+  if (response.data.success && response.data.data !== undefined) {
+    return {
+      httpStatusCode: 200,
+      httpStatus: "OK",
+      message: response.data.message,
+      payload: response.data.data,
+    };
+  }
+  // Return error response
+  return {
+    httpStatusCode: response.status || 500,
+    httpStatus: "ERROR",
+    message: response.data.message || "Failed to fetch addons",
+    payload: [],
+  };
 }
 
 // Get a single addon
 export async function getAddon(addonId: number): Promise<ApiResponse<AddOn>> {
   const response = await axiosInstance.get(`${BASE_PATH}/addons/${addonId}`);
-  return response.data;
+
+  if (response.data.success && response.data.data) {
+    return {
+      httpStatusCode: 200,
+      httpStatus: "OK",
+      message: response.data.message,
+      payload: response.data.data,
+    };
+  }
+  throw new Error(response.data.message || "Failed to fetch addon");
 }
 
 // Create a new addon
 export async function createAddon(newAddon: NewAddOn): Promise<ApiResponse<AddOn>> {
   const response = await axiosInstance.post(`${BASE_PATH}/addons`, newAddon);
-  return response.data;
+
+  if (response.data.success && response.data.data) {
+    return {
+      httpStatusCode: 201,
+      httpStatus: "CREATED",
+      message: response.data.message,
+      payload: response.data.data,
+    };
+  }
+  throw new Error(response.data.message || "Failed to create addon");
 }
 
 // Update an addon
 export async function updateAddon(addonId: number, addon: Partial<NewAddOn>): Promise<ApiResponse<AddOn>> {
   const response = await axiosInstance.put(`${BASE_PATH}/addons/${addonId}`, addon);
-  return response.data;
+
+  if (response.data.success && response.data.data) {
+    return {
+      httpStatusCode: 200,
+      httpStatus: "OK",
+      message: response.data.message,
+      payload: response.data.data,
+    };
+  }
+  throw new Error(response.data.message || "Failed to update addon");
 }
 
 // Delete an addon
 export async function deleteAddon(addonId: number): Promise<ApiResponse<void>> {
-  const response = await axiosInstance.delete(`${BASE_PATH}/addons/${addonId}`);
-  return response.data;
+  try {
+    const response = await axiosInstance.delete(`${BASE_PATH}/addons/${addonId}`);
+    // Backend returns { success, message, data }
+    if (response.data && response.data.success) {
+      return {
+        httpStatusCode: 200,
+        httpStatus: "OK",
+        message: response.data.message || "Addon deleted successfully",
+        payload: undefined as void,
+      };
+    }
+    // Handle error response from backend (non-200 status but no exception)
+    const errorMessage = response.data?.message || "Failed to delete addon";
+    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    // Handle axios errors (network, 500, etc.)
+    // When axios receives a 500, it throws an error with response.data containing the error
+    if (error && typeof error === "object" && "response" in error) {
+      const axiosError = error as {
+        response?: {
+          status?: number;
+          data?: {
+            message?: string;
+            error?: string | { message?: string };
+            success?: boolean;
+          };
+        };
+      };
+
+      // Extract error message from various possible response structures
+      let errorMessage = "Failed to delete addon";
+
+      if (axiosError.response?.data) {
+        const responseData = axiosError.response.data;
+        // Check for message in different possible locations
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        } else if (typeof responseData.error === "string") {
+          errorMessage = responseData.error;
+        } else if (responseData.error && typeof responseData.error === "object" && "message" in responseData.error) {
+          errorMessage = (responseData.error as { message: string }).message;
+        } else if (axiosError.response.status === 500) {
+          errorMessage = "Server error occurred while deleting addon. Please try again.";
+        }
+      }
+
+      console.error("Delete addon error:", {
+        status: axiosError.response?.status,
+        data: axiosError.response?.data,
+        errorMessage,
+      });
+
+      throw new Error(errorMessage);
+    }
+    // Handle other errors
+    if (error instanceof Error) {
+      console.error("Delete addon error:", error);
+      throw error;
+    }
+    throw new Error("Failed to delete addon");
+  }
+}
+
+// ==================== FEE CONCESSION SLABS APIs ====================
+
+export interface NewFeeConcessionSlab {
+  name: string;
+  description: string;
+  defaultConcessionRate: number;
+  sequence: number;
+  legacyFeeSlabId?: number | null;
+}
+
+// Get all fee concession slabs
+export async function getAllFeeConcessionSlabs(): Promise<ApiResponse<FeeConcessionSlab[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/concession-slabs`);
+
+  if (response.data.success && response.data.data !== undefined) {
+    return {
+      httpStatusCode: 200,
+      httpStatus: "OK",
+      message: response.data.message,
+      payload: response.data.data,
+    };
+  }
+  // Return error response
+  return {
+    httpStatusCode: response.status || 500,
+    httpStatus: "ERROR",
+    message: response.data.message || "Failed to fetch fee concession slabs",
+    payload: [],
+  };
+}
+
+// Get a single fee concession slab
+export async function getFeeConcessionSlab(slabId: number): Promise<ApiResponse<FeeConcessionSlab>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/concession-slabs/${slabId}`);
+
+  if (response.data.success && response.data.data) {
+    return {
+      httpStatusCode: 200,
+      httpStatus: "OK",
+      message: response.data.message,
+      payload: response.data.data,
+    };
+  }
+  throw new Error(response.data.message || "Failed to fetch fee concession slab");
+}
+
+// Create a new fee concession slab
+export async function createFeeConcessionSlab(newSlab: NewFeeConcessionSlab): Promise<ApiResponse<FeeConcessionSlab>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/concession-slabs`, newSlab);
+
+  if (response.data.success && response.data.data) {
+    return {
+      httpStatusCode: 201,
+      httpStatus: "CREATED",
+      message: response.data.message,
+      payload: response.data.data,
+    };
+  }
+  throw new Error(response.data.message || "Failed to create fee concession slab");
+}
+
+// Update a fee concession slab
+export async function updateFeeConcessionSlab(
+  slabId: number,
+  slab: Partial<NewFeeConcessionSlab>,
+): Promise<ApiResponse<FeeConcessionSlab>> {
+  const response = await axiosInstance.put(`${BASE_PATH}/concession-slabs/${slabId}`, slab);
+
+  if (response.data.success && response.data.data) {
+    return {
+      httpStatusCode: 200,
+      httpStatus: "OK",
+      message: response.data.message,
+      payload: response.data.data,
+    };
+  }
+  throw new Error(response.data.message || "Failed to update fee concession slab");
+}
+
+// Delete a fee concession slab
+export async function deleteFeeConcessionSlab(slabId: number): Promise<ApiResponse<void>> {
+  const response = await axiosInstance.delete(`${BASE_PATH}/concession-slabs/${slabId}`);
+
+  if (response.data.success) {
+    return {
+      httpStatusCode: 200,
+      httpStatus: "OK",
+      message: response.data.message,
+      payload: undefined as void,
+    };
+  }
+  throw new Error(response.data.message || "Failed to delete fee concession slab");
 }
 
 // ==================== FEES COMPONENTS APIs ====================

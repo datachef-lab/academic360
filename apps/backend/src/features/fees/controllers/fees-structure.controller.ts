@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import * as feeStructureService from "../services/fee-structure.service.js";
 import {
   FeeStructure,
@@ -7,14 +8,14 @@ import {
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 
-function toDate(val: any): Date | null {
+function toDate(val: unknown): Date | null {
   if (!val) return null;
   if (val instanceof Date) return val;
   if (typeof val === "string" || typeof val === "number") return new Date(val);
-  return val;
+  return null;
 }
 
-function convertDates(obj: Record<string, any>) {
+function convertDates(obj: Partial<FeeStructure> | Record<string, unknown>) {
   const dateFields = [
     "startDate",
     "endDate",
@@ -23,9 +24,13 @@ function convertDates(obj: Record<string, any>) {
     "onlineEndDate",
     "createdAt",
     "updatedAt",
-  ];
+  ] as const;
+  const objRecord = obj as Record<string, unknown>;
   for (const f of dateFields) {
-    if (obj[f]) obj[f] = toDate(obj[f]);
+    const value = objRecord[f];
+    if (value) {
+      objRecord[f] = toDate(value);
+    }
   }
 }
 
@@ -35,7 +40,9 @@ export const createFeeStructure = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const parse = createFeeStructureSchema.safeParse(req.body as any);
+    const parse = createFeeStructureSchema.safeParse(
+      req.body as z.input<typeof createFeeStructureSchema>,
+    );
     if (!parse.success) {
       res
         .status(400)
@@ -50,8 +57,10 @@ export const createFeeStructure = async (
       return;
     }
     const body = parse.data as Omit<FeeStructure, "id">;
-    convertDates(body as any);
-    const created = await feeStructureService.createFeeStructure(body as any);
+    convertDates(body);
+    const created = await feeStructureService.createFeeStructure(
+      body as Omit<FeeStructure, "id" | "createdAt" | "updatedAt">,
+    );
     if (!created) {
       res
         .status(400)
@@ -126,7 +135,10 @@ export const updateFeeStructure = async (
         .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
       return;
     }
-    const parse = createFeeStructureSchema.partial().safeParse(req.body as any);
+    const partialSchema = createFeeStructureSchema.partial();
+    const parse = partialSchema.safeParse(
+      req.body as z.input<typeof partialSchema>,
+    );
     if (!parse.success) {
       res
         .status(400)
@@ -141,11 +153,8 @@ export const updateFeeStructure = async (
       return;
     }
     const body = parse.data as Partial<FeeStructure>;
-    convertDates(body as any);
-    const updated = await feeStructureService.updateFeeStructure(
-      id,
-      body as any,
-    );
+    convertDates(body);
+    const updated = await feeStructureService.updateFeeStructure(id, body);
     if (!updated) {
       res
         .status(404)

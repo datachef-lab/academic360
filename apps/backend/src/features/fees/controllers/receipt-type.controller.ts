@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import * as receiptTypeService from "../services/receipt-type.service.js";
 import {
   createReceiptTypeSchema,
@@ -13,7 +14,9 @@ export const createReceiptType = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const parse = createReceiptTypeSchema.safeParse(req.body as any);
+    const parse = createReceiptTypeSchema.safeParse(
+      req.body as z.input<typeof createReceiptTypeSchema>,
+    );
     if (!parse.success) {
       res
         .status(400)
@@ -27,8 +30,11 @@ export const createReceiptType = async (
         );
       return;
     }
-    const body = parse.data as Omit<ReceiptType, "id">;
-    const created = await receiptTypeService.createReceiptType(body as any);
+    const body = parse.data as Omit<
+      ReceiptType,
+      "id" | "createdAt" | "updatedAt"
+    >;
+    const created = await receiptTypeService.createReceiptType(body);
     if (!created) {
       res
         .status(400)
@@ -103,7 +109,10 @@ export const updateReceiptType = async (
         .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
       return;
     }
-    const parse = createReceiptTypeSchema.partial().safeParse(req.body as any);
+    const partialSchema = createReceiptTypeSchema.partial();
+    const parse = partialSchema.safeParse(
+      req.body as z.input<typeof partialSchema>,
+    );
     if (!parse.success) {
       res
         .status(400)
@@ -118,7 +127,7 @@ export const updateReceiptType = async (
       return;
     }
     const body = parse.data as Partial<ReceiptType>;
-    const updated = await receiptTypeService.updateReceiptType(id, body as any);
+    const updated = await receiptTypeService.updateReceiptType(id, body);
     if (!updated) {
       res
         .status(404)
