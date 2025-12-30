@@ -2,6 +2,7 @@ import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureF
 import AcademicYearPage from "./AcademicYearPage";
 import AddonPage from "./AddonPage";
 import FeeHeadsPage from "./FeeHeadsPage";
+import FeeConcessionSlabPage from "./FeeConcessionSlabPage";
 import FeesReceiptTypePage from "./FeesReceiptTypePage";
 import FeesSlabPage from "./FeesSlabPage";
 import FeesStructurePage from "./FeesStructurePage";
@@ -14,6 +15,7 @@ export {
   AcademicYearPage,
   AddonPage,
   FeeHeadsPage,
+  FeeConcessionSlabPage,
   FeesReceiptTypePage,
   FeesSlabPage,
   FeesStructurePage,

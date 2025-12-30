@@ -1,6 +1,6 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
-import { LayoutDashboard, Receipt, Layers, FileText, BarChart2 } from "lucide-react";
+import { LayoutDashboard, Receipt, FileText, BarChart2, Percent, PlusCircle } from "lucide-react";
 import { Outlet, useLocation } from "react-router-dom";
 
 const topLinks = [
@@ -9,9 +9,13 @@ const topLinks = [
 ];
 
 const mastersLinks = [
-  { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Receipt },
-  { title: "Fees Slabs", url: "/dashboard/fees/slabs", icon: Layers },
+  // { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Receipt },
+  // { title: "Fees Slabs", url: "/dashboard/fees/slabs", icon: Layers },
+  { title: "Fee Concession Slabs", url: "/dashboard/fees/fee-concession-slab", icon: Percent },
   { title: "Fees Heads", url: "/dashboard/fees/heads", icon: FileText },
+
+  { title: "Fee Receipts", url: "/dashboard/fees/fee-receipts", icon: Receipt },
+  { title: "Addon", url: "/dashboard/fees/addon", icon: PlusCircle },
 ];
 
 export default function FeesMasterLayout() {
