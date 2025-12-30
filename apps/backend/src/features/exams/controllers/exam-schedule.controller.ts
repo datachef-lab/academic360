@@ -14,6 +14,7 @@ import {
   findByStudentId,
   findExamPapersByExamId,
   findExamsByStudentId,
+  getExamCandidatesByStudentIdAndExamId,
   getStudentsByPapers,
   sendExamAdmitCardEmails,
   updateExamSubject,
@@ -638,6 +639,52 @@ export const getExamsByStudentController = async (
       .status(200)
       .json(
         new ApiResponse(200, "SUCCESS", result, "Exams fetched successfully"),
+      );
+  } catch (error) {
+    console.error("[GET-STUDENT-EXAMS] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const getExamCandiatesByStudentIdAndExamIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { studentId, examId } = req.query;
+
+    if (!studentId || !examId) {
+      res
+        .status(400)
+        .json(new ApiError(400, "studentId and examId both are required"));
+      return;
+    }
+
+    const studentIdNum = Number(studentId);
+    const examIdNum = Number(examId);
+
+    if (isNaN(studentIdNum) || isNaN(examIdNum)) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Invalid studentId, page or pageSize"));
+      return;
+    }
+
+    const result = await getExamCandidatesByStudentIdAndExamId(
+      studentIdNum,
+      examIdNum,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Exams Candidates fetched successfully",
+        ),
       );
   } catch (error) {
     console.error("[GET-STUDENT-EXAMS] Error:", error);

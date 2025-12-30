@@ -7,6 +7,7 @@ import {
   downloadSingleAdmitCardController,
   getAllExamsController,
   getExamByIdController,
+  getExamCandiatesByStudentIdAndExamIdController,
   getExamPapersByExamIdController,
   getExamsByStudentController,
   getStudentsForExam,
@@ -52,5 +53,6 @@ router.get("/exam-papers/:id", getExamPapersByExamIdController);
  * Get paginated exams for a student
  */
 router.get("/student/:studentId/exams", getExamsByStudentController);
+router.get("/candidates", getExamCandiatesByStudentIdAndExamIdController);
 
 export default router;

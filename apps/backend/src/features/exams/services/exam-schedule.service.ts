@@ -2677,3 +2677,35 @@ export async function sendExamAdmitCardEmails(
     failed,
   };
 }
+
+export async function getExamCandidatesByStudentIdAndExamId(
+  studentId: number,
+  examId: number,
+) {
+  const examCandidates = await db
+    .select()
+    .from(examCandidateModel)
+    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .leftJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .where(and(eq(studentModel.id, studentId), eq(examModel.id, examId)));
+
+  return await Promise.all(
+    examCandidates.map(async (examCandidate) => {
+      const paper = await db
+        .select()
+        .from(paperModel)
+        .where(eq(paperModel.id, examCandidate.exam_candidates.paperId))
+        .limit(1)
+        .then((rows) => rows[0]);
+
+      return {
+        ...examCandidate,
+        paper,
+      };
+    }),
+  );
+}
