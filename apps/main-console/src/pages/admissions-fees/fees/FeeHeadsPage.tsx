@@ -216,26 +216,32 @@ const FeeHeadsPage: React.FC = () => {
 
       {/* ----------------------- ADD / EDIT MODAL ----------------------- */}
       <Dialog open={showModal} onOpenChange={(o) => !o && handleClose()}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Fee Head" : "Add New Fee Head"}</DialogTitle>
             <DialogDescription>{editingItem ? "Update fee head details" : "Create a new fee head"}</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Head Name *</Label>
+          {/* 2 Column Layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-4">
+            {/* Head Name */}
+            <div className="flex flex-col gap-2">
+              <Label>
+                Head Name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="col-span-3"
                 placeholder="Enter head name"
                 autoFocus
               />
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Sequence *</Label>
+            {/* Sequence */}
+            <div className="flex flex-col gap-2">
+              <Label>
+                Sequence <span className="text-red-500">*</span>
+              </Label>
               <Input
                 type="number"
                 min="1"
@@ -246,16 +252,15 @@ const FeeHeadsPage: React.FC = () => {
                     sequence: parseInt(e.target.value) || 1,
                   })
                 }
-                className="col-span-3"
               />
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Remarks</Label>
+            {/* Remarks – full width */}
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label>Remarks</Label>
               <Input
                 value={form.remarks}
                 onChange={(e) => setForm({ ...form, remarks: e.target.value })}
-                className="col-span-3"
                 placeholder="Optional remarks"
               />
             </div>

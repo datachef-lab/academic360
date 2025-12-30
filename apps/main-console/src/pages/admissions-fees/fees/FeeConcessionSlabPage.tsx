@@ -277,7 +277,7 @@ const FeeConcessionSlabPage: React.FC = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Fee Concession Slab" : "Add New Fee Concession Slab"}</DialogTitle>
             <DialogDescription>
@@ -286,78 +286,88 @@ const FeeConcessionSlabPage: React.FC = () => {
                 : "Fill in the details to create a new fee concession slab."}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Slab Name *
+
+          {/* 2 Column Layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-4">
+            {/* Slab Name */}
+            <div className="flex flex-col gap-2">
+              <Label>
+                Slab Name <span className="text-red-500">*</span>
               </Label>
               <Input
-                id="name"
                 value={form.name}
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value.length > 0 && value[0] === " ") return;
                   setForm({ ...form, name: value });
                 }}
-                className="col-span-3"
                 placeholder="Enter slab name"
                 maxLength={255}
                 autoFocus
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Description *
+
+            {/* Default Rate */}
+            <div className="flex flex-col gap-2">
+              <Label>
+                Default Rate (%) <span className="text-red-500">*</span>
               </Label>
               <Input
-                id="description"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={form.defaultConcessionRate}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    defaultConcessionRate: parseFloat(e.target.value) || 0,
+                  })
+                }
+                placeholder="0 - 100"
+              />
+            </div>
+
+            {/* Description – full width */}
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label>
+                Description <span className="text-red-500">*</span>
+              </Label>
+              <Input
                 value={form.description}
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value.length > 0 && value[0] === " ") return;
                   setForm({ ...form, description: value });
                 }}
-                className="col-span-3"
                 placeholder="Enter description"
                 maxLength={500}
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="defaultConcessionRate" className="text-right">
-                Default Rate (%) *
+
+            {/* Sequence */}
+            <div className="flex flex-col gap-2">
+              <Label>
+                Sequence <span className="text-red-500">*</span>
               </Label>
               <Input
-                id="defaultConcessionRate"
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                value={form.defaultConcessionRate}
-                onChange={(e) => setForm({ ...form, defaultConcessionRate: parseFloat(e.target.value) || 0 })}
-                className="col-span-3"
-                placeholder="Enter default concession rate (0-100)"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="sequence" className="text-right">
-                Sequence *
-              </Label>
-              <Input
-                id="sequence"
                 type="number"
                 min="1"
                 value={form.sequence}
-                onChange={(e) => setForm({ ...form, sequence: parseInt(e.target.value) || 1 })}
-                className="col-span-3"
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    sequence: parseInt(e.target.value) || 1,
+                  })
+                }
                 placeholder="Enter sequence number"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="legacyFeeSlabId" className="text-right">
-                Legacy Slab ID
-              </Label>
+
+            {/* Legacy Slab ID */}
+            <div className="flex flex-col gap-2">
+              <Label>Legacy Slab ID</Label>
               <Input
-                id="legacyFeeSlabId"
                 type="number"
                 value={form.legacyFeeSlabId || ""}
                 onChange={(e) =>
@@ -366,11 +376,11 @@ const FeeConcessionSlabPage: React.FC = () => {
                     legacyFeeSlabId: e.target.value ? parseInt(e.target.value) : null,
                   })
                 }
-                className="col-span-3"
-                placeholder="Enter legacy fee slab ID (optional)"
+                placeholder="Optional"
               />
             </div>
           </div>
+
           <DialogFooter>
             <Button variant="secondary" onClick={handleClose}>
               Cancel

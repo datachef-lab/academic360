@@ -255,16 +255,17 @@ const FeesReceiptTypePage: React.FC = () => {
 
       {/* ADD / EDIT MODAL */}
       <Dialog open={showModal} onOpenChange={(o) => !o && handleClose()}>
-        <DialogContent className="sm:max-w-[650px]">
+        <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Receipt Type" : "Add Receipt Type"}</DialogTitle>
             <DialogDescription>Manage receipt and challan configuration</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
+          {/* 2 Column Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-4">
             {(
               [
-                ["name", "Name *"],
+                ["name", "Name", true],
                 ["chk", "Chk"],
                 ["chkMisc", "ChkMisc"],
                 ["printChln", "PrintChln"],
@@ -273,21 +274,22 @@ const FeesReceiptTypePage: React.FC = () => {
                 ["chkOnline", "ChkOnline"],
                 ["chkOnSequence", "ChkOnSequence"],
               ] as const
-            ).map(([key, label]) => (
-              <div key={key} className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">{label}</Label>
-                <Input
-                  className="col-span-3"
-                  value={form[key]}
-                  onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                />
+            ).map(([key, label, required]) => (
+              <div key={key} className="flex flex-col gap-2">
+                <Label>
+                  {label}
+                  {required && <span className="text-red-500 ml-1">*</span>}
+                </Label>
+
+                <Input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
               </div>
             ))}
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">AddOn</Label>
+            {/* AddOn Field */}
+            <div className="flex flex-col gap-2">
+              <Label>AddOn</Label>
               <select
-                className="col-span-3 px-3 py-2 border rounded-md"
+                className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                 value={form.addOnId ?? ""}
                 onChange={(e) =>
                   setForm({

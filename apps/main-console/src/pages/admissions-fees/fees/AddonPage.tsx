@@ -210,44 +210,47 @@ const AddonPage: React.FC = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-auto">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Addon" : "Add New Addon"}</DialogTitle>
             <DialogDescription>
-              {editingItem ? "Update the addon name below." : "Enter the addon name to create a new addon."}
+              {editingItem ? "Update the addon details below." : "Enter the addon details to create a new addon."}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name *
+
+          <div className="grid grid-cols-1 sm:grid-cols-1  py-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="name">
+                Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="name"
                 value={form.name}
                 onChange={(e) => {
                   const value = e.target.value;
-                  // Prevent leading/trailing spaces but allow spaces in between
-                  if (value.length > 0 && value[0] === " ") {
-                    return; // Prevent leading space
-                  }
+                  if (value.length > 0 && value[0] === " ") return;
                   setForm({ name: value });
                 }}
-                className="col-span-3"
                 placeholder="Enter addon name"
                 maxLength={255}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && form.name.trim()) {
-                    handleSubmit();
-                  }
-                  if (e.key === "Escape") {
-                    handleClose();
-                  }
+                  if (e.key === "Enter" && form.name.trim()) handleSubmit();
+                  if (e.key === "Escape") handleClose();
                 }}
                 autoFocus
               />
             </div>
+
+            {/* Example Second Field (optional / future-ready) */}
+            {/* <div className="flex flex-col gap-2">
+      <Label htmlFor="description">Description</Label>
+      <Input
+        id="description"
+        placeholder="Optional description"
+      />
+    </div> */}
           </div>
+
           <DialogFooter>
             <Button variant="secondary" onClick={handleClose}>
               Cancel

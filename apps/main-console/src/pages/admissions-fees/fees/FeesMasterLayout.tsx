@@ -9,7 +9,7 @@ const topLinks = [
 ];
 
 const mastersLinks = [
-  // { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Receipt },
+  { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Receipt },
   // { title: "Fees Slabs", url: "/dashboard/fees/slabs", icon: Layers },
   { title: "Fee Concession Slabs", url: "/dashboard/fees/fee-concession-slab", icon: Percent },
   { title: "Fees Heads", url: "/dashboard/fees/heads", icon: FileText },
