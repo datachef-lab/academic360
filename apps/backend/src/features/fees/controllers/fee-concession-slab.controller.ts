@@ -8,6 +8,7 @@ import {
 } from "../services/fee-concession-slab.service";
 import { createFeeConcessionSlabSchema } from "@repo/db/schemas";
 import { handleError } from "@/utils";
+import { ApiResponse } from "@/utils/ApiResonse";
 
 export async function createFeeConcessionSlabHandler(
   req: Request,
@@ -17,11 +18,30 @@ export async function createFeeConcessionSlabHandler(
     // Validate input
     const parsed = createFeeConcessionSlabSchema.parse(req.body);
 
-    const result = await createFeeConcessionSlab(parsed);
+    const created = await createFeeConcessionSlab(parsed);
 
-    if (!result.success) return res.status(500).json(result);
+    if (!created)
+      return res
+        .status(500)
+        .json(
+          new ApiResponse(
+            500,
+            "ERROR",
+            null,
+            "Failed to create fee concession slab",
+          ),
+        );
 
-    return res.status(201).json(result);
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          "SUCCESS",
+          created,
+          "Fee concession slab created successfully",
+        ),
+      );
   } catch (error) {
     // Zod validation error yields a 400
     // handleError will map and respond accordingly
@@ -34,9 +54,17 @@ export async function getAllFeeConcessionSlabsHandler(
   res: Response,
 ) {
   try {
-    const result = await getAllFeeConcessionSlabs();
-    if (!result.success) return res.status(500).json(result);
-    return res.status(200).json(result);
+    const slabs = await getAllFeeConcessionSlabs();
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          slabs,
+          "Fee concession slabs retrieved successfully",
+        ),
+      );
   } catch (error) {
     return handleError(error, res);
   }
@@ -53,13 +81,29 @@ export async function getFeeConcessionSlabByIdHandler(
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const result = await getFeeConcessionSlabById(id);
-    if (!result.success) {
-      const isNotFound = result.message.includes("not found");
-      return res.status(isNotFound ? 404 : 500).json(result);
-    }
+    const slab = await getFeeConcessionSlabById(id);
+    if (!slab)
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            `Fee concession slab with ID ${id} not found`,
+          ),
+        );
 
-    return res.status(200).json(result);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          slab,
+          "Fee concession slab retrieved successfully",
+        ),
+      );
   } catch (error) {
     return handleError(error, res);
   }
@@ -80,13 +124,29 @@ export async function updateFeeConcessionSlabHandler(
     const partialSchema = createFeeConcessionSlabSchema.partial();
     const parsed = partialSchema.parse(req.body);
 
-    const result = await updateFeeConcessionSlab(id, parsed);
-    if (!result.success) {
-      const isNotFound = result.message.includes("not found");
-      return res.status(isNotFound ? 404 : 500).json(result);
-    }
+    const updated = await updateFeeConcessionSlab(id, parsed);
+    if (!updated)
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            `Fee concession slab with ID ${id} not found`,
+          ),
+        );
 
-    return res.status(200).json(result);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          updated,
+          "Fee concession slab updated successfully",
+        ),
+      );
   } catch (error) {
     return handleError(error, res);
   }
@@ -103,13 +163,29 @@ export async function deleteFeeConcessionSlabHandler(
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const result = await deleteFeeConcessionSlab(id);
-    if (!result.success) {
-      const isNotFound = result.message.includes("not found");
-      return res.status(isNotFound ? 404 : 500).json(result);
-    }
+    const deleted = await deleteFeeConcessionSlab(id);
+    if (!deleted)
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            `Fee concession slab with ID ${id} not found`,
+          ),
+        );
 
-    return res.status(200).json(result);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "DELETED",
+          deleted,
+          "Fee concession slab deleted successfully",
+        ),
+      );
   } catch (error) {
     return handleError(error, res);
   }

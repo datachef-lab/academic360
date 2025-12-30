@@ -8,13 +8,27 @@ import {
 } from "../services/fee-head.service";
 import { createFeeHeadSchema } from "@repo/db/schemas";
 import { handleError } from "@/utils";
+import { ApiResponse } from "@/utils/ApiResonse";
 
 export async function createFeeHeadHandler(req: Request, res: Response) {
   try {
     const parsed = createFeeHeadSchema.parse(req.body);
-    const result = await createFeeHead(parsed);
-    if (!result.success) return res.status(500).json(result);
-    return res.status(201).json(result);
+    const created = await createFeeHead(parsed);
+    if (!created)
+      return res
+        .status(500)
+        .json(new ApiResponse(500, "ERROR", null, "Failed to create fee head"));
+
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          "SUCCESS",
+          created,
+          "Fee head created successfully",
+        ),
+      );
   } catch (error) {
     return handleError(error, res);
   }
@@ -22,9 +36,17 @@ export async function createFeeHeadHandler(req: Request, res: Response) {
 
 export async function getAllFeeHeadsHandler(_req: Request, res: Response) {
   try {
-    const result = await getAllFeeHeads();
-    if (!result.success) return res.status(500).json(result);
-    return res.status(200).json(result);
+    const rows = await getAllFeeHeads();
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          rows,
+          "Fee heads retrieved successfully",
+        ),
+      );
   } catch (error) {
     return handleError(error, res);
   }
@@ -38,13 +60,24 @@ export async function getFeeHeadByIdHandler(req: Request, res: Response) {
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const result = await getFeeHeadById(id);
-    if (!result.success) {
-      const isNotFound = result.message.includes("not found");
-      return res.status(isNotFound ? 404 : 500).json(result);
-    }
+    const row = await getFeeHeadById(id);
+    if (!row)
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            `Fee head with ID ${id} not found`,
+          ),
+        );
 
-    return res.status(200).json(result);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", row, "Fee head retrieved successfully"),
+      );
   } catch (error) {
     return handleError(error, res);
   }
@@ -61,13 +94,29 @@ export async function updateFeeHeadHandler(req: Request, res: Response) {
     const partialSchema = createFeeHeadSchema.partial();
     const parsed = partialSchema.parse(req.body);
 
-    const result = await updateFeeHead(id, parsed);
-    if (!result.success) {
-      const isNotFound = result.message.includes("not found");
-      return res.status(isNotFound ? 404 : 500).json(result);
-    }
+    const updated = await updateFeeHead(id, parsed);
+    if (!updated)
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            `Fee head with ID ${id} not found`,
+          ),
+        );
 
-    return res.status(200).json(result);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          updated,
+          "Fee head updated successfully",
+        ),
+      );
   } catch (error) {
     return handleError(error, res);
   }
@@ -81,13 +130,29 @@ export async function deleteFeeHeadHandler(req: Request, res: Response) {
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const result = await deleteFeeHead(id);
-    if (!result.success) {
-      const isNotFound = result.message.includes("not found");
-      return res.status(isNotFound ? 404 : 500).json(result);
-    }
+    const deleted = await deleteFeeHead(id);
+    if (!deleted)
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            `Fee head with ID ${id} not found`,
+          ),
+        );
 
-    return res.status(200).json(result);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "DELETED",
+          deleted,
+          "Fee head deleted successfully",
+        ),
+      );
   } catch (error) {
     return handleError(error, res);
   }

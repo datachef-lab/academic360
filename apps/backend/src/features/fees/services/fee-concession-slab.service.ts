@@ -6,150 +6,58 @@ import {
 } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 
-export type ServiceResult<T> = {
-  success: boolean;
-  message: string;
-  data?: T;
-  error?: unknown;
-};
-
+/**
+ * Services return raw DTOs/arrays/null and do not catch errors.
+ * Validation is performed in controllers via zod schemas.
+ */
 export const createFeeConcessionSlab = async (
   data: FeeConcessionSlab,
-): Promise<ServiceResult<typeof feeConcessionSlabModel.$inferSelect>> => {
-  try {
-    // Validate input using the drizzle-zod schema
-    createFeeConcessionSlabSchema.parse(data);
-
-    const [created] = await db
-      .insert(feeConcessionSlabModel)
-      .values(data)
-      .returning();
-
-    return {
-      success: true,
-      message: "Fee concession slab created successfully",
-      data: created,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: "Failed to create fee concession slab",
-      error,
-    };
-  }
+): Promise<typeof feeConcessionSlabModel.$inferSelect> => {
+  const [created] = await db
+    .insert(feeConcessionSlabModel)
+    .values(data)
+    .returning();
+  return created;
 };
 
 export const getAllFeeConcessionSlabs = async (): Promise<
-  ServiceResult<(typeof feeConcessionSlabModel.$inferSelect)[]>
+  (typeof feeConcessionSlabModel.$inferSelect)[]
 > => {
-  try {
-    const slabs = await db.select().from(feeConcessionSlabModel);
-    return {
-      success: true,
-      message: "Fee concession slabs retrieved successfully",
-      data: slabs,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: "Failed to retrieve fee concession slabs",
-      error,
-    };
-  }
+  const slabs = await db.select().from(feeConcessionSlabModel);
+  return slabs;
 };
 
 export const getFeeConcessionSlabById = async (
   id: number,
-): Promise<ServiceResult<typeof feeConcessionSlabModel.$inferSelect>> => {
-  try {
-    const [slab] = await db
-      .select()
-      .from(feeConcessionSlabModel)
-      .where(eq(feeConcessionSlabModel.id, id));
+): Promise<typeof feeConcessionSlabModel.$inferSelect | null> => {
+  const [slab] = await db
+    .select()
+    .from(feeConcessionSlabModel)
+    .where(eq(feeConcessionSlabModel.id, id));
 
-    if (!slab) {
-      return {
-        success: false,
-        message: `Fee concession slab with ID ${id} not found`,
-      };
-    }
-
-    return {
-      success: true,
-      message: "Fee concession slab retrieved successfully",
-      data: slab,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: "Error retrieving fee concession slab",
-      error,
-    };
-  }
+  return slab ?? null;
 };
 
 export const updateFeeConcessionSlab = async (
   id: number,
   data: Partial<FeeConcessionSlab>,
-): Promise<ServiceResult<typeof feeConcessionSlabModel.$inferSelect>> => {
-  try {
-    // Use partial schema for validation
-    const partialSchema = createFeeConcessionSlabSchema.partial();
-    partialSchema.parse(data);
+): Promise<typeof feeConcessionSlabModel.$inferSelect | null> => {
+  const [updated] = await db
+    .update(feeConcessionSlabModel)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(feeConcessionSlabModel.id, id))
+    .returning();
 
-    const [updated] = await db
-      .update(feeConcessionSlabModel)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(feeConcessionSlabModel.id, id))
-      .returning();
-
-    if (!updated) {
-      return {
-        success: false,
-        message: `Fee concession slab with ID ${id} not found`,
-      };
-    }
-
-    return {
-      success: true,
-      message: "Fee concession slab updated successfully",
-      data: updated,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: "Failed to update fee concession slab",
-      error,
-    };
-  }
+  return updated ?? null;
 };
 
 export const deleteFeeConcessionSlab = async (
   id: number,
-): Promise<ServiceResult<typeof feeConcessionSlabModel.$inferSelect>> => {
-  try {
-    const [deleted] = await db
-      .delete(feeConcessionSlabModel)
-      .where(eq(feeConcessionSlabModel.id, id))
-      .returning();
+): Promise<typeof feeConcessionSlabModel.$inferSelect | null> => {
+  const [deleted] = await db
+    .delete(feeConcessionSlabModel)
+    .where(eq(feeConcessionSlabModel.id, id))
+    .returning();
 
-    if (!deleted) {
-      return {
-        success: false,
-        message: `Fee concession slab with ID ${id} not found`,
-      };
-    }
-
-    return {
-      success: true,
-      message: "Fee concession slab deleted successfully",
-      data: deleted,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: "Failed to delete fee concession slab",
-      error,
-    };
-  }
+  return deleted ?? null;
 };

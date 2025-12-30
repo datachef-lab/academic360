@@ -94,6 +94,7 @@ import { Request, Response } from "express";
 import { AddOn } from "@repo/db/schemas";
 import * as addonService from "../services/addon.service";
 import { handleError } from "@/utils";
+import { ApiResponse } from "@/utils/ApiResonse";
 
 /**
  * Create a new addon
@@ -101,13 +102,18 @@ import { handleError } from "@/utils";
 export async function createAddonHandler(req: Request, res: Response) {
   try {
     const body = req.body as AddOn;
-    const result = await addonService.createAddon(body);
+    const created = await addonService.createAddon(body);
 
-    if (!result.success) {
-      return res.status(500).json(result);
+    // If service unexpectedly returns null/undefined treat as internal error
+    if (!created) {
+      return res
+        .status(500)
+        .json(new ApiResponse(500, "ERROR", null, "Failed to create addon"));
     }
 
-    return res.status(201).json(result);
+    return res
+      .status(201)
+      .json(new ApiResponse(201, "SUCCESS", created, "Addon created"));
   } catch (error) {
     return handleError(error, res);
   }
@@ -118,13 +124,10 @@ export async function createAddonHandler(req: Request, res: Response) {
  */
 export async function getAllAddonsHandler(_req: Request, res: Response) {
   try {
-    const result = await addonService.getAllAddons();
-
-    if (!result.success) {
-      return res.status(500).json(result);
-    }
-
-    return res.status(200).json(result);
+    const addons = await addonService.getAllAddons();
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", addons, "Addons fetched"));
   } catch (error) {
     return handleError(error, res);
   }
@@ -137,19 +140,20 @@ export async function getAddonByIdHandler(req: Request, res: Response) {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+
+    const addon = await addonService.getAddonById(id);
+
+    if (!addon) {
       return res
-        .status(400)
-        .json({ success: false, message: "Invalid ID format" });
+        .status(404)
+        .json(new ApiResponse(404, "NOT_FOUND", null, "Addon not found"));
     }
 
-    const result = await addonService.getAddonById(id);
-
-    if (!result.success) {
-      const isNotFound = result.message.includes("not found");
-      return res.status(isNotFound ? 404 : 500).json(result);
-    }
-
-    return res.status(200).json(result);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", addon, "Addon fetched"));
   } catch (error) {
     return handleError(error, res);
   }
@@ -162,20 +166,21 @@ export async function updateAddonHandler(req: Request, res: Response) {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid ID format" });
+      return res.status(400).json({ message: "Invalid ID format" });
     }
 
     const body = req.body as Partial<AddOn>;
-    const result = await addonService.updateAddon(id, body);
+    const updated = await addonService.updateAddon(id, body);
 
-    if (!result.success) {
-      const isNotFound = result.message.includes("not found");
-      return res.status(isNotFound ? 404 : 500).json(result);
+    if (!updated) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, "NOT_FOUND", null, "Addon not found"));
     }
 
-    return res.status(200).json(result);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", updated, "Addon updated"));
   } catch (error) {
     return handleError(error, res);
   }
@@ -188,19 +193,20 @@ export async function deleteAddonHandler(req: Request, res: Response) {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+
+    const deleted = await addonService.deleteAddon(id);
+
+    if (!deleted) {
       return res
-        .status(400)
-        .json({ success: false, message: "Invalid ID format" });
+        .status(404)
+        .json(new ApiResponse(404, "NOT_FOUND", null, "Addon not found"));
     }
 
-    const result = await addonService.deleteAddon(id);
-
-    if (!result.success) {
-      const isNotFound = result.message.includes("not found");
-      return res.status(isNotFound ? 404 : 500).json(result);
-    }
-
-    return res.status(200).json(result);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "DELETED", deleted, "Addon deleted"));
   } catch (error) {
     return handleError(error, res);
   }
