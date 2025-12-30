@@ -11,6 +11,7 @@ import {
   downloadSingleAdmitCard,
   findAll,
   findById,
+  findByStudentId,
   findExamPapersByExamId,
   findExamsByStudentId,
   getStudentsByPapers,
@@ -689,6 +690,32 @@ export const getExamByIdController = async (
     }
 
     const result = await findById(id);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", result, "Exams fetched successfully"),
+      );
+  } catch (error) {
+    console.error("[GET-STUDENT-EXAMS] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const getExamsByStudentIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const studentId = Number(req.params.studentId);
+
+    if (isNaN(studentId)) {
+      res.status(400).json(new ApiError(400, "Invalid exam id"));
+      return;
+    }
+
+    const result = await findByStudentId(studentId);
 
     res
       .status(200)

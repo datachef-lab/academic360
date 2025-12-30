@@ -100,12 +100,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             isActive: pathname === "/dashboard/admission-registration",
           },
         ]),
-    // {
-    //   title: "Exams",
-    //   url: "/dashboard/exams",
-    //   icon: NotebookPen,
-    //   isActive: pathname === "/dashboard/exams",
-    // },
+    {
+      title: "Exams",
+      url: "/dashboard/exams",
+      icon: NotebookPen,
+      isActive: pathname === "/dashboard/exams",
+    },
     // {
     //   title: "Course Catalogue",
     //   url: "/dashboard/course-catalogue",

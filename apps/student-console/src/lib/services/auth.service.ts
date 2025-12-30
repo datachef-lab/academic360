@@ -7,7 +7,7 @@
 // import { axiosInstance } from '../utils';
 import type { UserDto } from "@repo/db/dtos/user";
 import { ApiResponse } from "@/types/api-response";
-import { ingaxiosInstance as axiosInstance } from "@/lib/utils";
+import { axiosInstance } from "@/lib/utils";
 
 // Export all auth service functions
 

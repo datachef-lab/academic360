@@ -1401,6 +1401,25 @@ export async function findById(id: number): Promise<ExamDto | null> {
   return await modelToDto(foundExam);
 }
 
+export async function findByStudentId(studentId: number): Promise<ExamDto[]> {
+  const foundExams = await db
+    .select()
+    .from(examModel)
+    .leftJoin(examCandidateModel, eq(examCandidateModel.examId, examModel.id))
+    .leftJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .where(eq(studentModel.id, studentId));
+
+  return (
+    await Promise.all(
+      foundExams.map(async (exm) => await modelToDto(exm.exams)),
+    )
+  ).filter((ele) => ele !== null);
+}
+
 export async function findAll(
   page: number = 1,
   pageSize: number = 10,

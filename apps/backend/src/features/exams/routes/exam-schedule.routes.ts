@@ -44,6 +44,7 @@ router.get(
 router.post("/", verifyJWT, uploadExcelMiddleware, createExamAssignmenthandler);
 router.get("/exam-candidates/download", downloadExamCandidatesController);
 router.get("/", getAllExamsController);
+// router.post("/student/:studentId", verifyJWT, uploadExcelMiddleware, getExamsByStudentController);
 router.get("/admit-card/download/single", downloadSingleAdmitCardController);
 router.get("/:id", getExamByIdController);
 router.get("/exam-papers/:id", getExamPapersByExamIdController);

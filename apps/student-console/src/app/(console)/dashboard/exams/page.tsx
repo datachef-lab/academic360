@@ -34,6 +34,7 @@ import { useStudent } from "@/providers/student-provider";
 import { format, parseISO } from "date-fns";
 import { useRouter } from "next/navigation";
 import { ExamDto } from "@/dtos";
+import { fetchExamsByStudentId } from "@/services/exam-api.service";
 interface Exam {
   id: number;
   testid: number;
@@ -59,6 +60,7 @@ export default function ExamsContent() {
   const { student, accessControl } = useStudent();
   const router = useRouter();
   const [allExams, setAllExams] = useState<Exam[]>([]);
+  const [exams, setExams] = useState<ExamDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
@@ -78,47 +80,70 @@ export default function ExamsContent() {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   // Upcoming exams: future dates (starting from tomorrow)
-  const upcomingExams = allExams
+  const upcomingExams = exams
     .filter((exam) => {
-      const examDate = parseISO(exam.examdate);
+      const examDate = new Date(exam.examSubjects[0].startTime);
       examDate.setHours(0, 0, 0, 0);
       return examDate > today;
     })
-    .sort((a, b) => parseISO(a.examdate).getTime() - parseISO(b.examdate).getTime());
+    .sort(
+      (a, b) =>
+        parseISO(new Date(a.examSubjects[0].startTime).toISOString()).getTime() -
+        parseISO(new Date(b.examSubjects[0].startTime).toISOString()).getTime(),
+    );
 
   // Today's exams: exams happening today
-  const recentExams = allExams
+  const recentExams = exams
     .filter((exam) => {
-      const examDate = parseISO(exam.examdate);
+      const examDate = new Date(exam.examSubjects[0].startTime);
       examDate.setHours(0, 0, 0, 0);
+
       return examDate.getTime() === today.getTime();
     })
-    .sort((a, b) => a.frmhr * 60 + a.frmmnt - (b.frmhr * 60 + b.frmmnt));
+    .sort((a, b) => {
+      const timeA = new Date(a.examSubjects[0].startTime).getTime();
+      const timeB = new Date(b.examSubjects[0].startTime).getTime();
+      return timeA - timeB;
+    });
 
   // Completed exams: exams from before today or completed today based on time
-  const previousExams = allExams
+  const previousExams = exams
     .filter((exam) => {
-      const examDate = parseISO(exam.examdate);
+      const subject = exam.examSubjects[0];
+
+      const examStart = new Date(subject.startTime);
+      const examEnd = new Date(subject.endTime);
+
+      const examDate = new Date(examStart);
       examDate.setHours(0, 0, 0, 0);
 
-      // If exam date is before today, it's definitely in the past
-      if (examDate < today) return true;
+      // 1️⃣ Exams before today
+      if (examDate.getTime() < today.getTime()) return true;
 
-      // If exam is today, check if it's completed based on end time
+      // 2️⃣ Exams today but already completed
       if (examDate.getTime() === today.getTime()) {
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        const examEndTimeInMinutes = exam.tohr * 60 + exam.tomnt;
-        const currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-        // If current time is past the exam end time, it's completed
-        return currentTimeInMinutes > examEndTimeInMinutes;
+        return new Date() > examEnd;
       }
 
       return false;
     })
-    .sort((a, b) => parseISO(b.examdate).getTime() - parseISO(a.examdate).getTime());
+    .sort((a, b) => {
+      const endA = new Date(a.examSubjects[0].endTime).getTime();
+      const endB = new Date(b.examSubjects[0].endTime).getTime();
+      return endB - endA; // latest completed first
+    });
+
+  useEffect(() => {
+    if (!student?.id) return;
+    fetchExamsByStudentId(student?.id!)
+      .then((data) => {
+        console.log("Fetched exams via service:", data, data.payload.content);
+        setExams(data.payload.content);
+      })
+      .catch((err) => {
+        console.log("Error fetching exams via service:", err);
+      });
+  }, [student?.id]);
 
   useEffect(() => {
     // If we don't have a student ID yet, do nothing
@@ -190,15 +215,35 @@ export default function ExamsContent() {
   const semesters = [...new Set(allExams.map((exam) => exam.sessionName))];
 
   // Get next exam date in days
+  //   const getNextExamDaysAway = () => {
+  //     if (upcomingExams.length === 0) return "N/A";
+
+  //     const nextExamDate = upcomingExams[0].examSubjects[0].startTime.toISOString();
+  //     const today = new Date();
+  //     const diffTime = Math.abs(nextExamDate.getTime() - today.getTime());
+  //     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  //     return diffDays === 0 ? "Today" : `${diffDays} days`;
+  //   };
+
   const getNextExamDaysAway = () => {
     if (upcomingExams.length === 0) return "N/A";
 
-    const nextExamDate = parseISO(upcomingExams[0].examdate);
+    const nextExamDate = new Date(upcomingExams[0].examSubjects[0].startTime);
+
     const today = new Date();
-    const diffTime = Math.abs(nextExamDate.getTime() - today.getTime());
+
+    // Normalize both to midnight for day-based diff
+    nextExamDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
+    const diffTime = nextExamDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    return diffDays === 0 ? "Today" : `${diffDays} days`;
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
+
+    return `${diffDays} days`;
   };
 
   // Format time from hours and minutes
@@ -253,38 +298,54 @@ export default function ExamsContent() {
   const getTotalTodayExamDuration = () => {
     if (recentExams.length === 0) return 0;
 
+    // return recentExams.reduce((total, exam) => {
+    //   const startMinutes = exam.frmhr * 60 + exam.frmmnt;
+
+    //   // Handle the case where tohr/tomnt might be Date objects or numbers
+    //   let endHourVal: number;
+    //   let endMinVal: number;
+
+    //   if (typeof exam.tohr === "object" && exam.tohr !== null) {
+    //     // If it's a Date object
+    //     endHourVal = (exam.tohr as Date).getHours();
+    //   } else {
+    //     // If it's a number or string
+    //     endHourVal = Number(exam.tohr);
+    //   }
+
+    //   if (typeof exam.tomnt === "object" && exam.tomnt !== null) {
+    //     // If it's a Date object
+    //     endMinVal = (exam.tomnt as Date).getMinutes();
+    //   } else {
+    //     // If it's a number or string
+    //     endMinVal = Number(exam.tomnt);
+    //   }
+
+    //   const endMinutes = endHourVal * 60 + endMinVal;
+    //   const duration = endMinutes - startMinutes;
+
+    //   // If duration is invalid, use a default of 2 hours (120 minutes)
+    //   if (duration <= 0 || duration > 480 || isNaN(duration)) {
+    //     return total + 120; // Default 2 hours per exam
+    //   }
+
+    //   return total + duration;
+    // }, 0);
+
     return recentExams.reduce((total, exam) => {
-      const startMinutes = exam.frmhr * 60 + exam.frmmnt;
+      const subject = exam.examSubjects[0];
 
-      // Handle the case where tohr/tomnt might be Date objects or numbers
-      let endHourVal: number;
-      let endMinVal: number;
+      const start = new Date(subject.startTime);
+      const end = new Date(subject.endTime);
 
-      if (typeof exam.tohr === "object" && exam.tohr !== null) {
-        // If it's a Date object
-        endHourVal = (exam.tohr as Date).getHours();
-      } else {
-        // If it's a number or string
-        endHourVal = Number(exam.tohr);
+      const durationMinutes = (end.getTime() - start.getTime()) / 60000;
+
+      // Safety guard
+      if (durationMinutes <= 0 || durationMinutes > 480 || isNaN(durationMinutes)) {
+        return total + 120; // fallback 2 hours
       }
 
-      if (typeof exam.tomnt === "object" && exam.tomnt !== null) {
-        // If it's a Date object
-        endMinVal = (exam.tomnt as Date).getMinutes();
-      } else {
-        // If it's a number or string
-        endMinVal = Number(exam.tomnt);
-      }
-
-      const endMinutes = endHourVal * 60 + endMinVal;
-      const duration = endMinutes - startMinutes;
-
-      // If duration is invalid, use a default of 2 hours (120 minutes)
-      if (duration <= 0 || duration > 480 || isNaN(duration)) {
-        return total + 120; // Default 2 hours per exam
-      }
-
-      return total + duration;
+      return total + durationMinutes;
     }, 0);
   };
 
@@ -306,7 +367,7 @@ export default function ExamsContent() {
     index,
     variant = "default",
   }: {
-    exam: Exam;
+    exam: ExamDto;
     index: number;
     variant?: "default" | "today" | "completed";
   }) => {
@@ -354,30 +415,35 @@ export default function ExamsContent() {
                   <Icon className={`w-6 h-6 ${styles.iconColor}`} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">{exam.testName}</h3>
-                  <p className={`${styles.titleColor} font-medium mb-2`}>{exam.paperName}</p>
+                  <h3 className="text-lg font-semibold text-gray-800">{exam.examType.name}</h3>
+                  <p className={`${styles.titleColor} font-medium mb-2`}>{"exam.paperName"}</p>
                   <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                     <div className="flex items-center">
                       <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {format(parseISO(exam.examdate), "MMMM d, yyyy")}
+                      {format(new Date(exam.examSubjects[0].startTime).toISOString(), "MMMM d, yyyy")}
                     </div>
                     <div className="flex items-center">
                       <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {formatTime(exam.frmhr, exam.frmmnt)}
+                      {format(new Date(exam.examSubjects[0].startTime), "hh:mm a")}
                     </div>
                     <div className="flex items-center">
                       <FileText className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {formatDuration(exam.frmhr, exam.frmmnt, exam.tohr, exam.tomnt)}
+                      {/* {formatDuration(
+      new Date(exam.examSubjects[0].startTime),
+      new Date(exam.examSubjects[0].endTime)
+    )} */}
                     </div>
                     <div className="flex items-center">
                       <BarChart className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {exam.room}
+                      {"exam.room"}
                     </div>
                   </div>
                 </div>
               </div>
               <div className="mt-3 md:mt-0">
-                <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${styles.badge}`}>{exam.className}</span>
+                <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${styles.badge}`}>
+                  {exam.class.name}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -555,7 +621,7 @@ export default function ExamsContent() {
               <h3 className="text-lg font-medium text-gray-700 mb-2">Error Loading Exams</h3>
               <p className="text-gray-500 max-w-md mx-auto">{error}</p>
             </div>
-          ) : allExams.length === 0 ? (
+          ) : exams.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-700 mb-2">No Exams Found</h3>
@@ -612,7 +678,7 @@ export default function ExamsContent() {
                       </div>
                     </div>
                     {upcomingExams
-                      .filter((exam) => selectedSemester === "all" || exam.sessionName === selectedSemester)
+                      .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
                       .map((exam, index) => (
                         <ExamCard key={exam.id} exam={exam} index={index} variant="default" />
                       ))}
@@ -663,7 +729,7 @@ export default function ExamsContent() {
                       </div>
                     </div>
                     {recentExams
-                      .filter((exam) => selectedSemester === "all" || exam.sessionName === selectedSemester)
+                      .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
                       .map((exam, index) => (
                         <ExamCard key={exam.id} exam={exam} index={index} variant="today" />
                       ))}
@@ -680,7 +746,7 @@ export default function ExamsContent() {
                   </div>
                 ) : (
                   previousExams
-                    .filter((exam) => selectedSemester === "all" || exam.sessionName === selectedSemester)
+                    .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
                     .map((exam, index) => <ExamCard key={exam.id} exam={exam} index={index} variant="completed" />)
                 )}
               </TabsContentFixed>
