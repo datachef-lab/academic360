@@ -789,7 +789,7 @@ app.use("/api/v1/academics", academicYearRouter);
 // Register specific routes BEFORE generic routes to avoid route conflicts
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
 app.use("/api/v1/fees/student-fees", studentFeesRouter);
-
+app.use("/api/v1/fees/heads", feeHeadRouter);
 app.use("/api/v1/fees", feesRouter);
 
 app.use("/api/v1/courses", courseRouter);

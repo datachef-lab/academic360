@@ -239,8 +239,9 @@ export const useFeesHeads = () => {
         const response = await createFeesHead(newFeesHead);
         await fetchFeesHeads();
         return response.payload;
-      } catch {
-        showError({ message: "Failed to create fees head" });
+      } catch (error) {
+        console.error("Error creating fees head:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to create fees head" });
         return null;
       }
     },
@@ -253,8 +254,9 @@ export const useFeesHeads = () => {
         const response = await updateFeesHead(id, feesHead);
         await fetchFeesHeads();
         return response.payload;
-      } catch {
-        showError({ message: "Failed to update fees head" });
+      } catch (error) {
+        console.error("Error updating fees head:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to update fees head" });
         return null;
       }
     },
@@ -267,8 +269,9 @@ export const useFeesHeads = () => {
         await deleteFeesHead(id);
         await fetchFeesHeads();
         return true;
-      } catch {
-        showError({ message: "Failed to delete fees head" });
+      } catch (error) {
+        console.error("Error deleting fees head:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to delete fees head" });
         return false;
       }
     },
@@ -671,8 +674,9 @@ export const useFeeConcessionSlabs = () => {
         const response = await createFeeConcessionSlab(newSlab);
         await fetchFeeConcessionSlabs();
         return response.payload;
-      } catch {
-        showError({ message: "Failed to create fee concession slab" });
+      } catch (error) {
+        console.error("Error creating fee concession slab:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to create fee concession slab" });
         return null;
       }
     },
@@ -685,8 +689,9 @@ export const useFeeConcessionSlabs = () => {
         const response = await updateFeeConcessionSlab(id, slab);
         await fetchFeeConcessionSlabs();
         return response.payload;
-      } catch {
-        showError({ message: "Failed to update fee concession slab" });
+      } catch (error) {
+        console.error("Error updating fee concession slab:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to update fee concession slab" });
         return null;
       }
     },
@@ -699,8 +704,9 @@ export const useFeeConcessionSlabs = () => {
         await deleteFeeConcessionSlab(id);
         await fetchFeeConcessionSlabs();
         return true;
-      } catch {
-        showError({ message: "Failed to delete fee concession slab" });
+      } catch (error) {
+        console.error("Error deleting fee concession slab:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to delete fee concession slab" });
         return false;
       }
     },
