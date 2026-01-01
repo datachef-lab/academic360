@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Calendar, Clock, FileText, BarChart, GraduationCap, History } from "lucide-react";
+import { Calendar, Clock, FileText, BarChart, GraduationCap, History, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -35,6 +35,7 @@ import { format, parseISO } from "date-fns";
 import { useRouter } from "next/navigation";
 import { ExamDto } from "@/dtos";
 import { fetchExamsByStudentId } from "@/services/exam-api.service";
+import { ExamPapersModal } from "./exam-papers-modal";
 interface Exam {
   id: number;
   testid: number;
@@ -64,6 +65,8 @@ export default function ExamsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
+  const [selectedExam, setSelectedExam] = useState<ExamDto | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const hasInitialFetchRef = React.useRef(false);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
@@ -366,10 +369,12 @@ export default function ExamsContent() {
     exam,
     index,
     variant = "default",
+    onViewDetails,
   }: {
     exam: ExamDto;
     index: number;
     variant?: "default" | "today" | "completed";
+    onViewDetails: (exam: ExamDto) => void;
   }) => {
     const variantStyles = {
       default: {
@@ -426,24 +431,31 @@ export default function ExamsContent() {
                       <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
                       {format(new Date(exam.examSubjects[0].startTime), "hh:mm a")}
                     </div>
-                    <div className="flex items-center">
-                      <FileText className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {/* {formatDuration(
+                    {/* <div className="flex items-center">
+                      {/* <FileText className="w-4 h-4 mr-1.5 text-gray-400" /> */}
+                    {/* {formatDuration(
       new Date(exam.examSubjects[0].startTime),
       new Date(exam.examSubjects[0].endTime)
-    )} */}
+    )} 
                     </div>
                     <div className="flex items-center">
                       <BarChart className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {"exam.room"}
-                    </div>
+                      {"exam.room"} 
+                    </div> */}
                   </div>
                 </div>
               </div>
-              <div className="mt-3 md:mt-0">
+              <div className="mt-3 md:mt-0 flex items-center gap-3">
                 <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${styles.badge}`}>
                   {exam.class.name}
                 </span>
+                <button
+                  onClick={() => onViewDetails(exam)}
+                  className={`p-2 rounded-lg transition-all ${styles.iconBg} hover:opacity-80 ${styles.iconColor} cursor-pointer`}
+                  title="View exam papers"
+                >
+                  <Eye className="w-5 h-5" />
+                </button>
               </div>
             </div>
           </CardContent>
@@ -680,7 +692,16 @@ export default function ExamsContent() {
                     {upcomingExams
                       .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
                       .map((exam, index) => (
-                        <ExamCard key={exam.id} exam={exam} index={index} variant="default" />
+                        <ExamCard
+                          key={exam.id}
+                          exam={exam}
+                          index={index}
+                          variant="default"
+                          onViewDetails={(exam) => {
+                            setSelectedExam(exam);
+                            setIsModalOpen(true);
+                          }}
+                        />
                       ))}
                   </>
                 )}
@@ -731,7 +752,16 @@ export default function ExamsContent() {
                     {recentExams
                       .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
                       .map((exam, index) => (
-                        <ExamCard key={exam.id} exam={exam} index={index} variant="today" />
+                        <ExamCard
+                          key={exam.id}
+                          exam={exam}
+                          index={index}
+                          variant="today"
+                          onViewDetails={(exam) => {
+                            setSelectedExam(exam);
+                            setIsModalOpen(true);
+                          }}
+                        />
                       ))}
                   </>
                 )}
@@ -747,13 +777,29 @@ export default function ExamsContent() {
                 ) : (
                   previousExams
                     .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
-                    .map((exam, index) => <ExamCard key={exam.id} exam={exam} index={index} variant="completed" />)
+                    .map((exam, index) => (
+                      <ExamCard
+                        key={exam.id}
+                        exam={exam}
+                        index={index}
+                        variant="completed"
+                        onViewDetails={(exam) => {
+                          setSelectedExam(exam);
+                          setIsModalOpen(true);
+                        }}
+                      />
+                    ))
                 )}
               </TabsContentFixed>
             </TabsFixed>
           )}
         </motion.div>
       </div>
+
+      {/* Exam Papers Modal */}
+      {student?.id && (
+        <ExamPapersModal open={isModalOpen} onOpenChange={setIsModalOpen} exam={selectedExam} studentId={student.id} />
+      )}
     </div>
   );
 }
