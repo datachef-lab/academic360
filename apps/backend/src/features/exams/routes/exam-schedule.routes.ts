@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { NextFunction, Response, Router } from "express";
 import {
   countStudentsForExam,
   createExamAssignmenthandler,
@@ -53,12 +53,12 @@ router.get("/exam-candidates/download", downloadExamCandidatesController);
 router.get("/", getAllExamsController);
 // router.post("/student/:studentId", verifyJWT, uploadExcelMiddleware, getExamsByStudentController);
 router.get("/admit-card/download/single", downloadSingleAdmitCardController);
+router.get("/candidates", getExamCandiatesByStudentIdAndExamIdController);
 router.get("/:id", getExamByIdController);
 router.get("/exam-papers/:id", getExamPapersByExamIdController);
 /**
  * Get paginated exams for a student
  */
 router.get("/student/:studentId/exams", getExamsByStudentController);
-router.get("/candidates", getExamCandiatesByStudentIdAndExamIdController);
 
 export default router;
