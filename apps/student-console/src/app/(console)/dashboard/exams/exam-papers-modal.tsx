@@ -104,15 +104,12 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
 
     return candidates
       .map((candidate) => {
-        // Handle nested backend structure: backend returns { exam_candidates: {...}, paper: {...} }
-        // or flat structure if already transformed
         const candidateData = (candidate as any).exam_candidates ?? candidate;
         const examRoomId = candidateData?.examRoomId;
         const examSubjectId = candidateData?.examSubjectId;
         const seatNumber = candidateData?.seatNumber;
         const paper = candidate?.paper;
 
-        // Null safety checks
         if (!paper || !examRoomId || !examSubjectId) {
           console.warn("Missing required data in candidate:", { candidate, candidateData });
           return null;
@@ -175,7 +172,7 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `admit-card-${exam.id}-${studentId}.pdf`;
+      link.download = `admit-card-${examId}-${studentIdNum}.pdf`;
       document.body.appendChild(link);
       link.click();
 
@@ -204,19 +201,13 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
               <Button
                 onClick={handleDownloadAdmitCard}
                 disabled={downloading || loading}
-                className="flex items-center gap-2"
-                variant="outline"
+                className="h-10 w-10 rounded-full flex items-center justify-center bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
+                aria-label="Download admit card"
               >
                 {downloading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Downloading...
-                  </>
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
                 ) : (
-                  <>
-                    <Download className="h-4 w-4" />
-                    Download Admit Card
-                  </>
+                  <Download className="h-5 w-5 text-white" />
                 )}
               </Button>
             )}
@@ -243,47 +234,36 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
             <p className="text-gray-500">No exam papers found for this exam.</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {paperDetails.map((detail, index) => (
-              <Card key={index} className="border-indigo-100">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-lg text-gray-800">{detail.paperCode}</h4>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="w-4 h-4 mr-2 text-indigo-500" />
-                      <span className="font-medium">Date:</span>
-                      <span className="ml-2">{format(detail.startTime, "MMM d, yyyy")}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Clock className="w-4 h-4 mr-2 text-indigo-500" />
-                      <span className="font-medium">Time:</span>
-                      <span className="ml-2">
+          <div className="overflow-x-auto">
+            <table className="min-w-full border border-gray-200 bg-white text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Date & Time</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Venue</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Subject / Paper</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paperDetails.map((detail, index) => (
+                  <tr key={index} className="border-t last:border-b">
+                    <td className="px-4 py-3 align-top text-gray-700">
+                      <div className="font-medium">{format(detail.startTime, "MMM d, yyyy")}</div>
+                      <div className="text-gray-500 text-xs">
                         {format(detail.startTime, "hh:mm a")} - {format(detail.endTime, "hh:mm a")}
-                      </span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <MapPin className="w-4 h-4 mr-2 text-indigo-500" />
-                      <span className="font-medium">Room:</span>
-                      <span className="ml-2">{detail.room}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <MapPin className="w-4 h-4 mr-2 text-indigo-500" />
-                      <span className="font-medium">Floor:</span>
-                      <span className="ml-2">{detail.floor}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Hash className="w-4 h-4 mr-2 text-indigo-500" />
-                      <span className="font-medium">Seat Number:</span>
-                      <span className="ml-2 font-semibold text-indigo-600">{detail.seatNumber}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-top text-gray-700">
+                      <div className="font-medium">{detail.room}</div>
+                      <div className="text-gray-500 text-xs">
+                        {detail.floor} • Seat:{" "}
+                        <span className="font-semibold text-indigo-600">{detail.seatNumber}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-top text-gray-700">{detail.paperCode}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </DialogContent>
