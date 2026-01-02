@@ -1,5 +1,7 @@
+import * as XLSX from "xlsx";
+import fsO from "fs";
 import ExcelJS from "exceljs";
-import { db, pool } from "@/db/index.js";
+import { db, mysqlConnection, pool } from "@/db/index.js";
 import JSZip from "jszip";
 import fs from "fs/promises";
 import * as programCourseServices from "@/features/course-design/services/program-course.service";
@@ -8,7 +10,17 @@ import * as shiftService from "@/features/academics/services/shift.service";
 import * as roomServices from "./room.service";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
-import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import {
   ExamDto,
   ExamProgramCourseDto,
@@ -20,6 +32,7 @@ import {
 import {
   academicYearModel,
   classModel,
+  courseModel,
   ExamCandidate,
   examCandidateModel,
   examModel,
@@ -61,6 +74,15 @@ import { PaperDto } from "@repo/db/dtos";
 import { io } from "@/app";
 import { enqueueNotification } from "@/services/notificationClient";
 import pLimit from "p-limit";
+import {
+  OldSubject,
+  OldSubjectType,
+} from "@repo/db/legacy-system-types/admissions";
+import {
+  OldClass,
+  OldCourse,
+  OldPaperList,
+} from "@repo/db/legacy-system-types/course-design";
 
 export interface CountStudentsByPapersParams {
   classId: number;
@@ -3087,4 +3109,388 @@ export async function downloadAttendanceSheetsByExamId(
     zipBuffer,
     roomCount: totalRooms,
   };
+}
+
+interface OldStudentPapers {
+  affiliation: string;
+  regulation: string;
+  program_course: string;
+  uid: string;
+  user_name: string;
+  is_active: string;
+  registration_year: string;
+  promotion_academic_year: string;
+  promotion_status: string;
+  semester: string;
+  shift: string;
+  section: string;
+  class_roll_number: string;
+  university_roll_number: string;
+  university_registration_number: string;
+  subject: string;
+  subject_type: string;
+  selection_label: string;
+  selection_version: string;
+  paper_type: string;
+  paper: string;
+  paper_code: string;
+  credit: string;
+  is_elective: string;
+  legacy_student_id: number;
+  legacy_promotion_id: number;
+  legacy_paper_id: number;
+  legacy_subject_type_id: number;
+  legacy_subject_id: number;
+  legacy_course_id: number;
+  legacy_class_id: number;
+}
+
+interface NotFoundLegacyPaper {
+  affiliation: string;
+  regulation: string;
+  program_course: string;
+
+  semester: string;
+
+  subject: string;
+  subject_type: string;
+
+  paper_type: string;
+  paper: string;
+  paper_code: string;
+  credit: string;
+  is_elective: string;
+
+  legacy_paper_id: number;
+  legacy_subject_type_id: number;
+  legacy_subject_id: number;
+  legacy_course_id: number;
+  legacy_class_id: number;
+}
+
+export async function getIrpNotFoundCourseDesigns() {
+  const [oldStudentPapers] = (await mysqlConnection.query(`
+        SELECT
+            'Calcutta University' AS affiliation,
+            s.courseType AS regulation,
+            co.courseName AS program_course,
+            s.codenumber AS uid,
+            s.name AS user_name,
+            CASE WHEN s.active = 1 THEN 'Yes' ELSE 'No' END AS is_active,
+            COALESCE(hr_reg.registration_year, '') AS registration_year,
+            CONCAT(
+                SUBSTRING(pr_sess.sessionName, 1, 4),
+                '-',
+                RIGHT(pr_sess.sessionName, 2)
+            ) AS promotion_academic_year,
+            prs.spltype AS promotion_status,
+            REPLACE(cl.classname, 'Semester ', '') AS semester,
+            sh.shiftName AS shift,
+            COALESCE(sec.sectionName, '') AS section,
+            COALESCE(h.rollNo, '') AS class_roll_number,
+            
+            h.univrollno AS university_roll_number,
+            s.univregno AS university_registration_number,
+            COALESCE(sb.univcode, sb.subjectname) AS subject,
+            COALESCE(st.shortname, st.subjecttypename) AS subject_type,
+            '' AS selection_label,
+            '' AS selection_version,
+            
+            CASE WHEN p.allstudents = 1 THEN 'Mandatory' ELSE 'Elective' END AS paper_type,
+            pl.paperName AS paper,
+            pl.paperShortName AS paper_code,
+            pl.paperCreditPoint AS credit,
+            CASE WHEN p.allstudents = 1 THEN 'No' ELSE 'Yes' END AS is_elective,
+            s.id AS legacy_student_id,
+            h.id AS legacy_promotion_id,
+            pl.id AS legacy_paper_id,
+            st.id AS legacy_subject_type_id,
+            sb.id AS legacy_subject_id,
+            co.id AS legacy_course_id,
+            cl.id AS legacy_class_id
+
+        FROM studentpaperlinkingmain m
+        JOIN studentpaperlinkingpaperlist p
+            ON m.id = p.parent_id
+
+        JOIN historicalrecord h
+            ON m.courseid   = h.courseid
+        AND m.classid    = h.classid
+        AND m.sectionid = h.sectionid
+        AND m.shiftid   = h.shiftid
+        AND m.sessionid = h.sessionid
+
+        JOIN studentpersonaldetails s
+            ON h.parent_id = s.id
+
+        JOIN course co ON m.courseid = co.id
+        JOIN classes cl ON m.classid = cl.id
+        JOIN subjecttype st ON p.subjectTypeId = st.id
+        JOIN subject sb ON p.subjectId = sb.id
+        JOIN paperlist pl ON pl.id = p.paperId
+        JOIN currentsessionmaster pr_sess ON pr_sess.id = h.sessionid
+        JOIN shift sh ON sh.id = h.shiftId
+        JOIN section sec ON sec.id = h.sectionId
+        JOIN promotionstatus prs ON prs.id = h.promotionstatus
+        LEFT JOIN (
+            SELECT parent_id, YEAR(MIN(dateOfJoining)) AS registration_year
+            FROM historicalrecord
+            WHERE classid = 4
+            GROUP BY parent_id
+        ) hr_reg ON hr_reg.parent_id = s.id
+
+        WHERE
+            m.sessionid = 18
+            AND cl.id IN (5, 8)
+            AND p.allstudents IN (0, 1)
+
+        ORDER BY
+        hr_reg.registration_year,
+            program_course,
+            cl.id,
+            h.id,
+            uid,
+            subject_type
+        ;
+    `)) as [OldStudentPapers[], any];
+
+  console.log("Processing for legacy-subject-types...");
+  const foundLegacySubjectTypeIds = [
+    ...new Set(oldStudentPapers.map((p) => p.legacy_subject_type_id)),
+  ];
+  const notFoundLegacySubjectTypeIds: number[] = [];
+  let count = 0;
+  for (const legacySubjectTypeId of foundLegacySubjectTypeIds) {
+    console.log(`${count++} / ${foundLegacySubjectTypeIds.length}`);
+    const [[oldSubjectType]] = (await mysqlConnection.query(`
+            SELECT * FROM subjecttype WHERE id = ${legacySubjectTypeId}
+        `)) as [OldSubjectType[], any];
+
+    if (!oldSubjectType) {
+      notFoundLegacySubjectTypeIds.push(legacySubjectTypeId);
+      continue;
+    }
+
+    const [foundNewSubjectType] = await db
+      .select()
+      .from(subjectTypeModel)
+      .where(
+        or(
+          eq(subjectTypeModel.legacySubjectTypeId, legacySubjectTypeId),
+          ilike(subjectTypeModel.name, oldSubjectType.subjectTypeName!.trim()),
+        ),
+      );
+
+    if (!foundNewSubjectType) {
+      notFoundLegacySubjectTypeIds.push(legacySubjectTypeId);
+    }
+  }
+
+  console.log("Processing for legacy-courses...");
+  const foundLegacyCourseIds = [
+    ...new Set(oldStudentPapers.map((p) => p.legacy_course_id)),
+  ];
+  const notFoundLegacyCourseIds: number[] = [];
+  count = 0;
+  for (const legacyCourseId of foundLegacyCourseIds) {
+    console.log(`${count++} / ${foundLegacyCourseIds.length}`);
+    const [[oldCourse]] = (await mysqlConnection.query(`
+            SELECT * FROM course WHERE id = ${legacyCourseId}
+        `)) as [OldCourse[], any];
+
+    if (!oldCourse) {
+      notFoundLegacyCourseIds.push(legacyCourseId);
+      continue;
+    }
+
+    const [foundNewCourse] = await db
+      .select()
+      .from(courseModel)
+      .where(
+        or(
+          eq(courseModel.legacyCourseId, legacyCourseId),
+          ilike(courseModel.name, oldCourse.courseName!.trim()),
+        ),
+      );
+
+    if (!foundNewCourse) {
+      notFoundLegacyCourseIds.push(legacyCourseId);
+    }
+  }
+
+  console.log("Processing for legacy-subjects...");
+  const foundLegacySubjectIds = [
+    ...new Set(oldStudentPapers.map((p) => p.legacy_subject_id)),
+  ];
+  const notFoundLegacySubjectIds: number[] = [];
+  count = 0;
+  for (const legacySubjectId of foundLegacySubjectIds) {
+    console.log(`${count++} / ${foundLegacySubjectIds.length}`);
+    const [[oldSubject]] = (await mysqlConnection.query(`
+            SELECT * FROM subject WHERE id = ${legacySubjectId}
+        `)) as [OldSubject[], any];
+
+    if (!oldSubject) {
+      notFoundLegacySubjectIds.push(legacySubjectId);
+      continue;
+    }
+
+    const [foundNewSubject] = await db
+      .select()
+      .from(subjectModel)
+      .where(
+        or(
+          eq(subjectModel.legacySubjectId, legacySubjectId),
+          ilike(subjectModel.name, oldSubject.subjectName!.trim()),
+        ),
+      );
+
+    if (!foundNewSubject) {
+      notFoundLegacySubjectIds.push(legacySubjectId);
+    }
+  }
+
+  console.log("Processing for legacy-papers...");
+  // const foundLegacyPaperIds = [...new Set(oldStudentPapers.map((p) => p.legacy_paper_id))];
+  const notFoundLegacyPaperMap = new Map<string, NotFoundLegacyPaper>();
+
+  const uniquePaperCandidates = Array.from(
+    new Map(
+      oldStudentPapers.map((p) => [
+        [
+          p.legacy_subject_type_id,
+          p.legacy_subject_id,
+          p.legacy_course_id,
+          p.legacy_class_id,
+          p.legacy_paper_id,
+        ].join("-"),
+        p,
+      ]),
+    ).values(),
+  );
+
+  console.log(
+    `Reduced from ${oldStudentPapers.length} → ${uniquePaperCandidates.length}`,
+  );
+
+  count = 0;
+  for (let i = 0; i < uniquePaperCandidates.length; i++) {
+    const paper = uniquePaperCandidates[i];
+
+    console.log(
+      `Student Iteration: ${count++} / ${uniquePaperCandidates.length}`,
+    );
+    const [[oldSubjectType]] = (await mysqlConnection.query(`
+            SELECT * FROM subjecttype WHERE id = ${paper.legacy_subject_type_id}
+        `)) as [OldSubjectType[], any];
+
+    const [[oldSubject]] = (await mysqlConnection.query(`
+            SELECT * FROM subject WHERE id = ${paper.legacy_subject_id}
+        `)) as [OldSubject[], any];
+
+    const [[oldCourse]] = (await mysqlConnection.query(`
+            SELECT * FROM course WHERE id = ${paper.legacy_course_id}
+        `)) as [OldCourse[], any];
+
+    const [[oldClass]] = (await mysqlConnection.query(`
+            SELECT * FROM classes WHERE id = ${paper.legacy_class_id}
+        `)) as [OldClass[], any];
+
+    const [foundNewPaper] = await db
+      .select()
+      .from(paperModel)
+      .leftJoin(
+        subjectTypeModel,
+        eq(paperModel.subjectTypeId, subjectTypeModel.id),
+      )
+      .leftJoin(subjectModel, eq(paperModel.subjectId, subjectModel.id))
+      .leftJoin(
+        programCourseModel,
+        eq(paperModel.programCourseId, programCourseModel.id),
+      )
+      .leftJoin(courseModel, eq(programCourseModel.courseId, courseModel.id))
+      .leftJoin(classModel, eq(paperModel.classId, classModel.id))
+      .where(
+        and(
+          or(
+            eq(subjectTypeModel.legacySubjectTypeId, oldSubjectType?.id!),
+            ilike(
+              subjectTypeModel.name,
+              oldSubjectType?.subjectTypeName!.trim(),
+            ),
+          ),
+          or(
+            eq(subjectModel.legacySubjectId, oldSubject?.id!),
+            ilike(subjectModel.name, oldSubject?.subjectName!.trim()),
+          ),
+          or(
+            eq(courseModel.legacyCourseId, oldCourse?.id!),
+            ilike(courseModel.name, oldCourse?.courseName!.trim()),
+            ilike(programCourseModel.name, oldCourse?.courseName!.trim()),
+          ),
+          or(ilike(classModel.name, oldClass?.classname!.trim())),
+        ),
+      );
+
+    if (!foundNewPaper) {
+      const key = [
+        paper.legacy_paper_id,
+        paper.legacy_subject_id,
+        paper.legacy_subject_type_id,
+        paper.legacy_course_id,
+        paper.legacy_class_id,
+      ].join("-");
+
+      if (!notFoundLegacyPaperMap.has(key)) {
+        notFoundLegacyPaperMap.set(key, {
+          affiliation: paper.affiliation,
+          regulation: paper.regulation,
+          program_course: paper.program_course,
+          semester: paper.semester,
+          subject: paper.subject,
+          subject_type: paper.subject_type,
+          paper_type: paper.paper_type,
+          paper: paper.paper,
+          paper_code: paper.paper_code,
+          credit: paper.credit,
+          is_elective: paper.is_elective,
+          legacy_paper_id: paper.legacy_paper_id,
+          legacy_subject_type_id: paper.legacy_subject_type_id,
+          legacy_subject_id: paper.legacy_subject_id,
+          legacy_course_id: paper.legacy_course_id,
+          legacy_class_id: paper.legacy_class_id,
+        });
+      }
+    }
+  }
+
+  // console.log("notFoundLegacySubjectTypeIds", notFoundLegacySubjectTypeIds);
+  // console.log("notFoundLegacyCourseIds", notFoundLegacyCourseIds);
+  // console.log("notFoundLegacySubjectIds", notFoundLegacySubjectIds);
+  // console.log("notFoundLegacyPaperIds", JSON.stringify(notFoundLegacyPaperIds, null, 2));
+
+  const notFoundLegacyPaper = Array.from(notFoundLegacyPaperMap.values());
+
+  if (notFoundLegacyPaper.length === 0) {
+    console.log("No missing papers found. Excel not generated.");
+    return;
+  }
+  const worksheet = XLSX.utils.json_to_sheet(notFoundLegacyPaper);
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "irp-missing-papers");
+
+  const outputDir = path.join(process.cwd(), "exports");
+  if (!fsO.existsSync(outputDir)) {
+    fsO.mkdirSync(outputDir, { recursive: true });
+  }
+
+  const filePath = path.join(
+    outputDir,
+    `irp_not_found_course_designs_${Date.now()}.xlsx`,
+  );
+
+  XLSX.writeFile(workbook, filePath);
+
+  console.log(`✅ Excel file generated at: ${filePath}`);
 }
