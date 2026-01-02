@@ -1,24 +1,24 @@
 import React, { useMemo, useState } from "react";
-import { Edit, ReceiptIndianRupee, Trash2, FileDown } from "lucide-react";
-
-import Header from "@/components/common/PageHeader";
+import { Edit, ReceiptIndianRupee, Trash2, Download, Upload, PlusCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFeesReceiptTypes, useAddons } from "@/hooks/useFees";
 import { FeesReceiptType } from "@/types/fees";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 type ReceiptTypeForm = {
   name: string;
@@ -49,6 +49,9 @@ const FeesReceiptTypePage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingItem, setEditingItem] = useState<FeesReceiptType | null>(null);
   const [deletingItem, setDeletingItem] = useState<FeesReceiptType | null>(null);
+  const [searchText, setSearchText] = useState("");
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [form, setForm] = useState<ReceiptTypeForm>(EMPTY_FORM);
 
   const { feesReceiptTypes, loading, addFeesReceiptType, updateFeesReceiptTypeById, deleteFeesReceiptTypeById } =
@@ -58,14 +61,104 @@ const FeesReceiptTypePage: React.FC = () => {
 
   const addonMap = useMemo(() => new Map(addons.map((a) => [a.id, a.name])), [addons]);
 
-  /* -------------------- EXPORT -------------------- */
-  const handleExport = () => {
-    if (!feesReceiptTypes.length) {
-      toast.warning("No data to export");
+  // Filter receipt types based on search text
+  const filteredReceiptTypes = feesReceiptTypes.filter((receipt) => {
+    const searchLower = searchText.toLowerCase();
+    return (
+      receipt.name?.toLowerCase().includes(searchLower) ||
+      receipt.chk?.toLowerCase().includes(searchLower) ||
+      receipt.splType?.toLowerCase().includes(searchLower) ||
+      (receipt.addOnId && addonMap.get(receipt.addOnId)?.toLowerCase().includes(searchLower))
+    );
+  });
+
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      ["Name", "Chk", "ChkMisc", "PrintChln", "SplType", "AddOn", "PrintReceipt", "ChkOnline", "ChkOnSequence"],
+      ["Example Receipt", "", "", "", "", "", "", "", ""],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "fees_receipt_types_template.xlsx");
+    toast.success("Template downloaded successfully");
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkFile) {
+      toast.warning("Please select a file to upload");
       return;
     }
 
-    const csv = [
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+            toast.error("The uploaded file does not contain any sheets");
+            return;
+          }
+          const sheetName = workbook.SheetNames[0];
+          if (!sheetName || typeof sheetName !== "string") {
+            toast.error("The uploaded file does not contain any sheets");
+            return;
+          }
+          const worksheet = workbook.Sheets[sheetName];
+          if (!worksheet) {
+            toast.error("Failed to read worksheet from the uploaded file");
+            return;
+          }
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+          // Process and upload data
+          let successCount = 0;
+          let errorCount = 0;
+
+          for (const row of jsonData as any[]) {
+            try {
+              await addFeesReceiptType({
+                name: row["Name"] || "",
+                chk: row["Chk"] || null,
+                chkMisc: row["ChkMisc"] || null,
+                printChln: row["PrintChln"] || null,
+                splType: row["SplType"] || null,
+                addOnId: row["AddOn"] ? parseInt(row["AddOn"]) : null,
+                printReceipt: row["PrintReceipt"] || null,
+                chkOnline: row["ChkOnline"] || null,
+                chkOnSequence: row["ChkOnSequence"] || null,
+              });
+              successCount++;
+            } catch (error) {
+              errorCount++;
+              console.error("Error uploading row:", error);
+            }
+          }
+
+          toast.success(`Bulk upload completed: ${successCount} successful, ${errorCount} failed`);
+          setIsBulkUploadOpen(false);
+          setBulkFile(null);
+        } catch (error) {
+          console.error("Error processing file:", error);
+          toast.error("Failed to process file. Please check the format.");
+        }
+      };
+      reader.readAsArrayBuffer(bulkFile);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Failed to upload file");
+    }
+  };
+
+  const handleDownloadAll = () => {
+    if (!feesReceiptTypes.length) {
+      toast.warning("No data to download");
+      return;
+    }
+
+    const data = [
       ["ID", "Name", "Chk", "ChkMisc", "PrintChln", "SplType", "AddOn", "PrintReceipt", "ChkOnline", "ChkOnSequence"],
       ...feesReceiptTypes.map((r) => [
         r.id ?? "",
@@ -79,17 +172,13 @@ const FeesReceiptTypePage: React.FC = () => {
         r.chkOnline ?? "",
         r.chkOnSequence ?? "",
       ]),
-    ]
-      .map((row) => row.map((c) => `"${String(c)}"`).join(","))
-      .join("\n");
+    ];
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `fees_receipt_types_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Fees Receipt Types");
+    XLSX.writeFile(wb, `fees_receipt_types_${new Date().toISOString().split("T")[0]}.xlsx`);
+    toast.success("Data downloaded successfully");
   };
 
   /* -------------------- SAVE -------------------- */
@@ -153,6 +242,12 @@ const FeesReceiptTypePage: React.FC = () => {
     setShowModal(true);
   };
 
+  const handleAddNew = () => {
+    setEditingItem(null);
+    setForm(EMPTY_FORM);
+    setShowModal(true);
+  };
+
   const handleDeleteClick = (item: FeesReceiptType) => {
     setDeletingItem(item);
     setShowDeleteModal(true);
@@ -180,142 +275,215 @@ const FeesReceiptTypePage: React.FC = () => {
   /* -------------------- LOADING -------------------- */
   if (loading) {
     return (
-      <div className="min-h-[80vh] bg-white p-4">
-        <Header title="Fees Receipt Types" subtitle="Manage receipt & challan types" icon={ReceiptIndianRupee} />
-        <div className="flex items-center justify-center h-64 text-lg">Loading receipt types...</div>
+      <div className="p-4">
+        <Card className="border-none">
+          <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 bg-background">
+            <div>
+              <CardTitle className="flex items-center">
+                <ReceiptIndianRupee className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
+                Fees Receipt Types
+              </CardTitle>
+              <div className="text-muted-foreground">Manage receipt & challan types</div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center h-64 text-lg">Loading receipt types...</div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[80vh] bg-white p-4">
-      <Header
-        title="Fees Receipt Types"
-        subtitle="Manage receipt & challan types"
-        icon={ReceiptIndianRupee}
-        actions={
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => setShowModal(true)}>
-              + Add Receipt
+    <div className="p-4">
+      <Card className="border-none">
+        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 bg-background">
+          <div>
+            <CardTitle className="flex items-center">
+              <ReceiptIndianRupee className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
+              Fees Receipt Types
+            </CardTitle>
+            <div className="text-muted-foreground">Manage receipt & challan types</div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="mr-2 h-4 w-4" /> Bulk Upload
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bulk Upload Fees Receipt Types</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col gap-4">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                  />
+                  <Button onClick={handleBulkUpload} disabled={!bulkFile}>
+                    Upload
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+              <Download className="mr-2 h-4 w-4" /> Download Template
             </Button>
-            <Button size="sm" variant="outline" onClick={handleExport} disabled={!feesReceiptTypes.length}>
-              <FileDown className="h-4 w-4 mr-1" />
-              Export
+
+            <AlertDialog open={showModal} onOpenChange={setShowModal}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="default"
+                  onClick={handleAddNew}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{editingItem ? "Edit Receipt Type" : "Add Receipt Type"}</AlertDialogTitle>
+                </AlertDialogHeader>
+                <div className="py-4">
+                  {/* 2 Column Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {(
+                      [
+                        ["name", "Name", true],
+                        ["chk", "Chk"],
+                        ["chkMisc", "ChkMisc"],
+                        ["printChln", "PrintChln"],
+                        ["splType", "SplType"],
+                        ["printReceipt", "PrintReceipt"],
+                        ["chkOnline", "ChkOnline"],
+                        ["chkOnSequence", "ChkOnSequence"],
+                      ] as const
+                    ).map(([key, label, required]) => (
+                      <div key={key} className="flex flex-col gap-2">
+                        <Label>
+                          {label}
+                          {required && <span className="text-red-500 ml-1">*</span>}
+                        </Label>
+                        <Input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+                      </div>
+                    ))}
+
+                    {/* AddOn Field */}
+                    <div className="flex flex-col gap-2">
+                      <Label>AddOn</Label>
+                      <Select
+                        value={form.addOnId?.toString() || undefined}
+                        onValueChange={(value) =>
+                          setForm({
+                            ...form,
+                            addOnId: value ? Number(value) : null,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select AddOn (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {addons
+                            .filter((a) => a.id !== undefined && a.id !== null)
+                            .map((a) => {
+                              if (!a.id) return null;
+                              return (
+                                <SelectItem key={a.id} value={a.id.toString()}>
+                                  {a.name}
+                                </SelectItem>
+                              );
+                            })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 mt-6">
+                    <Button variant="secondary" onClick={handleClose}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={!form.name.trim()}>
+                      {editingItem ? "Update" : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </CardHeader>
+
+        <CardContent className="px-0">
+          <div className="bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
+            <Input
+              placeholder="Search..."
+              className="w-64"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
+              <Download className="h-4 w-4" /> Download
             </Button>
           </div>
-        }
-      />
 
-      {/* TABLE */}
-      <div className="overflow-x-auto rounded-xl shadow-md bg-white mt-6">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-100">
-              <TableHead className="text-center">#</TableHead>
-              <TableHead className="text-center">Name</TableHead>
-              <TableHead className="text-center">Chk</TableHead>
-              <TableHead className="text-center">Spl Type</TableHead>
-              <TableHead className="text-center">AddOn</TableHead>
-              <TableHead className="text-center">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {feesReceiptTypes.length ? (
-              feesReceiptTypes.map((row, idx) => (
-                <TableRow key={row.id} className="hover:bg-gray-50">
-                  <TableCell className="text-center font-medium">{idx + 1}</TableCell>
-                  <TableCell className="text-center">{row.name}</TableCell>
-                  <TableCell className="text-center">{row.chk || "-"}</TableCell>
-                  <TableCell className="text-center">{row.splType || "-"}</TableCell>
-                  <TableCell className="text-center">
-                    {row.addOnId ? (addonMap.get(row.addOnId) ?? row.addOnId) : "-"}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex justify-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(row)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(row)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-6">
-                  No records found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* ADD / EDIT MODAL */}
-      <Dialog open={showModal} onOpenChange={(o) => !o && handleClose()}>
-        <DialogContent className="sm:max-w-[800px]">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? "Edit Receipt Type" : "Add Receipt Type"}</DialogTitle>
-            <DialogDescription>Manage receipt and challan configuration</DialogDescription>
-          </DialogHeader>
-
-          {/* 2 Column Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-4">
-            {(
-              [
-                ["name", "Name", true],
-                ["chk", "Chk"],
-                ["chkMisc", "ChkMisc"],
-                ["printChln", "PrintChln"],
-                ["splType", "SplType"],
-                ["printReceipt", "PrintReceipt"],
-                ["chkOnline", "ChkOnline"],
-                ["chkOnSequence", "ChkOnSequence"],
-              ] as const
-            ).map(([key, label, required]) => (
-              <div key={key} className="flex flex-col gap-2">
-                <Label>
-                  {label}
-                  {required && <span className="text-red-500 ml-1">*</span>}
-                </Label>
-
-                <Input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
-              </div>
-            ))}
-
-            {/* AddOn Field */}
-            <div className="flex flex-col gap-2">
-              <Label>AddOn</Label>
-              <select
-                className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                value={form.addOnId ?? ""}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    addOnId: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-              >
-                <option value="">Select AddOn (optional)</option>
-                {addons.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+          <div className="relative" style={{ height: "600px" }}>
+            <div className="overflow-y-auto overflow-x-auto h-full">
+              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
+                <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
+                  <TableRow>
+                    <TableHead style={{ width: 60 }}>ID</TableHead>
+                    <TableHead style={{ width: 200 }}>Name</TableHead>
+                    <TableHead style={{ width: 100 }}>Chk</TableHead>
+                    <TableHead style={{ width: 120 }}>Spl Type</TableHead>
+                    <TableHead style={{ width: 150 }}>AddOn</TableHead>
+                    <TableHead style={{ width: 140 }}>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredReceiptTypes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center">
+                        No receipt types found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredReceiptTypes.map((row) => (
+                      <TableRow key={row.id} className="group">
+                        <TableCell style={{ width: 60 }}>{row.id}</TableCell>
+                        <TableCell style={{ width: 200 }}>{row.name}</TableCell>
+                        <TableCell style={{ width: 100 }}>{row.chk || "-"}</TableCell>
+                        <TableCell style={{ width: 120 }}>{row.splType || "-"}</TableCell>
+                        <TableCell style={{ width: 150 }}>
+                          {row.addOnId ? (addonMap.get(row.addOnId) ?? row.addOnId) : "-"}
+                        </TableCell>
+                        <TableCell style={{ width: 120 }}>
+                          <div className="flex space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteClick(row)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </div>
-
-          <DialogFooter>
-            <Button variant="secondary" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>{editingItem ? "Update" : "Save"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
 
       {/* DELETE CONFIRM */}
       <DeleteConfirmationModal

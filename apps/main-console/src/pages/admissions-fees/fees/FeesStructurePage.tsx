@@ -12,13 +12,19 @@ import {
   Pencil,
 } from "lucide-react";
 // import { toast } from "sonner";
-import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureForm";
+// import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureForm";
+import FeeStructureMaster from "@/components/fees/FeeStructureMaster";
 // import { getAllCourses } from "../../services/course-api";
 import { Course } from "@/types/course-design";
-import { FeesStructureDto, FeesSlabMapping, FeesSlab, CreateFeesStructureDto } from "@/types/fees";
+import { FeesStructureDto, FeesSlabMapping, FeesSlab } from "@/types/fees";
 import { AcademicYear } from "@/types/academics/academic-year";
-import { useFeesStructures, useAcademicYearsFromFeesStructures, useCoursesFromFeesStructures } from "@/hooks/useFees";
-import { useFeesSlabMappings, useFeesReceiptTypes } from "@/hooks/useFees";
+import {
+  useFeesStructures,
+  useAcademicYearsFromFeesStructures,
+  useCoursesFromFeesStructures,
+  useFeesHeads,
+} from "@/hooks/useFees";
+import { useFeesReceiptTypes } from "@/hooks/useFees";
 import { checkSlabsExistForAcademicYear, getFeesStructuresByAcademicYearAndCourse } from "@/services/fees-api";
 import axiosInstance from "@/utils/api";
 import { useShifts } from "@/hooks/useShifts";
@@ -30,15 +36,15 @@ import { getAllClasses } from "@/services/classes.service";
 
 const FeesStructurePage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
-  const setClasses = useState<Class[]>([])[1];
+  const [classes, setClasses] = useState<Class[]>([]);
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
   const [showSlabModal, setShowSlabModal] = useState(false);
-  const [modalFieldsDisabled, setModalFieldsDisabled] = useState(false);
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<AcademicYear | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeTab] = useState<"fees" | "slabs">("fees");
-  const [currentFeesStructure, setCurrentFeesStructure] = useState<FeesStructureDto | null>(null);
-  const [initialStep, setInitialStep] = useState(1);
+  // Note: currentFeesStructure and initialStep are commented out as they're only used in the commented FeeStructureForm component
+  // const [currentFeesStructure, setCurrentFeesStructure] = useState<FeesStructureDto | null>(null);
+  // const [initialStep, setInitialStep] = useState(1);
   const [slabYearMappings] = useState<FeesSlabMapping[]>([]);
   const setSlabsExistForYear = useState(false)[1];
   const [allSlabs, setAllSlabs] = useState<FeesSlab[]>([]);
@@ -53,9 +59,9 @@ const FeesStructurePage: React.FC = () => {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
 
   // Use the fees API hook
-  const { loading: feesLoading, addFeesStructure, updateFeesStructureById } = useFeesStructures();
-  const { addFeesSlabMappings } = useFeesSlabMappings();
+  const { loading: feesLoading, addFeesStructure } = useFeesStructures();
   const { feesReceiptTypes, loading: receiptTypesLoading } = useFeesReceiptTypes();
+  const { loading: feesHeadsLoading } = useFeesHeads();
 
   // Use the new hooks
   const { academicYears, loading: academicYearsLoading } = useAcademicYearsFromFeesStructures();
@@ -191,67 +197,6 @@ const FeesStructurePage: React.FC = () => {
     setAvailableCourses(filtered);
   };
 
-  const handleFeeStructureSubmit = async (
-    givenFeesStructure: FeesStructureDto | CreateFeesStructureDto,
-    formType: "ADD" | "EDIT",
-  ) => {
-    console.log("Fee Structure Form Data:", givenFeesStructure);
-    try {
-      // Duplicate check (for create only)
-      if (!currentFeesStructure?.id) {
-        const duplicate = filteredFeesStructures.find((fs) => {
-          // Type guard for course/courses
-          const givenCourseId =
-            "course" in givenFeesStructure ? givenFeesStructure.course?.id : givenFeesStructure.courses[0]?.id;
-          return (
-            fs.academicYear?.id === givenFeesStructure.academicYear?.id &&
-            fs.course?.id === givenCourseId &&
-            fs.class.id === givenFeesStructure.class.id &&
-            fs.shift?.id === givenFeesStructure.shift?.id &&
-            fs.feesReceiptTypeId === givenFeesStructure.feesReceiptTypeId
-          );
-        });
-        if (duplicate) {
-          alert(
-            "A fee structure with the same Academic Year, Course, Semester, Shift, and Receipt Type already exists.",
-          );
-          return;
-        }
-      }
-      if (givenFeesStructure.feesSlabMappings.length > 0) {
-        await addFeesSlabMappings(givenFeesStructure.feesSlabMappings);
-      }
-      if (formType === "EDIT") {
-        await updateFeesStructureById(currentFeesStructure!.id!, givenFeesStructure);
-      } else {
-        const created = await addFeesStructure(givenFeesStructure as CreateFeesStructureDto);
-        if (created) {
-          setSelectedAcademicYear(created.academicYear ?? null);
-          setSelectedCourse(created.course ?? null);
-
-          const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id == created.feesReceiptTypeId!)!;
-          setSelectedReceiptType(tmpSelectedFeesReceiptType);
-          setSelectedShift(created.shift!);
-
-          const tmpFilteredFeesStructures = feesStructures.filter(
-            (ele) => ele.feesReceiptTypeId === tmpSelectedFeesReceiptType?.id && ele.shift?.id === created.shift?.id,
-          );
-
-          setFilteredFeesStructures(tmpFilteredFeesStructures);
-        }
-      }
-      setShowFeeStructureForm(false);
-    } catch {
-      // Error handled
-    } finally {
-      if (selectedAcademicYear?.id && selectedCourse?.id) {
-        await fetchFeesStructures();
-      } else {
-        setFilteredFeesStructures([]);
-      }
-    }
-  };
-
   // const handleAdd = () => {
   //   if (!selectedAcademicYear || !selectedCourse) {
   //     toast.error("Please select both Academic Year and Course before adding a fee structure.");
@@ -300,18 +245,16 @@ const FeesStructurePage: React.FC = () => {
   //   setInitialStep(3); // Skip to fee configuration since slabs exist
   // };
 
-  const handleEdit = (fs: FeesStructureDto) => {
-    setModalFieldsDisabled(true);
-    setCurrentFeesStructure(fs);
+  const handleEdit = (_fs: FeesStructureDto) => {
+    // setCurrentFeesStructure(_fs); // Commented out - only used in commented FeeStructureForm
     setShowFeeStructureForm(true);
-    setInitialStep(2);
+    // setInitialStep(2); // Commented out - only used in commented FeeStructureForm
   };
 
   const handleCreate = () => {
-    setModalFieldsDisabled(false);
-    setCurrentFeesStructure(null);
+    // setCurrentFeesStructure(null); // Commented out - only used in commented FeeStructureForm
     setShowFeeStructureForm(true);
-    setInitialStep(1);
+    // setInitialStep(1); // Commented out - only used in commented FeeStructureForm
   };
 
   // const handleDelete = async (id: number) => {
@@ -398,7 +341,7 @@ const FeesStructurePage: React.FC = () => {
     }
   }, [coursesForSelectedYear, selectedCourse]);
 
-  if (academicYearsLoading || feesLoading || receiptTypesLoading || shiftsLoading) {
+  if (academicYearsLoading || feesLoading || receiptTypesLoading || shiftsLoading || feesHeadsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-lg">Loading fees structures...</div>
@@ -765,7 +708,8 @@ const FeesStructurePage: React.FC = () => {
         </div>
       )}
 
-      {showFeeStructureForm && (
+      {/* Commented out the old 5-step modal form */}
+      {/* {showFeeStructureForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <FeeStructureForm
             onClose={() => setShowFeeStructureForm(false)}
@@ -782,6 +726,29 @@ const FeesStructurePage: React.FC = () => {
             existingCourses={availableCourses}
           />
         </div>
+      )} */}
+
+      {/* New Fee Structure Master Modal */}
+      {showFeeStructureForm && (
+        <FeeStructureMaster
+          open={showFeeStructureForm}
+          onClose={() => setShowFeeStructureForm(false)}
+          receiptTypes={feesReceiptTypes}
+          classes={classes}
+          onSave={async (data) => {
+            try {
+              await addFeesStructure(data as any);
+              setShowFeeStructureForm(false);
+              // Refresh the fees structures list
+              if (selectedAcademicYear?.id && selectedCourse?.id) {
+                await fetchFeesStructures();
+              }
+            } catch (error) {
+              console.error("Error saving fee structure:", error);
+              alert("Failed to save fee structure. Please try again.");
+            }
+          }}
+        />
       )}
 
       {showSlabModal && (

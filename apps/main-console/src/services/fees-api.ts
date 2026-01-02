@@ -12,6 +12,7 @@ import {
   CreateFeesStructureDto,
   FeeConcessionSlab,
 } from "@/types/fees";
+import { CreateFeeStructureDto } from "@repo/db/dtos/fees";
 
 const BASE_PATH = "/api/v1/fees";
 
@@ -50,7 +51,7 @@ export async function getFeesStructure(feesStructureId: number): Promise<ApiResp
 
 // Create a new fees structure
 export async function createFeesStructure(
-  newFeesStructure: CreateFeesStructureDto,
+  newFeesStructure: CreateFeeStructureDto | CreateFeesStructureDto,
 ): Promise<ApiResponse<FeesStructureDto>> {
   const response = await axiosInstance.post(`${BASE_PATH}/structure`, newFeesStructure);
   return response.data;
