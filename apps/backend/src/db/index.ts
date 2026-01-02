@@ -36,6 +36,7 @@ import { CuRegistrationExcelService } from "@/services/cu-registration-excel.ser
 import { sendAdmRegFormToNotSendStudents } from "@/features/admissions/services/cu-registration-correction-request.service";
 import { exportStaffDataToExcel } from "@/features/user/services/tmp-service";
 import { loadAllStaff } from "@/features/user/services/staff.service";
+import { getIrpNotFoundCourseDesigns } from "@/features/exams/services/exam-schedule.service";
 
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -160,6 +161,7 @@ export const connectToMySQL = async () => {
     console.log(rows);
     // exportStaffDataToExcel();
     console.log("[MySQL] - Connected successfully. 🎉");
+    // getIrpNotFoundCourseDesigns();
   } catch (error) {
     console.error("[MySQL] - Connection failed: ⚠", error);
     // process.exit(1); // Exit the application if the database connection fails

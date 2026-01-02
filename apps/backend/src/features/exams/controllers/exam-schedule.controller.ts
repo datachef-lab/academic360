@@ -706,6 +706,8 @@ export const getExamCandiatesByStudentIdAndExamIdController = async (
   try {
     const { studentId, examId } = req.query;
 
+    console.log(req.query);
+
     if (!studentId || !examId) {
       res
         .status(400)
@@ -783,6 +785,7 @@ export const getExamByIdController = async (
   try {
     const id = Number(req.params.id);
 
+    console.log("in getExamByIdController()", id);
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid exam id"));
       return;
@@ -808,7 +811,7 @@ export const getExamsByStudentIdController = async (
 ): Promise<void> => {
   try {
     const studentId = Number(req.params.studentId);
-
+    console.log("in getExamsByStudentIdController()");
     if (isNaN(studentId)) {
       res.status(400).json(new ApiError(400, "Invalid exam id"));
       return;
@@ -834,6 +837,8 @@ export const getExamPapersByExamIdController = async (
 ): Promise<void> => {
   try {
     const id = Number(req.params.id);
+
+    console.log("in getExamPapersByExamIdController()");
 
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid exam id"));
