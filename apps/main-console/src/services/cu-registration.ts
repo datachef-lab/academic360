@@ -3,17 +3,22 @@ import type { CuRegistrationCorrectionRequestDto } from "@repo/db/dtos/admission
 
 const BASE = "/api/admissions/cu-registration-correction-requests";
 
+type CorrectionPayload =
+  | CuRegistrationCorrectionRequestDto[]
+  | { content: CuRegistrationCorrectionRequestDto[] }
+  | { requests: CuRegistrationCorrectionRequestDto[] };
+
 export async function getStudentCuCorrectionRequests(studentId: number) {
   console.info(`[CU-REG MAIN-CONSOLE] Fetching correction requests for student: ${studentId}`);
   try {
     const res = await axiosInstance.get<{
       success: boolean;
-      payload: CuRegistrationCorrectionRequestDto[] | { content: CuRegistrationCorrectionRequestDto[] };
+      payload: CorrectionPayload;
     }>(BASE, {
       params: { studentId },
     });
     console.info(`[CU-REG MAIN-CONSOLE] Correction requests response:`, res.data);
-    const p = res.data.payload;
+    const p = "requests" in res.data.payload ? res.data.payload.requests : res.data.payload;
     const result = (Array.isArray(p) ? p : p?.content) as CuRegistrationCorrectionRequestDto[];
     console.info(`[CU-REG MAIN-CONSOLE] Parsed correction requests:`, result);
     return result;
