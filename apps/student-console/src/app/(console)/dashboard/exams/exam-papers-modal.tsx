@@ -5,9 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ExamCandidateDto, ExamDto } from "@/dtos";
 import { fetchExamCandidates, downloadAdmitCard } from "@/services/exam-api.service";
 import { format } from "date-fns";
-import { Calendar, Clock, MapPin, Hash, Loader2, Download } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Loader2, Download } from "lucide-react";
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface ExamPapersModalProps {
   open: boolean;
@@ -28,9 +30,8 @@ interface PaperDetails {
 export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPapersModalProps) {
   const [candidates, setCandidates] = useState<ExamCandidateDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Validate required fields before making API call
@@ -39,8 +40,11 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
       const examId = typeof exam.id === "number" ? exam.id : Number(exam.id);
 
       if (isNaN(examId) || examId <= 0) {
-        console.error("Invalid exam.id:", exam.id, "Type:", typeof exam.id);
-        setError(`Invalid exam ID: ${exam.id}`);
+        toast({
+          title: "Invalid exam",
+          description: "Exam information is missing or invalid. Please refresh or contact support.",
+          variant: "destructive",
+        });
         setCandidates([]);
         setLoading(false);
         return;
@@ -48,17 +52,17 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
 
       const studentIdNum = typeof studentId === "number" ? studentId : Number(studentId);
       if (isNaN(studentIdNum) || studentIdNum <= 0) {
-        console.error("Invalid studentId:", studentId, "Type:", typeof studentId);
-        setError(`Invalid student ID: ${studentId}`);
+        toast({
+          title: "Invalid student",
+          description: "Student information is missing or invalid. Please sign in again or contact support.",
+          variant: "destructive",
+        });
         setCandidates([]);
         setLoading(false);
         return;
       }
 
       setLoading(true);
-      setError(null);
-
-      console.log("Fetching exam candidates with:", { examId, studentId: studentIdNum, examObject: exam });
 
       fetchExamCandidates(examId, studentIdNum)
         .then((response) => {
@@ -69,17 +73,15 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
           }
         })
         .catch((err) => {
-          console.error("Error fetching exam candidates:", err);
-          console.error("Error details:", {
-            message: err?.message,
-            response: err?.response?.data,
-            status: err?.response?.status,
-            examId,
-            studentId: studentIdNum,
-          });
-
           const errorMessage = err?.response?.data?.message || err?.message || "Failed to load exam papers";
-          setError(errorMessage);
+          toast({
+            title: "Could not load exam schedule",
+            description:
+              typeof errorMessage === "string"
+                ? errorMessage
+                : "An unexpected error occurred while loading exam papers.",
+            variant: "destructive",
+          });
           setCandidates([]);
         })
         .finally(() => {
@@ -87,12 +89,7 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
         });
     } else {
       if (open) {
-        console.warn("Missing required data:", {
-          exam: !!exam,
-          examId: exam?.id,
-          studentId,
-          open,
-        });
+        // missing required data; state will reflect empty candidates
       }
       setCandidates([]);
     }
@@ -111,21 +108,18 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
         const paper = candidate?.paper;
 
         if (!paper || !examRoomId || !examSubjectId) {
-          console.warn("Missing required data in candidate:", { candidate, candidateData });
           return null;
         }
 
         // Find matching exam room from exam.locations array
         const examRoom = exam.locations?.find((loc) => loc?.id === examRoomId);
         if (!examRoom || !examRoom.room) {
-          console.warn(`Exam room not found for examRoomId: ${examRoomId}`, exam.locations);
           return null;
         }
 
         // Find matching exam subject from exam.examSubjects array
         const examSubject = exam.examSubjects?.find((subj) => subj?.id === examSubjectId);
         if (!examSubject) {
-          console.warn(`Exam subject not found for examSubjectId: ${examSubjectId}`, exam.examSubjects);
           return null;
         }
 
@@ -145,7 +139,11 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
   // Download admit card handler
   const handleDownloadAdmitCard = async () => {
     if (!exam || !studentId || !exam.id) {
-      setDownloadError("Missing exam or student information");
+      toast({
+        title: "Download unavailable",
+        description: "Missing exam or student information. Please try again later.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -154,18 +152,25 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
     const studentIdNum = typeof studentId === "number" ? studentId : Number(studentId);
 
     if (isNaN(examId) || examId <= 0) {
-      setDownloadError(`Invalid exam ID: ${exam.id}`);
+      toast({
+        title: "Invalid exam",
+        description: "Exam information is invalid. Please contact support.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (isNaN(studentIdNum) || studentIdNum <= 0) {
-      setDownloadError(`Invalid student ID: ${studentId}`);
+      toast({
+        title: "Invalid student",
+        description: "Student information is invalid. Please sign in again or contact support.",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
       setDownloading(true);
-      setDownloadError(null);
       const blob = await downloadAdmitCard(examId, studentIdNum);
 
       // Create a download link
@@ -180,10 +185,11 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("Error downloading admit card:", err);
-      setDownloadError("Failed to download admit card. Please try again.");
-      // Clear error after 5 seconds
-      setTimeout(() => setDownloadError(null), 5000);
+      toast({
+        title: "Download failed",
+        description: "Failed to download admit card. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setDownloading(false);
     }
@@ -193,15 +199,19 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="p-0 gap-0 sm:max-w-2xl max-h-[85vh] border-none overflow-hidden shadow-elevated rounded-xl">
+        <DialogHeader className="bg-indigo-600 px-8 py-6">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold">Exam Papers & Details</DialogTitle>
+            <div className="space-y-1">
+              <DialogTitle className="text-2xl font-semibold text-white tracking-tight">Exam Schedule</DialogTitle>
+              <p className="text-white/80 text-sm font-medium"></p>
+            </div>
             {paperDetails.length > 0 && (
               <Button
                 onClick={handleDownloadAdmitCard}
                 disabled={downloading || loading}
-                className="h-10 w-10 rounded-full flex items-center justify-center bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
+                title="Download admit card (PDF)"
+                className="h-10 w-10 mr-3 rounded-full flex items-center justify-center bg-indigo-00/40 drop-shadow-sm text-white hover:bg-indigo-700 shadow-sm"
                 aria-label="Download admit card"
               >
                 {downloading ? (
@@ -214,56 +224,66 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
           </div>
         </DialogHeader>
 
-        {downloadError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600">{downloadError}</p>
-          </div>
-        )}
-
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
             <span className="ml-3 text-gray-600">Loading exam papers...</span>
-          </div>
-        ) : error ? (
-          <div className="text-center py-12">
-            <p className="text-red-600">{error}</p>
           </div>
         ) : paperDetails.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500">No exam papers found for this exam.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-gray-200 bg-white text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Date & Time</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Venue</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Subject / Paper</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paperDetails.map((detail, index) => (
-                  <tr key={index} className="border-t last:border-b">
-                    <td className="px-4 py-3 align-top text-gray-700">
-                      <div className="font-medium">{format(detail.startTime, "MMM d, yyyy")}</div>
-                      <div className="text-gray-500 text-xs">
-                        {format(detail.startTime, "hh:mm a")} - {format(detail.endTime, "hh:mm a")}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 align-top text-gray-700">
-                      <div className="font-medium">{detail.room}</div>
-                      <div className="text-gray-500 text-xs">
-                        {detail.floor} • Seat:{" "}
-                        <span className="font-semibold text-indigo-600">{detail.seatNumber}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 align-top text-gray-700">{detail.paperCode}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className=" rounded-md after:shadow-md  overflow-hidden flex-1 flex flex-col">
+            <Table>
+              <TableHeader className="bg-gray-200 ">
+                <TableRow className=" bg-gray-200 hover:bg-gray-200">
+                  <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider  py-4 pl-6 pr-4 ">
+                    Date & Time
+                  </TableHead>
+                  <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider  py-3 px-4">
+                    Venue
+                  </TableHead>
+                  <TableHead className="text-gray-800 font-semibold text-xs text-center uppercase tracking-wider py-3 px-2">
+                    Subject / Paper
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+            </Table>
+            <div className="overflow-auto max-h-[400px] thin-scrollbar">
+              <Table>
+                <TableBody>
+                  {paperDetails.map((detail, index) => (
+                    <TableRow key={index} className="border-b border-gray-200 hover:bg-white">
+                      <TableCell className="py-4 pl-6 pr-4 ">
+                        <div className="space-y-0.5">
+                          <div className="font-semibold text-gray-800 text-sm">
+                            {format(detail.startTime, "MMM d, yyyy")}
+                          </div>
+                          <div className="text-muted-gray-800 text-xs font-mono">
+                            {format(detail.startTime, "hh:mm a")} – {format(detail.endTime, "hh:mm a")}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4 px-4 ">
+                        <div className="space-y-0.5">
+                          <div className="font-semibold text-gray-800 text-sm">{detail.room}</div>
+                          <div className="text-muted-gray-800 text-xs flex items-center font-mono gap-1.5">
+                            {detail.floor} •
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-600/10 font-mono text-accent-gray-800 text-xs font-medium">
+                              Seat:{detail.seatNumber}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4 px-2 ">
+                        <div className="text-muted-gray-800  text-sm ">{detail.paperCode}</div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
       </DialogContent>

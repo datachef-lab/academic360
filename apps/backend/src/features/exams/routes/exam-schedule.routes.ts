@@ -53,12 +53,19 @@ router.get("/exam-candidates/download", downloadExamCandidatesController);
 router.get("/", getAllExamsController);
 // router.post("/student/:studentId", verifyJWT, uploadExcelMiddleware, getExamsByStudentController);
 router.get("/admit-card/download/single", downloadSingleAdmitCardController);
+router.get(
+  "/candidates",
+  (req, res, next) => {
+    console.log(req.query);
+    next();
+  },
+  getExamCandiatesByStudentIdAndExamIdController,
+);
 router.get("/:id", getExamByIdController);
 router.get("/exam-papers/:id", getExamPapersByExamIdController);
 /**
  * Get paginated exams for a student
  */
 router.get("/student/:studentId/exams", getExamsByStudentController);
-router.get("/candidates", getExamCandiatesByStudentIdAndExamIdController);
 
 export default router;
