@@ -342,7 +342,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({ open, onClose, 
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[95vw] w-full h-[98vh] max-h-[98vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-2xl font-bold">Fee Structure & Concession Master</DialogTitle>
           </DialogHeader>
