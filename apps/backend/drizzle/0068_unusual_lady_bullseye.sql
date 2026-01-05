@@ -42,7 +42,7 @@ CREATE TABLE "receipt_types" (
 --> statement-breakpoint
 CREATE TABLE "fee_structure_concession_slabs" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"fees_structure_id_fk" integer NOT NULL,
+	"fee_structure_id_fk" integer NOT NULL,
 	"fee_concession_slab_id_fk" integer NOT NULL,
 	"concession_rate" double precision DEFAULT 0 NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE "fee_concession_slabs" (
 --> statement-breakpoint
 CREATE TABLE "fee_structures" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"receipt_type_id_fk" integer,
+	"receipt_type_id_fk" integer NOT NULL,
 	"base_amount" double precision NOT NULL,
 	"closing_date" date,
 	"academic_year_id_fk" integer NOT NULL,
@@ -121,10 +121,11 @@ DROP TABLE "fees_slab" CASCADE;--> statement-breakpoint
 DROP TABLE "fees_structures" CASCADE;--> statement-breakpoint
 DROP TABLE "instalments" CASCADE;--> statement-breakpoint
 DROP TABLE "student_fees_mappings" CASCADE;--> statement-breakpoint
+ALTER TABLE "exam_candidates" ADD COLUMN IF NOT EXISTS "foil_number" varchar(255);--> statement-breakpoint
 ALTER TABLE "fee_structure_components" ADD CONSTRAINT "fee_structure_components_fee_structure_id_fk_fee_structures_id_fk" FOREIGN KEY ("fee_structure_id_fk") REFERENCES "public"."fee_structures"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fee_structure_components" ADD CONSTRAINT "fee_structure_components_fee_head_id_fk_fee_heads_id_fk" FOREIGN KEY ("fee_head_id_fk") REFERENCES "public"."fee_heads"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "receipt_types" ADD CONSTRAINT "receipt_types_add_on_id_fk_addons_id_fk" FOREIGN KEY ("add_on_id_fk") REFERENCES "public"."addons"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "fee_structure_concession_slabs" ADD CONSTRAINT "fee_structure_concession_slabs_fees_structure_id_fk_fee_structures_id_fk" FOREIGN KEY ("fees_structure_id_fk") REFERENCES "public"."fee_structures"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "fee_structure_concession_slabs" ADD CONSTRAINT "fee_structure_concession_slabs_fee_structure_id_fk_fee_structures_id_fk" FOREIGN KEY ("fee_structure_id_fk") REFERENCES "public"."fee_structures"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fee_structure_concession_slabs" ADD CONSTRAINT "fee_structure_concession_slabs_fee_concession_slab_id_fk_fee_concession_slabs_id_fk" FOREIGN KEY ("fee_concession_slab_id_fk") REFERENCES "public"."fee_concession_slabs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fee_structures" ADD CONSTRAINT "fee_structures_receipt_type_id_fk_receipt_types_id_fk" FOREIGN KEY ("receipt_type_id_fk") REFERENCES "public"."receipt_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fee_structures" ADD CONSTRAINT "fee_structures_academic_year_id_fk_academic_years_id_fk" FOREIGN KEY ("academic_year_id_fk") REFERENCES "public"."academic_years"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -139,4 +140,3 @@ ALTER TABLE "student_fees" ADD CONSTRAINT "student_fees_fee_structure_id_fk_fee_
 ALTER TABLE "student_fees" ADD CONSTRAINT "student_fees_fee_structure_installment_id_fk_fee_structure_installments_id_fk" FOREIGN KEY ("fee_structure_installment_id_fk") REFERENCES "public"."fee_structure_installments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "student_fees" ADD CONSTRAINT "student_fees_fee_concession_slab_id_fk_fee_concession_slabs_id_fk" FOREIGN KEY ("fee_concession_slab_id_fk") REFERENCES "public"."fee_concession_slabs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 DROP TYPE "public"."student_fees_mapping_type";
-ALTER TABLE "exam_candidates" ADD COLUMN "foil_number" varchar(255);
