@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useError } from "./useError";
 import {
   // Fees Structure
-
+  getAllFeesStructures,
   createFeesStructure,
+  createFeeStructureByDto,
   updateFeesStructure,
   deleteFeesStructure,
 
@@ -58,6 +59,7 @@ import {
   FeesSlabMapping,
   CreateFeesStructureDto,
 } from "@/types/fees";
+import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Course } from "@/types/course-design";
 import {
@@ -70,62 +72,115 @@ import {
 // ==================== FEES STRUCTURE HOOKS ====================
 
 export const useFeesStructures = () => {
-  const [feesStructures, setFeesStructures] = useState<FeesStructureDto[]>([]);
+  const [feesStructures, setFeesStructures] = useState<FeeStructureDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    totalElements: 0,
+    totalPages: 0,
+  });
   const { showError } = useError();
 
-  const fetchFeesStructures = async () => {
-    try {
-      setLoading(true);
-      const data = await getFeesStructures();
-      setFeesStructures(data);
-    } catch {
-      showError({ message: "Failed to fetch fees structures" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchFeesStructures = useCallback(
+    async (
+      page: number = 1,
+      pageSize: number = 10,
+      filters?: {
+        academicYearId?: number;
+        classId?: number;
+        receiptTypeId?: number;
+        programCourseId?: number;
+        shiftId?: number;
+      },
+    ) => {
+      try {
+        setLoading(true);
+        const response = await getAllFeesStructures(page, pageSize, filters);
+        if (response.payload) {
+          setFeesStructures(response.payload.content);
+          setPagination({
+            page: response.payload.page,
+            pageSize: response.payload.pageSize,
+            totalElements: response.payload.totalElements,
+            totalPages: response.payload.totalPages,
+          });
+        } else {
+          setFeesStructures([]);
+        }
+      } catch {
+        showError({ message: "Failed to fetch fees structures" });
+        setFeesStructures([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showError],
+  );
 
-  const addFeesStructure = useCallback(async (newFeesStructure: CreateFeesStructureDto) => {
-    try {
-      const response = await createFeesStructure(newFeesStructure);
-      await fetchFeesStructures();
-      return response.payload;
-    } catch {
-      showError({ message: "Failed to create fees structure" });
-      return null;
-    }
-  }, []);
+  const addFeesStructure = useCallback(
+    async (newFeesStructure: CreateFeesStructureDto | CreateFeeStructureDto) => {
+      try {
+        // Check if it's the new CreateFeeStructureDto format (has programCourseIds and shiftIds arrays)
+        const isNewDto = "programCourseIds" in newFeesStructure && "shiftIds" in newFeesStructure;
 
-  const updateFeesStructureById = useCallback(async (id: number, feesStructure: Partial<FeesStructureDto>) => {
-    try {
-      const response = await updateFeesStructure(id, feesStructure);
-      await fetchFeesStructures();
-      return response.payload;
-    } catch {
-      showError({ message: "Failed to update fees structure" });
-      return null;
-    }
-  }, []);
+        if (isNewDto) {
+          // Use the new bulk creation endpoint
+          const response = await createFeeStructureByDto(newFeesStructure as CreateFeeStructureDto);
+          await fetchFeesStructures(1, 10);
+          return response.payload;
+        } else {
+          // Use the old single creation endpoint
+          const response = await createFeesStructure(newFeesStructure);
+          await fetchFeesStructures(1, 10);
+          return response.payload;
+        }
+      } catch (error) {
+        console.error("Error creating fees structure:", error);
+        showError({ message: "Failed to create fees structure" });
+        return null;
+      }
+    },
+    [fetchFeesStructures, showError],
+  );
 
-  const deleteFeesStructureById = useCallback(async (id: number) => {
-    try {
-      await deleteFeesStructure(id);
-      await fetchFeesStructures();
-      return true;
-    } catch {
-      showError({ message: "Failed to delete fees structure" });
-      return false;
-    }
-  }, []);
+  const updateFeesStructureById = useCallback(
+    async (id: number, feesStructure: Partial<FeesStructureDto>) => {
+      try {
+        const response = await updateFeesStructure(id, feesStructure);
+        await fetchFeesStructures(1, 10);
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to update fees structure" });
+        return null;
+      }
+    },
+    [fetchFeesStructures, showError],
+  );
 
-  useEffect(() => {
-    fetchFeesStructures();
-  }, []);
+  const deleteFeesStructureById = useCallback(
+    async (id: number) => {
+      try {
+        await deleteFeesStructure(id);
+        await fetchFeesStructures(1, 10);
+        return true;
+      } catch {
+        showError({ message: "Failed to delete fees structure" });
+        return false;
+      }
+    },
+    [fetchFeesStructures, showError],
+  );
+
+  // Remove initial fetch - let the component control when to fetch
+  // useEffect(() => {
+  //   fetchFeesStructures();
+  // }, []);
 
   return {
     feesStructures,
     loading,
+    pagination,
     refetch: fetchFeesStructures,
     addFeesStructure,
     updateFeesStructureById,

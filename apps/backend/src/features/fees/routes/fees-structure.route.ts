@@ -4,6 +4,11 @@ import * as feesStructureController from "../controllers/fees-structure.controll
 const router = Router();
 
 router.post("/", feesStructureController.createFeeStructure);
+router.post("/by-dto", feesStructureController.createFeeStructureByDto);
+router.get(
+  "/academic-years/all",
+  feesStructureController.getAcademicYearsFromFeesStructures,
+);
 router.get("/", feesStructureController.getAllFeeStructures);
 router.get("/:id", feesStructureController.getFeeStructureById);
 router.put("/:id", feesStructureController.updateFeeStructure);
@@ -46,6 +51,50 @@ export default router;
 //   getFeesStructuresByAcademicYearIdAndCourseIdHandler,
 // );
 // // feesStructureRouter.get("/design-abstract-level", getFeesDesignAbstractLevelHandler);
+// feesStructureRouter.post("/exists", checkFeesStructureExistsHandler);
+
+// export default feesStructureRouter;
+
+// // Base CRUD routes
+
+// feesStructureRouter.get("/", getFeesStructuresHandler);
+
+// feesStructureRouter.get("/:id", getFeesStructureByIdHandler);
+
+// feesStructureRouter.post("/", createFeesStructureHandler);
+
+// feesStructureRouter.put("/:id", updateFeesStructureHandler);
+
+// feesStructureRouter.delete("/:id", deleteFeesStructureHandler);
+
+// // Additional routes
+
+// feesStructureRouter.get(
+
+//   "/academic-years/all",
+
+//   getAcademicYearsFromFeesStructuresHandler,
+
+// );
+
+// feesStructureRouter.get(
+
+//   "/courses/:academicYearId",
+
+//   getCoursesFromFeesStructuresHandler,
+
+// );
+
+// feesStructureRouter.get(
+
+//   "/by-academic-year-and-course/:academicYearId/:courseId",
+
+//   getFeesStructuresByAcademicYearIdAndCourseIdHandler,
+
+// );
+
+// // feesStructureRouter.get("/design-abstract-level", getFeesDesignAbstractLevelHandler);
+
 // feesStructureRouter.post("/exists", checkFeesStructureExistsHandler);
 
 // export default feesStructureRouter;

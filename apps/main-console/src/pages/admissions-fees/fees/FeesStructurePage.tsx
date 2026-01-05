@@ -1,347 +1,199 @@
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  Banknote,
-  PlusCircle,
-  // Upload,
-  X,
-  // AlertCircle,
-  // Layers3,
-  // CheckCircle,
-  // XCircle,
-  // Search,
-  Pencil,
-} from "lucide-react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Banknote, PlusCircle, Pencil } from "lucide-react";
 // import { toast } from "sonner";
 // import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureForm";
 import FeeStructureMaster from "@/components/fees/FeeStructureMaster";
 // import { getAllCourses } from "../../services/course-api";
-import { Course } from "@/types/course-design";
-import { FeesStructureDto, FeesSlabMapping, FeesSlab } from "@/types/fees";
+import { FeeStructureDto } from "@repo/db/dtos/fees";
 import { AcademicYear } from "@/types/academics/academic-year";
-import {
-  useFeesStructures,
-  useAcademicYearsFromFeesStructures,
-  useCoursesFromFeesStructures,
-  useFeesHeads,
-} from "@/hooks/useFees";
+import { useFeesStructures, useAcademicYearsFromFeesStructures, useFeesHeads } from "@/hooks/useFees";
 import { useFeesReceiptTypes } from "@/hooks/useFees";
-import { checkSlabsExistForAcademicYear, getFeesStructuresByAcademicYearAndCourse } from "@/services/fees-api";
-import axiosInstance from "@/utils/api";
-import { useShifts } from "@/hooks/useShifts";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Shift } from "@/types/academics/shift";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FeesReceiptType } from "@/types/fees";
 import { Class } from "@/types/academics/class";
 import { getAllClasses } from "@/services/classes.service";
+import { Pagination } from "@/components/ui/pagination";
 
 const FeesStructurePage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [classes, setClasses] = useState<Class[]>([]);
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
-  const [showSlabModal, setShowSlabModal] = useState(false);
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<AcademicYear | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [activeTab] = useState<"fees" | "slabs">("fees");
-  // Note: currentFeesStructure and initialStep are commented out as they're only used in the commented FeeStructureForm component
-  // const [currentFeesStructure, setCurrentFeesStructure] = useState<FeesStructureDto | null>(null);
-  // const [initialStep, setInitialStep] = useState(1);
-  const [slabYearMappings] = useState<FeesSlabMapping[]>([]);
-  const setSlabsExistForYear = useState(false)[1];
-  const [allSlabs, setAllSlabs] = useState<FeesSlab[]>([]);
-  const [filteredFeesStructures, setFilteredFeesStructures] = useState<FeesStructureDto[]>([]);
-  const [feesStructures, setFeesStructures] = useState<FeesStructureDto[]>([]);
-  const [slabEditMode, setSlabEditMode] = useState(false);
-  const setEditingSlabMapping = useState<FeesSlabMapping | null>(null)[1];
-  const { shifts, loading: shiftsLoading } = useShifts();
-  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [selectedConcessionSlabModal, setSelectedConcessionSlabModal] = useState<FeeStructureDto | null>(null);
+  const [feesStructures, setFeesStructures] = useState<FeeStructureDto[]>([]);
 
   const [selectedReceiptType, setSelectedReceiptType] = useState<FeesReceiptType | null>(null);
-  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
 
-  // Use the fees API hook
-  const { loading: feesLoading, addFeesStructure } = useFeesStructures();
+  // Use the fees API hook with pagination
+  const {
+    feesStructures: paginatedFeesStructures,
+    loading: feesLoading,
+    pagination,
+    refetch: fetchFeesStructuresPaginated,
+    addFeesStructure,
+  } = useFeesStructures();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const { feesReceiptTypes, loading: receiptTypesLoading } = useFeesReceiptTypes();
   const { loading: feesHeadsLoading } = useFeesHeads();
 
   // Use the new hooks
   const { academicYears, loading: academicYearsLoading } = useAcademicYearsFromFeesStructures();
-  const { courses: coursesForSelectedYear } = useCoursesFromFeesStructures(selectedAcademicYear?.id ?? null);
 
-  // Add state for selected class
-  const setSelectedClass = useState<Class | null>(null)[1];
+  // State for selected class (used for filtering)
+  const [selectedClassFilter, setSelectedClassFilter] = useState<Class | null>(null);
 
-  // When academic year or course changes, reset selected class
+  // When academic year changes, reset selected class filter
   useEffect(() => {
-    setSelectedClass(null);
-  }, [selectedAcademicYear, selectedCourse, setSelectedClass]);
-
-  // Optionally, filter classes by course/academic year if needed
-  // For now, use all classes
+    setSelectedClassFilter(null);
+  }, [selectedAcademicYear]);
 
   useEffect(() => {
     getAllClasses().then((data) => setClasses(data));
-  }, [setClasses]);
+  }, []);
 
-  useEffect(() => {
-    const checkSlabsExist = async () => {
-      if (selectedAcademicYear?.id) {
-        try {
-          const result = await checkSlabsExistForAcademicYear(selectedAcademicYear.id);
-          setSlabsExistForYear(result.exists);
-          console.log("Slabs exist for year:", result.exists);
-        } catch {
-          // Error handled
-          setSlabsExistForYear(false);
-        }
-      } else {
-        setSlabsExistForYear(false);
-      }
-    };
+  const handleReceiptTypeChange = useCallback(
+    (value: string) => {
+      const id = Number(value);
+      const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id === id);
+      setSelectedReceiptType(tmpSelectedFeesReceiptType ?? null);
+    },
+    [feesReceiptTypes],
+  );
 
-    checkSlabsExist();
-  }, [selectedAcademicYear, setSlabsExistForYear]);
+  const handleClassChange = useCallback(
+    (value: string) => {
+      const id = Number(value);
+      const tmpSelectedClass = classes.find((ele) => ele.id === id);
+      setSelectedClassFilter(tmpSelectedClass ?? null);
+    },
+    [classes],
+  );
 
-  const fetchSlabs = async () => {
-    try {
-      const res = await axiosInstance.get<FeesSlab[]>("/api/v1/fees/slabs");
-      setAllSlabs(res.data);
-    } catch (error) {
-      console.log(error);
-      setAllSlabs([]);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedAcademicYear?.id) {
-      console.log("in fetching slabs, selectedAcademicYear", selectedAcademicYear);
-      fetchSlabs();
-    } else {
-      setAllSlabs([]);
-    }
-  }, [selectedAcademicYear]);
-
-  // const slabsForYear = slabYearMappings.map(mapping => {
-  //   const slab = allSlabs.find(s => s.id === mapping.feesSlabId);
-  //   return {
-  //     ...slab,
-  //     feeConcessionRate: mapping.feeConcessionRate,
-  //     mappingId: mapping.id,
-  //     status: slab && typeof (slab as any).disabled !== 'undefined' ? ((slab as any).disabled ? 'Disabled' : 'Enabled') : 'Enabled',
-  //   };
-  // });
-
-  // // Helper to get concession rate for a slab
-  // const getConcessionRate = (slabId: number): number => {
-  //   const mapping = slabYearMappings.find(
-  //     m => m.feesSlabId === slabId && m.academicYearId === selectedAcademicYear?.id
-  //   );
-  //   return mapping ? mapping.feeConcessionRate : 0;
-  // };
-
-  const handleReceiptTypeChange = (value: string) => {
-    const id = Number(value);
-    const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id === id);
-
-    // Filter by the newly selected receipt type
-    const tmpFilteredFeesStructures = feesStructures.filter((ele) => ele.feesReceiptTypeId === id);
-
-    setSelectedReceiptType(tmpSelectedFeesReceiptType ?? null);
-    setFilteredFeesStructures(tmpFilteredFeesStructures);
-
-    // Find all unique shifts for this receipt type
-    const availableShifts = feesStructures
-      .filter((fs) => fs.feesReceiptTypeId === id && fs.shift)
-      .map((fs) => fs.shift)
-      .filter((shift, idx, arr) => shift && arr.findIndex((s) => s?.id === shift?.id) === idx);
-
-    if (availableShifts.length > 0) {
-      setSelectedShift(availableShifts[0] ?? null);
-    } else {
-      setSelectedShift(null);
-    }
-  };
-
-  const handleShiftChange = (value: string) => {
-    const id = Number(value);
-    const tmpSelectedShift = shifts.find((ele) => ele.id === id);
-
-    // Filter by both the selected receipt type and the newly selected shift
-    const tmpFilteredFeesStructures = feesStructures.filter(
-      (ele) => ele.feesReceiptTypeId === (selectedReceiptType?.id ?? 0) && ele.shift?.id === id,
-    );
-
-    setSelectedShift(tmpSelectedShift ?? null);
-    setFilteredFeesStructures(tmpFilteredFeesStructures);
-  };
-
-  const fetchAvailableCourses = async (
-    academicYearId: number | undefined,
-    allCourses: Course[],
-    setAvailableCourses: React.Dispatch<React.SetStateAction<Course[]>>,
-  ) => {
-    if (typeof academicYearId !== "number") {
-      setAvailableCourses([]);
-      return;
-    }
-    const filtered: Course[] = [];
-    for (const course of allCourses) {
-      if (typeof course.id !== "number") continue;
-      if (typeof academicYearId !== "number") continue;
-      const structures = await getFeesStructuresByAcademicYearAndCourse(academicYearId, course.id);
-      if (!structures || structures.length === 0) {
-        filtered.push(course);
-      } else {
-        filtered.push(course);
-      }
-    }
-    setAvailableCourses(filtered);
-  };
-
-  // const handleAdd = () => {
-  //   if (!selectedAcademicYear || !selectedCourse) {
-  //     toast.error("Please select both Academic Year and Course before adding a fee structure.");
-  //     return;
-  //   }
-
-  //   if (!slabsExistForYear) {
-  //     toast.error("Please create fee slabs for this academic year first", {
-  //       description: "Navigate to the Slabs tab to create fee slabs.",
-  //       duration: 5000,
-  //     });
-  //     setActiveTab("slabs"); // Switch to slabs tab
-  //     return;
-  //   }
-
-  //   setModalFieldsDisabled(true);
-  //   const newSlabMapping: FeesSlabMapping = {
-  //     id: allSlabs[0].id!,
-  //     feesSlabId: allSlabs[0].id!,
-  //     feesStructureId: 0, // Placeholder, update as needed
-  //     feeConcessionRate: 0,
-  //   };
-  //   setCurrentFeesStructure({
-  //     id: undefined,
-  //     academicYear: selectedAcademicYear,
-  //     course: selectedCourse,
-  //     closingDate: new Date(),
-  //     semester: 1,
-  //     advanceForSemester: null,
-  //     shift: null,
-  //     feesReceiptTypeId: null,
-  //     startDate: new Date(),
-  //     endDate: new Date(),
-  //     onlineStartDate: new Date(),
-  //     onlineEndDate: new Date(),
-  //     numberOfInstalments: null,
-  //     instalmentStartDate: null,
-  //     instalmentEndDate: null,
-  //     createdAt: new Date(),
-  //     updatedAt: new Date(),
-  //     advanceForCourse: null,
-  //     components: [],
-  //     feesSlabMappings: [],
-  //   });
-  //   setShowFeeStructureForm(true);
-  //   setInitialStep(3); // Skip to fee configuration since slabs exist
-  // };
-
-  const handleEdit = (_fs: FeesStructureDto) => {
-    // setCurrentFeesStructure(_fs); // Commented out - only used in commented FeeStructureForm
+  const handleEdit = (_fs: FeeStructureDto) => {
     setShowFeeStructureForm(true);
-    // setInitialStep(2); // Commented out - only used in commented FeeStructureForm
   };
 
   const handleCreate = () => {
-    // setCurrentFeesStructure(null); // Commented out - only used in commented FeeStructureForm
     setShowFeeStructureForm(true);
-    // setInitialStep(1); // Commented out - only used in commented FeeStructureForm
   };
 
-  // const handleDelete = async (id: number) => {
-  //   if (window.confirm("Are you sure you want to delete this fees structure?")) {
-  //     await deleteFeesStructureById(id);
-  //   }
-  // };
+  // Memoize filters to prevent unnecessary re-renders
+  const filters = useMemo(() => {
+    const filterObj: {
+      academicYearId?: number;
+      classId?: number;
+      receiptTypeId?: number;
+      programCourseId?: number;
+      shiftId?: number;
+    } = {};
 
-  const fetchFeesStructures = useCallback(async () => {
-    if (!selectedAcademicYear?.id || !selectedCourse?.id) {
-      setFilteredFeesStructures([]);
-      return;
+    if (selectedAcademicYear?.id) {
+      filterObj.academicYearId = selectedAcademicYear.id;
     }
-    try {
-      console.log("fetching fees structures: -");
-      const res = await axiosInstance.get<FeesStructureDto[]>(
-        `/api/v1/fees/structure/by-academic-year-and-course/${selectedAcademicYear.id}/${selectedCourse.id}`,
-      );
-      // console.log(first)
-      setFeesStructures(res.data || []);
-      console.log("fetching fees structures, res.data: -", res.data);
+    if (selectedReceiptType?.id) {
+      filterObj.receiptTypeId = selectedReceiptType.id;
+    }
+    if (selectedClassFilter?.id) {
+      filterObj.classId = selectedClassFilter.id;
+    }
 
-      if (res.data.length > 0) {
-        const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id == res.data[0]?.feesReceiptTypeId);
-        console.log("tmpSelectedFeesReceiptType:", tmpSelectedFeesReceiptType);
-        const tmpArr = res.data.filter((ele) => ele.feesReceiptTypeId == tmpSelectedFeesReceiptType?.id);
-        console.log("tmpArr:", tmpArr);
-        const tmpSelectedShift = tmpArr[0]?.shift;
-        console.log("tmpSelectedShift:", tmpSelectedShift);
-        const tmpFilteredFeesStructures = tmpArr.filter(
-          (ele) => ele.feesReceiptTypeId === tmpSelectedFeesReceiptType?.id && ele.shift?.id === tmpSelectedShift?.id,
-        );
-        console.log("tmpFilteredFeesStructures:", tmpFilteredFeesStructures);
-        setSelectedReceiptType(tmpSelectedFeesReceiptType!);
-        setSelectedShift(tmpSelectedShift!);
-        setFilteredFeesStructures(tmpFilteredFeesStructures);
+    return filterObj;
+  }, [selectedAcademicYear?.id, selectedReceiptType?.id, selectedClassFilter?.id]);
+
+  // Fetch fees structures with pagination
+  useEffect(() => {
+    fetchFeesStructuresPaginated(currentPage, pageSize, filters);
+  }, [currentPage, pageSize, filters, fetchFeesStructuresPaginated]);
+
+  // Update fees structures when paginated data changes
+  useEffect(() => {
+    setFeesStructures(paginatedFeesStructures);
+  }, [paginatedFeesStructures]);
+
+  // Auto-select receipt type only once when data first loads
+  useEffect(() => {
+    if (paginatedFeesStructures.length > 0 && !selectedReceiptType && feesReceiptTypes.length > 0) {
+      const firstReceiptTypeId = paginatedFeesStructures[0]?.receiptType?.id;
+      if (firstReceiptTypeId) {
+        const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id === firstReceiptTypeId);
+        if (tmpSelectedFeesReceiptType) {
+          setSelectedReceiptType(tmpSelectedFeesReceiptType);
+        }
       }
-    } catch (error) {
-      console.log(error);
-      setFilteredFeesStructures([]);
     }
-  }, [selectedAcademicYear, selectedCourse, feesReceiptTypes]);
+  }, [paginatedFeesStructures, feesReceiptTypes, selectedReceiptType]);
 
-  useEffect(() => {
-    if (selectedAcademicYear?.id && selectedCourse?.id) {
-      fetchFeesStructures();
-    } else {
-      setFilteredFeesStructures([]);
+  // Memoize filtered structures based on receipt type, class, and academic year
+  const memoizedFilteredFeesStructures = useMemo(() => {
+    let filtered = paginatedFeesStructures;
+
+    if (selectedReceiptType?.id) {
+      filtered = filtered.filter((ele) => ele.receiptType?.id === selectedReceiptType.id);
     }
-  }, [selectedAcademicYear, selectedCourse, fetchFeesStructures]);
 
-  const handleSlabModalClose = () => {
-    setShowSlabModal(false);
-    setEditingSlabMapping(null);
-    setSlabEditMode(false);
-  };
+    if (selectedClassFilter?.id) {
+      filtered = filtered.filter((ele) => ele.class?.id === selectedClassFilter.id);
+    }
 
-  const availableSlabsToCreate = allSlabs.filter(
-    (slab) => !slabYearMappings.some((mapping) => mapping.feesSlabId === slab.id),
-  );
-  const isCreateSlabDisabled = availableSlabsToCreate.length === 0;
+    if (selectedAcademicYear?.id) {
+      filtered = filtered.filter((ele) => ele.academicYear?.id === selectedAcademicYear.id);
+    }
 
-  // const toRoman = (num: number | null | undefined) => {
-  //   if (!num) return "";
-  //   const romans = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
-  //   return romans[num - 1] || num;
-  // };
+    return filtered;
+  }, [paginatedFeesStructures, selectedReceiptType?.id, selectedClassFilter?.id, selectedAcademicYear?.id]);
 
+  // Reset to page 1 when filters change
   useEffect(() => {
-    fetchAvailableCourses(selectedAcademicYear?.id, coursesForSelectedYear || [], setAvailableCourses);
-  }, [selectedAcademicYear, coursesForSelectedYear]);
+    setCurrentPage(1);
+  }, [selectedAcademicYear, selectedReceiptType, selectedClassFilter]);
 
-  // Auto-select first academic year if not set
+  // Auto-select first academic year if not set (only run once)
   useEffect(() => {
     if (!selectedAcademicYear && academicYears.length > 0) {
       setSelectedAcademicYear(academicYears[0] || null);
     }
-  }, [academicYears, selectedAcademicYear]);
+  }, [academicYears.length, selectedAcademicYear]);
 
-  // Auto-select first course for the selected year if not set
-  useEffect(() => {
-    if (!selectedCourse && coursesForSelectedYear.length > 0) {
-      setSelectedCourse(coursesForSelectedYear[0] || null);
-    }
-  }, [coursesForSelectedYear, selectedCourse]);
+  // Get all unique fee heads from components for modal columns
+  const uniqueFeeHeads = useMemo(() => {
+    const feeHeadMap = new Map<number, FeeStructureDto["components"][0]["feeHead"]>();
+    memoizedFilteredFeesStructures.forEach((fs) => {
+      fs.components?.forEach((component) => {
+        if (component.feeHead?.id) {
+          feeHeadMap.set(component.feeHead.id, component.feeHead);
+        }
+      });
+    });
+    return Array.from(feeHeadMap.values());
+  }, [memoizedFilteredFeesStructures]);
 
-  if (academicYearsLoading || feesLoading || receiptTypesLoading || shiftsLoading || feesHeadsLoading) {
+  // Memoize sorted filtered structures to prevent unnecessary re-sorting
+  const sortedFilteredFeesStructures = useMemo(() => {
+    return [...memoizedFilteredFeesStructures].sort((a, b) => {
+      const aName = a.programCourse?.name || "";
+      const bName = b.programCourse?.name || "";
+      return aName.localeCompare(bName);
+    });
+  }, [memoizedFilteredFeesStructures]);
+
+  // Color variants for components (cycling through different colors, excluding orange which is used for shift)
+  const componentColors = [
+    "border-blue-300 text-blue-700 bg-blue-50", // Light blue
+    "border-red-300 text-red-700 bg-red-50", // Red
+    "border-indigo-300 text-indigo-700 bg-indigo-50", // Indigo
+    "border-cyan-300 text-cyan-700 bg-cyan-50", // Cyan
+    "border-pink-300 text-pink-700 bg-pink-50", // Pink
+    "border-amber-300 text-amber-700 bg-amber-50", // Amber
+  ];
+
+  if (academicYearsLoading || feesLoading || receiptTypesLoading || feesHeadsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-lg">Loading fees structures...</div>
@@ -384,27 +236,6 @@ const FeesStructurePage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Course</label>
-              <Select
-                value={selectedCourse?.id ? String(selectedCourse.id) : "all"}
-                onValueChange={(val) => {
-                  const course = coursesForSelectedYear.find((c) => String(c.id) === val);
-                  setSelectedCourse(course || null);
-                }}
-              >
-                <SelectTrigger className="w-40" disabled={!selectedAcademicYear}>
-                  <SelectValue placeholder="Select Course" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCourses.map((course) => (
-                    <SelectItem key={course.id} value={String(course.id)}>
-                      {course.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </div>
       </div>
@@ -424,7 +255,7 @@ const FeesStructurePage: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {feesReceiptTypes
-                    .filter((rt) => feesStructures.some((fs) => fs.feesReceiptTypeId === rt.id))
+                    .filter((rt) => feesStructures.some((fs) => fs.receiptType?.id === rt.id))
                     .map((rt) => (
                       <SelectItem key={rt.id} value={String(rt.id)}>
                         {rt.name}
@@ -434,25 +265,25 @@ const FeesStructurePage: React.FC = () => {
               </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Shift</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Class/Semester</label>
               <Select
-                value={selectedShift ? String(selectedShift.id) : ""}
-                onValueChange={handleShiftChange}
-                disabled={!selectedReceiptType} // Only disable if no receipt type is selected
+                value={selectedClassFilter ? String(selectedClassFilter.id) : ""}
+                onValueChange={handleClassChange}
+                disabled={!selectedReceiptType}
               >
                 <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select Shift" />
+                  <SelectValue placeholder="Select Class" />
                 </SelectTrigger>
                 <SelectContent>
-                  {shifts
-                    .filter((shft) =>
+                  {classes
+                    .filter((cls) =>
                       feesStructures.some(
-                        (fs) => fs.feesReceiptTypeId === selectedReceiptType?.id && fs.shift?.id === shft.id,
+                        (fs) => fs.receiptType?.id === selectedReceiptType?.id && fs.class?.id === cls.id,
                       ),
                     )
-                    .map((shft) => (
-                      <SelectItem key={shft.id} value={String(shft.id)}>
-                        {shft.name}
+                    .map((cls) => (
+                      <SelectItem key={cls.id} value={String(cls.id)}>
+                        {cls.name}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -460,273 +291,208 @@ const FeesStructurePage: React.FC = () => {
             </div>
           </div>
         </nav>
-        <button
-          onClick={() => {
-            if (activeTab === "slabs") {
-              setShowSlabModal(true);
-            } else {
-              handleCreate();
-            }
-          }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors ${activeTab === "slabs" && isCreateSlabDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
-          disabled={activeTab === "slabs" && isCreateSlabDisabled}
-        >
-          <PlusCircle className="h-3.5 w-3.5" />
-          {activeTab === "slabs" ? "Create Slab" : "Create Structure"}
-        </button>
+        <Button onClick={handleCreate} size="sm">
+          <PlusCircle className="h-4 w-4" />
+          Create Structure
+        </Button>
       </div>
 
       <div className="mt-6">
         <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 mb-8">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">
-                    Semester
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border bg-yellow-100">
-                    Base Amount
-                  </th>
-                  {allSlabs.map((slab) => (
-                    <th
-                      key={slab.id}
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border"
-                    >
-                      {slab.name}
-                    </th>
-                  ))}
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">
-                    Installment 1
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">
-                    Installment 2
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredFeesStructures
-                  .sort((a, b) => {
-                    if (!a.class?.name || !b.class?.name) return 0;
-                    const getNum = (name: string) => parseInt(name.replace(/[^0-9]/g, ""), 10) || 0;
-                    return getNum(a.class.name) - getNum(b.class.name);
-                  })
-                  .map((fs) => {
-                    const className = fs.class?.name || "-";
-                    const baseAmount = fs.components.reduce((sum, comp) => sum + (comp.baseAmount ?? 0), 0);
-                    const numInstalments = fs.numberOfInstalments || 0;
-                    return (
-                      <tr key={fs.class?.id || Math.random()}>
-                        <td className="px-4 py-3 whitespace-nowrap border">{className}</td>
-                        <td className="px-4 py-3 whitespace-nowrap border font-bold bg-yellow-50 text-yellow-800">
-                          ₹ {baseAmount.toLocaleString()}
-                        </td>
-                        {allSlabs.map((slab) => {
-                          const mapping = fs.feesSlabMappings?.find((m) => m.feesSlabId === slab.id);
-                          let adjusted = baseAmount;
-                          if (mapping) {
-                            const concessionable = fs.components.filter((c) => c.isConcessionApplicable);
-                            const concession = concessionable.reduce(
-                              (sum, c) => sum + (c.baseAmount ?? 0) * (mapping.feeConcessionRate / 100),
-                              0,
-                            );
-                            adjusted = baseAmount - concession;
-                          }
-                          return (
-                            <td key={slab.id} className="px-4 py-3 whitespace-nowrap border">
-                              <div>₹ {adjusted.toLocaleString()}</div>
-                              {mapping && mapping.feeConcessionRate > 0 && (
-                                <div className="text-xs font-bold text-green-700 bg-green-100 rounded px-1 mt-1 inline-block">
-                                  {mapping.feeConcessionRate}%
-                                </div>
-                              )}
-                            </td>
-                          );
-                        })}
-                        <td className="px-4 py-3 whitespace-nowrap border">
-                          {numInstalments >= 1 ? `₹ ${(baseAmount / numInstalments).toLocaleString()}` : "-"}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap border">
-                          {numInstalments >= 2 ? `₹ ${(baseAmount / numInstalments).toLocaleString()}` : "-"}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap border">
-                          <button
-                            className="text-purple-600 hover:text-purple-800 mr-2"
-                            onClick={() => handleEdit(fs)}
-                            title="Edit"
-                          >
-                            <Pencil className="h-5 w-5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                <tr className="bg-gray-50 font-bold">
-                  <td className="px-4 py-3 whitespace-nowrap border">Total</td>
-                  <td className="px-4 py-3 whitespace-nowrap border bg-yellow-200 text-yellow-900 text-lg">
-                    ₹{" "}
-                    {filteredFeesStructures
-                      .reduce((sum, fs) => sum + fs.components.reduce((s, c) => s + (c.baseAmount ?? 0), 0), 0)
-                      .toLocaleString()}
-                  </td>
-                  {allSlabs.map((slab) => {
-                    const total = filteredFeesStructures.reduce((sum, fs) => {
-                      const baseAmount = fs.components.reduce((s, c) => s + (c.baseAmount ?? 0), 0);
-                      const mapping = fs.feesSlabMappings?.find((m) => m.feesSlabId === slab.id);
-                      let adjusted = baseAmount;
-                      if (mapping) {
-                        const concessionable = fs.components.filter((c) => c.isConcessionApplicable);
-                        const concession = concessionable.reduce(
-                          (s, c) => s + (c.baseAmount ?? 0) * (mapping.feeConcessionRate / 100),
-                          0,
-                        );
-                        adjusted = baseAmount - concession;
-                      }
-                      return sum + adjusted;
-                    }, 0);
-                    return (
-                      <td
-                        key={slab.id}
-                        className="px-4 py-3 whitespace-nowrap border bg-green-100 text-green-900 text-lg"
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b">
+                <TableHead className="w-[200px] border-r">Program Course</TableHead>
+                <TableHead className="bg-yellow-50 border-r">Base Amount</TableHead>
+                <TableHead className="border-r">Shift</TableHead>
+                <TableHead className="border-r">Components</TableHead>
+                <TableHead className="border-r">Concession Slab</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedFilteredFeesStructures.map((fs) => {
+                const programCourseName = fs.programCourse?.name || "-";
+                const baseAmount = fs.baseAmount || 0;
+                const shiftName = fs.shift?.name || "-";
+                const feeHeads = fs.components
+                  .map((c) => c.feeHead)
+                  .filter((head): head is NonNullable<typeof head> => head !== null && head !== undefined);
+                const hasConcessionSlabs = fs.feeStructureConcessionSlabs && fs.feeStructureConcessionSlabs.length > 0;
+
+                return (
+                  <TableRow key={fs.id || Math.random()} className="border-b">
+                    <TableCell className="border-r">
+                      {programCourseName !== "-" ? (
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200">
+                          {programCourseName}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-bold bg-yellow-50 text-yellow-800 border-r">
+                      ₹ {baseAmount.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="border-r">
+                      {shiftName !== "-" ? (
+                        <Badge variant="outline" className="border-orange-300 text-orange-700 bg-orange-50">
+                          {shiftName}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="border-r">
+                      {feeHeads.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {feeHeads.map((feeHead, index) => (
+                            <Badge
+                              key={feeHead.id}
+                              variant="outline"
+                              className={componentColors[index % componentColors.length]}
+                            >
+                              {feeHead.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="border-r">
+                      {hasConcessionSlabs ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedConcessionSlabModal(fs)}
+                          className="text-xs"
+                        >
+                          View Slabs ({fs.feeStructureConcessionSlabs?.length || 0})
+                        </Button>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(fs)}
+                        title="Edit"
+                        className="h-8 w-8"
                       >
-                        ₹ {total.toLocaleString()}
-                      </td>
-                    );
-                  })}
-                  <td className="px-4 py-3 whitespace-nowrap border">
-                    ₹{" "}
-                    {filteredFeesStructures
-                      .reduce((sum, fs) => {
-                        const baseAmount = fs.components.reduce((s, c) => s + (c.baseAmount ?? 0), 0);
-                        const numInstalments = fs.numberOfInstalments || 0;
-                        return sum + (numInstalments >= 1 ? baseAmount / numInstalments : 0);
-                      }, 0)
-                      .toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap border">
-                    ₹{" "}
-                    {filteredFeesStructures
-                      .reduce((sum, fs) => {
-                        const baseAmount = fs.components.reduce((s, c) => s + (c.baseAmount ?? 0), 0);
-                        const numInstalments = fs.numberOfInstalments || 0;
-                        return sum + (numInstalments >= 2 ? baseAmount / numInstalments : 0);
-                      }, 0)
-                      .toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap border"></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                        <Pencil className="h-4 w-4 text-purple-600" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {sortedFilteredFeesStructures.length > 0 && (
+                <TableRow className="bg-gray-50 font-bold border-t-2">
+                  <TableCell className="border-r">Total</TableCell>
+                  <TableCell className="bg-yellow-200 text-yellow-900 text-lg border-r">
+                    ₹ {sortedFilteredFeesStructures.reduce((sum, fs) => sum + (fs.baseAmount || 0), 0).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="border-r"></TableCell>
+                  <TableCell className="border-r"></TableCell>
+                  <TableCell className="border-r"></TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Pagination Controls */}
+          {pagination && pagination.totalElements > 0 && (
+            <div className="mt-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalElements}
+                itemsPerPage={pageSize}
+                startIndex={(currentPage - 1) * pageSize}
+                endIndex={Math.min(currentPage * pageSize, pagination.totalElements)}
+                onPageChange={(page) => setCurrentPage(page)}
+                onItemsPerPageChange={(newPageSize) => {
+                  setPageSize(newPageSize);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
 
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Add New Fee</h2>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                >
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-              </div>
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Fee</DialogTitle>
+            <DialogDescription>Create a new fee structure entry</DialogDescription>
+          </DialogHeader>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fee Name</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="e.g., Tuition Fee"
-                  />
-                </div>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fee Name</label>
+              <input
+                type="text"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="e.g., Tuition Fee"
+              />
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
-                  <input
-                    type="number"
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="0"
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+              <input
+                type="number"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="0"
+              />
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    <option value="Mandatory">Mandatory</option>
-                    <option value="Optional">Optional</option>
-                  </select>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <select className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="Mandatory">Mandatory</option>
+                <option value="Optional">Optional</option>
+              </select>
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Applied To</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="e.g., All Students"
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Applied To</label>
+              <input
+                type="text"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="e.g., All Students"
+              />
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <input
+                type="date"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    rows={3}
-                    placeholder="Fee description..."
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 mt-4">
-                <button className="flex-1 py-1.5 px-3 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors font-medium">
-                  Add Fee
-                </button>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-1.5 px-3 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                rows={3}
+                placeholder="Fee description..."
+              />
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Commented out the old 5-step modal form */}
-      {/* {showFeeStructureForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <FeeStructureForm
-            onClose={() => setShowFeeStructureForm(false)}
-            onSubmit={handleFeeStructureSubmit}
-            fieldsDisabled={modalFieldsDisabled}
-            disabledSteps={[1, 2, 3]}
-            formType={currentFeesStructure ? "EDIT" : "ADD"}
-            selectedAcademicYear={selectedAcademicYear}
-            selectedCourse={selectedCourse}
-            initialStep={initialStep}
-            // feesSlabMappings={slabYearMappings}
-            feesStructure={currentFeesStructure}
-            existingFeeStructures={filteredFeesStructures}
-            existingCourses={availableCourses}
-          />
-        </div>
-      )} */}
+          <div className="flex gap-2 mt-4">
+            <Button className="flex-1">Add Fee</Button>
+            <Button variant="outline" onClick={() => setShowAddModal(false)} className="flex-1">
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* New Fee Structure Master Modal */}
       {showFeeStructureForm && (
@@ -740,9 +506,21 @@ const FeesStructurePage: React.FC = () => {
               await addFeesStructure(data as any);
               setShowFeeStructureForm(false);
               // Refresh the fees structures list
-              if (selectedAcademicYear?.id && selectedCourse?.id) {
-                await fetchFeesStructures();
+              const filters: {
+                academicYearId?: number;
+                receiptTypeId?: number;
+                classId?: number;
+              } = {};
+              if (selectedAcademicYear?.id) {
+                filters.academicYearId = selectedAcademicYear.id;
               }
+              if (selectedReceiptType?.id) {
+                filters.receiptTypeId = selectedReceiptType.id;
+              }
+              if (selectedClassFilter?.id) {
+                filters.classId = selectedClassFilter.id;
+              }
+              await fetchFeesStructuresPaginated(currentPage, pageSize, filters);
             } catch (error) {
               console.error("Error saving fee structure:", error);
               alert("Failed to save fee structure. Please try again.");
@@ -751,26 +529,126 @@ const FeesStructurePage: React.FC = () => {
         />
       )}
 
-      {showSlabModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">{slabEditMode ? "Edit Slab" : "Create Slab"}</h2>
-              <button onClick={handleSlabModalClose} className="p-1.5 hover:bg-gray-100 rounded transition-colors">
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
+      {/* Concession Slab Modal */}
+      <Dialog
+        open={!!selectedConcessionSlabModal}
+        onOpenChange={(open) => !open && setSelectedConcessionSlabModal(null)}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Concession Slabs - {selectedConcessionSlabModal?.programCourse?.name || "N/A"}</DialogTitle>
+            <DialogDescription>View concession slab details and adjusted amounts for each fee head</DialogDescription>
+          </DialogHeader>
+
+          {selectedConcessionSlabModal?.feeStructureConcessionSlabs &&
+          selectedConcessionSlabModal.feeStructureConcessionSlabs.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b">
+                    <TableHead className="border-r">Concession Slab</TableHead>
+                    {uniqueFeeHeads
+                      .filter(
+                        (feeHead): feeHead is NonNullable<typeof feeHead> =>
+                          feeHead?.id !== null && feeHead?.id !== undefined,
+                      )
+                      .map((feeHead, index) => {
+                        // Use different colors for fee heads (not green, not orange - orange is for shift)
+                        const feeHeadColors = [
+                          "border-blue-300 text-blue-700 bg-blue-50",
+                          "border-red-300 text-red-700 bg-red-50",
+                          "border-indigo-300 text-indigo-700 bg-indigo-50",
+                          "border-cyan-300 text-cyan-700 bg-cyan-50",
+                          "border-pink-300 text-pink-700 bg-pink-50",
+                          "border-amber-300 text-amber-700 bg-amber-50",
+                        ];
+                        return (
+                          <TableHead key={feeHead.id} className="border-r">
+                            <Badge variant="outline" className={feeHeadColors[index % feeHeadColors.length]}>
+                              {feeHead.name || "-"}
+                            </Badge>
+                          </TableHead>
+                        );
+                      })}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedConcessionSlabModal.feeStructureConcessionSlabs.map((slabMapping) => {
+                    const slabName = slabMapping.feeConcessionSlab?.name || "-";
+                    const concessionRate = slabMapping.concessionRate || 0;
+                    const baseAmount = selectedConcessionSlabModal.baseAmount || 0;
+
+                    return (
+                      <TableRow key={slabMapping.id || Math.random()} className="border-b">
+                        <TableCell className="font-medium border-r">
+                          {slabName !== "-" ? (
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                              {slabName}
+                            </Badge>
+                          ) : (
+                            "-"
+                          )}
+                          {concessionRate > 0 && (
+                            <Badge variant="outline" className="ml-2 border-green-300 text-green-700 bg-green-50">
+                              {concessionRate}%
+                            </Badge>
+                          )}
+                        </TableCell>
+                        {uniqueFeeHeads
+                          .filter(
+                            (feeHead): feeHead is NonNullable<typeof feeHead> =>
+                              feeHead?.id !== null && feeHead?.id !== undefined,
+                          )
+                          .map((feeHead, index) => {
+                            // Find if this component is concession applicable
+                            const component = selectedConcessionSlabModal.components.find(
+                              (c) => c.feeHead?.id === feeHead.id,
+                            );
+
+                            if (!component || !component.isConcessionApplicable) {
+                              return (
+                                <TableCell key={feeHead.id} className="text-gray-400 border-r">
+                                  -
+                                </TableCell>
+                              );
+                            }
+
+                            // Calculate concession amount for this component
+                            const componentAmount = (baseAmount * (component.feeHeadPercentage || 0)) / 100;
+                            const concessionAmount = componentAmount * (concessionRate / 100);
+                            const adjustedAmount = componentAmount - concessionAmount;
+
+                            return (
+                              <TableCell
+                                key={feeHead.id}
+                                className={
+                                  index <
+                                  uniqueFeeHeads.filter(
+                                    (fh): fh is NonNullable<typeof fh> => fh?.id !== null && fh?.id !== undefined,
+                                  ).length -
+                                    1
+                                    ? "border-r"
+                                    : ""
+                                }
+                              >
+                                <div className="font-medium">₹ {adjustedAmount.toLocaleString()}</div>
+                                {concessionAmount > 0 && (
+                                  <div className="text-xs text-green-700">-₹ {concessionAmount.toLocaleString()}</div>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
-            {/* <SlabForm
-              allSlabs={allSlabs}
-              initialData={editingSlabMapping}
-              academicYearId={selectedAcademicYear?.id}
-              onSubmit={handleSlabSubmit}
-              onClose={handleSlabModalClose}
-              editMode={slabEditMode}
-            /> */}
-          </div>
-        </div>
-      )}
+          ) : (
+            <div className="text-center py-8 text-gray-500">No concession slabs found</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

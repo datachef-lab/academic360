@@ -12,7 +12,9 @@ import {
   CreateFeesStructureDto,
   FeeConcessionSlab,
 } from "@/types/fees";
-import { CreateFeeStructureDto } from "@repo/db/dtos/fees";
+import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
+import { PaginatedResponse } from "@/types/pagination";
+import { AcademicYear } from "@/types/academics/academic-year";
 
 const BASE_PATH = "/api/v1/fees";
 
@@ -37,9 +39,42 @@ export interface NewFeesStructure {
   components?: Omit<FeesComponent, "id" | "feesStructureId" | "createdAt" | "updatedAt">[];
 }
 
-// Get all fees structures
-export async function getAllFeesStructures(): Promise<ApiResponse<FeesStructureDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/structure`);
+// Get all fees structures (paginated)
+export async function getAllFeesStructures(
+  page: number = 1,
+  pageSize: number = 10,
+  filters?: {
+    academicYearId?: number;
+    classId?: number;
+    receiptTypeId?: number;
+    programCourseId?: number;
+    shiftId?: number;
+  },
+): Promise<ApiResponse<PaginatedResponse<FeeStructureDto>>> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    pageSize: pageSize.toString(),
+  });
+
+  if (filters) {
+    if (filters.academicYearId) {
+      params.append("academicYearId", filters.academicYearId.toString());
+    }
+    if (filters.classId) {
+      params.append("classId", filters.classId.toString());
+    }
+    if (filters.receiptTypeId) {
+      params.append("receiptTypeId", filters.receiptTypeId.toString());
+    }
+    if (filters.programCourseId) {
+      params.append("programCourseId", filters.programCourseId.toString());
+    }
+    if (filters.shiftId) {
+      params.append("shiftId", filters.shiftId.toString());
+    }
+  }
+
+  const response = await axiosInstance.get(`${BASE_PATH}/structure?${params.toString()}`);
   return response.data;
 }
 
@@ -54,6 +89,14 @@ export async function createFeesStructure(
   newFeesStructure: CreateFeeStructureDto | CreateFeesStructureDto,
 ): Promise<ApiResponse<FeesStructureDto>> {
   const response = await axiosInstance.post(`${BASE_PATH}/structure`, newFeesStructure);
+  return response.data;
+}
+
+// Create fee structures by DTO (bulk creation for multiple program courses and shifts)
+export async function createFeeStructureByDto(
+  createFeeStructureDto: CreateFeeStructureDto,
+): Promise<ApiResponse<FeesStructureDto[]>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/structure/by-dto`, createFeeStructureDto);
   return response.data;
 }
 
@@ -592,14 +635,37 @@ export const checkSlabsExistForAcademicYear = async (academicYearId: number): Pr
   return response.data;
 };
 
-export const getFeesStructures = async () => {
-  const response = await axiosInstance.get(`${BASE_PATH}/structure`);
-  return response.data;
+export const getFeesStructures = async (
+  page: number = 1,
+  pageSize: number = 10,
+  filters?: {
+    academicYearId?: number;
+    classId?: number;
+    receiptTypeId?: number;
+    programCourseId?: number;
+    shiftId?: number;
+  },
+): Promise<FeeStructureDto[]> => {
+  const response = await axiosInstance.get<ApiResponse<PaginatedResponse<FeeStructureDto>>>(`${BASE_PATH}/structure`, {
+    params: {
+      page,
+      pageSize,
+      ...filters,
+    },
+  });
+  // Handle ApiResponse format with PaginatedResponse
+  if (response.data.payload && response.data.payload.content) {
+    return response.data.payload.content;
+  }
+  return [];
 };
 
-export const getAcademicYearsFromFeesStructures = async () => {
+export const getAcademicYearsFromFeesStructures = async (): Promise<AcademicYear[]> => {
   const response = await axiosInstance.get(`${BASE_PATH}/structure/academic-years/all`);
-  return response.data;
+  if (response.data && response.data.payload) {
+    return response.data.payload;
+  }
+  return [];
 };
 
 export const getCoursesFromFeesStructures = async (academicYearId: number) => {

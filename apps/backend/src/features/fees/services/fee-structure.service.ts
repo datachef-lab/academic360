@@ -1,27 +1,246 @@
 import { db } from "@/db/index.js";
-import { CreateFeeStructureDto } from "@repo/db/dtos/fees";
+import {
+  CreateFeeStructureDto,
+  FeeStructureDto,
+  FeeStructureComponentDto,
+  FeeStructureConcessionSlabDto,
+} from "@repo/db/dtos/fees";
 import {
   feeStructureModel,
   FeeStructure,
   feeStructureComponentModel,
   feeStructureConcessionSlabModel,
+  feeStructureInstallmentModel,
+  receiptTypeModel,
+  feeHeadModel,
+  feeConcessionSlabModel,
 } from "@repo/db/schemas/models/fees";
-import { and, eq } from "drizzle-orm";
+import {
+  academicYearModel,
+  classModel,
+  shiftModel,
+} from "@repo/db/schemas/models/academics";
+import { programCourseModel } from "@repo/db/schemas/models/course-design";
+import { and, eq, count, desc, inArray, sql } from "drizzle-orm";
+import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
+import * as academicYearService from "@/features/academics/services/academic-year.service.js";
+import * as classService from "@/features/academics/services/class.service.js";
+import * as shiftService from "@/features/academics/services/shift.service.js";
+import * as programCourseService from "@/features/course-design/services/program-course.service.js";
+import * as receiptTypeService from "./receipt-type.service.js";
+import * as feeHeadService from "./fee-head.service.js";
+import * as feeConcessionSlabService from "./fee-concession-slab.service.js";
 
 type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
 
+/**
+ * Converts a FeeStructure model to FeeStructureDto
+ */
+async function modelToDto(
+  model: typeof feeStructureModel.$inferSelect | null,
+): Promise<FeeStructureDto | null> {
+  if (!model) return null;
+
+  try {
+    // Fetch related entities
+    const receiptType = await receiptTypeService.getReceiptTypeById(
+      model.receiptTypeId,
+    );
+    const academicYear = await academicYearService.findAcademicYearById(
+      model.academicYearId,
+    );
+    const programCourse = await programCourseService.findById(
+      model.programCourseId,
+    );
+    const classRecord = await classService.findClassById(model.classId);
+    const shift = await shiftService.findById(model.shiftId);
+
+    if (
+      !receiptType ||
+      !academicYear ||
+      !programCourse ||
+      !classRecord ||
+      !shift
+    ) {
+      return null;
+    }
+
+    // Fetch advance for program course and class if they exist
+    const advanceForProgramCourse = model.advanceForProgramCourseId
+      ? await programCourseService.findById(model.advanceForProgramCourseId)
+      : null;
+    const advanceForClass = model.advanceForClassId
+      ? await classService.findClassById(model.advanceForClassId)
+      : null;
+
+    // Fetch components
+    const components = await db
+      .select()
+      .from(feeStructureComponentModel)
+      .where(eq(feeStructureComponentModel.feeStructureId, model.id!));
+
+    const componentDtos: FeeStructureComponentDto[] = await Promise.all(
+      components.map(async (component) => {
+        const feeHead = await feeHeadService.getFeeHeadById(
+          component.feeHeadId,
+        );
+        return {
+          ...component,
+          feeHead: feeHead || null,
+        };
+      }),
+    );
+
+    // Fetch concession slabs
+    const concessionSlabs = await db
+      .select()
+      .from(feeStructureConcessionSlabModel)
+      .where(eq(feeStructureConcessionSlabModel.feeStructureId, model.id!));
+
+    const concessionSlabDtos: FeeStructureConcessionSlabDto[] =
+      await Promise.all(
+        concessionSlabs.map(async (slab) => {
+          const feeConcessionSlab =
+            await feeConcessionSlabService.getFeeConcessionSlabById(
+              slab.feeConcessionSlabId,
+            );
+          if (!feeConcessionSlab) {
+            throw new Error(
+              `Fee concession slab not found: ${slab.feeConcessionSlabId}`,
+            );
+          }
+          return {
+            ...slab,
+            feeConcessionSlab,
+          };
+        }),
+      );
+
+    // Fetch installments
+    const installments = await db
+      .select()
+      .from(feeStructureInstallmentModel)
+      .where(eq(feeStructureInstallmentModel.feeStructureId, model.id!));
+
+    // Build DTO
+    const {
+      receiptTypeId,
+      academicYearId,
+      programCourseId,
+      classId,
+      shiftId,
+      advanceForProgramCourseId,
+      advanceForClassId,
+      ...rest
+    } = model;
+
+    return {
+      ...rest,
+      receiptType,
+      academicYear,
+      programCourse,
+      class: classRecord,
+      shift,
+      advanceForProgramCourse,
+      advanceForClass,
+      components: componentDtos,
+      feeStructureConcessionSlabs: concessionSlabDtos,
+      installments,
+    };
+  } catch (error) {
+    console.error("Error converting fee structure model to DTO:", error);
+    return null;
+  }
+}
+
 export const createFeeStructure = async (
   data: Omit<FeeStructureInsert, "id" | "createdAt" | "updatedAt">,
-) => {
+): Promise<FeeStructureDto | null> => {
   const [created] = await db.insert(feeStructureModel).values(data).returning();
-  return created || null;
+  if (!created) return null;
+  return await modelToDto(created);
 };
 
-export const getAllFeeStructures = async () => {
-  return db.select().from(feeStructureModel);
+export const getAllFeeStructures = async (
+  page: number = 1,
+  pageSize: number = 10,
+  filters?: {
+    academicYearId?: number;
+    classId?: number;
+    receiptTypeId?: number;
+    programCourseId?: number;
+    shiftId?: number;
+  },
+): Promise<PaginatedResponse<FeeStructureDto>> => {
+  const offset = (page - 1) * pageSize;
+  const limit = Math.max(1, Math.min(100, pageSize)); // Limit pageSize between 1 and 100
+
+  // Build where conditions
+  const conditions = [];
+  if (filters?.academicYearId) {
+    conditions.push(
+      eq(feeStructureModel.academicYearId, filters.academicYearId),
+    );
+  }
+  if (filters?.classId) {
+    conditions.push(eq(feeStructureModel.classId, filters.classId));
+  }
+  if (filters?.receiptTypeId) {
+    conditions.push(eq(feeStructureModel.receiptTypeId, filters.receiptTypeId));
+  }
+  if (filters?.programCourseId) {
+    conditions.push(
+      eq(feeStructureModel.programCourseId, filters.programCourseId),
+    );
+  }
+  if (filters?.shiftId) {
+    conditions.push(eq(feeStructureModel.shiftId, filters.shiftId));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  // Get total count
+  const countQuery = db.select({ count: count() }).from(feeStructureModel);
+
+  const [{ count: totalCount }] = whereClause
+    ? await countQuery.where(whereClause)
+    : await countQuery;
+
+  const totalElements = Number(totalCount || 0);
+  const totalPages = Math.max(1, Math.ceil(totalElements / limit));
+
+  // Get paginated structures
+  let query = db
+    .select()
+    .from(feeStructureModel)
+    .orderBy(desc(feeStructureModel.id))
+    .limit(limit)
+    .offset(offset);
+
+  if (whereClause) {
+    query = query.where(whereClause) as any;
+  }
+
+  const structures = await query;
+
+  // Convert to DTOs
+  const dtos = await Promise.all(structures.map((s) => modelToDto(s)));
+  const content = dtos.filter((dto): dto is FeeStructureDto => dto !== null);
+
+  return {
+    content,
+    page,
+    pageSize: limit,
+    totalPages,
+    totalElements,
+  };
 };
 
-export async function createFeeStructureByDto(givenDto: CreateFeeStructureDto) {
+export async function createFeeStructureByDto(
+  givenDto: CreateFeeStructureDto,
+): Promise<FeeStructureDto[]> {
+  const createdStructures: FeeStructureDto[] = [];
+
   for (let i = 0; i < givenDto.programCourseIds.length; i++) {
     for (let j = 0; j < givenDto.shiftIds.length; j++) {
       // Step 1: - Create fee structure for each combination of programCourseId and shiftId
@@ -32,6 +251,15 @@ export async function createFeeStructureByDto(givenDto: CreateFeeStructureDto) {
         baseAmount: givenDto.baseAmount,
         programCourseId: givenDto.programCourseIds[i],
         shiftId: givenDto.shiftIds[j],
+        closingDate: givenDto.closingDate,
+        startDate: givenDto.startDate,
+        endDate: givenDto.endDate,
+        onlineStartDate: givenDto.onlineStartDate,
+        onlineEndDate: givenDto.onlineEndDate,
+        numberOfInstallments: givenDto.numberOfInstallments,
+        advanceForProgramCourseId:
+          givenDto.advanceForProgramCourseIds?.[i] || null,
+        advanceForClassId: null, // advanceForClassIds not in DTO, set to null
       };
       const [existingFeeStructure] = await db
         .select()
@@ -66,6 +294,8 @@ export async function createFeeStructureByDto(givenDto: CreateFeeStructureDto) {
         .values(feeStructuredataToInsert)
         .returning();
 
+      if (!newFeesStructure) continue;
+
       // Step 2: - Add the components
       for (let k = 0; k < givenDto.components.length; k++) {
         const component = givenDto.components[k];
@@ -85,37 +315,63 @@ export async function createFeeStructureByDto(givenDto: CreateFeeStructureDto) {
           concessionRate: concessionSlab.concessionRate,
         });
       }
+
+      // Step 4: - Add installments if provided
+      if (givenDto.installments && givenDto.installments.length > 0) {
+        for (let k = 0; k < givenDto.installments.length; k++) {
+          const installment = givenDto.installments[k];
+          await db.insert(feeStructureInstallmentModel).values({
+            ...installment,
+            feeStructureId: newFeesStructure.id!,
+          });
+        }
+      }
+
+      // Convert to DTO and add to results
+      const dto = await modelToDto(newFeesStructure);
+      if (dto) {
+        createdStructures.push(dto);
+      }
     }
   }
+
+  return createdStructures;
 }
 
-export const getFeeStructureById = async (id: number) => {
+export const getFeeStructureById = async (
+  id: number,
+): Promise<FeeStructureDto | null> => {
   const [found] = await db
     .select()
     .from(feeStructureModel)
     .where(eq(feeStructureModel.id, id));
-  return found || null;
+  if (!found) return null;
+  return await modelToDto(found);
 };
 
 // TODO: Update function should be handling the upsert for all the related entities.
 export const updateFeeStructure = async (
   id: number,
   data: Partial<FeeStructure>,
-) => {
+): Promise<FeeStructureDto | null> => {
   const [updated] = await db
     .update(feeStructureModel)
     .set(data)
     .where(eq(feeStructureModel.id, id))
     .returning();
-  return updated || null;
+  if (!updated) return null;
+  return await modelToDto(updated);
 };
 
-export const deleteFeeStructure = async (id: number) => {
+export const deleteFeeStructure = async (
+  id: number,
+): Promise<FeeStructureDto | null> => {
   const [deleted] = await db
     .delete(feeStructureModel)
     .where(eq(feeStructureModel.id, id))
     .returning();
-  return deleted || null;
+  if (!deleted) return null;
+  return await modelToDto(deleted);
 };
 
 // export const getFeesStructureById = async (
@@ -775,3 +1031,35 @@ export const deleteFeeStructure = async (id: number) => {
 //         );
 //     return !!existing;
 // };
+
+export const getAcademicYearsFromFeesStructures = async () => {
+  // Get all fee structures to extract unique academic year IDs
+  const allStructures = await db
+    .select({ academicYearId: feeStructureModel.academicYearId })
+    .from(feeStructureModel);
+
+  // Get unique academic year IDs
+  const uniqueAcademicYearIds = Array.from(
+    new Set(
+      allStructures
+        .map((s) => s.academicYearId)
+        .filter((id): id is number => id !== null && id !== undefined),
+    ),
+  );
+
+  if (uniqueAcademicYearIds.length === 0) {
+    return [];
+  }
+
+  // Fetch academic years using the service
+  const academicYears = await Promise.all(
+    uniqueAcademicYearIds.map((id) =>
+      academicYearService.findAcademicYearById(id),
+    ),
+  );
+
+  // Filter out null values and return
+  return academicYears.filter(
+    (ay): ay is NonNullable<typeof ay> => ay !== null,
+  );
+};

@@ -14,7 +14,6 @@ import { Shift } from "@/types/academics/shift";
 import { FeesHead, FeesReceiptType, FeeConcessionSlab } from "@/types/fees";
 import { Class } from "@/types/academics/class";
 import { CreateFeeStructureDto } from "@repo/db/dtos/fees";
-import { FeeStructureConcessionSlabT } from "@repo/db/schemas";
 import { getProgramCourses, getAcademicYears } from "@/services/course-design.api";
 import { getAllShifts } from "@/services/academic";
 import { getAllFeesHeads, getAllFeeConcessionSlabs } from "@/services/fees-api";
@@ -69,6 +68,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({ open, onClose, 
     semester: "Sem 1",
     concessionSlabs: [],
   });
+  const [saving, setSaving] = useState(false);
 
   // Fetch academic years, program courses, shifts, fee heads and concession slabs on component mount
   useEffect(() => {
@@ -248,7 +248,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({ open, onClose, 
     setShowPreviewModal(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!onSave) {
       onClose();
       return;
@@ -275,6 +275,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({ open, onClose, 
       alert("Please select at least one Shift");
       return;
     }
+    if (feeStructureRow.components.length === 0) {
+      alert("Please select at least one Fee Head");
+      return;
+    }
+
+    setSaving(true);
 
     // Map UI data to CreateFeeStructureDto
     const createFeeStructureDto: CreateFeeStructureDto = {
@@ -295,7 +301,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({ open, onClose, 
           feeHeadPercentage: 0, // Default, can be calculated based on amount
           sequence: index + 1,
           remarks: null,
-        };
+        } as any; // Type assertion needed due to schema inference
       }),
       // Map program names to IDs
       programCourseIds: feeStructureRow.programs
@@ -318,12 +324,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({ open, onClose, 
           throw new Error(`Fee concession slab ID not found for: ${slab.name}`);
         }
         return {
-          feesStructureId: 0, // Will be set by backend when creating
+          feeStructureId: 0, // Will be set by backend when creating
           feeConcessionSlabId: slab.id,
           concessionRate: slab.defaultConcessionRate,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as FeeStructureConcessionSlabT;
+        } as any; // Type assertion needed due to schema inference
       }),
       installments: [], // Can be added later if needed
       closingDate: null,
@@ -335,8 +339,15 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({ open, onClose, 
       advanceForClassId: null,
     };
 
-    onSave(createFeeStructureDto);
-    onClose();
+    try {
+      await onSave(createFeeStructureDto);
+      onClose();
+    } catch (error) {
+      console.error("Error saving fee structure:", error);
+      alert("Failed to save fee structure. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -665,10 +676,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({ open, onClose, 
           </div>
 
           <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -824,7 +837,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({ open, onClose, 
             <Button variant="outline" onClick={() => setShowPreviewModal(false)}>
               Close
             </Button>
-            <Button onClick={handleSave}>Save</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
