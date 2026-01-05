@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1571,14 +1572,14 @@ export default function ScheduleExamPage() {
               <Play className="w-4 h-4" />
               <span className="hidden sm:inline">Assign</span>
             </Button>
-            <Button
+            {/* <Button
               onClick={exportCSV}
               className="gap-2 bg-green-500 text-white hover:bg-green-600"
               disabled={studentsWithSeats.length === 0}
             >
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Export CSV</span>
-            </Button>
+            </Button> */}
           </div>
         </div>
       </header>
@@ -1770,56 +1771,64 @@ export default function ScheduleExamPage() {
           icon={DoorOpen}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <Label className="block text-sm font-medium text-gray-900 mb-1.5">Select Rooms</Label>
-                <Button
-                  variant="outline"
-                  onClick={openRoomsModalHandler}
-                  className="w-full justify-start bg-white border-purple-200 text-left font-normal hover:bg-purple-100"
-                >
-                  {selectedRooms.length ? `${selectedRooms.length} room(s) selected` : "Click to select rooms..."}
-                </Button>
-              </div>
-
-              <div>
-                <Label className="block text-sm font-medium text-gray-900 mb-1.5">Students per Bench</Label>
-                <Input
-                  type="number"
-                  value={studentsPerBench}
-                  onChange={(e) => setStudentsPerBench(Number(e.target.value) || 2)}
-                  className="bg-white border-purple-200"
-                  min={1}
-                />
-              </div>
-
-              <div>
-                <Label className="block text-sm font-medium text-gray-900 mb-1.5">Total Capacity</Label>
-                <div className="flex items-center gap-2 px-3 py-2.5 bg-purple-50 rounded-lg">
-                  <span className="font-semibold text-purple-500">{totalCapacity || "—"}</span>
-                </div>
-                {totalCapacity > 0 && totalStudents > 0 && totalCapacity < totalStudents && (
-                  <div className="flex items-center gap-2 mt-2 text-red-500 text-sm">
-                    <AlertTriangle className="w-4 h-4" />
-                    <span>Capacity is less than total students</span>
-                  </div>
-                )}
-              </div>
+            {/* Select Rooms */}
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Select Rooms</Label>
+              <Button
+                variant="outline"
+                onClick={openRoomsModalHandler}
+                className="w-full justify-start bg-white border-purple-200 text-left font-normal hover:bg-purple-100"
+              >
+                {selectedRooms.length ? `${selectedRooms.length} room(s) selected` : "Click to select rooms..."}
+              </Button>
             </div>
 
-            {/* Excel File Upload */}
+            {/* Students per Bench */}
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Students per Bench</Label>
+              <Input
+                type="number"
+                value={studentsPerBench}
+                onChange={(e) => setStudentsPerBench(Number(e.target.value) || 2)}
+                min={1}
+                className="bg-white border-purple-200"
+              />
+            </div>
 
+            {/* Assign By */}
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Assign By</Label>
+              <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
+                <SelectTrigger className="w-full bg-white border-purple-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                  <SelectItem value="UID">UID</SelectItem>
+                  <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
+                  <SelectItem value="CU_ROLL_NUMBER">CU Roll Number</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Upload Excel (Conditional) */}
             {examType && examTypes.find((e) => e.id.toString() === examType && e.name === "Test Exam") && (
-              <div className="flex items-center">
+              <div>
+                <Label className="block text-sm font-medium text-gray-900 mb-1.5">Upload Seating Excel</Label>
+
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-9 w-44 justify-between border-purple-300">
-                      <Upload className="w-4 h-4 mr-1" />
-                      {excelFile
-                        ? `File: ${excelFile.name.slice(0, 20)}${excelFile.name.length > 20 ? "..." : ""}`
-                        : "Upload Excel"}
+                    <Button variant="outline" className="w-full justify-between bg-white border-purple-200 font-normal">
+                      <span className="flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        {excelFile
+                          ? excelFile.name.length > 20
+                            ? `${excelFile.name.slice(0, 20)}...`
+                            : excelFile.name
+                          : "Upload Excel"}
+                      </span>
                     </Button>
                   </PopoverTrigger>
+
                   <PopoverContent className="w-80 p-4" align="start">
                     <div className="space-y-3">
                       <Input
@@ -1829,6 +1838,7 @@ export default function ScheduleExamPage() {
                         onChange={handleFileUpload}
                         className="hidden"
                       />
+
                       <Button
                         type="button"
                         variant="outline"
@@ -1836,8 +1846,9 @@ export default function ScheduleExamPage() {
                         className="w-full"
                       >
                         <Upload className="w-4 h-4 mr-2" />
-                        Choose Excel File (foil_number, uid)
+                        Choose Excel File
                       </Button>
+
                       {excelFile && (
                         <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
                           <span className="text-sm text-green-700">{excelFile.name}</span>
@@ -1851,29 +1862,32 @@ export default function ScheduleExamPage() {
                           </Button>
                         </div>
                       )}
-                      <p className="text-xs text-gray-500">Upload XLSX with columns: foil_number, uid</p>
+
+                      <p className="text-xs text-gray-500">
+                        Upload XLSX with columns:
+                        <br />
+                        <b>foil_number</b>, <b>uid</b>
+                      </p>
                     </div>
                   </PopoverContent>
                 </Popover>
               </div>
             )}
 
-            <div className="space-y-4">
-              <div>
-                <Label className="block text-sm font-medium text-gray-900 mb-1.5">Assign By</Label>
-                <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
-                  <SelectTrigger className="w-full bg-white border-purple-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
-                    <SelectItem value="UID">UID</SelectItem>
-                    <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
-                    <SelectItem value="CU_ROLL_NUMBER">CU Roll Number</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Total Capacity (LAST) */}
+            <div className="md:col-span-2 w-[50%]">
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Total Capacity</Label>
+
+              <div className="flex items-center gap-2 px-3 py-3 bg-purple-50 rounded-lg">
+                <span className="font-semibold text-purple-600 text-lg">{totalCapacity || "—"}</span>
               </div>
 
-              {/* Center: Tabs (Rooms / Students) with table */}
+              {totalCapacity > 0 && totalStudents > 0 && totalCapacity < totalStudents && (
+                <div className="flex items-center gap-2 mt-2 text-red-500 text-sm">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Capacity is less than total students</span>
+                </div>
+              )}
             </div>
           </div>
         </AccordionSection>
@@ -1956,8 +1970,7 @@ export default function ScheduleExamPage() {
                     return (
                       <Badge
                         key={subject.subjectId}
-                        variant={isSelected ? "default" : "outline"}
-                        className="cursor-pointer"
+                        className={`cursor-pointer ${isSelected ? "bg-purple-100 text-purple-800 " : "bg-white text-purple-800 border border-purple-200"}`}
                         onClick={() => {
                           setSelectedSubjectIds((prev) =>
                             isSelected ? prev.filter((id) => id !== subject.subjectId!) : [...prev, subject.subjectId!],
@@ -1987,8 +2000,8 @@ export default function ScheduleExamPage() {
               <span className="ml-2 text-gray-600">Loading students...</span>
             </div>
           ) : studentsWithSeats.length > 0 ? (
-            <div className="overflow-x-auto -mx-5 px-5">
-              <Table className="min-w-[800px]">
+            <div className="overflow-x-auto overflow-y-auto max-h-[500px] -mx-5 px-5">
+              <Table className="min-w-auto">
                 <TableHeader>
                   <TableRow className="border-b border-purple-200">
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Sl.</TableHead>
@@ -1996,11 +2009,14 @@ export default function ScheduleExamPage() {
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Name</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Roll No.</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Reg. No.</TableHead>
-                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Contact</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Email</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Phone</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Floor</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Room</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Seat</TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
                   {studentsWithSeats.map((student, idx) => (
                     <TableRow
@@ -2008,25 +2024,38 @@ export default function ScheduleExamPage() {
                       className="border-b border-purple-200/50 hover:bg-purple-50 transition-colors"
                     >
                       <TableCell className="text-gray-600">{idx + 1}</TableCell>
-                      <TableCell className="font-medium text-gray-900">{student.uid}</TableCell>
-                      <TableCell className="text-gray-900">{student.name}</TableCell>
+
+                      <TableCell className="font-medium text-gray-900">{student.uid || "N/A"}</TableCell>
+
+                      <TableCell className="text-gray-900">{student.name || "N/A"}</TableCell>
+
                       <TableCell className="text-gray-600">N/A</TableCell>
+
                       <TableCell className="text-gray-600">
                         {student.cuRegistrationApplicationNumber || "N/A"}
                       </TableCell>
-                      <TableCell className="text-gray-600">
-                        <div className="space-y-1">
-                          <div>{student.email || "N/A"}</div>
-                          <div className="text-xs text-gray-600">WA: {student.whatsappPhone || "N/A"}</div>
-                        </div>
-                      </TableCell>
+
+                      {/* Email */}
+                      <TableCell className="text-gray-600">{student.email || "N/A"}</TableCell>
+
+                      {/* Phone */}
+                      <TableCell className="text-gray-600">{student.whatsappPhone || "N/A"}</TableCell>
+
+                      {/* Floor */}
                       <TableCell>
-                        <Badge variant={student.roomName ? "default" : "secondary"}>
-                          {student.floorName && student.roomName
-                            ? `${student.floorName}, ${student.roomName}`
-                            : student.floorName || student.roomName || "N/A"}
+                        <Badge className="bg-purple-200 text-purple-700 hover:bg-purple-2">
+                          {student.floorName || "N/A"}
                         </Badge>
                       </TableCell>
+
+                      {/* Room */}
+                      <TableCell>
+                        <Badge className="bg-purple-200 text-purple-700 hover:bg-purple-200">
+                          {student.roomName || "N/A"}
+                        </Badge>
+                      </TableCell>
+
+                      {/* Seat */}
                       <TableCell className="font-medium text-gray-900">{student.seatNumber || "N/A"}</TableCell>
                     </TableRow>
                   ))}
