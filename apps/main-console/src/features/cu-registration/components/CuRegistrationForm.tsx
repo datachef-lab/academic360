@@ -964,10 +964,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             })
           : Promise.resolve(null);
 
-        const correctionReqPromise = getStudentCuCorrectionRequests(studentId).catch((e) => {
-          console.error(`[CU-REG MAIN-CONSOLE] Error fetching correction requests:`, e);
-          return [] as Array<Record<string, unknown>>;
-        });
+        const correctionReqPromise = getStudentCuCorrectionRequests(studentId)
+          .then((data) => {
+            console.log("correctionReqPromise data", data);
+            return data || ([] as Array<Record<string, unknown>>);
+          })
+          .catch((e) => {
+            console.error(`[CU-REG MAIN-CONSOLE] Error fetching correction requests:`, e);
+            return [] as Array<Record<string, unknown>>;
+          });
 
         const subjectsPromise = Promise.all([
           fetchStudentSubjectSelections(studentId).catch(() => ({
@@ -988,6 +993,7 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         ]);
 
         const existingRequest = (requests as Array<Record<string, unknown>>)?.[0] || null;
+        console.log("existingRequest", existingRequest);
 
         if (existingRequest) {
           const ex = existingRequest as Record<string, unknown>;

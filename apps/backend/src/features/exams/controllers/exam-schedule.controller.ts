@@ -7,12 +7,15 @@ import {
   countStudentsByPapers,
   createExamAssignment,
   downloadAdmitCardsAsZip,
+  downloadAttendanceSheetsByExamId,
   downloadExamCandidatesbyExamId,
   downloadSingleAdmitCard,
   findAll,
   findById,
+  findByStudentId,
   findExamPapersByExamId,
   findExamsByStudentId,
+  getExamCandidatesByStudentIdAndExamId,
   getStudentsByPapers,
   sendExamAdmitCardEmails,
   updateExamSubject,
@@ -477,6 +480,57 @@ export const downloadAdmitCardsController = async (
   }
 };
 
+export const downloadAttendanceSheetsByExamIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  console.log(req.query);
+  try {
+    const { examId, uploadSessionId } = req.query;
+
+    if (!examId) {
+      res
+        .status(400)
+        .json(new ApiError(400, "examId and examSubjectId are required"));
+      return;
+    }
+
+    const examIdNum = Number(examId);
+
+    if (isNaN(examIdNum)) {
+      res.status(400).json(new ApiError(400, "Invalid examId"));
+      return;
+    }
+
+    console.info(`[ATTENDANCE_SHEETS-DOWNLOAD] Starting download`, {
+      examIdNum,
+    });
+
+    const result = await downloadAttendanceSheetsByExamId(
+      examIdNum,
+      (req as any)?.user!.id as number,
+      uploadSessionId as string | undefined,
+    );
+
+    if (result.roomCount === 0) {
+      res.status(404).json(new ApiError(404, "No attendance dr sheet found"));
+      return;
+    }
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="exam-${examId}-attendance-dr-sheets.zip"`,
+    );
+
+    res.send(result.zipBuffer);
+  } catch (error) {
+    console.error("[ATTENDANCE_SHEETS-DOWNLOAD] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
 export const downloadExamCandidatesController = async (
   req: Request,
   res: Response,
@@ -644,6 +698,54 @@ export const getExamsByStudentController = async (
   }
 };
 
+export const getExamCandiatesByStudentIdAndExamIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { studentId, examId } = req.query;
+
+    console.log(req.query);
+
+    if (!studentId || !examId) {
+      res
+        .status(400)
+        .json(new ApiError(400, "studentId and examId both are required"));
+      return;
+    }
+
+    const studentIdNum = Number(studentId);
+    const examIdNum = Number(examId);
+
+    if (isNaN(studentIdNum) || isNaN(examIdNum)) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Invalid studentId, page or pageSize"));
+      return;
+    }
+
+    const result = await getExamCandidatesByStudentIdAndExamId(
+      studentIdNum,
+      examIdNum,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Exams Candidates fetched successfully",
+        ),
+      );
+  } catch (error) {
+    console.error("[GET-STUDENT-EXAMS] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
 export const getAllExamsController = async (
   req: Request,
   res: Response,
@@ -683,12 +785,39 @@ export const getExamByIdController = async (
   try {
     const id = Number(req.params.id);
 
+    console.log("in getExamByIdController()", id);
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid exam id"));
       return;
     }
 
     const result = await findById(id);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", result, "Exams fetched successfully"),
+      );
+  } catch (error) {
+    console.error("[GET-STUDENT-EXAMS] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const getExamsByStudentIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const studentId = Number(req.params.studentId);
+    console.log("in getExamsByStudentIdController()");
+    if (isNaN(studentId)) {
+      res.status(400).json(new ApiError(400, "Invalid exam id"));
+      return;
+    }
+
+    const result = await findByStudentId(studentId);
 
     res
       .status(200)
@@ -708,6 +837,8 @@ export const getExamPapersByExamIdController = async (
 ): Promise<void> => {
   try {
     const id = Number(req.params.id);
+
+    console.log("in getExamPapersByExamIdController()");
 
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid exam id"));

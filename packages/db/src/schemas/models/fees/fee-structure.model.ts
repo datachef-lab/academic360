@@ -9,7 +9,8 @@ import { academicYearModel, classModel, shiftModel } from "@/schemas/models/acad
 export const feeStructureModel = pgTable("fee_structures", {
     id: serial().primaryKey(),
     receiptTypeId: integer("receipt_type_id_fk")
-        .references(() => receiptTypeModel.id),
+        .references(() => receiptTypeModel.id)
+        .notNull(),
     baseAmount: doublePrecision().notNull(),
     closingDate: date(),
     academicYearId: integer("academic_year_id_fk")

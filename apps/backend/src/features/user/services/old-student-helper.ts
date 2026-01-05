@@ -667,8 +667,8 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
           : undefined,
         lastPassedYear: oldStudent.lspassedyr ?? undefined,
         notes: oldStudent.notes ?? undefined,
-        active: !!oldStudent.active,
-        alumni: !!oldStudent.alumni,
+        active: bitToBool(oldStudent.active),
+        alumni: bitToBool(oldStudent.alumni),
         leavingDate: oldStudent.leavingdate
           ? new Date(oldStudent.leavingdate)
           : undefined,

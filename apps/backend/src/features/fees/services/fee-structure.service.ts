@@ -1,6 +1,12 @@
 import { db } from "@/db/index.js";
-import { feeStructureModel, FeeStructure } from "@repo/db/schemas/models/fees";
-import { eq } from "drizzle-orm";
+import { CreateFeeStructureDto } from "@repo/db/dtos/fees";
+import {
+  feeStructureModel,
+  FeeStructure,
+  feeStructureComponentModel,
+  feeStructureConcessionSlabModel,
+} from "@repo/db/schemas/models/fees";
+import { and, eq } from "drizzle-orm";
 
 type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
 
@@ -15,6 +21,74 @@ export const getAllFeeStructures = async () => {
   return db.select().from(feeStructureModel);
 };
 
+export async function createFeeStructureByDto(givenDto: CreateFeeStructureDto) {
+  for (let i = 0; i < givenDto.programCourseIds.length; i++) {
+    for (let j = 0; j < givenDto.shiftIds.length; j++) {
+      // Step 1: - Create fee structure for each combination of programCourseId and shiftId
+      const feeStructuredataToInsert: FeeStructure = {
+        academicYearId: givenDto.academicYearId,
+        classId: givenDto.classId,
+        receiptTypeId: givenDto.receiptTypeId,
+        baseAmount: givenDto.baseAmount,
+        programCourseId: givenDto.programCourseIds[i],
+        shiftId: givenDto.shiftIds[j],
+      };
+      const [existingFeeStructure] = await db
+        .select()
+        .from(feeStructureModel)
+        .where(
+          and(
+            eq(
+              feeStructureModel.academicYearId,
+              feeStructuredataToInsert.academicYearId,
+            ),
+            eq(feeStructureModel.classId, feeStructuredataToInsert.classId),
+            eq(
+              feeStructureModel.programCourseId,
+              feeStructuredataToInsert.programCourseId,
+            ),
+            eq(feeStructureModel.shiftId, feeStructuredataToInsert.shiftId),
+            eq(
+              feeStructureModel.receiptTypeId,
+              feeStructuredataToInsert.receiptTypeId,
+            ),
+          ),
+        );
+
+      if (existingFeeStructure) {
+        // Skip creation if fee structure already exists
+        continue;
+      }
+
+      // Create new fee structure
+      const [newFeesStructure] = await db
+        .insert(feeStructureModel)
+        .values(feeStructuredataToInsert)
+        .returning();
+
+      // Step 2: - Add the components
+      for (let k = 0; k < givenDto.components.length; k++) {
+        const component = givenDto.components[k];
+
+        await db.insert(feeStructureComponentModel).values({
+          ...component,
+          feeStructureId: newFeesStructure.id!,
+        });
+      }
+      // Step 3: - Add the fee-concession-slabs
+      for (let k = 0; k < givenDto.feeStructureConcessionSlabs.length; k++) {
+        const concessionSlab = givenDto.feeStructureConcessionSlabs[k];
+
+        await db.insert(feeStructureConcessionSlabModel).values({
+          feeStructureId: newFeesStructure.id!,
+          feeConcessionSlabId: concessionSlab.feeConcessionSlabId,
+          concessionRate: concessionSlab.concessionRate,
+        });
+      }
+    }
+  }
+}
+
 export const getFeeStructureById = async (id: number) => {
   const [found] = await db
     .select()
@@ -23,6 +97,7 @@ export const getFeeStructureById = async (id: number) => {
   return found || null;
 };
 
+// TODO: Update function should be handling the upsert for all the related entities.
 export const updateFeeStructure = async (
   id: number,
   data: Partial<FeeStructure>,

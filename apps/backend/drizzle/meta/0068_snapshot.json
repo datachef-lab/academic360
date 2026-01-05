@@ -1,5 +1,5 @@
 {
-  "id": "a437d122-4cf9-483d-bb98-f7885ef8c302",
+  "id": "0fa3534d-d993-495d-af78-8db323ab767d",
   "prevId": "4bc3a1ba-3f85-48d0-ab12-af555aab9cf2",
   "version": "7",
   "dialect": "postgresql",
@@ -7718,8 +7718,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "fees_structure_id_fk": {
-          "name": "fees_structure_id_fk",
+        "fee_structure_id_fk": {
+          "name": "fee_structure_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -7754,12 +7754,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "fee_structure_concession_slabs_fees_structure_id_fk_fee_structures_id_fk": {
-          "name": "fee_structure_concession_slabs_fees_structure_id_fk_fee_structures_id_fk",
+        "fee_structure_concession_slabs_fee_structure_id_fk_fee_structures_id_fk": {
+          "name": "fee_structure_concession_slabs_fee_structure_id_fk_fee_structures_id_fk",
           "tableFrom": "fee_structure_concession_slabs",
           "tableTo": "fee_structures",
           "columnsFrom": [
-            "fees_structure_id_fk"
+            "fee_structure_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -7873,7 +7873,7 @@
           "name": "receipt_type_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "base_amount": {
           "name": "base_amount",
