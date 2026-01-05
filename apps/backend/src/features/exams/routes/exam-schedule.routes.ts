@@ -1,12 +1,14 @@
-import { Router } from "express";
+import { NextFunction, Response, Router } from "express";
 import {
   countStudentsForExam,
   createExamAssignmenthandler,
   downloadAdmitCardsController,
+  downloadAttendanceSheetsByExamIdController,
   downloadExamCandidatesController,
   downloadSingleAdmitCardController,
   getAllExamsController,
   getExamByIdController,
+  getExamCandiatesByStudentIdAndExamIdController,
   getExamPapersByExamIdController,
   getExamsByStudentController,
   getStudentsForExam,
@@ -36,6 +38,11 @@ router.put("/exam-subject", verifyJWT, updateExamSubjectHandler);
 
 router.get("/download-admit-cards", verifyJWT, downloadAdmitCardsController);
 router.get(
+  "/download-attendance-sheets",
+  verifyJWT,
+  downloadAttendanceSheetsByExamIdController,
+);
+router.get(
   "/send-admit-cards",
   verifyJWT,
   triggerExamCandidatesEmailController,
@@ -44,7 +51,9 @@ router.get(
 router.post("/", verifyJWT, uploadExcelMiddleware, createExamAssignmenthandler);
 router.get("/exam-candidates/download", downloadExamCandidatesController);
 router.get("/", getAllExamsController);
+// router.post("/student/:studentId", verifyJWT, uploadExcelMiddleware, getExamsByStudentController);
 router.get("/admit-card/download/single", downloadSingleAdmitCardController);
+router.get("/candidates", getExamCandiatesByStudentIdAndExamIdController);
 router.get("/:id", getExamByIdController);
 router.get("/exam-papers/:id", getExamPapersByExamIdController);
 /**

@@ -6,7 +6,7 @@ import { feeConcessionSlabModel, feeStructureModel } from "@/schemas/models/fees
 
 export const feeStructureConcessionSlabModel = pgTable("fee_structure_concession_slabs", {
     id: serial().primaryKey(),
-    feesStructureId: integer("fees_structure_id_fk")
+    feeStructureId: integer("fee_structure_id_fk")
         .references(() => feeStructureModel.id)
         .notNull(),
     feeConcessionSlabId: integer("fee_concession_slab_id_fk")
