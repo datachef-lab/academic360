@@ -1970,7 +1970,7 @@ export default function ScheduleExamPage() {
                     return (
                       <Badge
                         key={subject.subjectId}
-                        className={`cursor-pointer ${isSelected ? "bg-purple-100 text-purple-800 " : "bg-white text-purple-800 border border-purple-200"}`}
+                        className={`cursor-pointer ${isSelected ? "bg-purple-100 text-purple-800 hover:bg-purple-100  " : "bg-white text-purple-800 hover:bg-purple-50  border border-purple-200"}`}
                         onClick={() => {
                           setSelectedSubjectIds((prev) =>
                             isSelected ? prev.filter((id) => id !== subject.subjectId!) : [...prev, subject.subjectId!],
@@ -2043,14 +2043,14 @@ export default function ScheduleExamPage() {
 
                       {/* Floor */}
                       <TableCell>
-                        <Badge className="bg-purple-200 text-purple-700 hover:bg-purple-2">
+                        <Badge className="bg-purple-100 text-purple-600 hover:bg-purple-100">
                           {student.floorName || "N/A"}
                         </Badge>
                       </TableCell>
 
                       {/* Room */}
                       <TableCell>
-                        <Badge className="bg-purple-200 text-purple-700 hover:bg-purple-200">
+                        <Badge className="bg-purple-100 text-purple-600 hover:bg-purple-100">
                           {student.roomName || "N/A"}
                         </Badge>
                       </TableCell>
