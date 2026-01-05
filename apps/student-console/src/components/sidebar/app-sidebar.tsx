@@ -33,6 +33,7 @@ import { fetchStudentSubjectSelections } from "@/services/subject-selection";
 // import { useAuth } from "@/hooks/use-auth";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const isNestedIframe = window.self !== window.top;
   const pathname = usePathname();
   //   const { user } = useAuth();
   const { accessControl, student } = useStudent();
@@ -90,7 +91,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isActive: pathname === "/dashboard/subject-selection",
     },
     // Hide admission registration for MA and MCOM students
-    ...(isBlockedProgram
+    ...(isBlockedProgram || !isNestedIframe
       ? []
       : [
           {
@@ -100,12 +101,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             isActive: pathname === "/dashboard/admission-registration",
           },
         ]),
-    // {
-    //   title: "Exams",
-    //   url: "/dashboard/exams",
-    //   icon: NotebookPen,
-    //   isActive: pathname === "/dashboard/exams",
-    // },
+    {
+      title: "Exams",
+      url: "/dashboard/exams",
+      icon: NotebookPen,
+      isActive: pathname === "/dashboard/exams",
+    },
     // {
     //   title: "Course Catalogue",
     //   url: "/dashboard/course-catalogue",

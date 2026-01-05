@@ -186,6 +186,7 @@ export const createOtp = async (
   const expiresAt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
   console.log("🕐 Creating OTP at:", now.toISOString());
+  console.log("otp:", otpCode);
   console.log("⏰ OTP will expire at:", expiresAt.toISOString());
   console.log("⏱️ Expiry duration:", expiryMinutes, "minutes");
 
