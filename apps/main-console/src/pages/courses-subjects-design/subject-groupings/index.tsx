@@ -20,14 +20,14 @@ import type {
   Subject,
   SubjectGroupingMainDto,
   SubjectType,
-} from "@repo/db";
+} from "@repo/db/index";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { Edit, FileText, PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import type { AcademicYear } from "@/types/academics/academic-year";
+import { AcademicYear } from "@/types/academics/academic-year";
 
 interface UISubjectGroupingRow {
   id: number;
@@ -170,7 +170,9 @@ function SubjectGroupingsPage() {
     setSelectedProgramCourseIds(
       (g.subjectGroupingProgramCourses || []).map((pc) => pc.programCourseId).filter((id): id is number => !!id),
     );
-    setSelectedSubjectIds((g.subjectGroupingSubjects || []).map((s) => s.subjectId).filter((id): id is number => !!id));
+    setSelectedSubjectIds(
+      (g.subjectGroupingSubjects || []).map((s) => s.subjectId).filter((id: number): id is number => !!id),
+    );
     // Clear filters/search so all relevant options are visible when editing
     setSelectedAffiliationId(null);
     setSelectedRegulationTypeId(null);

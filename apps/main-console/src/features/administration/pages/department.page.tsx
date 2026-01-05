@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, Edit, GitBranch, PlusCircle } from "lucide-react";
-import type { Department, SubDepartment } from "@repo/db";
+import type { Department, SubDepartment } from "@repo/db/index";
 
 import {
   createDepartment,

@@ -1,5 +1,5 @@
 import { ApiResponse } from "@/types/api-response";
-import { RoomT } from "@repo/db/schemas/models/exams";
+import type { RoomT } from "@repo/db/schemas/models/exams";
 import axiosInstance from "@/utils/api";
 import { RoomDto } from "@/dtos";
 

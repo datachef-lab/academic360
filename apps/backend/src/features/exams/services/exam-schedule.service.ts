@@ -1,5 +1,7 @@
+import * as XLSX from "xlsx";
+import fsO from "fs";
 import ExcelJS from "exceljs";
-import { db, pool } from "@/db/index.js";
+import { db, mysqlConnection, pool } from "@/db/index.js";
 import JSZip from "jszip";
 import fs from "fs/promises";
 import * as programCourseServices from "@/features/course-design/services/program-course.service";
@@ -8,7 +10,17 @@ import * as shiftService from "@/features/academics/services/shift.service";
 import * as roomServices from "./room.service";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
 import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
-import { and, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import {
   ExamDto,
   ExamProgramCourseDto,
@@ -20,6 +32,7 @@ import {
 import {
   academicYearModel,
   classModel,
+  courseModel,
   ExamCandidate,
   examCandidateModel,
   examModel,
@@ -60,6 +73,16 @@ import { socketService } from "@/services/socketService";
 import { PaperDto } from "@repo/db/dtos";
 import { io } from "@/app";
 import { enqueueNotification } from "@/services/notificationClient";
+import pLimit from "p-limit";
+import {
+  OldSubject,
+  OldSubjectType,
+} from "@repo/db/legacy-system-types/admissions";
+import {
+  OldClass,
+  OldCourse,
+  OldPaperList,
+} from "@repo/db/legacy-system-types/course-design";
 
 export interface CountStudentsByPapersParams {
   classId: number;
@@ -67,6 +90,8 @@ export interface CountStudentsByPapersParams {
   paperIds: number[];
   academicYearIds: number[];
   shiftIds?: number[];
+  gender: "MALE" | "FEMALE" | "OTHER" | null;
+  excelStudents: { foil_number: string; uid: string }[];
 }
 
 /**
@@ -76,11 +101,365 @@ export interface CountStudentsByPapersParams {
  * - Only count active students (user.isActive = true)
  * - Get student IDs from latest promotions
  */
+// async function getEligibleStudentIds(
+//     params: CountStudentsByPapersParams,
+// ): Promise<number[]> {
+//     const {
+//         classId,
+//         programCourseIds,
+//         paperIds,
+//         academicYearIds,
+//         shiftIds,
+//         gender,
+//         excelStudents
+//     } = params;
+
+//     console.log("[EXAM-SCHEDULE] Getting eligible student IDs:", params);
+
+//     if (
+//         paperIds.length === 0 ||
+//         programCourseIds.length === 0 ||
+//         academicYearIds.length === 0
+//     ) {
+//         return [];
+//     }
+
+//     const shiftFilter =
+//         shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : "";
+
+//     //   const eligibleSql = `
+//     //         WITH filtered_papers AS (
+//     //             SELECT
+//     //                 p.id,
+//     //                 p.subject_id_fk,
+//     //                 p.subject_type_id_fk,
+//     //                 p.class_id_fk,
+//     //                 p.programe_course_id_fk,
+//     //                 p.academic_year_id_fk,
+//     //                 p.is_optional
+//     //             FROM papers p
+//     //             WHERE p.id = ANY($1)
+//     //               AND p.class_id_fk = $2
+//     //               AND p.programe_course_id_fk = ANY($3)
+//     //               AND p.academic_year_id_fk = ANY($4)
+//     //               AND p.is_active = TRUE
+//     //         ),
+//     //         latest_promotions AS (
+//     //             SELECT DISTINCT ON (pr.student_id_fk)
+//     //                    pr.student_id_fk,
+//     //                    pr.program_course_id_fk,
+//     //                    pr.session_id_fk,
+//     //                    pr.class_id_fk
+//     //             FROM promotions pr
+//     //             INNER JOIN sessions sess ON sess.id = pr.session_id_fk
+//     //             WHERE pr.class_id_fk = $2
+//     //               AND pr.program_course_id_fk = ANY($3)
+//     //               AND sess.academic_id_fk = ANY($4)
+//     //               ${shiftFilter}
+//     //             ORDER BY pr.student_id_fk,
+//     //                      pr.start_date DESC NULLS LAST,
+//     //                      pr.created_at DESC,
+//     //                      pr.id DESC
+//     //         ),
+//     //         latest_student_selections AS (
+//     //             SELECT id,
+//     //                    student_id_fk,
+//     //                    subject_id_fk,
+//     //                    subject_selection_meta_id_fk
+//     //             FROM (
+//     //                 SELECT sss.*,
+//     //                        ROW_NUMBER() OVER (
+//     //                          PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+//     //                          ORDER BY sss.version DESC,
+//     //                                   sss.updated_at DESC NULLS LAST,
+//     //                                   sss.created_at DESC,
+//     //                                   sss.id DESC
+//     //                        ) AS rn
+//     //                 FROM student_subject_selections sss
+//     //                 WHERE sss.is_active = TRUE
+//     //             ) ranked
+//     //             WHERE rn = 1
+//     //         ),
+//     //         mandatory AS (
+//     //             SELECT DISTINCT std.id AS student_id
+//     //             FROM filtered_papers fp
+//     //             JOIN latest_promotions pr
+//     //               ON pr.program_course_id_fk = fp.programe_course_id_fk
+//     //              AND pr.class_id_fk = fp.class_id_fk
+//     //             JOIN students std ON std.id = pr.student_id_fk
+//     //             JOIN users u ON u.id = std.user_id_fk
+//     //             WHERE fp.is_optional = FALSE
+//     //               AND u.is_active = TRUE
+//     //         ),
+//     //         optional AS (
+//     //             SELECT DISTINCT std.id AS student_id
+//     //             FROM filtered_papers fp
+//     //             JOIN latest_promotions pr
+//     //               ON pr.program_course_id_fk = fp.programe_course_id_fk
+//     //              AND pr.class_id_fk = fp.class_id_fk
+//     //             JOIN students std ON std.id = pr.student_id_fk
+//     //             JOIN users u ON u.id = std.user_id_fk
+//     //             JOIN latest_student_selections lss
+//     //               ON lss.student_id_fk = std.id
+//     //              AND lss.subject_id_fk = fp.subject_id_fk
+//     //             JOIN subject_selection_meta sm
+//     //               ON sm.id = lss.subject_selection_meta_id_fk
+//     //              AND sm.subject_type_id_fk = fp.subject_type_id_fk
+//     //             JOIN subject_selection_meta_classes smc
+//     //               ON smc.subject_selection_meta_id_fk = sm.id
+//     //              AND smc.class_id_fk = fp.class_id_fk
+//     //             WHERE fp.is_optional = TRUE
+//     //               AND u.is_active = TRUE
+//     //         )
+//     //         SELECT DISTINCT student_id
+//     //         FROM (
+//     //             SELECT * FROM mandatory
+//     //             UNION ALL
+//     //             SELECT * FROM optional
+//     //         ) eligible_students
+//     //     `;
+
+//     //   const eligibleSql = `
+//     //   WITH current_promotions AS (
+//     //     -- Get the latest promotion specifically for the requested class + academic year + program + shift
+//     //     SELECT DISTINCT ON (pr.student_id_fk)
+//     //         pr.student_id_fk AS student_id,
+//     //         pr.program_course_id_fk,
+//     //         pr.class_id_fk,
+//     //         pr.shift_id_fk
+//     //     FROM promotions pr
+//     //     JOIN sessions s ON s.id = pr.session_id_fk
+//     //     JOIN academic_years ay ON ay.id = s.academic_id_fk
+//     //     WHERE pr.is_alumni = FALSE
+//     //       AND pr.class_id_fk = $2                    -- requested class (e.g., Semester I)
+//     //       AND ay.id = ANY($3)                        -- requested academic year(s)
+//     //       AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
+//     //       ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : ""}
+//     //     ORDER BY pr.student_id_fk,
+//     //              pr.start_date DESC NULLS LAST,
+//     //              pr.created_at DESC
+//     //   ),
+
+//     //   filtered_papers AS (
+//     //     SELECT
+//     //         p.id AS paper_id,
+//     //         p.subject_id_fk,
+//     //         p.subject_type_id_fk,
+//     //         p.is_optional
+//     //     FROM papers p
+//     //     WHERE p.id = ANY($1)
+//     //       AND p.class_id_fk = $2
+//     //       AND p.program_course_id_fk = ANY($4)
+//     //       AND p.academic_year_id_fk = ANY($3)
+//     //       AND p.is_active = TRUE
+//     //   ),
+
+//     //   latest_student_selections AS (
+//     //     SELECT
+//     //         student_id_fk,
+//     //         subject_id_fk,
+//     //         subject_selection_meta_id_fk
+//     //     FROM (
+//     //         SELECT sss.*,
+//     //                ROW_NUMBER() OVER (
+//     //                  PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+//     //                  ORDER BY sss.version DESC,
+//     //                           sss.updated_at DESC NULLS LAST,
+//     //                           sss.created_at DESC,
+//     //                           sss.id DESC
+//     //                ) AS rn
+//     //         FROM student_subject_selections sss
+//     //         WHERE sss.is_active = TRUE
+//     //     ) ranked
+//     //     WHERE rn = 1
+//     //   ),
+
+//     //   mandatory_students AS (
+//     //     SELECT DISTINCT cp.student_id
+//     //     FROM current_promotions cp
+//     //     CROSS JOIN filtered_papers fp
+//     //     WHERE fp.is_optional = FALSE
+//     //   ),
+
+//     //   optional_students AS (
+//     //     SELECT DISTINCT cp.student_id
+//     //     FROM current_promotions cp
+//     //     JOIN filtered_papers fp ON fp.is_optional = TRUE
+//     //     JOIN latest_student_selections lss
+//     //       ON lss.student_id_fk = cp.student_id
+//     //      AND lss.subject_id_fk = fp.subject_id_fk
+//     //     JOIN subject_selection_meta sm
+//     //       ON sm.id = lss.subject_selection_meta_id_fk
+//     //      AND sm.subject_type_id_fk = fp.subject_type_id_fk
+//     //     JOIN subject_selection_meta_classes smc
+//     //       ON smc.subject_selection_meta_id_fk = sm.id
+//     //      AND smc.class_id_fk = $2
+//     //   )
+
+//     //   SELECT DISTINCT student_id
+//     //   FROM (
+//     //     SELECT student_id FROM mandatory_students
+//     //     UNION
+//     //     SELECT student_id FROM optional_students
+//     //   ) eligible
+//     //   ORDER BY student_id;
+//     // `;
+
+// //     ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY(COALESCE($5::int[], ARRAY[]::int[]))" : ""}
+// //   ${gender && gender.trim() !== '' && gender.length > 1 ? "AND pd.gender = ANY(COALESCE($6::text[], ARRAY[]::text[]))" : ""}
+// //   ${excelStudents.length > 0 ? "AND std.uid = ANY(COALESCE($7::text[], ARRAY[]::text[]))" : ""}
+
+//     const eligibleSql = `
+// WITH current_promotions AS (
+//   -- Get the latest promotion specifically for the requested class + academic year + program + shift
+//   SELECT DISTINCT ON (pr.student_id_fk)
+//       pr.student_id_fk AS student_id,
+//       pr.program_course_id_fk,
+//       pr.class_id_fk,
+//       pr.shift_id_fk
+//   FROM promotions pr
+//   JOIN sessions s ON s.id = pr.session_id_fk
+//   JOIN academic_years ay ON ay.id = s.academic_id_fk
+//   JOIN students std ON std.id = pr.student_id_fk
+//   JOIN users u ON u.id = std.user_id_fk
+//   JOIN personal_details pd ON pd.user_id_fk = u.id
+//   WHERE pr.is_alumni = FALSE
+//     AND pr.class_id_fk = $2                    -- requested class
+//     AND ay.id = ANY($3)                        -- requested academic year(s)
+//     AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
+
+//    -- OPTIONAL FILTERS (SAFE)
+//   AND pr.shift_id_fk = ANY($5::int[])
+//   AND pd.gender::text = ANY($6::text[])
+//   AND std.uid = ANY($7::text[])
+//   ORDER BY pr.student_id_fk,
+//            pr.start_date DESC NULLS LAST,
+//            pr.created_at DESC
+// ),
+
+// filtered_papers AS (
+//   SELECT
+//       p.id AS paper_id,
+//       p.subject_id_fk,
+//       p.subject_type_id_fk,
+//       p.is_optional
+//   FROM papers p
+//   WHERE p.id = ANY($1)
+//     AND p.class_id_fk = $2
+//     AND p.programe_course_id_fk = ANY($4)        -- Fixed: was "programe"
+//     AND p.academic_year_id_fk = ANY($3)
+//     AND p.is_active = TRUE
+// ),
+
+// latest_student_selections AS (
+//   SELECT
+//       student_id_fk,
+//       subject_id_fk,
+//       subject_selection_meta_id_fk
+//   FROM (
+//       SELECT sss.*,
+//              ROW_NUMBER() OVER (
+//                PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+//                ORDER BY sss.version DESC,
+//                         sss.updated_at DESC NULLS LAST,
+//                         sss.created_at DESC,
+//                         sss.id DESC
+//              ) AS rn
+//       FROM student_subject_selections sss
+//       WHERE sss.is_active = TRUE
+//   ) ranked
+//   WHERE rn = 1
+// ),
+
+// mandatory_students AS (
+//   SELECT DISTINCT cp.student_id
+//   FROM current_promotions cp
+//   JOIN students std ON std.id = cp.student_id
+//   ${excelStudents.length === 0 ? 'JOIN users u ON u.id = std.user_id_fk AND u.is_active = TRUE' : ''}
+//   CROSS JOIN filtered_papers fp
+//   WHERE fp.is_optional = FALSE
+// ),
+
+// optional_students AS (
+//   SELECT DISTINCT cp.student_id
+//   FROM current_promotions cp
+//   JOIN students std ON std.id = cp.student_id
+//   ${excelStudents.length === 0 ? 'JOIN users u ON u.id = std.user_id_fk AND u.is_active = TRUE' : ''}
+//   JOIN filtered_papers fp ON fp.is_optional = TRUE
+//   JOIN latest_student_selections lss
+//     ON lss.student_id_fk = cp.student_id
+//    AND lss.subject_id_fk = fp.subject_id_fk
+//   JOIN subject_selection_meta sm
+//     ON sm.id = lss.subject_selection_meta_id_fk
+//    AND sm.subject_type_id_fk = fp.subject_type_id_fk
+//   JOIN subject_selection_meta_classes smc
+//     ON smc.subject_selection_meta_id_fk = sm.id
+//    AND smc.class_id_fk = $2
+// )
+
+// SELECT DISTINCT student_id
+// FROM (
+//   SELECT student_id FROM mandatory_students
+//   UNION
+//   SELECT student_id FROM optional_students
+// ) eligible
+// ORDER BY student_id;
+// `;
+
+//     const eligibleParams: any[] = [
+//         paperIds, // $1
+//         classId, // $2
+//         academicYearIds, // $3
+//         programCourseIds, // $4
+//     ];
+
+//     if (shiftIds && shiftIds.length > 0) {
+//         eligibleParams.push(shiftIds); // $5
+//     }
+//     if (gender) {
+//         if (gender.trim() !== '') {
+//             eligibleParams.push([gender]); // $6
+//         }
+//     }
+
+//     if (excelStudents.length > 0) {
+//         const uids = excelStudents.map(e => e.uid)
+//         eligibleParams.push(uids); // $7
+//     }
+
+//     const eligibleParamsU = [
+//         paperIds,                                 // $1 int[]
+//         classId,                                  // $2 int
+//         academicYearIds,                          // $3 int[]
+//         programCourseIds,                         // $4 int[]
+//         shiftIds && shiftIds.length ? shiftIds : [], // $5 int[]
+//         gender && gender.trim() ? [gender] : [],     // $6 text[]
+//         excelStudents.length
+//           ? excelStudents.map(e => e.uid)
+//           : []                                     // $7 text[]
+//       ];
+
+//     console.log(eligibleParamsU)
+
+//     const { rows } = await pool.query(eligibleSql, eligibleParamsU);
+
+//     return rows
+//         .map((row: { student_id: number }) => Number(row.student_id))
+//         .filter((id: number) => !Number.isNaN(id));
+// }
+
 async function getEligibleStudentIds(
   params: CountStudentsByPapersParams,
 ): Promise<number[]> {
-  const { classId, programCourseIds, paperIds, academicYearIds, shiftIds } =
-    params;
+  const {
+    classId,
+    programCourseIds,
+    paperIds,
+    academicYearIds,
+    shiftIds = [],
+    gender = "",
+    excelStudents = [],
+  } = params;
 
   console.log("[EXAM-SCHEDULE] Getting eligible student IDs:", params);
 
@@ -92,203 +471,130 @@ async function getEligibleStudentIds(
     return [];
   }
 
-  const shiftFilter =
-    shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : "";
-
-  //   const eligibleSql = `
-  //         WITH filtered_papers AS (
-  //             SELECT
-  //                 p.id,
-  //                 p.subject_id_fk,
-  //                 p.subject_type_id_fk,
-  //                 p.class_id_fk,
-  //                 p.programe_course_id_fk,
-  //                 p.academic_year_id_fk,
-  //                 p.is_optional
-  //             FROM papers p
-  //             WHERE p.id = ANY($1)
-  //               AND p.class_id_fk = $2
-  //               AND p.programe_course_id_fk = ANY($3)
-  //               AND p.academic_year_id_fk = ANY($4)
-  //               AND p.is_active = TRUE
-  //         ),
-  //         latest_promotions AS (
-  //             SELECT DISTINCT ON (pr.student_id_fk)
-  //                    pr.student_id_fk,
-  //                    pr.program_course_id_fk,
-  //                    pr.session_id_fk,
-  //                    pr.class_id_fk
-  //             FROM promotions pr
-  //             INNER JOIN sessions sess ON sess.id = pr.session_id_fk
-  //             WHERE pr.class_id_fk = $2
-  //               AND pr.program_course_id_fk = ANY($3)
-  //               AND sess.academic_id_fk = ANY($4)
-  //               ${shiftFilter}
-  //             ORDER BY pr.student_id_fk,
-  //                      pr.start_date DESC NULLS LAST,
-  //                      pr.created_at DESC,
-  //                      pr.id DESC
-  //         ),
-  //         latest_student_selections AS (
-  //             SELECT id,
-  //                    student_id_fk,
-  //                    subject_id_fk,
-  //                    subject_selection_meta_id_fk
-  //             FROM (
-  //                 SELECT sss.*,
-  //                        ROW_NUMBER() OVER (
-  //                          PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
-  //                          ORDER BY sss.version DESC,
-  //                                   sss.updated_at DESC NULLS LAST,
-  //                                   sss.created_at DESC,
-  //                                   sss.id DESC
-  //                        ) AS rn
-  //                 FROM student_subject_selections sss
-  //                 WHERE sss.is_active = TRUE
-  //             ) ranked
-  //             WHERE rn = 1
-  //         ),
-  //         mandatory AS (
-  //             SELECT DISTINCT std.id AS student_id
-  //             FROM filtered_papers fp
-  //             JOIN latest_promotions pr
-  //               ON pr.program_course_id_fk = fp.programe_course_id_fk
-  //              AND pr.class_id_fk = fp.class_id_fk
-  //             JOIN students std ON std.id = pr.student_id_fk
-  //             JOIN users u ON u.id = std.user_id_fk
-  //             WHERE fp.is_optional = FALSE
-  //               AND u.is_active = TRUE
-  //         ),
-  //         optional AS (
-  //             SELECT DISTINCT std.id AS student_id
-  //             FROM filtered_papers fp
-  //             JOIN latest_promotions pr
-  //               ON pr.program_course_id_fk = fp.programe_course_id_fk
-  //              AND pr.class_id_fk = fp.class_id_fk
-  //             JOIN students std ON std.id = pr.student_id_fk
-  //             JOIN users u ON u.id = std.user_id_fk
-  //             JOIN latest_student_selections lss
-  //               ON lss.student_id_fk = std.id
-  //              AND lss.subject_id_fk = fp.subject_id_fk
-  //             JOIN subject_selection_meta sm
-  //               ON sm.id = lss.subject_selection_meta_id_fk
-  //              AND sm.subject_type_id_fk = fp.subject_type_id_fk
-  //             JOIN subject_selection_meta_classes smc
-  //               ON smc.subject_selection_meta_id_fk = sm.id
-  //              AND smc.class_id_fk = fp.class_id_fk
-  //             WHERE fp.is_optional = TRUE
-  //               AND u.is_active = TRUE
-  //         )
-  //         SELECT DISTINCT student_id
-  //         FROM (
-  //             SELECT * FROM mandatory
-  //             UNION ALL
-  //             SELECT * FROM optional
-  //         ) eligible_students
-  //     `;
-
-  const eligibleSql = `
-  WITH current_promotions AS (
-    -- Get the latest promotion specifically for the requested class + academic year + program + shift
-    SELECT DISTINCT ON (pr.student_id_fk)
-        pr.student_id_fk AS student_id,
-        pr.program_course_id_fk,
-        pr.class_id_fk,
-        pr.shift_id_fk
-    FROM promotions pr
-    JOIN sessions s ON s.id = pr.session_id_fk
-    JOIN academic_years ay ON ay.id = s.academic_id_fk
-    WHERE pr.is_alumni = FALSE
-      AND pr.class_id_fk = $2                    -- requested class (e.g., Semester I)
-      AND ay.id = ANY($3)                        -- requested academic year(s)
-      AND pr.program_course_id_fk = ANY($4)      -- requested program course(s)
-      ${shiftIds && shiftIds.length > 0 ? "AND pr.shift_id_fk = ANY($5)" : ""}
-    ORDER BY pr.student_id_fk,
-             pr.start_date DESC NULLS LAST,
-             pr.created_at DESC
-  ),
-
-  filtered_papers AS (
-    SELECT 
-        p.id AS paper_id,
-        p.subject_id_fk,
-        p.subject_type_id_fk,
-        p.is_optional
-    FROM papers p
-    WHERE p.id = ANY($1)
-      AND p.class_id_fk = $2
-      AND p.programe_course_id_fk = ANY($4)
-      AND p.academic_year_id_fk = ANY($3)
-      AND p.is_active = TRUE
-  ),
-
-  latest_student_selections AS (
-    SELECT 
-        student_id_fk, 
-        subject_id_fk, 
-        subject_selection_meta_id_fk
-    FROM (
-        SELECT sss.*,
-               ROW_NUMBER() OVER (
-                 PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
-                 ORDER BY sss.version DESC,
-                          sss.updated_at DESC NULLS LAST,
-                          sss.created_at DESC,
-                          sss.id DESC
-               ) AS rn
-        FROM student_subject_selections sss
-        WHERE sss.is_active = TRUE
-    ) ranked
-    WHERE rn = 1
-  ),
-
-  mandatory_students AS (
-    SELECT DISTINCT cp.student_id
-    FROM current_promotions cp
-    CROSS JOIN filtered_papers fp
-    WHERE fp.is_optional = FALSE
-  ),
-
-  optional_students AS (
-    SELECT DISTINCT cp.student_id
-    FROM current_promotions cp
-    JOIN filtered_papers fp ON fp.is_optional = TRUE
-    JOIN latest_student_selections lss
-      ON lss.student_id_fk = cp.student_id
-     AND lss.subject_id_fk = fp.subject_id_fk
-    JOIN subject_selection_meta sm
-      ON sm.id = lss.subject_selection_meta_id_fk
-     AND sm.subject_type_id_fk = fp.subject_type_id_fk
-    JOIN subject_selection_meta_classes smc
-      ON smc.subject_selection_meta_id_fk = sm.id
-     AND smc.class_id_fk = $2
-  )
-
-  SELECT DISTINCT student_id
-  FROM (
-    SELECT student_id FROM mandatory_students
-    UNION
-    SELECT student_id FROM optional_students
-  ) eligible
-  ORDER BY student_id;
-`;
-
-  const eligibleParams: any[] = [
+  // Build dynamic WHERE conditions safely
+  const conditions: string[] = [];
+  const values: any[] = [
     paperIds, // $1
     classId, // $2
     academicYearIds, // $3
     programCourseIds, // $4
   ];
+  let paramIndex = 5;
 
-  if (shiftIds && shiftIds.length > 0) {
-    eligibleParams.push(shiftIds);
+  if (shiftIds.length > 0) {
+    conditions.push(`AND pr.shift_id_fk = ANY($${paramIndex})`);
+    values.push(shiftIds);
+    paramIndex++;
   }
 
-  const { rows } = await pool.query(eligibleSql, eligibleParams);
+  if (gender && gender.trim() !== "") {
+    conditions.push(`AND pd.gender = ANY($${paramIndex})`);
+    values.push([gender]);
+    paramIndex++;
+  }
+
+  if (excelStudents.length > 0) {
+    const uids = excelStudents.map((s) => s.uid);
+    conditions.push(`AND std.uid = ANY($${paramIndex})`);
+    values.push(uids);
+    paramIndex++;
+  }
+
+  const whereClause = conditions.length > 0 ? conditions.join("\n    ") : "";
+
+  const eligibleSql = `
+WITH current_promotions AS (
+  SELECT DISTINCT ON (pr.student_id_fk)
+      pr.student_id_fk AS student_id,
+      pr.program_course_id_fk,
+      pr.class_id_fk,
+      pr.shift_id_fk
+  FROM promotions pr
+  JOIN sessions s ON s.id = pr.session_id_fk
+  JOIN academic_years ay ON ay.id = s.academic_id_fk
+  JOIN students std ON std.id = pr.student_id_fk
+  JOIN users u ON u.id = std.user_id_fk
+  JOIN personal_details pd ON pd.user_id_fk = u.id
+  WHERE pr.is_alumni = FALSE
+    AND pr.class_id_fk = $2
+    AND ay.id = ANY($3)
+    ${excelStudents.length === 0 ? "AND u.is_active = TRUE" : ""}
+    AND pr.program_course_id_fk = ANY($4)
+    ${whereClause}
+  ORDER BY pr.student_id_fk,
+           pr.start_date DESC NULLS LAST,
+           pr.created_at DESC
+),
+filtered_papers AS (
+  SELECT
+      p.id AS paper_id,
+      p.subject_id_fk,
+      p.subject_type_id_fk,
+      p.is_optional
+  FROM papers p
+  WHERE p.id = ANY($1)
+    AND p.class_id_fk = $2
+    AND p.programe_course_id_fk = ANY($4)
+    AND p.academic_year_id_fk = ANY($3)
+    AND p.is_active = TRUE
+),
+latest_student_selections AS (
+  SELECT
+      student_id_fk,
+      subject_id_fk,
+      subject_selection_meta_id_fk
+  FROM (
+      SELECT sss.*,
+             ROW_NUMBER() OVER (
+               PARTITION BY sss.student_id_fk, sss.subject_selection_meta_id_fk
+               ORDER BY sss.version DESC,
+                        sss.updated_at DESC NULLS LAST,
+                        sss.created_at DESC,
+                        sss.id DESC
+             ) AS rn
+      FROM student_subject_selections sss
+      WHERE sss.is_active = TRUE
+  ) ranked
+  WHERE rn = 1
+),
+mandatory_students AS (
+  SELECT DISTINCT cp.student_id
+  FROM current_promotions cp
+
+  CROSS JOIN filtered_papers fp
+  WHERE fp.is_optional = FALSE
+),
+optional_students AS (
+  SELECT DISTINCT cp.student_id
+  FROM current_promotions cp
+  
+  JOIN filtered_papers fp ON fp.is_optional = TRUE
+  JOIN latest_student_selections lss
+    ON lss.student_id_fk = cp.student_id
+   AND lss.subject_id_fk = fp.subject_id_fk
+  JOIN subject_selection_meta sm
+    ON sm.id = lss.subject_selection_meta_id_fk
+   AND sm.subject_type_id_fk = fp.subject_type_id_fk
+  JOIN subject_selection_meta_classes smc
+    ON smc.subject_selection_meta_id_fk = sm.id
+   AND smc.class_id_fk = $2
+)
+SELECT DISTINCT student_id
+FROM (
+  SELECT student_id FROM mandatory_students
+  UNION
+  SELECT student_id FROM optional_students
+) eligible
+ORDER BY student_id;
+`;
+
+  console.log("[EXAM-SCHEDULE] Executing SQL with params:", values);
+
+  const { rows } = await pool.query(eligibleSql, values);
 
   return rows
     .map((row: { student_id: number }) => Number(row.student_id))
-    .filter((id: number) => !Number.isNaN(id));
+    .filter((id) => !Number.isNaN(id));
 }
 
 export async function countStudentsByPapers(
@@ -299,7 +605,7 @@ export async function countStudentsByPapers(
 }
 
 export interface GetStudentsByPapersParams extends CountStudentsByPapersParams {
-  assignBy: "UID" | "CU Reg. No.";
+  assignBy: "CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER";
 }
 
 export interface StudentWithSeat {
@@ -483,6 +789,7 @@ export async function getStudentsByPapers(
       userWhatsappPhone: userModel.whatsappNumber,
       cuRegistrationApplicationNumber:
         cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+      cuRollNumber: studentModel.rollNumber,
     })
     .from(studentModel)
     .innerJoin(
@@ -503,9 +810,11 @@ export async function getStudentsByPapers(
   students.sort((a, b) =>
     params.assignBy === "UID"
       ? (a.uid || "").localeCompare(b.uid || "")
-      : (a.cuRegistrationApplicationNumber || "").localeCompare(
-          b.cuRegistrationApplicationNumber || "",
-        ),
+      : params.assignBy === "CU_REGISTRATION_NUMBER"
+        ? (a.cuRegistrationApplicationNumber || "").localeCompare(
+            b.cuRegistrationApplicationNumber || "",
+          )
+        : (a.cuRollNumber || "").localeCompare(b.cuRollNumber || ""),
   );
 
   const result: StudentWithSeat[] = [];
@@ -608,12 +917,20 @@ function generateSeatPositions(maxStudentsPerBench: number): string[] {
   return positions;
 }
 
-export async function createExamAssignment(dto: ExamDto) {
+export async function createExamAssignment(
+  dto: ExamDto,
+  excelStudents: { foil_number: string; uid: string }[],
+) {
   return await db.transaction(async (tx) => {
     console.log(
       "[EXAM-SCHEDULE:createExamAssignment] Creating exam assignment:",
       dto,
     );
+
+    console.log(dto.academicYear);
+    console.log(dto.class);
+    console.log(dto.examType);
+    console.log(dto.examSubjects);
     // 1. Create exam record
     const [exam] = await tx
       .insert(examModel)
@@ -842,11 +1159,13 @@ export async function createExamAssignment(dto: ExamDto) {
     // 6. Prepare seat assignment
     const seatParams: GetStudentsByPapersParams = {
       classId: dto.class.id!,
+      excelStudents,
       programCourseIds: programCourseIdsArr, // ← now always array
       paperIds: Array.from(paperMap.values()),
       academicYearIds: [dto.academicYear.id!],
       shiftIds: shiftIdsArr.length > 0 ? shiftIdsArr : undefined,
-      assignBy: dto.orderType === "UID" ? "UID" : "CU Reg. No.",
+      assignBy: dto.orderType!,
+      gender: dto.gender,
     };
     console.log("[EXAM-SCHEDULE] Seat parameters:", seatParams);
     const roomAssignments = dto.locations.map((l) => ({
@@ -1018,6 +1337,8 @@ export async function createExamAssignment(dto: ExamDto) {
 
     const candidateInserts: ExamCandidate[] = [];
 
+    console.log("dto.examSubjects:", dto.examSubjects);
+
     for (const subj of dto.examSubjects) {
       const examSubjectId = subjectToExamSubject.get(subj.subject.id!);
       if (!examSubjectId) {
@@ -1059,6 +1380,11 @@ export async function createExamAssignment(dto: ExamDto) {
             );
           }
 
+          const foilNumber =
+            excelStudents.find((es) => es.uid == s.uid)?.foil_number || null;
+
+          console.log("in exam-candidate insert, foil_number:", foilNumber);
+
           candidateInserts.push({
             examId: exam.id!,
             promotionId,
@@ -1067,6 +1393,7 @@ export async function createExamAssignment(dto: ExamDto) {
             examSubjectId, // 🔥 correct subject
             paperId, // 🔥 correct paper
             seatNumber: s.seatNumber,
+            foilNumber,
           });
         }
       }
@@ -1095,6 +1422,25 @@ export async function findById(id: number): Promise<ExamDto | null> {
   if (!foundExam) return null;
 
   return await modelToDto(foundExam);
+}
+
+export async function findByStudentId(studentId: number): Promise<ExamDto[]> {
+  const foundExams = await db
+    .select()
+    .from(examModel)
+    .leftJoin(examCandidateModel, eq(examCandidateModel.examId, examModel.id))
+    .leftJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .where(eq(studentModel.id, studentId));
+
+  return (
+    await Promise.all(
+      foundExams.map(async (exm) => await modelToDto(exm.exams)),
+    )
+  ).filter((ele) => ele !== null);
 }
 
 export async function findAll(
@@ -1434,6 +1780,13 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
 //     };
 // }
 
+function sanitizeWorksheetName(name: string): string {
+  return name
+    .replace(/[*?:\\/\[\]]/g, "-") // replace invalid chars
+    .substring(0, 31) // Excel max length = 31
+    .trim();
+}
+
 export async function downloadAdmitCardsAsZip(
   examId: number,
   userId: number,
@@ -1489,7 +1842,8 @@ export async function downloadAdmitCardsAsZip(
     )
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .where(eq(examCandidateModel.examId, examId));
+    .where(eq(examCandidateModel.examId, examId))
+    .orderBy(asc(examSubjectModel.startTime));
 
   const zip = new JSZip();
 
@@ -1530,7 +1884,7 @@ export async function downloadAdmitCardsAsZip(
       batch.map(async ([uid, studentRows]) => {
         const pdfBuffer =
           await pdfGenerationService.generateExamAdmitCardPdfBuffer({
-            semester: studentRows[0]?.semester ?? "",
+            semester: studentRows[0]?.semester?.split(" ")[1] ?? "",
             examType: studentRows[0]?.examType ?? "",
             session: studentRows[0]?.session ?? "",
             name: studentRows[0]?.name ?? "",
@@ -1632,15 +1986,16 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
       uid: studentModel.uid,
       email: userModel.email,
       phone: userModel.phone,
-      whatsappNumber: userModel.whatsappNumber,
-      programCourse: programCourseModel.name,
+      whatsapp_number: userModel.whatsappNumber,
+      program_course: programCourseModel.name,
       section: sectionModel.name,
       shift: shiftModel.name,
       subject: subjectModel.code,
-      subjectType: subjectTypeModel.code,
+      subject_type: subjectTypeModel.code,
       paper: paperModel.name,
-      paperCode: paperModel.code,
-      seatNumber: examCandidateModel.seatNumber,
+      paper_code: paperModel.code,
+      seat: examCandidateModel.seatNumber,
+      foilNumber: examCandidateModel.foilNumber,
     })
     .from(examCandidateModel)
 
@@ -1719,7 +2074,7 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
   const groupedBySubject = new Map<string, typeof result>();
 
   for (const row of result) {
-    const key = row.paperCode ?? row.subject ?? "UNKNOWN";
+    const key = row.paper_code ?? row.subject ?? "UNKNOWN";
     if (!groupedBySubject.has(key)) {
       groupedBySubject.set(key, []);
     }
@@ -1730,7 +2085,7 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
   const workbook = new ExcelJS.Workbook();
 
   for (const [subjectKey, rows] of groupedBySubject) {
-    const sheet = workbook.addWorksheet(subjectKey.substring(0, 31));
+    const sheet = workbook.addWorksheet(sanitizeWorksheetName(subjectKey));
 
     // 🔥 AUTO-GENERATE COLUMNS FROM RESULT KEYS
     const columns = Object.keys(rows[0]).map((key) => ({
@@ -2065,7 +2420,8 @@ export async function fetchExamCandidatesByExamId(examId: number) {
     )
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .where(eq(examCandidateModel.examId, examId));
+    .where(eq(examCandidateModel.examId, examId))
+    .orderBy(asc(examSubjectModel.startTime));
 
   return result;
 }
@@ -2093,7 +2449,7 @@ export async function generateAdmitCardBuffers(
   for (const [uid, rows] of uidMap.entries()) {
     const pdfBuffer = await pdfGenerationService.generateExamAdmitCardPdfBuffer(
       {
-        semester: rows[0]?.semester ?? "",
+        semester: rows[0]?.semester!.split(" ")[1] ?? "",
         examType: rows[0]?.examType ?? "",
         session: rows[0]?.session ?? "",
         name: rows[0]?.userName ?? "",
@@ -2123,7 +2479,7 @@ export async function generateAdmitCardBuffers(
       userId: rows[0]?.userId ?? null,
       userEmail: rows[0]?.userEmail ?? null,
       userName: rows[0]?.userName ?? null,
-
+      examType: rows[0]?.examType!,
       session: rows[0]?.session ?? "",
       cuRollNumber: rows[0]?.cuRollNumber ?? null,
       cuRegistrationNumber: rows[0]?.cuRegistrationNumber ?? null,
@@ -2193,7 +2549,7 @@ export type AdmitCardEmailPayload = {
   userId: number | null;
   userEmail: string | null;
   userName: string | null;
-
+  examType: string;
   session: string;
   cuRollNumber: string | null;
   cuRegistrationNumber: string | null;
@@ -2277,6 +2633,7 @@ export async function sendExamAdmitCardEmails(
               },
             ],
             notificationEvent: {
+              subject: `Semester ${candidate.semester.split(" ")[1]} | ${candidate.examType} | Schedule Exam Notification`,
               templateData: {
                 name: candidate.userName ?? "",
                 uid: candidate.uid,
@@ -2287,6 +2644,7 @@ export async function sendExamAdmitCardEmails(
                 cuRegistrationNumber: candidate.cuRegistrationNumber,
                 shiftName: candidate.shiftName,
                 examRows: candidate.examRows, // 🔥 THIS WAS MISSING
+                subject: `Semester ${candidate.semester.split(" ")[1]} | ${candidate.examType} | Schedule Exam Notification`,
               },
             },
           });
@@ -2342,4 +2700,797 @@ export async function sendExamAdmitCardEmails(
     sent,
     failed,
   };
+}
+
+export async function getExamCandidatesByStudentIdAndExamId(
+  studentId: number,
+  examId: number,
+) {
+  const examCandidates = await db
+    .select()
+    .from(examCandidateModel)
+    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .leftJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .where(and(eq(studentModel.id, studentId), eq(examModel.id, examId)));
+
+  return await Promise.all(
+    examCandidates.map(async (examCandidate) => {
+      const paper = await db
+        .select()
+        .from(paperModel)
+        .where(eq(paperModel.id, examCandidate.exam_candidates.paperId))
+        .limit(1)
+        .then((rows) => rows[0]);
+
+      return {
+        ...examCandidate,
+        paper,
+      };
+    }),
+  );
+}
+
+// export async function downloadAttendanceSheetsByExamId(
+//     examId: number,
+//     userId: number,
+//     uploadSessionId?: string,
+// ): Promise<{
+//     zipBuffer: Buffer;
+//     roomCount: number;
+// }> {
+//     const result = await db
+//         .select({
+//             examType: examTypeModel.name,
+//             class: classModel.name,
+//             academicYear: academicYearModel.year,
+//             name: userModel.name,
+//             uid: studentModel.uid,
+//             rollNumber: studentModel.rollNumber,
+//             paperName: paperModel.name,
+//             paperCode: paperModel.code,
+//             floor: floorModel.name,
+//             orderType: examModel.orderType,
+//             room: roomModel.name,
+//             seatNumber: examCandidateModel.seatNumber,
+//             examStartTime: examSubjectModel.startTime,
+//             examEndTime: examSubjectModel.endTime,
+//         })
+//         .from(examCandidateModel)
+//         .leftJoin(examModel, eq(examCandidateModel.examId, examModel.id))
+//         .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
+//         .leftJoin(classModel, eq(classModel.id, examModel.classId))
+//         .leftJoin(academicYearModel, eq(academicYearModel.id, examModel.academicYearId))
+//         .leftJoin(examRoomModel, eq(examCandidateModel.examRoomId, examRoomModel.id))
+//         .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+//         .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+//         .leftJoin(promotionModel, eq(promotionModel.id, examCandidateModel.promotionId))
+//         .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+//         .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+//         .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+//         .leftJoin(examSubjectModel, eq(examSubjectModel.id, examCandidateModel.examSubjectId))
+//         .where(eq(examCandidateModel.examId, examId))
+//         .orderBy(
+//             asc(examSubjectModel.startTime),
+//             asc(floorModel.name),
+//             asc(roomModel.name),
+//             asc(examCandidateModel.seatNumber),
+//         );
+
+//     const zip = new JSZip();
+
+//     // ---------- Initial socket emit ----------
+//     if (io && userId) {
+//         io.to(`user:${userId}`).emit("download_progress", {
+//             id: uploadSessionId || `download-${Date.now()}`,
+//             userId,
+//             type: "download_progress",
+//             message: "Generating attendance dr sheet...",
+//             progress: 0,
+//             status: "started",
+//             createdAt: new Date(),
+//             sessionId: uploadSessionId,
+//             stage: "pdf_generation",
+//         });
+//     }
+
+//     const rooms = new Set<string>(result.map(r => r.room!));
+
+//     for (let r = 0; r < rooms.size; r++) {
+//         const filteredResult = result.filter(res => res.room === Array.from(rooms)[r]);
+//         const pdfBuffer = await pdfGenerationService.generateExamAttendanceSheetPdfBuffer({
+//             semester: filteredResult[0].class!.split(" ")[1],
+//             examType: filteredResult[0].examType!,
+//             session: filteredResult[0].academicYear!,
+//             roomNumber: filteredResult[0].room!,
+//             examDates: [
+//                 ...new Set(
+//                     filteredResult.map(item => {
+//                         const d = item.examStartTime;
+
+//                         if (d) {
+//                             const day = String(d.getDate()).padStart(2, "0");
+//                             const month = String(d.getMonth() + 1).padStart(2, "0");
+//                             const year = d?.getFullYear();
+
+//                             return `${day}/${month}/${year}`;
+//                         }
+
+//                         return '';
+
+//                     })
+//                 )
+//             ],
+//             examTimings: [
+//                 ...new Set(
+//                     filteredResult.map(item => {
+//                         const d = item.examStartTime;
+
+//                         if (d) {
+
+//                             let hours = d.getHours();
+//                             const minutes = String(d.getMinutes()).padStart(2, "0");
+//                             const ampm = hours >= 12 ? "PM" : "AM";
+
+//                             hours = hours % 12 || 12;
+//                             return `${hours}:${minutes} ${ampm}`;
+//                         }
+
+//                         return '';
+//                     })
+//                 )
+//             ],
+//             examPapersCodes: [
+//                 ...new Set(
+//                     filteredResult.map(item => item.paperCode!)
+//                 )
+//             ],
+//             examCandidates: filteredResult.map(r => ({
+//                 name: r.name!,
+//                 identifier: (r.orderType === "UID" ? r.uid! : r.rollNumber)!,
+//                 seatNumber: r.seatNumber!,
+//             })),
+//         });
+
+//         const fileDate = filteredResult[0].examStartTime
+//             ? filteredResult[0].examStartTime.toISOString().split("T")[0]
+//             : "date";
+
+//         zip.file(
+//             `${filteredResult[0].examType}_${filteredResult[0].class}_${filteredResult[0].room}_${fileDate}.pdf`,
+//             pdfBuffer
+//         );
+
+//     }
+
+//     // ---------- ZIP generation ----------
+//     if (io && userId) {
+//         io.to(`user:${userId}`).emit("download_progress", {
+//             id: uploadSessionId || `download-${Date.now()}`,
+//             userId,
+//             type: "download_progress",
+//             message: "Creating ZIP file...",
+//             progress: 100,
+//             status: "finalizing",
+//             createdAt: new Date(),
+//             sessionId: uploadSessionId,
+//             stage: "zipping",
+//         });
+//     }
+
+//     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+//     return {
+//         zipBuffer,
+//         roomCount: rooms.size,
+//     };
+// }
+
+export async function downloadAttendanceSheetsByExamId(
+  examId: number,
+  userId: number,
+  uploadSessionId?: string,
+): Promise<{
+  zipBuffer: Buffer;
+  roomCount: number;
+}> {
+  const result = await db
+    .select({
+      examType: examTypeModel.name,
+      class: classModel.name,
+      academicYear: academicYearModel.year,
+      name: userModel.name,
+      uid: studentModel.uid,
+      rollNumber: studentModel.rollNumber,
+      paperName: paperModel.name,
+      paperCode: paperModel.code,
+      floor: floorModel.name,
+      orderType: examModel.orderType,
+      room: roomModel.name,
+      seatNumber: examCandidateModel.seatNumber,
+      examStartTime: examSubjectModel.startTime,
+      examEndTime: examSubjectModel.endTime,
+    })
+    .from(examCandidateModel)
+    .leftJoin(examModel, eq(examCandidateModel.examId, examModel.id))
+    .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
+    .leftJoin(classModel, eq(classModel.id, examModel.classId))
+    .leftJoin(
+      academicYearModel,
+      eq(academicYearModel.id, examModel.academicYearId),
+    )
+    .leftJoin(
+      examRoomModel,
+      eq(examCandidateModel.examRoomId, examRoomModel.id),
+    )
+    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+    .leftJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+    .leftJoin(
+      examSubjectModel,
+      eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+    )
+    .where(eq(examCandidateModel.examId, examId))
+    .orderBy(
+      asc(examSubjectModel.startTime),
+      asc(examCandidateModel.seatNumber),
+      asc(floorModel.name),
+      asc(roomModel.name),
+    );
+
+  const zip = new JSZip();
+
+  // ---------- SOCKET START ----------
+  if (io && userId) {
+    io.to(`user:${userId}`).emit("download_progress", {
+      id: uploadSessionId,
+      userId,
+      message: "Generating attendance sheets...",
+      progress: 0,
+      status: "started",
+      stage: "pdf_generation",
+    });
+  }
+
+  // ---------- GROUP ROOMS ----------
+  const rooms = Array.from(new Set(result.map((r) => r.room!).filter(Boolean)));
+  const paperCodes = Array.from(
+    new Set(result.map((r) => r.paperCode!).filter(Boolean)),
+  );
+  const totalRooms = rooms.length;
+
+  const limit = pLimit(5); // max 5 parallel PDFs
+  let completed = 0;
+
+  await Promise.all(
+    rooms.map((room) =>
+      limit(async () => {
+        const filteredResult = result
+          .filter((r) => r.room === room)
+          .sort((a, b) => {
+            // Sort by seat number
+            const seatA = a.seatNumber || "";
+            const seatB = b.seatNumber || "";
+            return seatA.localeCompare(seatB, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            });
+          });
+
+        if (!filteredResult.length) return;
+
+        // ---------- ENSURE DATE-TIME-PAPER SEQUENCE ----------
+        const examSlots: {
+          date: string;
+          time: string;
+          paperCode: string;
+        }[] = [];
+
+        const seen = new Set<string>();
+
+        for (const item of filteredResult) {
+          if (!item.examStartTime) continue;
+
+          const d = item.examStartTime;
+
+          const date = `${String(d.getDate()).padStart(2, "0")}/${String(
+            d.getMonth() + 1,
+          ).padStart(2, "0")}/${d.getFullYear()}`;
+
+          let hours = d.getHours();
+          const minutes = String(d.getMinutes()).padStart(2, "0");
+          const ampm = hours >= 12 ? "PM" : "AM";
+          hours = hours % 12 || 12;
+
+          const time = `${hours}:${minutes} ${ampm}`;
+          const paperCode = item.paperCode!;
+
+          const key = `${date}|${time}|${paperCode}`;
+
+          if (!seen.has(key)) {
+            seen.add(key);
+            examSlots.push({ date, time, paperCode });
+          }
+        }
+
+        // ---------- PDF GENERATION ----------
+        console.log({
+          semester: filteredResult[0].class!.split(" ")[1],
+          examType: filteredResult[0].examType!,
+          session: filteredResult[0].academicYear!,
+          roomNumber: room!,
+          examDates: examSlots.map((s) => s.date),
+          examTimings: examSlots.map((s) => s.time),
+          examPapersCodes: examSlots.map((s) => s.paperCode),
+          examCandidates: filteredResult.map((r) => ({
+            name: r.name!,
+            identifier: r.orderType === "UID" ? r.uid! : r.rollNumber!,
+            seatNumber: r.seatNumber!,
+          })),
+        });
+
+        const uniqueCandidates = new Map<string, any>();
+
+        filteredResult.forEach((r) => {
+          // Use the most reliable unique identifier
+          const key = r.orderType === "UID" ? r.uid : r.rollNumber;
+
+          if (key && !uniqueCandidates.has(key)) {
+            uniqueCandidates.set(key, {
+              name: r.name!,
+              identifier: r.orderType === "UID" ? r.uid! : r.rollNumber!,
+              seatNumber: r.seatNumber!,
+            });
+          }
+        });
+
+        const pdfBuffer =
+          await pdfGenerationService.generateExamAttendanceSheetPdfBuffer({
+            semester: filteredResult[0].class!.split(" ")[1],
+            examType: filteredResult[0].examType!,
+            session: filteredResult[0].academicYear!,
+            roomNumber: room!,
+            examDates: examSlots.map((s) => s.date),
+            examTimings: examSlots.map((s) => s.time),
+            examPapersCodes: examSlots.map((s) => s.paperCode),
+            examCandidates: Array.from(uniqueCandidates.values()),
+          });
+
+        const fileDate = filteredResult[0].examStartTime
+          ? filteredResult[0].examStartTime.toISOString().split("T")[0]
+          : "date";
+
+        zip.file(
+          `${filteredResult[0].examType}_${filteredResult[0].class}_room_${room}_${fileDate}.pdf`,
+          pdfBuffer,
+        );
+
+        // ---------- SOCKET PROGRESS ----------
+        completed++;
+
+        if (io && userId) {
+          io.to(`user:${userId}`).emit("download_progress", {
+            id: uploadSessionId,
+            userId,
+            message: `Generated ${completed}/${totalRooms} PDFs`,
+            progress: Math.round((completed / totalRooms) * 100),
+            status: "processing",
+            stage: "pdf_generation",
+          });
+        }
+      }),
+    ),
+  );
+
+  // ---------- ZIP FINALIZE ----------
+  if (io && userId) {
+    io.to(`user:${userId}`).emit("download_progress", {
+      id: uploadSessionId,
+      userId,
+      message: "Creating ZIP file...",
+      progress: 100,
+      status: "finalizing",
+      stage: "zipping",
+    });
+  }
+
+  const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+  return {
+    zipBuffer,
+    roomCount: totalRooms,
+  };
+}
+
+interface OldStudentPapers {
+  affiliation: string;
+  regulation: string;
+  program_course: string;
+  uid: string;
+  user_name: string;
+  is_active: string;
+  registration_year: string;
+  promotion_academic_year: string;
+  promotion_status: string;
+  semester: string;
+  shift: string;
+  section: string;
+  class_roll_number: string;
+  university_roll_number: string;
+  university_registration_number: string;
+  subject: string;
+  subject_type: string;
+  selection_label: string;
+  selection_version: string;
+  paper_type: string;
+  paper: string;
+  paper_code: string;
+  credit: string;
+  is_elective: string;
+  legacy_student_id: number;
+  legacy_promotion_id: number;
+  legacy_paper_id: number;
+  legacy_subject_type_id: number;
+  legacy_subject_id: number;
+  legacy_course_id: number;
+  legacy_class_id: number;
+}
+
+interface NotFoundLegacyPaper {
+  affiliation: string;
+  regulation: string;
+  program_course: string;
+
+  semester: string;
+
+  subject: string;
+  subject_type: string;
+
+  paper_type: string;
+  paper: string;
+  paper_code: string;
+  credit: string;
+  is_elective: string;
+
+  legacy_paper_id: number;
+  legacy_subject_type_id: number;
+  legacy_subject_id: number;
+  legacy_course_id: number;
+  legacy_class_id: number;
+}
+
+export async function getIrpNotFoundCourseDesigns() {
+  const [oldStudentPapers] = (await mysqlConnection.query(`
+        SELECT
+            'Calcutta University' AS affiliation,
+            s.courseType AS regulation,
+            co.courseName AS program_course,
+            s.codenumber AS uid,
+            s.name AS user_name,
+            CASE WHEN s.active = 1 THEN 'Yes' ELSE 'No' END AS is_active,
+            COALESCE(hr_reg.registration_year, '') AS registration_year,
+            CONCAT(
+                SUBSTRING(pr_sess.sessionName, 1, 4),
+                '-',
+                RIGHT(pr_sess.sessionName, 2)
+            ) AS promotion_academic_year,
+            prs.spltype AS promotion_status,
+            REPLACE(cl.classname, 'Semester ', '') AS semester,
+            sh.shiftName AS shift,
+            COALESCE(sec.sectionName, '') AS section,
+            COALESCE(h.rollNo, '') AS class_roll_number,
+            
+            h.univrollno AS university_roll_number,
+            s.univregno AS university_registration_number,
+            COALESCE(sb.univcode, sb.subjectname) AS subject,
+            COALESCE(st.shortname, st.subjecttypename) AS subject_type,
+            '' AS selection_label,
+            '' AS selection_version,
+            
+            CASE WHEN p.allstudents = 1 THEN 'Mandatory' ELSE 'Elective' END AS paper_type,
+            pl.paperName AS paper,
+            pl.paperShortName AS paper_code,
+            pl.paperCreditPoint AS credit,
+            CASE WHEN p.allstudents = 1 THEN 'No' ELSE 'Yes' END AS is_elective,
+            s.id AS legacy_student_id,
+            h.id AS legacy_promotion_id,
+            pl.id AS legacy_paper_id,
+            st.id AS legacy_subject_type_id,
+            sb.id AS legacy_subject_id,
+            co.id AS legacy_course_id,
+            cl.id AS legacy_class_id
+
+        FROM studentpaperlinkingmain m
+        JOIN studentpaperlinkingpaperlist p
+            ON m.id = p.parent_id
+
+        JOIN historicalrecord h
+            ON m.courseid   = h.courseid
+        AND m.classid    = h.classid
+        AND m.sectionid = h.sectionid
+        AND m.shiftid   = h.shiftid
+        AND m.sessionid = h.sessionid
+
+        JOIN studentpersonaldetails s
+            ON h.parent_id = s.id
+
+        JOIN course co ON m.courseid = co.id
+        JOIN classes cl ON m.classid = cl.id
+        JOIN subjecttype st ON p.subjectTypeId = st.id
+        JOIN subject sb ON p.subjectId = sb.id
+        JOIN paperlist pl ON pl.id = p.paperId
+        JOIN currentsessionmaster pr_sess ON pr_sess.id = h.sessionid
+        JOIN shift sh ON sh.id = h.shiftId
+        JOIN section sec ON sec.id = h.sectionId
+        JOIN promotionstatus prs ON prs.id = h.promotionstatus
+        LEFT JOIN (
+            SELECT parent_id, YEAR(MIN(dateOfJoining)) AS registration_year
+            FROM historicalrecord
+            WHERE classid = 4
+            GROUP BY parent_id
+        ) hr_reg ON hr_reg.parent_id = s.id
+
+        WHERE
+            m.sessionid = 18
+            AND cl.id IN (5, 8)
+            AND p.allstudents IN (0, 1)
+
+        ORDER BY
+        hr_reg.registration_year,
+            program_course,
+            cl.id,
+            h.id,
+            uid,
+            subject_type
+        ;
+    `)) as [OldStudentPapers[], any];
+
+  console.log("Processing for legacy-subject-types...");
+  const foundLegacySubjectTypeIds = [
+    ...new Set(oldStudentPapers.map((p) => p.legacy_subject_type_id)),
+  ];
+  const notFoundLegacySubjectTypeIds: number[] = [];
+  let count = 0;
+  for (const legacySubjectTypeId of foundLegacySubjectTypeIds) {
+    console.log(`${count++} / ${foundLegacySubjectTypeIds.length}`);
+    const [[oldSubjectType]] = (await mysqlConnection.query(`
+            SELECT * FROM subjecttype WHERE id = ${legacySubjectTypeId}
+        `)) as [OldSubjectType[], any];
+
+    if (!oldSubjectType) {
+      notFoundLegacySubjectTypeIds.push(legacySubjectTypeId);
+      continue;
+    }
+
+    const [foundNewSubjectType] = await db
+      .select()
+      .from(subjectTypeModel)
+      .where(
+        or(
+          eq(subjectTypeModel.legacySubjectTypeId, legacySubjectTypeId),
+          ilike(subjectTypeModel.name, oldSubjectType.subjectTypeName!.trim()),
+        ),
+      );
+
+    if (!foundNewSubjectType) {
+      notFoundLegacySubjectTypeIds.push(legacySubjectTypeId);
+    }
+  }
+
+  console.log("Processing for legacy-courses...");
+  const foundLegacyCourseIds = [
+    ...new Set(oldStudentPapers.map((p) => p.legacy_course_id)),
+  ];
+  const notFoundLegacyCourseIds: number[] = [];
+  count = 0;
+  for (const legacyCourseId of foundLegacyCourseIds) {
+    console.log(`${count++} / ${foundLegacyCourseIds.length}`);
+    const [[oldCourse]] = (await mysqlConnection.query(`
+            SELECT * FROM course WHERE id = ${legacyCourseId}
+        `)) as [OldCourse[], any];
+
+    if (!oldCourse) {
+      notFoundLegacyCourseIds.push(legacyCourseId);
+      continue;
+    }
+
+    const [foundNewCourse] = await db
+      .select()
+      .from(courseModel)
+      .where(
+        or(
+          eq(courseModel.legacyCourseId, legacyCourseId),
+          ilike(courseModel.name, oldCourse.courseName!.trim()),
+        ),
+      );
+
+    if (!foundNewCourse) {
+      notFoundLegacyCourseIds.push(legacyCourseId);
+    }
+  }
+
+  console.log("Processing for legacy-subjects...");
+  const foundLegacySubjectIds = [
+    ...new Set(oldStudentPapers.map((p) => p.legacy_subject_id)),
+  ];
+  const notFoundLegacySubjectIds: number[] = [];
+  count = 0;
+  for (const legacySubjectId of foundLegacySubjectIds) {
+    console.log(`${count++} / ${foundLegacySubjectIds.length}`);
+    const [[oldSubject]] = (await mysqlConnection.query(`
+            SELECT * FROM subject WHERE id = ${legacySubjectId}
+        `)) as [OldSubject[], any];
+
+    if (!oldSubject) {
+      notFoundLegacySubjectIds.push(legacySubjectId);
+      continue;
+    }
+
+    const [foundNewSubject] = await db
+      .select()
+      .from(subjectModel)
+      .where(
+        or(
+          eq(subjectModel.legacySubjectId, legacySubjectId),
+          ilike(subjectModel.name, oldSubject.subjectName!.trim()),
+        ),
+      );
+
+    if (!foundNewSubject) {
+      notFoundLegacySubjectIds.push(legacySubjectId);
+    }
+  }
+
+  console.log("Processing for legacy-papers...");
+  // const foundLegacyPaperIds = [...new Set(oldStudentPapers.map((p) => p.legacy_paper_id))];
+  const notFoundLegacyPaperMap = new Map<string, NotFoundLegacyPaper>();
+
+  const uniquePaperCandidates = Array.from(
+    new Map(
+      oldStudentPapers.map((p) => [
+        [
+          p.legacy_subject_type_id,
+          p.legacy_subject_id,
+          p.legacy_course_id,
+          p.legacy_class_id,
+          p.legacy_paper_id,
+        ].join("-"),
+        p,
+      ]),
+    ).values(),
+  );
+
+  console.log(
+    `Reduced from ${oldStudentPapers.length} → ${uniquePaperCandidates.length}`,
+  );
+
+  count = 0;
+  for (let i = 0; i < uniquePaperCandidates.length; i++) {
+    const paper = uniquePaperCandidates[i];
+
+    console.log(
+      `Student Iteration: ${count++} / ${uniquePaperCandidates.length}`,
+    );
+    const [[oldSubjectType]] = (await mysqlConnection.query(`
+            SELECT * FROM subjecttype WHERE id = ${paper.legacy_subject_type_id}
+        `)) as [OldSubjectType[], any];
+
+    const [[oldSubject]] = (await mysqlConnection.query(`
+            SELECT * FROM subject WHERE id = ${paper.legacy_subject_id}
+        `)) as [OldSubject[], any];
+
+    const [[oldCourse]] = (await mysqlConnection.query(`
+            SELECT * FROM course WHERE id = ${paper.legacy_course_id}
+        `)) as [OldCourse[], any];
+
+    const [[oldClass]] = (await mysqlConnection.query(`
+            SELECT * FROM classes WHERE id = ${paper.legacy_class_id}
+        `)) as [OldClass[], any];
+
+    const [foundNewPaper] = await db
+      .select()
+      .from(paperModel)
+      .leftJoin(
+        subjectTypeModel,
+        eq(paperModel.subjectTypeId, subjectTypeModel.id),
+      )
+      .leftJoin(subjectModel, eq(paperModel.subjectId, subjectModel.id))
+      .leftJoin(
+        programCourseModel,
+        eq(paperModel.programCourseId, programCourseModel.id),
+      )
+      .leftJoin(courseModel, eq(programCourseModel.courseId, courseModel.id))
+      .leftJoin(classModel, eq(paperModel.classId, classModel.id))
+      .where(
+        and(
+          or(
+            eq(subjectTypeModel.legacySubjectTypeId, oldSubjectType?.id!),
+            ilike(
+              subjectTypeModel.name,
+              oldSubjectType?.subjectTypeName!.trim(),
+            ),
+          ),
+          or(
+            eq(subjectModel.legacySubjectId, oldSubject?.id!),
+            ilike(subjectModel.name, oldSubject?.subjectName!.trim()),
+          ),
+          or(
+            eq(courseModel.legacyCourseId, oldCourse?.id!),
+            ilike(courseModel.name, oldCourse?.courseName!.trim()),
+            ilike(programCourseModel.name, oldCourse?.courseName!.trim()),
+          ),
+          or(ilike(classModel.name, oldClass?.classname!.trim())),
+        ),
+      );
+
+    if (!foundNewPaper) {
+      const key = [
+        paper.legacy_paper_id,
+        paper.legacy_subject_id,
+        paper.legacy_subject_type_id,
+        paper.legacy_course_id,
+        paper.legacy_class_id,
+      ].join("-");
+
+      if (!notFoundLegacyPaperMap.has(key)) {
+        notFoundLegacyPaperMap.set(key, {
+          affiliation: paper.affiliation,
+          regulation: paper.regulation,
+          program_course: paper.program_course,
+          semester: paper.semester,
+          subject: paper.subject,
+          subject_type: paper.subject_type,
+          paper_type: paper.paper_type,
+          paper: paper.paper,
+          paper_code: paper.paper_code,
+          credit: paper.credit,
+          is_elective: paper.is_elective,
+          legacy_paper_id: paper.legacy_paper_id,
+          legacy_subject_type_id: paper.legacy_subject_type_id,
+          legacy_subject_id: paper.legacy_subject_id,
+          legacy_course_id: paper.legacy_course_id,
+          legacy_class_id: paper.legacy_class_id,
+        });
+      }
+    }
+  }
+
+  // console.log("notFoundLegacySubjectTypeIds", notFoundLegacySubjectTypeIds);
+  // console.log("notFoundLegacyCourseIds", notFoundLegacyCourseIds);
+  // console.log("notFoundLegacySubjectIds", notFoundLegacySubjectIds);
+  // console.log("notFoundLegacyPaperIds", JSON.stringify(notFoundLegacyPaperIds, null, 2));
+
+  const notFoundLegacyPaper = Array.from(notFoundLegacyPaperMap.values());
+
+  if (notFoundLegacyPaper.length === 0) {
+    console.log("No missing papers found. Excel not generated.");
+    return;
+  }
+  const worksheet = XLSX.utils.json_to_sheet(notFoundLegacyPaper);
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "irp-missing-papers");
+
+  const outputDir = path.join(process.cwd(), "exports");
+  if (!fsO.existsSync(outputDir)) {
+    fsO.mkdirSync(outputDir, { recursive: true });
+  }
+
+  const filePath = path.join(
+    outputDir,
+    `irp_not_found_course_designs_${Date.now()}.xlsx`,
+  );
+
+  XLSX.writeFile(workbook, filePath);
+
+  console.log(`✅ Excel file generated at: ${filePath}`);
 }

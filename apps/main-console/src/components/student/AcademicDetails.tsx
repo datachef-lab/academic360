@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { AdmissionAcademicInfoDto, StudentAcademicSubjectsDto } from "@repo/db/dtos/admissions";
+import type { AdmissionAcademicInfoDto, StudentAcademicSubjectsDto } from "@repo/db/dtos/admissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useEffect, useMemo, useState } from "react";

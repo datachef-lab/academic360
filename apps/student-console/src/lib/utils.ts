@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const ingaxiosInstance = axios.create({
+export const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: {
     "Content-Type": "application/json",
@@ -16,7 +16,7 @@ export const ingaxiosInstance = axios.create({
 });
 
 // Add request interceptor to ensure app header is always set
-ingaxiosInstance.interceptors.request.use(
+axiosInstance.interceptors.request.use(
   (config) => {
     // Ensure app header is set for all requests
     if (!config.headers["app"]) {
@@ -26,3 +26,11 @@ ingaxiosInstance.interceptors.request.use(
   },
   (error) => Promise.reject(error),
 );
+
+export interface PaginatedResponse<T> {
+  content: T[];
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalElements: number;
+}

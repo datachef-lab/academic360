@@ -209,12 +209,12 @@ export default function StudentPage() {
               className={`px-2 py-1 text-xs font-medium rounded-full ${
                 userData?.isSuspended
                   ? "bg-amber-500/90 hover:bg-amber-600 text-white"
-                  : data?.active
+                  : userData?.isActive
                     ? "bg-emerald-500/90 hover:bg-emerald-600 text-white"
                     : "bg-red-500/90 hover:bg-red-500 text-white"
               }`}
             >
-              {userData?.isSuspended ? "Suspended" : data?.active ? "Active" : "Inactive"}
+              {userData?.isSuspended ? "Suspended" : userData?.isActive ? "Active" : "Inactive"}
             </Badge>
             <Badge
               variant="outline"
@@ -600,7 +600,7 @@ export default function StudentPage() {
                     studentPayload.cancelledAdmissionAt = null;
                   }
 
-                  await axiosInstance.put(`/api/students/${studentId}/status`, studentPayload);
+                  await axiosInstance.put(`/api/gr/${studentId}/status`, studentPayload);
 
                   // Invalidate queries to refresh the UI
                   await queryClient.invalidateQueries({ queryKey: ["student", studentIdOrUid] });

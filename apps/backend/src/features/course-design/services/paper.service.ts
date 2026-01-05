@@ -50,17 +50,16 @@ import { findClassById } from "@/features/academics/services/class.service";
 // import { getPaperComponentById } from "../controllers/paper-component.controller";
 
 // Separate detailed DTO for expanded responses (embedded entities)
-export interface PaperDetailedDto
-  extends Omit<
-    PaperDto,
-    | "subjectId"
-    | "affiliationId"
-    | "regulationTypeId"
-    | "academicYearId"
-    | "subjectTypeId"
-    | "programCourseId"
-    | "classId"
-  > {
+export interface PaperDetailedDto extends Omit<
+  PaperDto,
+  | "subjectId"
+  | "affiliationId"
+  | "regulationTypeId"
+  | "academicYearId"
+  | "subjectTypeId"
+  | "programCourseId"
+  | "classId"
+> {
   subject: Subject;
   affiliation: Affiliation;
   regulationType: RegulationType;
@@ -436,24 +435,18 @@ export async function getPapersFilteredPaginated(
     conditions.push(eq(paperModel.autoAssign, filters.autoAssign));
 
   // Import models only when needed
-  const { subjectModel } = await import(
-    "@repo/db/schemas/models/course-design"
-  );
-  const { affiliationModel } = await import(
-    "@repo/db/schemas/models/course-design"
-  );
-  const { regulationTypeModel } = await import(
-    "@repo/db/schemas/models/course-design"
-  );
-  const { academicYearModel } = await import(
-    "@repo/db/schemas/models/academics"
-  );
-  const { subjectTypeModel } = await import(
-    "@repo/db/schemas/models/course-design"
-  );
-  const { programCourseModel } = await import(
-    "@repo/db/schemas/models/course-design"
-  );
+  const { subjectModel } =
+    await import("@repo/db/schemas/models/course-design");
+  const { affiliationModel } =
+    await import("@repo/db/schemas/models/course-design");
+  const { regulationTypeModel } =
+    await import("@repo/db/schemas/models/course-design");
+  const { academicYearModel } =
+    await import("@repo/db/schemas/models/academics");
+  const { subjectTypeModel } =
+    await import("@repo/db/schemas/models/course-design");
+  const { programCourseModel } =
+    await import("@repo/db/schemas/models/course-design");
   const { classModel } = await import("@repo/db/schemas/models/academics");
 
   // Add search conditions if searchText is provided

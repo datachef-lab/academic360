@@ -1,15 +1,21 @@
+import * as XLSX from "xlsx";
+import fs from "fs";
+
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import {
   countStudentsByPapers,
   createExamAssignment,
   downloadAdmitCardsAsZip,
+  downloadAttendanceSheetsByExamId,
   downloadExamCandidatesbyExamId,
   downloadSingleAdmitCard,
   findAll,
   findById,
+  findByStudentId,
   findExamPapersByExamId,
   findExamsByStudentId,
+  getExamCandidatesByStudentIdAndExamId,
   getStudentsByPapers,
   sendExamAdmitCardEmails,
   updateExamSubject,
@@ -19,8 +25,14 @@ import { handleError } from "@/utils/handleError.js";
 
 export const countStudentsForExam = async (req: Request, res: Response) => {
   try {
-    const { classId, programCourseIds, paperIds, academicYearIds, shiftIds } =
-      req.body;
+    const {
+      classId,
+      programCourseIds,
+      paperIds,
+      academicYearIds,
+      shiftIds,
+      gender,
+    } = req.body;
 
     console.log("[EXAM-SCHEDULE-CONTROLLER] Received request:", {
       classId,
@@ -28,6 +40,7 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
       paperIds,
       academicYearIds,
       shiftIds,
+      gender,
     });
 
     if (
@@ -62,6 +75,38 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
         );
     }
 
+    // Parse Excel file if provided (assuming multer middleware handles file upload and attaches to req.file)
+    let excelStudents: { foil_number: string; uid: string }[] = [];
+    if (req.file) {
+      if (!req.file.mimetype || !req.file.mimetype.includes("spreadsheetml")) {
+        console.warn("[EXAM-SCHEDULE-CONTROLLER] Invalid file type for Excel");
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "ERROR",
+              null,
+              "Invalid file type. Please upload a valid XLSX file.",
+            ),
+          );
+      }
+
+      const buffer = fs.readFileSync(req.file.path);
+
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        throw new Error("No sheets found in Excel file");
+      }
+      const sheet = workbook.Sheets[sheetName];
+      excelStudents = XLSX.utils.sheet_to_json(sheet) as {
+        foil_number: string;
+        uid: string;
+      }[];
+    }
+
     const params = {
       classId: Number(classId),
       programCourseIds: programCourseIds.map((id: unknown) => Number(id)),
@@ -70,6 +115,8 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
       shiftIds: shiftIds
         ? shiftIds.map((id: unknown) => Number(id))
         : undefined,
+      gender,
+      excelStudents,
     };
 
     console.log(
@@ -108,6 +155,7 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
       shiftIds,
       assignBy,
       roomAssignments,
+      gender,
     } = req.body;
 
     console.log("[EXAM-SCHEDULE-CONTROLLER] Received get students request:", {
@@ -162,6 +210,38 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
         );
     }
 
+    // Parse Excel file if provided (assuming multer middleware handles file upload and attaches to req.file)
+    let excelStudents: { foil_number: string; uid: string }[] = [];
+    if (req.file) {
+      if (!req.file.mimetype || !req.file.mimetype.includes("spreadsheetml")) {
+        console.warn("[EXAM-SCHEDULE-CONTROLLER] Invalid file type for Excel");
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "ERROR",
+              null,
+              "Invalid file type. Please upload a valid XLSX file.",
+            ),
+          );
+      }
+
+      const buffer = fs.readFileSync(req.file.path);
+
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        throw new Error("No sheets found in Excel file");
+      }
+      const sheet = workbook.Sheets[sheetName];
+      excelStudents = XLSX.utils.sheet_to_json(sheet) as {
+        foil_number: string;
+        uid: string;
+      }[];
+    }
+
     const params = {
       classId: Number(classId),
       programCourseIds: programCourseIds.map((id: unknown) => Number(id)),
@@ -170,7 +250,9 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
       shiftIds: shiftIds
         ? shiftIds.map((id: unknown) => Number(id))
         : undefined,
-      assignBy: assignBy as "UID" | "CU Reg. No.",
+      assignBy: assignBy as "CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER",
+      gender,
+      excelStudents,
     };
 
     const students = await getStudentsByPapers(params, roomAssignments);
@@ -286,7 +368,44 @@ export const createExamAssignmenthandler = async (
     //   assignBy: assignBy as "UID" | "CU Reg. No.",
     // };
 
-    const students = await createExamAssignment(req.body);
+    // Parse Excel file if provided (assuming multer middleware handles file upload and attaches to req.file)
+    let excelStudents: { foil_number: string; uid: string }[] = [];
+    if (req.file) {
+      if (!req.file.mimetype || !req.file.mimetype.includes("spreadsheetml")) {
+        console.warn("[EXAM-SCHEDULE-CONTROLLER] Invalid file type for Excel");
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "ERROR",
+              null,
+              "Invalid file type. Please upload a valid XLSX file.",
+            ),
+          );
+      }
+
+      const buffer = fs.readFileSync(req.file.path);
+
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        throw new Error("No sheets found in Excel file");
+      }
+      const sheet = workbook.Sheets[sheetName];
+      excelStudents = XLSX.utils.sheet_to_json(sheet) as {
+        foil_number: string;
+        uid: string;
+      }[];
+    }
+
+    const dto =
+      typeof req.body.dto === "string"
+        ? JSON.parse(req.body.dto)
+        : req.body.dto;
+
+    const students = await createExamAssignment(dto, excelStudents);
 
     // console.log(
     //     "[EXAM-SCHEDULE-CONTROLLER] Service returned students:",
@@ -357,6 +476,57 @@ export const downloadAdmitCardsController = async (
     res.send(result.zipBuffer);
   } catch (error) {
     console.error("[ADMIT-CARD-DOWNLOAD] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const downloadAttendanceSheetsByExamIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  console.log(req.query);
+  try {
+    const { examId, uploadSessionId } = req.query;
+
+    if (!examId) {
+      res
+        .status(400)
+        .json(new ApiError(400, "examId and examSubjectId are required"));
+      return;
+    }
+
+    const examIdNum = Number(examId);
+
+    if (isNaN(examIdNum)) {
+      res.status(400).json(new ApiError(400, "Invalid examId"));
+      return;
+    }
+
+    console.info(`[ATTENDANCE_SHEETS-DOWNLOAD] Starting download`, {
+      examIdNum,
+    });
+
+    const result = await downloadAttendanceSheetsByExamId(
+      examIdNum,
+      (req as any)?.user!.id as number,
+      uploadSessionId as string | undefined,
+    );
+
+    if (result.roomCount === 0) {
+      res.status(404).json(new ApiError(404, "No attendance dr sheet found"));
+      return;
+    }
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="exam-${examId}-attendance-dr-sheets.zip"`,
+    );
+
+    res.send(result.zipBuffer);
+  } catch (error) {
+    console.error("[ATTENDANCE_SHEETS-DOWNLOAD] Error:", error);
     handleError(error, res, next);
   }
 };
@@ -528,6 +698,54 @@ export const getExamsByStudentController = async (
   }
 };
 
+export const getExamCandiatesByStudentIdAndExamIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { studentId, examId } = req.query;
+
+    console.log(req.query);
+
+    if (!studentId || !examId) {
+      res
+        .status(400)
+        .json(new ApiError(400, "studentId and examId both are required"));
+      return;
+    }
+
+    const studentIdNum = Number(studentId);
+    const examIdNum = Number(examId);
+
+    if (isNaN(studentIdNum) || isNaN(examIdNum)) {
+      res
+        .status(400)
+        .json(new ApiError(400, "Invalid studentId, page or pageSize"));
+      return;
+    }
+
+    const result = await getExamCandidatesByStudentIdAndExamId(
+      studentIdNum,
+      examIdNum,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Exams Candidates fetched successfully",
+        ),
+      );
+  } catch (error) {
+    console.error("[GET-STUDENT-EXAMS] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
 export const getAllExamsController = async (
   req: Request,
   res: Response,
@@ -567,12 +785,39 @@ export const getExamByIdController = async (
   try {
     const id = Number(req.params.id);
 
+    console.log("in getExamByIdController()", id);
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid exam id"));
       return;
     }
 
     const result = await findById(id);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", result, "Exams fetched successfully"),
+      );
+  } catch (error) {
+    console.error("[GET-STUDENT-EXAMS] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const getExamsByStudentIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const studentId = Number(req.params.studentId);
+    console.log("in getExamsByStudentIdController()");
+    if (isNaN(studentId)) {
+      res.status(400).json(new ApiError(400, "Invalid exam id"));
+      return;
+    }
+
+    const result = await findByStudentId(studentId);
 
     res
       .status(200)
@@ -592,6 +837,8 @@ export const getExamPapersByExamIdController = async (
 ): Promise<void> => {
   try {
     const id = Number(req.params.id);
+
+    console.log("in getExamPapersByExamIdController()");
 
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid exam id"));

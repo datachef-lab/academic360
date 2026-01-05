@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import type { SubjectType } from "@repo/db";
+import type { SubjectType } from "@repo/db/index";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({

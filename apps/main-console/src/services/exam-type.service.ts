@@ -1,5 +1,5 @@
 import { ApiResponse } from "@/types/api-response";
-import { ExamTypeT } from "@repo/db/schemas/models/exams";
+import type { ExamTypeT } from "@repo/db/schemas/models/exams";
 import axiosInstance from "@/utils/api";
 
 export type { ExamTypeT };

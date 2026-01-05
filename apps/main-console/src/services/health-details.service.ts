@@ -1,5 +1,5 @@
 import { ApiResponse } from "@/types/api-response";
-import { HealthDto } from "@repo/db/dtos/user";
+import type { HealthDto } from "@repo/db/dtos/user";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/health";
@@ -26,8 +26,8 @@ export async function getHealthDetailByStudentId(studentId: number): Promise<Api
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
-  } catch (err: any) {
-    if (err?.response?.status === 404) {
+  } catch (err) {
+    if ((err as { response: { status: number } })?.response?.status === 404) {
       return { payload: null } as ApiResponse<HealthDto | null>;
     }
     throw new Error(`Failed to fetch health detail for studentId ${studentId}`);

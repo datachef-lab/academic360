@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { SubjectCategoryForm } from "./subject-category-form";
-import type { SubjectType } from "@repo/db";
+import type { SubjectType } from "@repo/db/index";
 import {
   getSubjectTypes,
   createSubjectType,

@@ -5,9 +5,9 @@ import React, { useState, useCallback, useEffect, ReactNode, createContext } fro
 // Force dynamic rendering to prevent prerendering issues
 export const dynamic = "force-dynamic";
 import { useRouter, usePathname } from "next/navigation";
-import { UserDto } from "@repo/db/dtos/user";
+import type { UserDto } from "@repo/db/dtos/user";
 import { ApiResponse } from "@repo/utils/ApiResonse";
-import { ingaxiosInstance as axiosInstance } from "@/lib/utils";
+import { axiosInstance } from "@/lib/utils";
 
 export interface AuthContextType {
   user: UserDto | null;

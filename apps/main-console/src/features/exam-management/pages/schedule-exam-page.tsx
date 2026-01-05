@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,17 +8,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   FileSpreadsheet,
   Users,
-  Calendar,
-  ClipboardList,
+  //   Calendar,
+  //   ClipboardList,
   Download,
   Play,
   AlertTriangle,
   DoorOpen,
   BookOpen,
   Loader2,
+  Upload,
+  Trash2,
+  CheckCircle2,
+  AlertCircle,
+  Calendar,
+  ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getAllExamTypes, type ExamTypeT } from "@/services/exam-type.service";
+import { getAllExamTypes, ExamTypeT } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
 import { getAffiliations, getRegulationTypes, getProgramCourseDtos } from "@/services/course-design.api";
 import { getAllShifts } from "@/services/academic";
@@ -26,10 +32,10 @@ import { getSubjectTypes, getExamComponents } from "@/services/course-design.api
 import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
 import { getAllRooms } from "@/services/room.service";
-import { getAllFloors, type FloorT } from "@/services/floor.service";
-import { countStudentsForExam, getStudentsForExam, type StudentWithSeat } from "@/services/exam-schedule.service";
+import { getAllFloors, FloorT } from "@/services/floor.service";
+import { countStudentsForExam, getStudentsForExam, StudentWithSeat } from "@/services/exam-schedule.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import type { Class } from "@/types/academics/class";
+import { Class } from "@/types/academics/class";
 import type {
   SubjectType,
   PaperDto,
@@ -41,14 +47,18 @@ import type {
   RoomDto,
   ProgramCourseDto,
   ExamProgramCourseDto,
+  ExamComponentT,
 } from "@repo/db";
 import type { Shift } from "@/types/academics/shift";
 import type { Subject } from "@repo/db";
 import type { ExamComponent } from "@/types/course-design";
-import type { ExamComponent as ExamComponentDb } from "@repo/db";
 import { doAssignExam } from "../services";
 import { AccordionSection } from "../components/AccordionSection";
 import { MultiSelect } from "../components/MultiSelect";
+// import { RoomsModal } from "../components/RoomsModal";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RoomsModal } from "../components/RoomsModal";
 
 interface SelectedRoom extends RoomDto {
@@ -75,6 +85,7 @@ export default function ScheduleExamPage() {
   const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
   const [regulationTypes, setRegulationTypes] = useState<RegulationType[]>([]);
   const [papers, setPapers] = useState<PaperDto[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [rooms, setRooms] = useState<RoomDto[]>([]);
   const [floors, setFloors] = useState<FloorT[]>([]);
@@ -110,7 +121,7 @@ export default function ScheduleExamPage() {
   const [loadingStudents, setLoadingStudents] = useState(false);
 
   // Step 2: Room Selection
-  const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | null>(null);
+  const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
   const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
   const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
   const [totalCapacity, setTotalCapacity] = useState(0);
@@ -119,6 +130,10 @@ export default function ScheduleExamPage() {
   // Step 3: Exam Schedule (keyed by subjectId)
   const [subjectSchedules, setSubjectSchedules] = useState<Record<string, Schedule>>({});
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
+
+  // Excel file upload state
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Accordion states
   const [openExamInfo, setOpenExamInfo] = useState(true);
@@ -254,7 +269,7 @@ export default function ScheduleExamPage() {
         setLoading((prev) => ({ ...prev, examComponents: true }));
         const examComponentsData = await getExamComponents();
         const mappedComponents: ExamComponent[] = Array.isArray(examComponentsData)
-          ? examComponentsData.map((comp: ExamComponentDb) => {
+          ? examComponentsData.map((comp: ExamComponentT) => {
               // Handle both isActive (from @repo/db) and disabled (from @/types/course-design)
               const isDisabled =
                 (comp as { isActive?: boolean | null }).isActive === false ||
@@ -290,23 +305,51 @@ export default function ScheduleExamPage() {
     void fetchInitialData();
   }, [loadAcademicYears]);
 
-  // Fetch papers when filters change
+  // Handle Excel file upload
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.name.toLowerCase().match(/\.(xlsx|xls)$/)) {
+        toast.error("Please upload a valid Excel file (.xlsx or .xls)");
+        event.target.value = "";
+        return;
+      }
+      if (file.size > 100 * 1024 * 1024) {
+        // 100MB limit
+        toast.error("File size must be less than 100MB");
+        event.target.value = "";
+        return;
+      }
+      setExcelFile(file);
+      toast.success(`Uploaded: ${file.name}`);
+    }
+  };
+
+  const removeExcelFile = () => {
+    setExcelFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    toast.info("Excel file removed");
+  };
+  // change Fetch papers when filters change
   const fetchPapers = useCallback(async () => {
     if (selectedProgramCourses.length === 0 || !semester) {
       setPapers([]);
       return;
     }
-
     try {
       setLoading((prev) => ({ ...prev, papers: true }));
       const classObj = classes.find((c) => c.id?.toString() === semester);
       const classId = classObj?.id;
-
+      // Since API only accepts single values, we need to make multiple calls
+      // for each combination of program course and subject type
       const allPapers: PaperDto[] = [];
       const seenPaperIds = new Set<number>();
-
+      // If no subject categories selected, fetch for all program courses
       const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
-
+      // If no subject types selected, fetch papers for all program courses with class filter
       if (subjectTypesToUse.length === 0) {
         for (const programCourseId of selectedProgramCourses) {
           try {
@@ -318,7 +361,6 @@ export default function ScheduleExamPage() {
               classId: classId ?? null,
               subjectTypeId: null,
             });
-
             if (papersData?.content) {
               for (const paper of papersData.content) {
                 if (paper.id && !seenPaperIds.has(paper.id)) {
@@ -343,7 +385,6 @@ export default function ScheduleExamPage() {
                 classId: classId ?? null,
                 subjectTypeId: subjectTypeId,
               });
-
               if (papersData?.content) {
                 for (const paper of papersData.content) {
                   if (paper.id && !seenPaperIds.has(paper.id)) {
@@ -361,7 +402,6 @@ export default function ScheduleExamPage() {
           }
         }
       }
-
       setPapers(allPapers);
     } catch (error) {
       console.error("Error fetching papers:", error);
@@ -380,6 +420,198 @@ export default function ScheduleExamPage() {
     selectedRegulationTypeId,
     currentAcademicYear?.id,
   ]);
+
+  // Fetch papers when filters change
+  //   const fetchPapers = useCallback(async () => {
+  //     if (selectedProgramCourses.length === 0 || !semester) {
+  //       setPapers([]);
+  //       return;
+  //     }
+
+  //     try {
+  //       setLoading((prev) => ({ ...prev, papers: true }));
+  //       const classObj = classes.find((c) => c.id?.toString() === semester);
+  //       const classId = classObj?.id;
+
+  //       // Since API only accepts single values, we need to make multiple calls
+  //       // for each combination of program course and subject type
+  //       const allPapers: PaperDto[] = [];
+  //       const seenPaperIds = new Set<number>();
+
+  //       // If no subject categories selected, fetch for all program courses
+  //       const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
+
+  //       // If no subject types selected, fetch papers for all program courses with class filter
+  //       if (subjectTypesToUse.length === 0) {
+  //         for (const programCourseId of selectedProgramCourses) {
+  //           try {
+  //             const papersData = await getPapersPaginated(1, 1000, {
+  //               academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
+  //               affiliationId: selectedAffiliationId ?? null,
+  //               regulationTypeId: selectedRegulationTypeId ?? null,
+  //               programCourseId: programCourseId,
+  //               classId: classId ?? null,
+  //               subjectTypeId: null,
+  //             });
+
+  //             if (papersData?.content) {
+  //               for (const paper of papersData.content) {
+  //                 if (paper.id && !seenPaperIds.has(paper.id)) {
+  //                   seenPaperIds.add(paper.id);
+  //                   allPapers.push(paper);
+  //                 }
+  //               }
+  //             }
+  //           } catch (error) {
+  //             console.error(`Error fetching papers for program course ${programCourseId}:`, error);
+  //           }
+  //         }
+  //       } else {
+  //         // Fetch papers for each combination of program course and subject type
+  //         for (const programCourseId of selectedProgramCourses) {
+  //           for (const subjectTypeId of subjectTypesToUse) {
+  //             try {
+  //               const papersData = await getPapersPaginated(1, 1000, {
+  //                 academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
+  //                 affiliationId: selectedAffiliationId ?? null,
+  //                 regulationTypeId: selectedRegulationTypeId ?? null,
+  //                 programCourseId: programCourseId,
+  //                 classId: classId ?? null,
+  //                 subjectTypeId: subjectTypeId,
+  //               });
+
+  //               if (papersData?.content) {
+  //                 for (const paper of papersData.content) {
+  //                   if (paper.id && !seenPaperIds.has(paper.id)) {
+  //                     seenPaperIds.add(paper.id);
+  //                     allPapers.push(paper);
+  //                   }
+  //                 }
+  //               }
+  //             } catch (error) {
+  //               console.error(
+  //                 `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
+  //                 error,
+  //               );
+  //             }
+  //           }
+  //         }
+  //       }
+
+  //       setPapers(allPapers);
+  //     } catch (error) {
+  //       console.error("Error fetching papers:", error);
+  //       toast.error("Failed to load papers");
+  //       setPapers([]);
+  //     } finally {
+  //       setLoading((prev) => ({ ...prev, papers: false }));
+  //     }
+  //   }, [
+  //     selectedProgramCourses,
+  //     semester,
+  //     selectedSubjectCategories,
+  //     classes,
+  //     selectedAcademicYearId,
+  //     selectedAffiliationId,
+  //     selectedRegulationTypeId,
+  //     currentAcademicYear?.id,
+  //   ]);
+
+  // Fetch papers when filters change
+  //   const fetchPapers = useCallback(async () => {
+  //     if (selectedProgramCourses.length === 0 || !semester) {
+  //       setPapers([]);
+  //       return;
+  //     }
+
+  //     try {
+  //       setLoading((prev) => ({ ...prev, papers: true }));
+  //       const classObj = classes.find((c) => c.id?.toString() === semester);
+  //       const classId = classObj?.id;
+
+  //       // Since API only accepts single values, we need to make multiple calls
+  //       // for each combination of program course and subject type
+  //       const allPapers: PaperDto[] = [];
+  //       const seenPaperIds = new Set<number>();
+
+  //       // If no subject categories selected, fetch for all program courses
+  //       const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
+
+  //       // If no subject types selected, fetch papers for all program courses with class filter
+  //       if (subjectTypesToUse.length === 0) {
+  //         for (const programCourseId of selectedProgramCourses) {
+  //           try {
+  //             const papersData = await getPapersPaginated(1, 1000, {
+  //               academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
+  //               affiliationId: selectedAffiliationId ?? null,
+  //               regulationTypeId: selectedRegulationTypeId ?? null,
+  //               programCourseId: programCourseId,
+  //               classId: classId ?? null,
+  //               subjectTypeId: null,
+  //             });
+
+  //             if (papersData?.content) {
+  //               for (const paper of papersData.content) {
+  //                 if (paper.id && !seenPaperIds.has(paper.id)) {
+  //                   seenPaperIds.add(paper.id);
+  //                   allPapers.push(paper);
+  //                 }
+  //               }
+  //             }
+  //           } catch (error) {
+  //             console.error(`Error fetching papers for program course ${programCourseId}:`, error);
+  //           }
+  //         }
+  //       } else {
+  //         // Fetch papers for each combination of program course and subject type
+  //         for (const programCourseId of selectedProgramCourses) {
+  //           for (const subjectTypeId of subjectTypesToUse) {
+  //             try {
+  //               const papersData = await getPapersPaginated(1, 1000, {
+  //                 academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
+  //                 affiliationId: selectedAffiliationId ?? null,
+  //                 regulationTypeId: selectedRegulationTypeId ?? null,
+  //                 programCourseId: programCourseId,
+  //                 classId: classId ?? null,
+  //                 subjectTypeId: subjectTypeId,
+  //               });
+
+  //               if (papersData?.content) {
+  //                 for (const paper of papersData.content) {
+  //                   if (paper.id && !seenPaperIds.has(paper.id)) {
+  //                     seenPaperIds.add(paper.id);
+  //                     allPapers.push(paper);
+  //                   }
+  //                 }
+  //               }
+  //             } catch (error) {
+  //               console.error(
+  //                 `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
+  //                 error,
+  //               );
+  //             }
+  //           }
+  //         }
+  //       }
+
+  //       setPapers(allPapers);
+  //     } catch (error) {
+  //       console.error("Error fetching papers:", error);
+  //       toast.error("Failed to load papers");
+  //       setPapers([]);
+  //     } finally {
+  //       setLoading((prev) => ({ ...prev, papers: false }));
+  //     }
+  //   }, [
+  //     selectedProgramCourses,
+  //     semester,
+  //     selectedSubjectCategories,
+  //     classes,
+  //     selectedAcademicYearId,
+  //     selectedAffiliationId,
+  //     selectedRegulationTypeId,
+  //     currentAcademicYear?.id,
+  //   ]);
 
   useEffect(() => {
     void fetchPapers();
@@ -431,6 +663,36 @@ export default function ScheduleExamPage() {
     }));
   };
 
+  //   const getDistinctSubjects = (): Array<{
+  //     subjectId: number | null;
+  //     subjectName: string;
+  //     subjectCode: string | null;
+  //   }> => {
+  //     const availablePapers = getAvailablePapers();
+  //     const subjectMap = new Map<number | null, { name: string; code: string | null }>();
+
+  //     availablePapers.forEach((paper) => {
+  //       if (paper.subjectId) {
+  //         const subject = subjects.find((s) => s.id === paper.subjectId);
+  //         const subjectName = subject?.name || `Subject ID: ${paper.subjectId}`;
+  //         const subjectCode = subject?.code || null;
+  //         if (!subjectMap.has(paper.subjectId)) {
+  //           subjectMap.set(paper.subjectId, { name: subjectName, code: subjectCode });
+  //         }
+  //       } else {
+  //         if (!subjectMap.has(null)) {
+  //           subjectMap.set(null, { name: "Unknown Subject", code: null });
+  //         }
+  //       }
+  //     });
+
+  //     return Array.from(subjectMap.entries()).map(([subjectId, subjectData]) => ({
+  //       subjectId,
+  //       subjectName: subjectData.name,
+  //       subjectCode: subjectData.code,
+  //     }));
+  //   };
+
   //   const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
   //     if (!selectedSubjectId) return [];
   //     return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
@@ -449,6 +711,11 @@ export default function ScheduleExamPage() {
 
     return Array.from(paperIds);
   }, [selectedSubjectIds, getAvailablePapers]);
+
+  const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
+    if (!selectedSubjectId) return [];
+    return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
+  }, [selectedSubjectId, getAvailablePapers]);
 
   // Fetch student count from API based on selected subject
   //   useEffect(() => {
@@ -536,13 +803,20 @@ export default function ScheduleExamPage() {
           return;
         }
 
-        const response = await countStudentsForExam({
-          classId: classObj.id,
-          programCourseIds: selectedProgramCourses,
-          paperIds,
-          academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-        });
+        const response = await countStudentsForExam(
+          {
+            classId: classObj.id,
+            programCourseIds: selectedProgramCourses,
+            paperIds,
+            academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
+            shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+            gender: gender === "ALL" ? null : gender,
+            // Pass file if present; services should use FormData if file exists
+          },
+          excelFile,
+        );
+
+        console.log("[SCHEDULE-EXAM] Student count response:", response);
 
         if (response.httpStatus === "SUCCESS" && response.payload) {
           setTotalStudents(response.payload.count);
@@ -565,6 +839,7 @@ export default function ScheduleExamPage() {
     currentAcademicYear,
     getPaperIdsForSelectedSubjects, // ← new dependency
     selectedAcademicYearId,
+    gender,
   ]);
 
   useEffect(() => {
@@ -702,15 +977,19 @@ export default function ScheduleExamPage() {
             };
           });
 
-        const response = await getStudentsForExam({
-          classId: classObj.id,
-          programCourseIds: selectedProgramCourses,
-          paperIds,
-          academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-          assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
-          roomAssignments,
-        });
+        const response = await getStudentsForExam(
+          {
+            classId: classObj.id,
+            programCourseIds: selectedProgramCourses,
+            paperIds,
+            academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
+            shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+            assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
+            roomAssignments,
+            gender: gender == "ALL" ? null : gender,
+          },
+          excelFile,
+        );
 
         if (response.httpStatus === "SUCCESS" && response.payload) {
           setStudentsWithSeats(response.payload.students);
@@ -736,9 +1015,13 @@ export default function ScheduleExamPage() {
     currentAcademicYear,
     assignBy,
     floors,
+    gender,
     getPaperIdsForSelectedSubjects, // ← changed
     selectedAcademicYearId,
+    excelFile,
   ]);
+
+  const [centerTab, setCenterTab] = useState<"rooms" | "students">("rooms");
 
   const handleScheduleChange = (subjectId: number | string | null, field: keyof Schedule, value: string) => {
     if (subjectId === null) return;
@@ -902,7 +1185,7 @@ export default function ScheduleExamPage() {
           examId: 0,
           subjectType: st,
         })),
-      gender: gender,
+      gender: gender === "ALL" ? null : gender,
       examSubjects: examSubjects.map((es) => ({
         ...es,
         subject: subjects.find((ele) => ele.id === es.subjectId)!,
@@ -915,7 +1198,14 @@ export default function ScheduleExamPage() {
     };
 
     try {
-      const response = await doAssignExam(tmpExamAssignment);
+      console.log("Before calling doAssignExam with:", tmpExamAssignment);
+      const response = await doAssignExam(
+        {
+          ...tmpExamAssignment,
+          gender: (tmpExamAssignment.gender as string) === "ALL" ? null : tmpExamAssignment.gender,
+        },
+        excelFile,
+      );
       console.log("In exam assignment post api, response:", response);
       toast.success(`Successfully assigned exam to the students`);
       setOpenAssignments(true);
@@ -937,6 +1227,190 @@ export default function ScheduleExamPage() {
     setTempOverrides(clone);
     setRoomsModalOpen(true);
   };
+
+  const capacityStatus = totalCapacity >= totalStudents;
+
+  //   const toggleTempRoom = (roomId: number) => {
+  //     setTempSelectedRooms((prev) => (prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId]));
+  //   };
+
+  //   const setTempOverride = (roomId: number, value: string) => {
+  //     const numValue = value === "" ? 0 : Number(value);
+  //     setTempOverrides((prev) => ({ ...prev, [roomId]: numValue }));
+  //   };
+
+  //   const applyRoomSelection = () => {
+  //     const newSelectedRooms: SelectedRoom[] = [];
+  //     tempSelectedRooms.forEach((roomId) => {
+  //       const room = rooms.find((r) => r.id === roomId);
+  //       if (room) {
+  //         const override = tempOverrides[roomId];
+  //         const maxStudentsPerBench =
+  //           override && override > 0 ? override : room.maxStudentsPerBench || studentsPerBench || 2;
+  //         const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
+  //         newSelectedRooms.push({
+  //           ...room,
+  //           capacity,
+  //           maxStudentsPerBenchOverride: override && override > 0 ? override : undefined,
+  //         });
+  //       }
+  //     });
+  //     setSelectedRooms(newSelectedRooms);
+  //     setRoomsModalOpen(false);
+  //   };
+
+  //   // Prepare room data for modal
+  //   const { roomIdMap, availableRoomsForModal, masterBenches } = useMemo(() => {
+  //     const idMap: Record<string, number> = {};
+  //     const available = rooms
+  //       .filter((r) => r.isActive !== false)
+  //       .map((r) => {
+  //         if (r.id) {
+  //           const floor = floors.find((f) => f.id === r.floor.id);
+  //           const roomKey = `${floor?.name || "N/A"} - ${r.name || `Room ${r.id}`}`;
+  //           idMap[roomKey] = r.id;
+  //           return roomKey;
+  //         }
+  //         return "";
+  //       })
+  //       .filter((s) => s !== "");
+
+  //     const benches: Record<string, number> = {};
+  //     rooms.forEach((room) => {
+  //       if (room.id) {
+  //         const floor = floors.find((f) => f.id === room.floor.id);
+  //         const roomKey = `${floor?.name || "N/A"} - ${room.name || `Room ${room.id}`}`;
+  //         benches[roomKey] = room.numberOfBenches || 0;
+  //       }
+  //     });
+
+  //     return { roomIdMap: idMap, availableRoomsForModal: available, masterBenches: benches };
+  //   }, [rooms, floors]);
+
+  //   const getScheduledPapers = () => {
+  //     return selectedSubjectIds.filter((id) => {
+  //       const schedule = subjectSchedules[id.toString()];
+  //       return schedule && schedule.date && schedule.startTime && schedule.endTime;
+  //     });
+  //   };
+
+  // //   const exportCSV = () => {
+  // //     if (studentsWithSeats.length === 0) {
+  // //       toast.error("No assignments to export");
+  // //       return;
+  // //     }
+
+  // //     const scheduledSubjectIds = getScheduledPapers();
+  // //     const header = ["Sl. No.", "UID", "Student Name", "CU Roll No.", "CU Reg. No.", "Course"];
+
+  // //     scheduledSubjectIds.forEach((subjectId) => {
+  // //       const subject = subjects.find((s) => s.id === subjectId);
+  // //       const subjectName = subject?.code || subject?.name || `Subject ${subjectId}`;
+  // //       header.push(`Subject: ${subjectName}`);
+  // //       const schedule = subjectSchedules[subjectId.toString()];
+  // //       if (schedule) {
+  // //         header.push(`Date: ${schedule.date}`);
+  // //         header.push(`Time: ${schedule.startTime} - ${schedule.endTime}`);
+  // //       }
+  // //     });
+
+  // //     header.push("Room", "Seat");
+
+  // //     const rows = studentsWithSeats.map((student, idx) => {
+  // //       const base = [
+  // //         idx + 1,
+  // //         student.uid,
+  // //         student.name,
+  // //         "N/A", // cuRollNo not available in StudentWithSeat type
+  // //         student.cuRegistrationApplicationNumber || "N/A",
+  // //         "N/A", // programCourseName not available in StudentWithSeat type
+  // //       ];
+
+  // //       const subjectData = scheduledSubjectIds.flatMap((subjectId) => {
+  // //         const schedule = subjectSchedules[subjectId.toString()];
+  // //         if (schedule) {
+  // //           return [schedule.date || "—", `${schedule.startTime || "—"} - ${schedule.endTime || "—"}`];
+  // //         }
+  // //         return ["—", "—"];
+  // //       });
+
+  // //       return [...base, ...subjectData, student.roomName || "N/A", student.seatNumber || "N/A"];
+  // //     });
+
+  //     const csv = [header, ...rows]
+  //       .map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(","))
+  //       .join("\n");
+  //     const blob = new Blob([csv], { type: "text/csv" });
+  //     const link = document.createElement("a");
+  //     link.href = URL.createObjectURL(blob);
+  //     link.download = "exam-assignments.csv";
+  //     link.click();
+  //   };
+
+  // Convert arrays to string arrays for MultiSelect
+  //   const programCourseNames = programCourses.filter((c) => c.isActive !== false).map((c) => c.name || `Course ${c.id}`);
+
+  //   const shiftNames = shifts.map((s) => s.name || `Shift ${s.id}`);
+
+  //   const subjectCategoryNames = subjectTypes
+  //     .filter((c) => c.isActive !== false)
+  //     .map((c) => (c.code && c.code.trim() ? c.code : c.name) || `Category ${c.id}`);
+
+  //   const selectedProgramCourseNames = selectedProgramCourses
+  //     .map((id) => programCourses.find((c) => c.id === id)?.name)
+  //     .filter((name): name is string => !!name);
+
+  //   const selectedShiftNames = selectedShifts
+  //     .map((id) => shifts.find((s) => s.id === id)?.name)
+  //     .filter((name): name is string => !!name);
+
+  //   const selectedSubjectCategoryNames = selectedSubjectCategories
+  //     .map((id) => {
+  //       const cat = subjectTypes.find((c) => c.id === id);
+  //       return cat?.code && cat.code.trim() ? cat.code : cat?.name;
+  //     })
+  //     .filter((name): name is string => !!name);
+
+  const handleRoomSelection = (room: RoomDto, selected: boolean) => {
+    if (selected) {
+      const maxStudentsPerBench = room.maxStudentsPerBench || 2;
+      const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
+      setSelectedRooms((prev) => [...prev, { ...room, capacity }]);
+    } else {
+      setSelectedRooms((prev) => prev.filter((r) => r.id !== room.id));
+    }
+  };
+
+  const handleMaxStudentsPerBenchOverride = (roomId: number, override: number | null) => {
+    setSelectedRooms((prev) =>
+      prev.map((r) => {
+        if (r.id === roomId) {
+          const maxStudentsPerBench = override || r.maxStudentsPerBench || 2;
+          const numberOfBenches = r.numberOfBenches || 0;
+          const capacity = numberOfBenches * maxStudentsPerBench;
+          return {
+            ...r,
+            maxStudentsPerBenchOverride: override || undefined,
+            capacity,
+          };
+        }
+        return r;
+      }),
+    );
+  };
+
+  // Rooms modal handlers
+  //   const openRoomsModalHandler = () => {
+  //     setTempSelectedRooms(selectedRooms.map((r) => r.id).filter((id): id is number => id !== undefined && id !== null));
+  //     const clone: Record<number, number> = {};
+  //     selectedRooms.forEach((r) => {
+  //       if (r.id !== undefined && r.id !== null && r.maxStudentsPerBenchOverride) {
+  //         clone[r.id] = r.maxStudentsPerBenchOverride;
+  //       }
+  //     });
+  //     setTempOverrides(clone);
+  //     setRoomsModalOpen(true);
+  //   };
 
   const toggleTempRoom = (roomId: number) => {
     setTempSelectedRooms((prev) => (prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId]));
@@ -1333,6 +1807,57 @@ export default function ScheduleExamPage() {
               </div>
             </div>
 
+            {/* Excel File Upload */}
+
+            {examType && examTypes.find((e) => e.id.toString() === examType && e.name === "Test Exam") && (
+              <div className="flex items-center">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-9 w-44 justify-between border-purple-300">
+                      <Upload className="w-4 h-4 mr-1" />
+                      {excelFile
+                        ? `File: ${excelFile.name.slice(0, 20)}${excelFile.name.length > 20 ? "..." : ""}`
+                        : "Upload Excel"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-4" align="start">
+                    <div className="space-y-3">
+                      <Input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Choose Excel File (foil_number, uid)
+                      </Button>
+                      {excelFile && (
+                        <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
+                          <span className="text-sm text-green-700">{excelFile.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={removeExcelFile}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500">Upload XLSX with columns: foil_number, uid</p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <Label className="block text-sm font-medium text-gray-900 mb-1.5">Assign By</Label>
@@ -1348,23 +1873,7 @@ export default function ScheduleExamPage() {
                 </Select>
               </div>
 
-              <div>
-                <Label className="block text-sm font-medium text-gray-900 mb-1.5">Gender</Label>
-                <Select
-                  value={gender || "ALL"}
-                  onValueChange={(value) => setGender(value === "ALL" ? null : (value as typeof gender))}
-                >
-                  <SelectTrigger className="w-full bg-white border-purple-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
-                    <SelectItem value="ALL">All</SelectItem>
-                    <SelectItem value="MALE">Male Only</SelectItem>
-                    <SelectItem value="FEMALE">Female Only</SelectItem>
-                    <SelectItem value="OTHER">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Center: Tabs (Rooms / Students) with table */}
             </div>
           </div>
         </AccordionSection>
@@ -1531,51 +2040,51 @@ export default function ScheduleExamPage() {
             </div>
           )}
         </AccordionSection>
-      </main>
 
-      <RoomsModal
-        isOpen={roomsModalOpen}
-        onClose={() => setRoomsModalOpen(false)}
-        availableRooms={availableRoomsForModal}
-        tempSelectedRooms={tempSelectedRooms
-          .map((id) => {
-            const room = rooms.find((r) => r.id === id);
-            if (room) {
-              const floor = floors.find((f) => f.id === room.floor.id);
-              return `${floor?.name || "N/A"} - ${room.name || `Room ${room.id}`}`;
-            }
-            return "";
-          })
-          .filter((s) => s !== "")}
-        tempOverrides={Object.fromEntries(
-          tempSelectedRooms
+        <RoomsModal
+          isOpen={roomsModalOpen}
+          onClose={() => setRoomsModalOpen(false)}
+          availableRooms={availableRoomsForModal}
+          tempSelectedRooms={tempSelectedRooms
             .map((id) => {
               const room = rooms.find((r) => r.id === id);
-              if (room && tempOverrides[id]) {
+              if (room) {
                 const floor = floors.find((f) => f.id === room.floor.id);
-                const roomKey = `${floor?.name || "N/A"} - ${room.name || `Room ${room.id}`}`;
-                return [roomKey, tempOverrides[id].toString()];
+                return `${floor?.name || "N/A"} - ${room.name || `Room ${room.id}`}`;
               }
-              return null;
+              return "";
             })
-            .filter((entry): entry is [string, string] => entry !== null),
-        )}
-        studentsPerBench={studentsPerBench}
-        masterBenches={masterBenches}
-        onToggleRoom={(roomKey) => {
-          const roomId = roomIdMap[roomKey];
-          if (roomId) {
-            toggleTempRoom(roomId);
-          }
-        }}
-        onSetOverride={(roomKey, value) => {
-          const roomId = roomIdMap[roomKey];
-          if (roomId) {
-            setTempOverride(roomId, value);
-          }
-        }}
-        onApply={applyRoomSelection}
-      />
+            .filter((s) => s !== "")}
+          tempOverrides={Object.fromEntries(
+            tempSelectedRooms
+              .map((id) => {
+                const room = rooms.find((r) => r.id === id);
+                if (room && tempOverrides[id]) {
+                  const floor = floors.find((f) => f.id === room.floor.id);
+                  const roomKey = `${floor?.name || "N/A"} - ${room.name || `Room ${room.id}`}`;
+                  return [roomKey, tempOverrides[id].toString()];
+                }
+                return null;
+              })
+              .filter((entry): entry is [string, string] => entry !== null),
+          )}
+          studentsPerBench={studentsPerBench}
+          masterBenches={masterBenches}
+          onToggleRoom={(roomKey) => {
+            const roomId = roomIdMap[roomKey];
+            if (roomId) {
+              toggleTempRoom(roomId);
+            }
+          }}
+          onSetOverride={(roomKey, value) => {
+            const roomId = roomIdMap[roomKey];
+            if (roomId) {
+              setTempOverride(roomId, value);
+            }
+          }}
+          onApply={applyRoomSelection}
+        />
+      </main>
     </div>
   );
 }

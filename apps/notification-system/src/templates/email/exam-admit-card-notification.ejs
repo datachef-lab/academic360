@@ -118,6 +118,17 @@
       color: #6b7280;
     }
 
+    .table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  min-width: 650px; /* prevents column squishing */
+}
+
+
     .signature {
       margin-top: 16px;
       color: #374151;
@@ -130,6 +141,10 @@
       table {
         font-size: 13px;
       }
+      th, td {
+    padding: 8px;
+    font-size: 13px;
+  }
     }
   </style>
 </head>
@@ -157,8 +172,8 @@
       <!-- Student Info -->
       <div class="info-box">
         <p><strong>Session:</strong> <%= content.dtoTemplateData.session %></p>
-        <p><strong>CU Roll Number:</strong> <%= content.dtoTemplateData.cuRollNumber || "—" %></p>
-        <p><strong>CU Registration Number:</strong> <%= content.dtoTemplateData.cuRegistrationNumber || "—" %></p>
+        <!-- <p><strong>CU Roll Number:</strong> <%= content.dtoTemplateData.cuRollNumber || "—" %></p> -->
+        <!-- <p><strong>CU Registration Number:</strong> <%= content.dtoTemplateData.cuRegistrationNumber || "—" %></p> -->
         <p><strong>Shift:</strong> <%= content.dtoTemplateData.shiftName %></p>
         <p><strong>UID:</strong> <%= content.dtoTemplateData.uid %></p>
       </div>
@@ -174,36 +189,38 @@
         <strong>Examination Schedule:</strong>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Subject</th>
-            <th>Paper Code</th>
-            <th>Room</th>
-            <th>Seat No</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% content.dtoTemplateData.examRows.forEach(function(row) { %>
-            <tr>
-              <td><%= row.date %></td>
-              <td><%= row.time %></td>
-              <td><%= row.subjectName %></td>
-              <td><%= row.subjectCode %></td>
-              <td><%= row.room %></td>
-              <td><%= row.seatNo %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
+      <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Subject</th>
+                <th>Paper Code</th>
+                <th>Room</th>
+                <th>Seat No</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% content.dtoTemplateData.examRows.forEach(function(row) { %>
+                <tr>
+                  <td><%= row.date %></td>
+                  <td><%= row.time %></td>
+                  <td><%= row.subjectName %></td>
+                  <td><%= row.subjectCode %></td>
+                  <td><%= row.room %></td>
+                  <td><%= row.seatNo %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+      </div>
 
       <!-- Important -->
       <div class="important">
         <strong>Important Instructions:</strong>
         <ul style="margin: 8px 0 0 18px;">
-          <li>Reporting time is at least 30 minutes before the exam.</li>
+          <li>Reporting time is 30 minutes before the alloted examination.</li>
           <li>Mobile phones and electronic gadgets are strictly prohibited.</li>
           <li>Carry your College ID card along with the Admit Card.</li>
         </ul>

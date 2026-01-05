@@ -12,7 +12,7 @@ import { ProgressUpdate } from "@/types/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { getRegulationTypes } from "@/services/course-design.api";
-import type { RegulationType } from "@repo/db";
+import type { RegulationType } from "@repo/db/index";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 interface ReportItem {
@@ -147,7 +147,7 @@ export default function ReportsPage() {
       createdAt: new Date(),
     });
 
-    const result = await ExportService.exportStudentSubjectsInventory(Number(selectedAcademicYearId));
+    const result = await ExportService.exportStudentSubjectSelections(1);
 
     if (result.success && result.data) {
       // Trigger download

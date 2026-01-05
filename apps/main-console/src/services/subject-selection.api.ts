@@ -1,7 +1,7 @@
 import { ApiResponse } from "@/types/api-response";
 import { PaginatedResponse } from "@/types/pagination";
 import api from "@/utils/api";
-import { RelatedSubjectMainDto, RelatedSubjectSubDto } from "@repo/db/dtos/subject-selection";
+import type { RelatedSubjectMainDto, RelatedSubjectSubDto } from "@repo/db/dtos/subject-selection";
 
 export type CreateRelatedSubjectMainInput = {
   programCourse: { id: number };

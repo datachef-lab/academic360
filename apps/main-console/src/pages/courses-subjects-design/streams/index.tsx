@@ -13,7 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import type { Stream } from "@repo/db";
+import type { Stream } from "@repo/db/index";
 import { getAllStreams, createStream, updateStream, bulkUploadStreams, BulkUploadResult } from "@/services/stream.api";
 import { deleteStream, DeleteResult } from "@/services/course-design.api";
 import { toast } from "sonner";

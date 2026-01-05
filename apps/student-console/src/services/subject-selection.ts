@@ -1,9 +1,9 @@
 // Import DTOs from shared package
-import {
+import type {
   SubjectSelectionMetaDto,
   StudentSubjectSelectionDto as DbStudentSubjectSelectionDto,
 } from "@repo/db/dtos/subject-selection";
-import { ingaxiosInstance as api } from "@/lib/utils";
+import { axiosInstance as api } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api-response";
 
 // Re-export for convenience

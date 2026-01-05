@@ -1,10 +1,10 @@
-import { getDbConnection } from "@repo/db/connection";
+import { db } from "@/db";
 import { notificationEventModel } from "@repo/db/schemas/models/notifications";
 import { eq } from "drizzle-orm";
 
 export class NotificationEventsService {
   static db() {
-    return getDbConnection(process.env.DATABASE_URL!);
+    return db;
   }
   static async list() {
     const db = this.db();

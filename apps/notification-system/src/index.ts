@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { app } from "@/app.js";
-import { getDbConnection } from "@repo/db/connection";
+
 import { db } from "./db";
 import { userModel } from "@repo/db/schemas";
 
@@ -55,12 +55,10 @@ function checkRequiredEnvs() {
     app.use("/api/notifications", notificationsRouter);
     app.get("/health", (_req, res) => res.json({ ok: true }));
     // Start workers before HTTP
-    const { startEmailWorker, stopEmailWorker } = await import(
-      "@/workers/email.worker.js"
-    );
-    const { startWhatsAppWorker, stopWhatsAppWorker } = await import(
-      "@/workers/whatsapp.worker.js"
-    );
+    const { startEmailWorker, stopEmailWorker } =
+      await import("@/workers/email.worker.js");
+    const { startWhatsAppWorker, stopWhatsAppWorker } =
+      await import("@/workers/whatsapp.worker.js");
     // Throttle worker start to avoid rapid loops
     setTimeout(() => startEmailWorker(), 1000);
     setTimeout(() => startWhatsAppWorker(), 1500);

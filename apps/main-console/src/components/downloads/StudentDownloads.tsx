@@ -6,7 +6,7 @@ import { DataTable } from "../reports/DataTable";
 import { useStudentDownloadStore } from "../globals/useStudentDownloadStore";
 import { getFilteredStudents } from "@/services/student";
 import StudentDownloadFilterAndExport from "./StudentDownloadFilterAndExport";
-import { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@repo/db/dtos/user";
 import { Student } from "@/types/user/student";
 import { studentDownloadColumns } from "./StudentDownloadColumn";
 

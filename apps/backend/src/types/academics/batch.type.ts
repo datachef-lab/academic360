@@ -64,11 +64,10 @@ import { Session } from "@repo/db/schemas/models/academics";
 //     programmeType: typeof programmeTypeEnum.enumValues[number];
 // }
 
-export interface BatchDto
-  extends Omit<
-    Batch,
-    "courseId" | "classId" | "sectionId" | "shiftId" | "sessionId"
-  > {
+export interface BatchDto extends Omit<
+  Batch,
+  "courseId" | "classId" | "sectionId" | "shiftId" | "sessionId"
+> {
   course: CourseDto;
   class: Class;
   section: Section;

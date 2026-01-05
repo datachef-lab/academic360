@@ -1,4 +1,4 @@
-import { ingaxiosInstance as api } from "@/lib/utils";
+import { axiosInstance as api } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api-response";
 
 export interface DynamicSubjectCategory {

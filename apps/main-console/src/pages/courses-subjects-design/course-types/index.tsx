@@ -1,5 +1,5 @@
 // import { UserDataTable } from "@/pages/DataTableTest";
-import type { CourseType } from "@repo/db";
+import type { CourseType } from "@repo/db/index";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Layers, Download, Upload, Trash2 } from "lucide-react";
 import React from "react";

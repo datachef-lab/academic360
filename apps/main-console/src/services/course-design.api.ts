@@ -17,7 +17,7 @@ import type {
   PaperDto,
   SubjectGroupingMainDto,
   ProgramCourseDto,
-} from "@repo/db";
+} from "@repo/db/index";
 import { ApiResponse } from "@/types/api-response";
 // import { Stream } from '@/pages/courses-subjects-design/streams/columns';
 import { AcademicYear } from "@/types/academics/academic-year";

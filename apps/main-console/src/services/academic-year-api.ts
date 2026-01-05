@@ -1,6 +1,6 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
-import { AcademicYear } from "@repo/db";
+import type { AcademicYear } from "@repo/db/schemas";
 
 // Get all academic years
 export async function getAllAcademicYears(): Promise<ApiResponse<AcademicYear[]>> {

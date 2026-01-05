@@ -1,4 +1,3 @@
-import { getDbConnection } from "@repo/db/connection";
 import {
   notificationQueueModel,
   notificationModel,

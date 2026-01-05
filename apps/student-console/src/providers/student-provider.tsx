@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { BatchCustom } from "@/types/academics/batch";
 import { StudentAccessControl } from "@/types/academics/access-control";
-import { UserDto, StudentDto } from "@repo/db/dtos/user";
+import type { UserDto, StudentDto } from "@repo/db/dtos/user";
 
 interface StudentContextType {
   student: StudentDto | null;

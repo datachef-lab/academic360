@@ -12,7 +12,7 @@ import {
 } from "@/services/student-subject-selection";
 import { fetchRestrictedGroupings } from "@/services/restricted-grouping";
 import { fetchStudentByUid } from "@/services/student";
-import { StudentDto } from "@repo/db/dtos/user";
+import type { StudentDto } from "@repo/db/dtos/user";
 
 interface SubjectSelectionFormProps {
   uid: string;
@@ -795,8 +795,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
         // Play success sound
         try {
-          const audioContext = new (window.AudioContext ||
-            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+          const audioContext = new (
+            window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+          )();
 
           // Create a more distinctive "success" sound with two quick beeps
           const playBeep = (frequency: number, startTime: number, duration: number) => {

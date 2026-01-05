@@ -230,6 +230,7 @@ async function processBatch() {
       // Resolve template via notification master (preferred), fallback to dto.emailTemplate
       let templateKey = dto.emailTemplate;
       // Subject should be dynamic: prefer subjectTemplate, then explicit subject, then by-template defaults
+
       let subject: string = "Notification";
       let computedTemplateData: Record<string, string> | undefined;
       let computedTemplateList: { name: string; value: string }[] | undefined;
@@ -573,6 +574,7 @@ async function processBatch() {
               process.env.DEVELOPER_EMAIL!,
             );
             console.log(`[email.worker] sending to staff: ${recipient}`);
+            subject = (dto.templateData?.subject || "Notification") as string;
             const res = await sendZeptoMail(
               recipient,
               subject,
