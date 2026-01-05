@@ -1,4 +1,5 @@
 import { db } from "@/db/index.js";
+import { CreateFeeStructureDto } from "@repo/db/dtos/fees";
 import { feeStructureModel, FeeStructure } from "@repo/db/schemas/models/fees";
 import { eq } from "drizzle-orm";
 
@@ -15,6 +16,26 @@ export const createFeeStructure = async (
 export const getAllFeeStructures = async () => {
   return db.select().from(feeStructureModel);
 };
+
+export async function createFeeStructureByDto(givenDto: CreateFeeStructureDto) {
+  for (let i = 0; i < givenDto.programCourseIds.length; i++) {
+    for (let j = 0; j < givenDto.shiftIds.length; j++) {
+      // Create fee structure for each combination of programCourseId and shiftId
+      const feeStructuredataToInsert: Omit<
+        FeeStructure,
+        "id" | "createdAt" | "updatedAt"
+      > = {
+        academicYearId: givenDto.academicYearId,
+        classId: givenDto.classId,
+        receiptTypeId: givenDto.receiptTypeId,
+        baseAmount: givenDto.baseAmount,
+        programCourseId: givenDto.programCourseIds[i],
+        shiftId: givenDto.shiftIds[j],
+      };
+      // await
+    }
+  }
+}
 
 export const getFeeStructureById = async (id: number) => {
   const [found] = await db
