@@ -123,16 +123,37 @@ async function prepareEmailAttachments(emailAttachments: any): Promise<
 }
 
 async function processBatch() {
-  const rows = await db
-    .select()
-    .from(notificationQueueModel)
-    .where(
-      and(
-        eq(notificationQueueModel.type, "EMAIL_QUEUE" as never),
-        eq(notificationQueueModel.isDeadLetter, false),
-      ),
-    )
-    .limit(BATCH_SIZE);
+  const rows = await db.transaction(async (tx) => {
+    // 1️⃣ Select IDs to claim
+    const ids = await tx
+      .select({ id: notificationQueueModel.id })
+      .from(notificationQueueModel)
+      .where(
+        and(
+          eq(notificationQueueModel.type, "EMAIL_QUEUE" as never),
+          eq(notificationQueueModel.isDeadLetter, false),
+          eq(notificationQueueModel.isProcessing, false),
+        ),
+      )
+      .orderBy(notificationQueueModel.createdAt)
+      .limit(BATCH_SIZE);
+
+    if (ids.length === 0) return [];
+
+    // 2️⃣ Mark them as processing
+    const claimed = await tx
+      .update(notificationQueueModel)
+      .set({ isProcessing: true })
+      .where(
+        inArray(
+          notificationQueueModel.id,
+          ids.map((r) => r.id),
+        ),
+      )
+      .returning();
+
+    return claimed;
+  });
 
   for (const row of rows) {
     try {
@@ -745,13 +766,17 @@ async function processBatch() {
               ? ((notif.otherUsersEmails as string[]) || []).join(", ")
               : user?.email,
       });
+      //   await db
+      //     .update(notificationQueueModel)
+      //     .set({
+      //       isDeadLetter: true,
+      //       type: "DEAD_LETTER_QUEUE" as never,
+      //       deadLetterAt: new Date(),
+      //     })
+      //     .where(eq(notificationQueueModel.id, row.id));
+      // Delete the queue row instead of dead-lettering to reduce clutter
       await db
-        .update(notificationQueueModel)
-        .set({
-          isDeadLetter: true,
-          type: "DEAD_LETTER_QUEUE" as never,
-          deadLetterAt: new Date(),
-        })
+        .delete(notificationQueueModel)
         .where(eq(notificationQueueModel.id, row.id));
     } catch (err: any) {
       // Reuse shared db; do not create new clients inside the loop
@@ -787,6 +812,7 @@ async function processBatch() {
           .set({
             isDeadLetter: true,
             type: "DEAD_LETTER_QUEUE" as never,
+            isProcessing: false,
             failedReason: errorMessage.slice(0, 500),
             deadLetterAt: new Date(),
           })
@@ -794,7 +820,7 @@ async function processBatch() {
       } else {
         await db
           .update(notificationQueueModel)
-          .set({ retryAttempts: attempts })
+          .set({ retryAttempts: attempts, isProcessing: false })
           .where(eq(notificationQueueModel.id, row.id));
       }
     }
