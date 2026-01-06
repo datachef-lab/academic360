@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,7 @@ import {
   Users,
   //   Calendar,
   //   ClipboardList,
-  Download,
+  //   Download,
   Play,
   AlertTriangle,
   DoorOpen,
@@ -20,8 +19,8 @@ import {
   Loader2,
   Upload,
   Trash2,
-  CheckCircle2,
-  AlertCircle,
+  //   CheckCircle2,
+  //   AlertCircle,
   Calendar,
   ClipboardList,
 } from "lucide-react";
@@ -59,8 +58,8 @@ import { AccordionSection } from "../components/AccordionSection";
 import { MultiSelect } from "../components/MultiSelect";
 // import { RoomsModal } from "../components/RoomsModal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+// import { Card, CardContent, CardHeader } from "@/components/ui/card";
+// import { Checkbox } from "@/components/ui/checkbox";
 import { RoomsModal } from "../components/RoomsModal";
 
 interface SelectedRoom extends RoomDto {
@@ -87,7 +86,7 @@ export default function ScheduleExamPage() {
   const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
   const [regulationTypes, setRegulationTypes] = useState<RegulationType[]>([]);
   const [papers, setPapers] = useState<PaperDto[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  //   const [selectedSubjectId] = useState<number | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [rooms, setRooms] = useState<RoomDto[]>([]);
   const [floors, setFloors] = useState<FloorT[]>([]);
@@ -123,7 +122,7 @@ export default function ScheduleExamPage() {
   const [loadingStudents, setLoadingStudents] = useState(false);
 
   // Step 2: Room Selection
-  const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
+  const [gender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
   const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
   const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
   const [totalCapacity, setTotalCapacity] = useState(0);
@@ -775,10 +774,10 @@ export default function ScheduleExamPage() {
     return Array.from(paperIds);
   }, [selectedSubjectIds, getAvailablePapers]);
 
-  const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
-    if (!selectedSubjectId) return [];
-    return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
-  }, [selectedSubjectId, getAvailablePapers]);
+  //   const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
+  //     if (!selectedSubjectId) return [];
+  //     return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
+  //   }, [selectedSubjectId, getAvailablePapers]);
 
   // Fetch student count from API based on selected subject
   //   useEffect(() => {
@@ -1085,7 +1084,7 @@ export default function ScheduleExamPage() {
     excelFile,
   ]);
 
-  const [centerTab, setCenterTab] = useState<"rooms" | "students">("rooms");
+  //   const [centerTab, setCenterTab] = useState<"rooms" | "students">("rooms");
 
   const handleScheduleChange = (subjectId: number | string | null, field: keyof Schedule, value: string) => {
     if (subjectId === null) return;
@@ -1292,7 +1291,7 @@ export default function ScheduleExamPage() {
     setRoomsModalOpen(true);
   };
 
-  const capacityStatus = totalCapacity >= totalStudents;
+  //   const capacityStatus = totalCapacity >= totalStudents;
 
   //   const toggleTempRoom = (roomId: number) => {
   //     setTempSelectedRooms((prev) => (prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId]));
@@ -1435,33 +1434,33 @@ export default function ScheduleExamPage() {
   //     })
   //     .filter((name): name is string => !!name);
 
-  const handleRoomSelection = (room: RoomDto, selected: boolean) => {
-    if (selected) {
-      const maxStudentsPerBench = room.maxStudentsPerBench || 2;
-      const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
-      setSelectedRooms((prev) => [...prev, { ...room, capacity }]);
-    } else {
-      setSelectedRooms((prev) => prev.filter((r) => r.id !== room.id));
-    }
-  };
+  //   const handleRoomSelection = (room: RoomDto, selected: boolean) => {
+  //     if (selected) {
+  //       const maxStudentsPerBench = room.maxStudentsPerBench || 2;
+  //       const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
+  //       setSelectedRooms((prev) => [...prev, { ...room, capacity }]);
+  //     } else {
+  //       setSelectedRooms((prev) => prev.filter((r) => r.id !== room.id));
+  //     }
+  //   };
 
-  const handleMaxStudentsPerBenchOverride = (roomId: number, override: number | null) => {
-    setSelectedRooms((prev) =>
-      prev.map((r) => {
-        if (r.id === roomId) {
-          const maxStudentsPerBench = override || r.maxStudentsPerBench || 2;
-          const numberOfBenches = r.numberOfBenches || 0;
-          const capacity = numberOfBenches * maxStudentsPerBench;
-          return {
-            ...r,
-            maxStudentsPerBenchOverride: override || undefined,
-            capacity,
-          };
-        }
-        return r;
-      }),
-    );
-  };
+  //   const handleMaxStudentsPerBenchOverride = (roomId: number, override: number | null) => {
+  //     setSelectedRooms((prev) =>
+  //       prev.map((r) => {
+  //         if (r.id === roomId) {
+  //           const maxStudentsPerBench = override || r.maxStudentsPerBench || 2;
+  //           const numberOfBenches = r.numberOfBenches || 0;
+  //           const capacity = numberOfBenches * maxStudentsPerBench;
+  //           return {
+  //             ...r,
+  //             maxStudentsPerBenchOverride: override || undefined,
+  //             capacity,
+  //           };
+  //         }
+  //         return r;
+  //       }),
+  //     );
+  //   };
 
   // Rooms modal handlers
   //   const openRoomsModalHandler = () => {
@@ -1533,65 +1532,65 @@ export default function ScheduleExamPage() {
     return { roomIdMap: idMap, availableRoomsForModal: available, masterBenches: benches };
   }, [rooms, floors]);
 
-  const getScheduledPapers = () => {
-    return selectedSubjectIds.filter((id) => {
-      const schedule = subjectSchedules[id.toString()];
-      return schedule && schedule.date && schedule.startTime && schedule.endTime;
-    });
-  };
+  //   const getScheduledPapers = () => {
+  //     return selectedSubjectIds.filter((id) => {
+  //       const schedule = subjectSchedules[id.toString()];
+  //       return schedule && schedule.date && schedule.startTime && schedule.endTime;
+  //     });
+  //   };
 
-  const exportCSV = () => {
-    if (studentsWithSeats.length === 0) {
-      toast.error("No assignments to export");
-      return;
-    }
+  //   const exportCSV = () => {
+  //     if (studentsWithSeats.length === 0) {
+  //       toast.error("No assignments to export");
+  //       return;
+  //     }
 
-    const scheduledSubjectIds = getScheduledPapers();
-    const header = ["Sl. No.", "UID", "Student Name", "CU Roll No.", "CU Reg. No.", "Course"];
+  //     const scheduledSubjectIds = getScheduledPapers();
+  //     const header = ["Sl. No.", "UID", "Student Name", "CU Roll No.", "CU Reg. No.", "Course"];
 
-    scheduledSubjectIds.forEach((subjectId) => {
-      const subject = subjects.find((s) => s.id === subjectId);
-      const subjectName = subject?.code || subject?.name || `Subject ${subjectId}`;
-      header.push(`Subject: ${subjectName}`);
-      const schedule = subjectSchedules[subjectId.toString()];
-      if (schedule) {
-        header.push(`Date: ${schedule.date}`);
-        header.push(`Time: ${schedule.startTime} - ${schedule.endTime}`);
-      }
-    });
+  //     scheduledSubjectIds.forEach((subjectId) => {
+  //       const subject = subjects.find((s) => s.id === subjectId);
+  //       const subjectName = subject?.code || subject?.name || `Subject ${subjectId}`;
+  //       header.push(`Subject: ${subjectName}`);
+  //       const schedule = subjectSchedules[subjectId.toString()];
+  //       if (schedule) {
+  //         header.push(`Date: ${schedule.date}`);
+  //         header.push(`Time: ${schedule.startTime} - ${schedule.endTime}`);
+  //       }
+  //     });
 
-    header.push("Room", "Seat");
+  //     header.push("Room", "Seat");
 
-    const rows = studentsWithSeats.map((student, idx) => {
-      const base = [
-        idx + 1,
-        student.uid,
-        student.name,
-        "N/A", // cuRollNo not available in StudentWithSeat type
-        student.cuRegistrationApplicationNumber || "N/A",
-        "N/A", // programCourseName not available in StudentWithSeat type
-      ];
+  //     const rows = studentsWithSeats.map((student, idx) => {
+  //       const base = [
+  //         idx + 1,
+  //         student.uid,
+  //         student.name,
+  //         "N/A", // cuRollNo not available in StudentWithSeat type
+  //         student.cuRegistrationApplicationNumber || "N/A",
+  //         "N/A", // programCourseName not available in StudentWithSeat type
+  //       ];
 
-      const subjectData = scheduledSubjectIds.flatMap((subjectId) => {
-        const schedule = subjectSchedules[subjectId.toString()];
-        if (schedule) {
-          return [schedule.date || "—", `${schedule.startTime || "—"} - ${schedule.endTime || "—"}`];
-        }
-        return ["—", "—"];
-      });
+  //       const subjectData = scheduledSubjectIds.flatMap((subjectId) => {
+  //         const schedule = subjectSchedules[subjectId.toString()];
+  //         if (schedule) {
+  //           return [schedule.date || "—", `${schedule.startTime || "—"} - ${schedule.endTime || "—"}`];
+  //         }
+  //         return ["—", "—"];
+  //       });
 
-      return [...base, ...subjectData, student.roomName || "N/A", student.seatNumber || "N/A"];
-    });
+  //       return [...base, ...subjectData, student.roomName || "N/A", student.seatNumber || "N/A"];
+  //     });
 
-    const csv = [header, ...rows]
-      .map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "exam-assignments.csv";
-    link.click();
-  };
+  //     const csv = [header, ...rows]
+  //       .map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(","))
+  //       .join("\n");
+  //     const blob = new Blob([csv], { type: "text/csv" });
+  //     const link = document.createElement("a");
+  //     link.href = URL.createObjectURL(blob);
+  //     link.download = "exam-assignments.csv";
+  //     link.click();
+  //   };
 
   // Convert arrays to string arrays for MultiSelect
   const programCourseNames = programCourses.filter((c) => c.isActive !== false).map((c) => c.name || `Course ${c.id}`);
