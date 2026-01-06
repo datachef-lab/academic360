@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import * as XLSX from "xlsx";
 import {
   FileSpreadsheet,
   Users,
@@ -135,6 +136,7 @@ export default function ScheduleExamPage() {
   // Excel file upload state
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [foilMap, setFoilMap] = useState<Record<string, string>>({});
 
   // Accordion states
   const [openExamInfo, setOpenExamInfo] = useState(true);
@@ -307,7 +309,7 @@ export default function ScheduleExamPage() {
   }, [loadAcademicYears]);
 
   // Handle Excel file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       // Validate file type
@@ -323,12 +325,72 @@ export default function ScheduleExamPage() {
         return;
       }
       setExcelFile(file);
-      toast.success(`Uploaded: ${file.name}`);
+
+      // Parse Excel file to extract UID to foil_number mapping
+      try {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        if (!firstSheetName) {
+          toast.error("No sheets found in workbook");
+          return;
+        }
+        const sheet = workbook.Sheets[firstSheetName];
+        if (!sheet) {
+          toast.error("Sheet not found in workbook");
+          return;
+        }
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
+
+        if (rows.length === 0) {
+          toast.error("Excel file is empty");
+          return;
+        }
+
+        // Find header row
+        const headerRow = rows[0] as string[];
+        const uidIndex = headerRow.findIndex((h) => h?.toString().toLowerCase().trim() === "uid");
+        const foilNumberIndex = headerRow.findIndex(
+          (h) =>
+            h?.toString().toLowerCase().trim() === "foil_number" ||
+            h?.toString().toLowerCase().trim() === "foil number",
+        );
+
+        if (uidIndex === -1) {
+          toast.error("Excel file must contain a 'uid' column");
+          return;
+        }
+
+        if (foilNumberIndex === -1) {
+          toast.error("Excel file must contain a 'foil_number' column");
+          return;
+        }
+
+        // Build mapping from data rows
+        const mapping: Record<string, string> = {};
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i] as unknown[];
+          const uid = row[uidIndex]?.toString().trim();
+          const foilNumber = row[foilNumberIndex]?.toString().trim();
+
+          if (uid && foilNumber) {
+            mapping[uid] = foilNumber;
+          }
+        }
+
+        setFoilMap(mapping);
+        toast.success(`Uploaded: ${file.name}. Parsed ${Object.keys(mapping).length} foil number mappings.`);
+      } catch (error) {
+        console.error("Error parsing Excel file:", error);
+        toast.error("Failed to parse Excel file. Please check the file format.");
+        setFoilMap({});
+      }
     }
   };
 
   const removeExcelFile = () => {
     setExcelFile(null);
+    setFoilMap({});
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -841,6 +903,7 @@ export default function ScheduleExamPage() {
     getPaperIdsForSelectedSubjects, // ← new dependency
     selectedAcademicYearId,
     gender,
+    excelFile,
   ]);
 
   useEffect(() => {
@@ -2009,8 +2072,10 @@ export default function ScheduleExamPage() {
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Name</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Roll No.</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Reg. No.</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Foil No.</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Email</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Phone</TableHead>
+
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Floor</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Room</TableHead>
                     <TableHead className="text-xs font-semibold text-gray-600 uppercase">Seat</TableHead>
@@ -2034,28 +2099,24 @@ export default function ScheduleExamPage() {
                       <TableCell className="text-gray-600">
                         {student.cuRegistrationApplicationNumber || "N/A"}
                       </TableCell>
+                      <TableCell className="font-medium text-gray-900">{foilMap[student.uid] || "N/A"}</TableCell>
 
-                      {/* Email */}
                       <TableCell className="text-gray-600">{student.email || "N/A"}</TableCell>
 
-                      {/* Phone */}
                       <TableCell className="text-gray-600">{student.whatsappPhone || "N/A"}</TableCell>
 
-                      {/* Floor */}
                       <TableCell>
                         <Badge className="bg-purple-100 text-purple-600 hover:bg-purple-100">
                           {student.floorName || "N/A"}
                         </Badge>
                       </TableCell>
 
-                      {/* Room */}
                       <TableCell>
                         <Badge className="bg-purple-100 text-purple-600 hover:bg-purple-100">
                           {student.roomName || "N/A"}
                         </Badge>
                       </TableCell>
 
-                      {/* Seat */}
                       <TableCell className="font-medium text-gray-900">{student.seatNumber || "N/A"}</TableCell>
                     </TableRow>
                   ))}
