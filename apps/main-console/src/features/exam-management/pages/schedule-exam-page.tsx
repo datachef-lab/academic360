@@ -1,13 +1,29 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Users, AlertCircle, CheckCircle2, Trash2, Loader2, Upload } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import * as XLSX from "xlsx";
+import {
+  FileSpreadsheet,
+  Users,
+  //   Calendar,
+  //   ClipboardList,
+  //   Download,
+  Play,
+  AlertTriangle,
+  DoorOpen,
+  BookOpen,
+  Loader2,
+  Upload,
+  Trash2,
+  //   CheckCircle2,
+  //   AlertCircle,
+  Calendar,
+  ClipboardList,
+} from "lucide-react";
 import { toast } from "sonner";
 import { getAllExamTypes, ExamTypeT } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
@@ -32,44 +48,30 @@ import type {
   RoomDto,
   ProgramCourseDto,
   ExamProgramCourseDto,
-} from "@repo/db/index";
-import { Shift } from "@/types/academics/shift";
-import type { Subject } from "@repo/db/index";
-import { ExamComponent } from "@/types/course-design";
+  ExamComponentT,
+} from "@repo/db";
+import type { Shift } from "@/types/academics/shift";
+import type { Subject } from "@repo/db";
+import type { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
+import { AccordionSection } from "../components/AccordionSection";
+import { MultiSelect } from "../components/MultiSelect";
+// import { RoomsModal } from "../components/RoomsModal";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+// import { Card, CardContent, CardHeader } from "@/components/ui/card";
+// import { Checkbox } from "@/components/ui/checkbox";
+import { RoomsModal } from "../components/RoomsModal";
 
 interface SelectedRoom extends RoomDto {
   capacity: number;
   maxStudentsPerBenchOverride?: number;
 }
 
-// interface Student {
-//   uid: string;
-//   name: string;
-//   cuRollNo: string;
-//   cuRegNo: string;
-//   programCourse: string;
-//   semester: string;
-//   shift: string;
-//   gender: "Male" | "Female";
-// }
-
 interface Schedule {
   date: string;
   startTime: string;
   endTime: string;
 }
-
-// interface Assignment {
-//   uid: string;
-//   name: string;
-//   cuRollNo: string;
-//   cuRegNo: string;
-//   programCourse: string;
-//   papers: { paperId: string; name: string; date: string; time: string }[];
-//   room: string;
-//   seatNo: string;
-// }
 
 export default function ScheduleExamPage() {
   // Academic Year hook - get current academic year from Redux slice
@@ -84,6 +86,7 @@ export default function ScheduleExamPage() {
   const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
   const [regulationTypes, setRegulationTypes] = useState<RegulationType[]>([]);
   const [papers, setPapers] = useState<PaperDto[]>([]);
+  //   const [selectedSubjectId] = useState<number | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [rooms, setRooms] = useState<RoomDto[]>([]);
   const [floors, setFloors] = useState<FloorT[]>([]);
@@ -109,7 +112,7 @@ export default function ScheduleExamPage() {
   const [selectedProgramCourses, setSelectedProgramCourses] = useState<number[]>([]);
   const [selectedShifts, setSelectedShifts] = useState<number[]>([]);
   const [selectedSubjectCategories, setSelectedSubjectCategories] = useState<number[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  //   const [selectedSubjectId] = useState<number | null>(null);
   const [selectedExamComponent, setSelectedExamComponent] = useState<number | null>(null);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(null);
   const [selectedAffiliationId, setSelectedAffiliationId] = useState<number | null>(null);
@@ -117,13 +120,13 @@ export default function ScheduleExamPage() {
   const [totalStudents, setTotalStudents] = useState(0);
   const [studentsWithSeats, setStudentsWithSeats] = useState<StudentWithSeat[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
-  //   const [examAssignment, setExamAssignment] = useState<ExamDto | null>(null);
 
   // Step 2: Room Selection
-  const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
+  const [gender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
   const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
   const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
   const [totalCapacity, setTotalCapacity] = useState(0);
+  const [studentsPerBench, setStudentsPerBench] = useState(2);
 
   // Step 3: Exam Schedule (keyed by subjectId)
   const [subjectSchedules, setSubjectSchedules] = useState<Record<string, Schedule>>({});
@@ -132,8 +135,18 @@ export default function ScheduleExamPage() {
   // Excel file upload state
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [foilMap, setFoilMap] = useState<Record<string, string>>({});
 
-  // Assignments (kept for potential future use)
+  // Accordion states
+  const [openExamInfo, setOpenExamInfo] = useState(true);
+  const [openRoomSelection, setOpenRoomSelection] = useState(false);
+  const [openSchedule, setOpenSchedule] = useState(false);
+  const [openAssignments, setOpenAssignments] = useState(false);
+
+  // Rooms modal states
+  const [roomsModalOpen, setRoomsModalOpen] = useState(false);
+  const [tempSelectedRooms, setTempSelectedRooms] = useState<number[]>([]);
+  const [tempOverrides, setTempOverrides] = useState<Record<number, number>>({});
 
   // Fetch initial data
   useEffect(() => {
@@ -257,18 +270,23 @@ export default function ScheduleExamPage() {
       try {
         setLoading((prev) => ({ ...prev, examComponents: true }));
         const examComponentsData = await getExamComponents();
-        // Map API response to match ExamComponent type (API returns isActive, type expects disabled)
         const mappedComponents: ExamComponent[] = Array.isArray(examComponentsData)
-          ? examComponentsData.map((comp) => ({
-              id: comp.id,
-              name: comp.name,
-              shortName: comp.shortName ?? null,
-              code: comp.code ?? null,
-              sequence: comp.sequence ?? null,
-              disabled: (comp as { isActive?: boolean | null }).isActive === false,
-              createdAt: comp.createdAt,
-              updatedAt: comp.updatedAt,
-            }))
+          ? examComponentsData.map((comp: ExamComponentT) => {
+              // Handle both isActive (from @repo/db) and disabled (from @/types/course-design)
+              const isDisabled =
+                (comp as { isActive?: boolean | null }).isActive === false ||
+                (comp as { disabled?: boolean }).disabled === true;
+              return {
+                id: comp.id,
+                name: comp.name,
+                shortName: comp.shortName ?? null,
+                code: comp.code ?? null,
+                sequence: comp.sequence ?? null,
+                disabled: isDisabled,
+                createdAt: comp.createdAt,
+                updatedAt: comp.updatedAt,
+              };
+            })
           : [];
         setExamComponents(mappedComponents);
       } catch (error) {
@@ -278,7 +296,6 @@ export default function ScheduleExamPage() {
         setLoading((prev) => ({ ...prev, examComponents: false }));
       }
 
-      // Load academic years using the hook (to get current academic year)
       try {
         await loadAcademicYears();
       } catch (error) {
@@ -291,7 +308,7 @@ export default function ScheduleExamPage() {
   }, [loadAcademicYears]);
 
   // Handle Excel file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       // Validate file type
@@ -307,12 +324,72 @@ export default function ScheduleExamPage() {
         return;
       }
       setExcelFile(file);
-      toast.success(`Uploaded: ${file.name}`);
+
+      // Parse Excel file to extract UID to foil_number mapping
+      try {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        if (!firstSheetName) {
+          toast.error("No sheets found in workbook");
+          return;
+        }
+        const sheet = workbook.Sheets[firstSheetName];
+        if (!sheet) {
+          toast.error("Sheet not found in workbook");
+          return;
+        }
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
+
+        if (rows.length === 0) {
+          toast.error("Excel file is empty");
+          return;
+        }
+
+        // Find header row
+        const headerRow = rows[0] as string[];
+        const uidIndex = headerRow.findIndex((h) => h?.toString().toLowerCase().trim() === "uid");
+        const foilNumberIndex = headerRow.findIndex(
+          (h) =>
+            h?.toString().toLowerCase().trim() === "foil_number" ||
+            h?.toString().toLowerCase().trim() === "foil number",
+        );
+
+        if (uidIndex === -1) {
+          toast.error("Excel file must contain a 'uid' column");
+          return;
+        }
+
+        if (foilNumberIndex === -1) {
+          toast.error("Excel file must contain a 'foil_number' column");
+          return;
+        }
+
+        // Build mapping from data rows
+        const mapping: Record<string, string> = {};
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i] as unknown[];
+          const uid = row[uidIndex]?.toString().trim();
+          const foilNumber = row[foilNumberIndex]?.toString().trim();
+
+          if (uid && foilNumber) {
+            mapping[uid] = foilNumber;
+          }
+        }
+
+        setFoilMap(mapping);
+        toast.success(`Uploaded: ${file.name}. Parsed ${Object.keys(mapping).length} foil number mappings.`);
+      } catch (error) {
+        console.error("Error parsing Excel file:", error);
+        toast.error("Failed to parse Excel file. Please check the file format.");
+        setFoilMap({});
+      }
     }
   };
 
   const removeExcelFile = () => {
     setExcelFile(null);
+    setFoilMap({});
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -359,7 +436,6 @@ export default function ScheduleExamPage() {
           }
         }
       } else {
-        // Fetch papers for each combination of program course and subject type
         for (const programCourseId of selectedProgramCourses) {
           for (const subjectTypeId of subjectTypesToUse) {
             try {
@@ -503,63 +579,111 @@ export default function ScheduleExamPage() {
   //     currentAcademicYear?.id,
   //   ]);
 
+  // Fetch papers when filters change
+  //   const fetchPapers = useCallback(async () => {
+  //     if (selectedProgramCourses.length === 0 || !semester) {
+  //       setPapers([]);
+  //       return;
+  //     }
+
+  //     try {
+  //       setLoading((prev) => ({ ...prev, papers: true }));
+  //       const classObj = classes.find((c) => c.id?.toString() === semester);
+  //       const classId = classObj?.id;
+
+  //       // Since API only accepts single values, we need to make multiple calls
+  //       // for each combination of program course and subject type
+  //       const allPapers: PaperDto[] = [];
+  //       const seenPaperIds = new Set<number>();
+
+  //       // If no subject categories selected, fetch for all program courses
+  //       const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
+
+  //       // If no subject types selected, fetch papers for all program courses with class filter
+  //       if (subjectTypesToUse.length === 0) {
+  //         for (const programCourseId of selectedProgramCourses) {
+  //           try {
+  //             const papersData = await getPapersPaginated(1, 1000, {
+  //               academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
+  //               affiliationId: selectedAffiliationId ?? null,
+  //               regulationTypeId: selectedRegulationTypeId ?? null,
+  //               programCourseId: programCourseId,
+  //               classId: classId ?? null,
+  //               subjectTypeId: null,
+  //             });
+
+  //             if (papersData?.content) {
+  //               for (const paper of papersData.content) {
+  //                 if (paper.id && !seenPaperIds.has(paper.id)) {
+  //                   seenPaperIds.add(paper.id);
+  //                   allPapers.push(paper);
+  //                 }
+  //               }
+  //             }
+  //           } catch (error) {
+  //             console.error(`Error fetching papers for program course ${programCourseId}:`, error);
+  //           }
+  //         }
+  //       } else {
+  //         // Fetch papers for each combination of program course and subject type
+  //         for (const programCourseId of selectedProgramCourses) {
+  //           for (const subjectTypeId of subjectTypesToUse) {
+  //             try {
+  //               const papersData = await getPapersPaginated(1, 1000, {
+  //                 academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
+  //                 affiliationId: selectedAffiliationId ?? null,
+  //                 regulationTypeId: selectedRegulationTypeId ?? null,
+  //                 programCourseId: programCourseId,
+  //                 classId: classId ?? null,
+  //                 subjectTypeId: subjectTypeId,
+  //               });
+
+  //               if (papersData?.content) {
+  //                 for (const paper of papersData.content) {
+  //                   if (paper.id && !seenPaperIds.has(paper.id)) {
+  //                     seenPaperIds.add(paper.id);
+  //                     allPapers.push(paper);
+  //                   }
+  //                 }
+  //               }
+  //             } catch (error) {
+  //               console.error(
+  //                 `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
+  //                 error,
+  //               );
+  //             }
+  //           }
+  //         }
+  //       }
+
+  //       setPapers(allPapers);
+  //     } catch (error) {
+  //       console.error("Error fetching papers:", error);
+  //       toast.error("Failed to load papers");
+  //       setPapers([]);
+  //     } finally {
+  //       setLoading((prev) => ({ ...prev, papers: false }));
+  //     }
+  //   }, [
+  //     selectedProgramCourses,
+  //     semester,
+  //     selectedSubjectCategories,
+  //     classes,
+  //     selectedAcademicYearId,
+  //     selectedAffiliationId,
+  //     selectedRegulationTypeId,
+  //     currentAcademicYear?.id,
+  //   ]);
+
   useEffect(() => {
     void fetchPapers();
   }, [fetchPapers]);
 
-  //   const generateMockStudents = useCallback((): Student[] => {
-  //     const students: Student[] = [];
-  //     let counter = 1;
-
-  //     selectedProgramCourses.forEach((courseId) => {
-  //       const course = programCourses.find((c) => c.id === courseId);
-  //       const courseName = course?.name || `Course ${courseId}`;
-  //       const shiftsToUse =
-  //         selectedShifts.length > 0
-  //           ? selectedShifts
-  //           : shifts.map((s) => s.id).filter((id): id is number => id !== undefined);
-  //       shiftsToUse.forEach((shiftId) => {
-  //         const shift = shifts.find((s) => s.id === shiftId);
-  //         const shiftName = shift?.name || `Shift ${shiftId}`;
-  //         const studentsPerGroup = 15;
-  //         for (let i = 0; i < studentsPerGroup; i++) {
-  //           students.push({
-  //             uid: `UID${String(counter).padStart(6, "0")}`,
-  //             name: `Student ${counter}`,
-  //             cuRollNo: `CUR${String(counter).padStart(6, "0")}`,
-  //             cuRegNo: `REG${String(counter).padStart(6, "0")}`,
-  //             programCourse: courseName,
-  //             semester: semester,
-  //             shift: shiftName,
-  //             gender: i % 2 === 0 ? "Male" : "Female",
-  //           });
-  //           counter++;
-  //         }
-  //       });
-  //     });
-
-  //     return students;
-  //   }, [selectedProgramCourses, selectedShifts, semester, programCourses, shifts]);
-
-  //   const getFilteredStudents = useCallback((): Student[] => {
-  //     const allStudents = generateMockStudents();
-  //     if (gender === null) return allStudents;
-  //     // Map enum values to student gender format
-  //     const genderMap: Record<string, "Male" | "Female"> = {
-  //       MALE: "Male",
-  //       FEMALE: "Female",
-  //     };
-  //     const filterGender = genderMap[gender] || gender;
-  //     return allStudents.filter((s) => s.gender === filterGender);
-  //   }, [gender, generateMockStudents]);
-
   const getAvailablePapers = useCallback((): PaperDto[] => {
     let filtered = papers.filter((paper) => paper.isActive !== false);
 
-    // Filter by selected exam component if one is selected
     if (selectedExamComponent !== null) {
       filtered = filtered.filter((paper) => {
-        // Check if paper has components array and if any component has the selected exam component
         return (
           paper.components &&
           Array.isArray(paper.components) &&
@@ -601,45 +725,133 @@ export default function ScheduleExamPage() {
     }));
   };
 
-  const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
-    if (!selectedSubjectId) return [];
-    return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
-  }, [selectedSubjectId, getAvailablePapers]);
+  //   const getDistinctSubjects = (): Array<{
+  //     subjectId: number | null;
+  //     subjectName: string;
+  //     subjectCode: string | null;
+  //   }> => {
+  //     const availablePapers = getAvailablePapers();
+  //     const subjectMap = new Map<number | null, { name: string; code: string | null }>();
 
-  //   const createFormData = useCallback((params: any) => {
-  //     const formData = new FormData();
-  //     Object.entries(params).forEach(([key, value]) => {
-  //       if (value !== undefined && value !== null) {
-  //         if (Array.isArray(value)) {
-  //           value.forEach((item) => formData.append(`${key}[]`, item.toString()));
-  //         } else {
-  //           formData.append(key, value.toString());
+  //     availablePapers.forEach((paper) => {
+  //       if (paper.subjectId) {
+  //         const subject = subjects.find((s) => s.id === paper.subjectId);
+  //         const subjectName = subject?.name || `Subject ID: ${paper.subjectId}`;
+  //         const subjectCode = subject?.code || null;
+  //         if (!subjectMap.has(paper.subjectId)) {
+  //           subjectMap.set(paper.subjectId, { name: subjectName, code: subjectCode });
+  //         }
+  //       } else {
+  //         if (!subjectMap.has(null)) {
+  //           subjectMap.set(null, { name: "Unknown Subject", code: null });
   //         }
   //       }
   //     });
-  //     if (excelFile) {
-  //       formData.append("file", excelFile);
-  //     }
-  //     return formData;
-  //   }, [excelFile]);
+
+  //     return Array.from(subjectMap.entries()).map(([subjectId, subjectData]) => ({
+  //       subjectId,
+  //       subjectName: subjectData.name,
+  //       subjectCode: subjectData.code,
+  //     }));
+  //   };
+
+  //   const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
+  //     if (!selectedSubjectId) return [];
+  //     return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
+  //   }, [selectedSubjectId, getAvailablePapers]);
+
+  const getPaperIdsForSelectedSubjects = useCallback((): number[] => {
+    if (selectedSubjectIds.length === 0) return [];
+
+    const paperIds = new Set<number>();
+    selectedSubjectIds.forEach((subjectId) => {
+      const subjectPapers = getAvailablePapers().filter((paper) => paper.subjectId === subjectId && paper.id);
+      subjectPapers.forEach((paper) => {
+        if (paper.id) paperIds.add(paper.id);
+      });
+    });
+
+    return Array.from(paperIds);
+  }, [selectedSubjectIds, getAvailablePapers]);
+
+  //   const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
+  //     if (!selectedSubjectId) return [];
+  //     return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
+  //   }, [selectedSubjectId, getAvailablePapers]);
 
   // Fetch student count from API based on selected subject
+  //   useEffect(() => {
+  //     const fetchStudentCount = async () => {
+  //       if (!currentAcademicYear?.id) {
+  //         console.log("[SCHEDULE-EXAM] Waiting for academic year to be loaded...");
+  //         setTotalStudents(0);
+  //         return;
+  //       }
+
+  //       if (selectedProgramCourses.length === 0 || !semester || !selectedSubjectId) {
+  //         setTotalStudents(0);
+  //         return;
+  //       }
+
+  //       const papersForSubject = getPapersForSelectedSubject();
+  //       const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
+
+  //       if (paperIds.length === 0) {
+  //         setTotalStudents(0);
+  //         return;
+  //       }
+
+  //       try {
+  //         const classObj = classes.find((c) => c.id?.toString() === semester);
+  //         if (!classObj?.id) {
+  //           setTotalStudents(0);
+  //           return;
+  //         }
+
+  //         const response = await countStudentsForExam({
+  //           classId: classObj.id,
+  //           programCourseIds: selectedProgramCourses,
+  //           paperIds,
+  //           academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
+  //           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+  //         });
+
+  //         if (response.httpStatus === "SUCCESS" && response.payload) {
+  //           setTotalStudents(response.payload.count);
+  //         } else {
+  //           setTotalStudents(0);
+  //         }
+  //       } catch (error) {
+  //         console.error("[SCHEDULE-EXAM] Error fetching student count:", error);
+  //         setTotalStudents(0);
+  //       }
+  //     };
+
+  //     void fetchStudentCount();
+  //   }, [
+  //     selectedProgramCourses,
+  //     selectedShifts,
+  //     semester,
+  //     selectedSubjectId,
+  //     classes,
+  //     currentAcademicYear,
+  //     getPapersForSelectedSubject,
+  //     selectedAcademicYearId,
+  //   ]);
+
   useEffect(() => {
     const fetchStudentCount = async () => {
-      // Check if currentAcademicYear is available
       if (!currentAcademicYear?.id) {
-        console.log("[SCHEDULE-EXAM] Waiting for academic year to be loaded...");
         setTotalStudents(0);
         return;
       }
 
-      if (selectedProgramCourses.length === 0 || !semester || !selectedSubjectId) {
+      if (selectedProgramCourses.length === 0 || !semester || selectedSubjectIds.length === 0) {
         setTotalStudents(0);
         return;
       }
 
-      const papersForSubject = getPapersForSelectedSubject();
-      const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
+      const paperIds = getPaperIdsForSelectedSubjects();
 
       if (paperIds.length === 0) {
         setTotalStudents(0);
@@ -652,14 +864,6 @@ export default function ScheduleExamPage() {
           setTotalStudents(0);
           return;
         }
-
-        console.log("[SCHEDULE-EXAM] Fetching student count with params:", {
-          classId: classObj.id,
-          programCourseIds: selectedProgramCourses,
-          paperIds,
-          academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-        });
 
         const response = await countStudentsForExam(
           {
@@ -679,7 +883,6 @@ export default function ScheduleExamPage() {
         if (response.httpStatus === "SUCCESS" && response.payload) {
           setTotalStudents(response.payload.count);
         } else {
-          console.warn("[SCHEDULE-EXAM] Unexpected response:", response);
           setTotalStudents(0);
         }
       } catch (error) {
@@ -693,12 +896,13 @@ export default function ScheduleExamPage() {
     selectedProgramCourses,
     selectedShifts,
     semester,
-    selectedSubjectId,
+    selectedSubjectIds, // ← now uses multiple subjects
     classes,
     currentAcademicYear,
-    getPapersForSelectedSubject,
+    getPaperIdsForSelectedSubjects, // ← new dependency
     selectedAcademicYearId,
     gender,
+    excelFile,
   ]);
 
   useEffect(() => {
@@ -711,21 +915,102 @@ export default function ScheduleExamPage() {
   }, [selectedRooms]);
 
   // Fetch students with seat assignments when rooms are selected
+  //   useEffect(() => {
+  //     const fetchStudentsWithSeats = async () => {
+  //       if (
+  //         selectedRooms.length === 0 ||
+  //         selectedProgramCourses.length === 0 ||
+  //         !semester ||
+  //         !selectedSubjectIds ||
+  //         !currentAcademicYear?.id
+  //       ) {
+  //         setStudentsWithSeats([]);
+  //         return;
+  //       }
+
+  //       const papersForSubject = getPapersForSelectedSubjects();
+  //       const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
+
+  //       if (paperIds.length === 0) {
+  //         setStudentsWithSeats([]);
+  //         return;
+  //       }
+
+  //       try {
+  //         setLoadingStudents(true);
+  //         const classObj = classes.find((c) => c.id?.toString() === semester);
+  //         if (!classObj?.id) {
+  //           setStudentsWithSeats([]);
+  //           return;
+  //         }
+
+  //         const roomAssignments = selectedRooms
+  //           .filter((room) => room.id !== undefined && room.id !== null)
+  //           .map((room) => {
+  //             const floor = floors.find((f) => f.id === room.floor.id);
+  //             const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+  //             return {
+  //               roomId: room.id!,
+  //               floorId: room.floor.id,
+  //               floorName: floor?.name || null,
+  //               roomName: room.name || `Room ${room.id}`,
+  //               maxStudentsPerBench,
+  //               numberOfBenches: room.numberOfBenches || 0,
+  //             };
+  //           });
+
+  //         const response = await getStudentsForExam({
+  //           classId: classObj.id,
+  //           programCourseIds: selectedProgramCourses,
+  //           paperIds,
+  //           academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
+  //           shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
+  //           assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
+  //           roomAssignments,
+  //         });
+
+  //         if (response.httpStatus === "SUCCESS" && response.payload) {
+  //           setStudentsWithSeats(response.payload.students);
+  //         } else {
+  //           setStudentsWithSeats([]);
+  //         }
+  //       } catch (error) {
+  //         console.error("[SCHEDULE-EXAM] Error fetching students with seats:", error);
+  //         setStudentsWithSeats([]);
+  //       } finally {
+  //         setLoadingStudents(false);
+  //       }
+  //     };
+
+  //     void fetchStudentsWithSeats();
+  //   }, [
+  //     selectedRooms,
+  //     selectedProgramCourses,
+  //     selectedShifts,
+  //     semester,
+  //     selectedSubjectId,
+  //     classes,
+  //     currentAcademicYear,
+  //     assignBy,
+  //     floors,
+  //     getPapersForSelectedSubject,
+  //     selectedAcademicYearId,
+  //   ]);
+
   useEffect(() => {
     const fetchStudentsWithSeats = async () => {
       if (
         selectedRooms.length === 0 ||
         selectedProgramCourses.length === 0 ||
         !semester ||
-        !selectedSubjectId ||
+        selectedSubjectIds.length === 0 || // ← changed from !selectedSubjectId
         !currentAcademicYear?.id
       ) {
         setStudentsWithSeats([]);
         return;
       }
 
-      const papersForSubject = getPapersForSelectedSubject();
-      const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
+      const paperIds = getPaperIdsForSelectedSubjects();
 
       if (paperIds.length === 0) {
         setStudentsWithSeats([]);
@@ -740,19 +1025,20 @@ export default function ScheduleExamPage() {
           return;
         }
 
-        // Prepare room assignments
-        const roomAssignments = selectedRooms.map((room) => {
-          const floor = floors.find((f) => f.id === room.floor.id);
-          const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-          return {
-            roomId: room.id!,
-            floorId: room.floor.id,
-            floorName: floor?.name || null,
-            roomName: room.name || `Room ${room.id}`,
-            maxStudentsPerBench,
-            numberOfBenches: room.numberOfBenches || 0,
-          };
-        });
+        const roomAssignments = selectedRooms
+          .filter((room) => room.id !== undefined && room.id !== null)
+          .map((room) => {
+            const floor = floors.find((f) => f.id === room.floor.id);
+            const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+            return {
+              roomId: room.id!,
+              floorId: room.floor.id,
+              floorName: floor?.name || null,
+              roomName: room.name || `Room ${room.id}`,
+              maxStudentsPerBench,
+              numberOfBenches: room.numberOfBenches || 0,
+            };
+          });
 
         const response = await getStudentsForExam(
           {
@@ -787,60 +1073,18 @@ export default function ScheduleExamPage() {
     selectedProgramCourses,
     selectedShifts,
     semester,
-    selectedSubjectId,
+    selectedSubjectIds, // ← changed
     classes,
     currentAcademicYear,
     assignBy,
     floors,
     gender,
-    getPapersForSelectedSubject,
+    getPaperIdsForSelectedSubjects, // ← changed
     selectedAcademicYearId,
     excelFile,
   ]);
 
-  const handleProgramCourseToggle = (courseId: number) => {
-    setSelectedProgramCourses((prev) =>
-      prev.includes(courseId) ? prev.filter((c) => c !== courseId) : [...prev, courseId],
-    );
-  };
-
-  const handleShiftToggle = (shiftId: number) => {
-    setSelectedShifts((prev) => (prev.includes(shiftId) ? prev.filter((s) => s !== shiftId) : [...prev, shiftId]));
-  };
-
-  const handleSubjectCategoryToggle = (categoryId: number) => {
-    setSelectedSubjectCategories((prev) =>
-      prev.includes(categoryId) ? prev.filter((c) => c !== categoryId) : [...prev, categoryId],
-    );
-  };
-
-  const handleRoomSelection = (room: RoomDto, selected: boolean) => {
-    if (selected) {
-      const maxStudentsPerBench = room.maxStudentsPerBench || 2;
-      const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
-      setSelectedRooms((prev) => [...prev, { ...room, capacity }]);
-    } else {
-      setSelectedRooms((prev) => prev.filter((r) => r.id !== room.id));
-    }
-  };
-
-  const handleMaxStudentsPerBenchOverride = (roomId: number, override: number | null) => {
-    setSelectedRooms((prev) =>
-      prev.map((r) => {
-        if (r.id === roomId) {
-          const maxStudentsPerBench = override || r.maxStudentsPerBench || 2;
-          const numberOfBenches = r.numberOfBenches || 0;
-          const capacity = numberOfBenches * maxStudentsPerBench;
-          return {
-            ...r,
-            maxStudentsPerBenchOverride: override || undefined,
-            capacity,
-          };
-        }
-        return r;
-      }),
-    );
-  };
+  //   const [centerTab, setCenterTab] = useState<"rooms" | "students">("rooms");
 
   const handleScheduleChange = (subjectId: number | string | null, field: keyof Schedule, value: string) => {
     if (subjectId === null) return;
@@ -853,85 +1097,6 @@ export default function ScheduleExamPage() {
       } as Schedule,
     }));
   };
-
-  //   const formatTime = (time24?: string) => {
-  //     if (!time24) return "";
-  //     const [hours, minutes] = time24.split(":");
-  //     const hour = parseInt(hours!);
-  //     const ampm = hour >= 12 ? "PM" : "AM";
-  //     const hour12 = hour % 12 || 12;
-  //     return `${hour12}:${minutes} ${ampm}`;
-  //   };
-
-  //   const generateSeatNumber = (benchNumber: number, positionOnBench: number, maxStudentsPerBench: number): string => {
-  //     const letters = maxStudentsPerBench === 2 ? ["A", "C"] : ["A", "B", "C"];
-  //     return `${benchNumber}${letters[positionOnBench - 1]}`;
-  //   };
-
-  //   const handleGenerate = () => {
-  //     const students = getFilteredStudents();
-
-  //     students.sort((a, b) => {
-  //       if (assignBy === "UID") return a.uid.localeCompare(b.uid);
-  //       return a.cuRegNo.localeCompare(b.cuRegNo);
-  //     });
-
-  //     const newAssignments: Assignment[] = [];
-  //     let currentRoomIndex = 0;
-  //     let currentBench = 1;
-  //     let currentPosition = 1;
-
-  //     students.forEach((student) => {
-  //       if (currentRoomIndex >= selectedRooms.length) return;
-
-  //       const currentRoom = selectedRooms[currentRoomIndex]!;
-  //       const maxStudentsPerBench = currentRoom.maxStudentsPerBenchOverride || currentRoom.maxStudentsPerBench || 2;
-  //       const roomCapacity = (currentRoom.numberOfBenches || 0) * maxStudentsPerBench;
-
-  //       const subjectSchedule = selectedSubjectId ? subjectSchedules[selectedSubjectId.toString()] : null;
-  //       const studentPapers = getPapersForSelectedSubject().map((paper) => ({
-  //         paperId: paper.id?.toString() || "",
-  //         name: paper.name || "Unnamed Paper",
-  //         date: subjectSchedule?.date || "TBD",
-  //         time: subjectSchedule?.startTime
-  //           ? `${formatTime(subjectSchedule.startTime)} - ${formatTime(subjectSchedule.endTime)}`
-  //           : "TBD",
-  //       }));
-
-  //       const seatNo = generateSeatNumber(currentBench, currentPosition, maxStudentsPerBench);
-
-  //       newAssignments.push({
-  //         uid: student.uid,
-  //         name: student.name,
-  //         cuRollNo: student.cuRollNo,
-  //         cuRegNo: student.cuRegNo,
-  //         programCourse: student.programCourse,
-  //         papers: studentPapers,
-  //         room: currentRoom.name || `Room ${currentRoom.id}`,
-  //         seatNo,
-  //       });
-
-  //       currentPosition++;
-  //       if (currentPosition > maxStudentsPerBench) {
-  //         currentPosition = 1;
-  //         currentBench++;
-  //       }
-
-  //       const studentsInRoom = newAssignments.filter(
-  //         (a) => a.room === (currentRoom.name || `Room ${currentRoom.id}`),
-  //       ).length;
-  //       if (studentsInRoom >= roomCapacity) {
-  //         currentRoomIndex++;
-  //         currentBench = 1;
-  //         currentPosition = 1;
-  //       }
-  //     });
-
-  //     toast.success(`Successfully assigned ${newAssignments.length} students`);
-  //   };
-
-  const capacityStatus = totalCapacity >= totalStudents;
-  const [centerTab, setCenterTab] = useState<"rooms" | "students">("rooms");
 
   // Keep selected academic year in sync with current academic year by default
   useEffect(() => {
@@ -990,16 +1155,68 @@ export default function ScheduleExamPage() {
       });
     }
 
-    const locations: ExamRoomDto[] = selectedRooms.map((room) => ({
-      roomId: room.id!,
-      studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
-      capacity: room.capacity,
-      room: rooms.find((r) => r.id === room.id)!,
-      examId: 0, // will be set backend
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      id: 0,
-    }));
+    if (examSubjects.length === 0) {
+      toast.error("Please set schedule for at least one subject");
+      return;
+    }
+
+    // Validate required data before proceeding
+    if (selectedRooms.length === 0) {
+      toast.error("Please select at least one room");
+      return;
+    }
+
+    if (!selectedAcademicYearId) {
+      toast.error("Please select an academic year");
+      return;
+    }
+
+    if (!semester) {
+      toast.error("Please select a semester");
+      return;
+    }
+
+    if (!examType) {
+      toast.error("Please select an exam type");
+      return;
+    }
+
+    const academicYear = availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId);
+    if (!academicYear) {
+      toast.error("Selected academic year not found");
+      return;
+    }
+
+    const classObj = classes.find((c) => c.id?.toString() === semester);
+    if (!classObj) {
+      toast.error("Selected semester/class not found");
+      return;
+    }
+
+    const examTypeObj = examTypes.find((et) => et.id?.toString() === examType);
+    if (!examTypeObj) {
+      toast.error("Selected exam type not found");
+      return;
+    }
+
+    const locations: ExamRoomDto[] = selectedRooms
+      .filter((room) => room.id !== undefined && room.id !== null)
+      .map((room) => {
+        const foundRoom = rooms.find((r) => r.id === room.id);
+        if (!foundRoom) {
+          throw new Error(`Room with id ${room.id} not found`);
+        }
+        return {
+          roomId: room.id!,
+          studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
+          capacity: room.capacity,
+          room: foundRoom,
+          examId: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          id: 0,
+        };
+      });
 
     const tmpExamAssignment: ExamDto = {
       orderType: assignBy,
@@ -1053,966 +1270,910 @@ export default function ScheduleExamPage() {
         excelFile,
       );
       console.log("In exam assignment post api, response:", response);
-
       toast.success(`Successfully assigned exam to the students`);
+      setOpenAssignments(true);
     } catch (error) {
       console.log("In exam assignment post api, error:", error);
       toast.error(`Something went wrong while assigning exam!`);
     }
   };
 
+  // Rooms modal handlers
+  const openRoomsModalHandler = () => {
+    setTempSelectedRooms(selectedRooms.map((r) => r.id).filter((id): id is number => id !== undefined && id !== null));
+    const clone: Record<number, number> = {};
+    selectedRooms.forEach((r) => {
+      if (r.id !== undefined && r.id !== null && r.maxStudentsPerBenchOverride) {
+        clone[r.id] = r.maxStudentsPerBenchOverride;
+      }
+    });
+    setTempOverrides(clone);
+    setRoomsModalOpen(true);
+  };
+
+  //   const capacityStatus = totalCapacity >= totalStudents;
+
+  //   const toggleTempRoom = (roomId: number) => {
+  //     setTempSelectedRooms((prev) => (prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId]));
+  //   };
+
+  //   const setTempOverride = (roomId: number, value: string) => {
+  //     const numValue = value === "" ? 0 : Number(value);
+  //     setTempOverrides((prev) => ({ ...prev, [roomId]: numValue }));
+  //   };
+
+  //   const applyRoomSelection = () => {
+  //     const newSelectedRooms: SelectedRoom[] = [];
+  //     tempSelectedRooms.forEach((roomId) => {
+  //       const room = rooms.find((r) => r.id === roomId);
+  //       if (room) {
+  //         const override = tempOverrides[roomId];
+  //         const maxStudentsPerBench =
+  //           override && override > 0 ? override : room.maxStudentsPerBench || studentsPerBench || 2;
+  //         const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
+  //         newSelectedRooms.push({
+  //           ...room,
+  //           capacity,
+  //           maxStudentsPerBenchOverride: override && override > 0 ? override : undefined,
+  //         });
+  //       }
+  //     });
+  //     setSelectedRooms(newSelectedRooms);
+  //     setRoomsModalOpen(false);
+  //   };
+
+  //   // Prepare room data for modal
+  //   const { roomIdMap, availableRoomsForModal, masterBenches } = useMemo(() => {
+  //     const idMap: Record<string, number> = {};
+  //     const available = rooms
+  //       .filter((r) => r.isActive !== false)
+  //       .map((r) => {
+  //         if (r.id) {
+  //           const floor = floors.find((f) => f.id === r.floor.id);
+  //           const roomKey = `${floor?.name || "N/A"} - ${r.name || `Room ${r.id}`}`;
+  //           idMap[roomKey] = r.id;
+  //           return roomKey;
+  //         }
+  //         return "";
+  //       })
+  //       .filter((s) => s !== "");
+
+  //     const benches: Record<string, number> = {};
+  //     rooms.forEach((room) => {
+  //       if (room.id) {
+  //         const floor = floors.find((f) => f.id === room.floor.id);
+  //         const roomKey = `${floor?.name || "N/A"} - ${room.name || `Room ${room.id}`}`;
+  //         benches[roomKey] = room.numberOfBenches || 0;
+  //       }
+  //     });
+
+  //     return { roomIdMap: idMap, availableRoomsForModal: available, masterBenches: benches };
+  //   }, [rooms, floors]);
+
+  //   const getScheduledPapers = () => {
+  //     return selectedSubjectIds.filter((id) => {
+  //       const schedule = subjectSchedules[id.toString()];
+  //       return schedule && schedule.date && schedule.startTime && schedule.endTime;
+  //     });
+  //   };
+
+  // //   const exportCSV = () => {
+  // //     if (studentsWithSeats.length === 0) {
+  // //       toast.error("No assignments to export");
+  // //       return;
+  // //     }
+
+  // //     const scheduledSubjectIds = getScheduledPapers();
+  // //     const header = ["Sl. No.", "UID", "Student Name", "CU Roll No.", "CU Reg. No.", "Course"];
+
+  // //     scheduledSubjectIds.forEach((subjectId) => {
+  // //       const subject = subjects.find((s) => s.id === subjectId);
+  // //       const subjectName = subject?.code || subject?.name || `Subject ${subjectId}`;
+  // //       header.push(`Subject: ${subjectName}`);
+  // //       const schedule = subjectSchedules[subjectId.toString()];
+  // //       if (schedule) {
+  // //         header.push(`Date: ${schedule.date}`);
+  // //         header.push(`Time: ${schedule.startTime} - ${schedule.endTime}`);
+  // //       }
+  // //     });
+
+  // //     header.push("Room", "Seat");
+
+  // //     const rows = studentsWithSeats.map((student, idx) => {
+  // //       const base = [
+  // //         idx + 1,
+  // //         student.uid,
+  // //         student.name,
+  // //         "N/A", // cuRollNo not available in StudentWithSeat type
+  // //         student.cuRegistrationApplicationNumber || "N/A",
+  // //         "N/A", // programCourseName not available in StudentWithSeat type
+  // //       ];
+
+  // //       const subjectData = scheduledSubjectIds.flatMap((subjectId) => {
+  // //         const schedule = subjectSchedules[subjectId.toString()];
+  // //         if (schedule) {
+  // //           return [schedule.date || "—", `${schedule.startTime || "—"} - ${schedule.endTime || "—"}`];
+  // //         }
+  // //         return ["—", "—"];
+  // //       });
+
+  // //       return [...base, ...subjectData, student.roomName || "N/A", student.seatNumber || "N/A"];
+  // //     });
+
+  //     const csv = [header, ...rows]
+  //       .map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(","))
+  //       .join("\n");
+  //     const blob = new Blob([csv], { type: "text/csv" });
+  //     const link = document.createElement("a");
+  //     link.href = URL.createObjectURL(blob);
+  //     link.download = "exam-assignments.csv";
+  //     link.click();
+  //   };
+
+  // Convert arrays to string arrays for MultiSelect
+  //   const programCourseNames = programCourses.filter((c) => c.isActive !== false).map((c) => c.name || `Course ${c.id}`);
+
+  //   const shiftNames = shifts.map((s) => s.name || `Shift ${s.id}`);
+
+  //   const subjectCategoryNames = subjectTypes
+  //     .filter((c) => c.isActive !== false)
+  //     .map((c) => (c.code && c.code.trim() ? c.code : c.name) || `Category ${c.id}`);
+
+  //   const selectedProgramCourseNames = selectedProgramCourses
+  //     .map((id) => programCourses.find((c) => c.id === id)?.name)
+  //     .filter((name): name is string => !!name);
+
+  //   const selectedShiftNames = selectedShifts
+  //     .map((id) => shifts.find((s) => s.id === id)?.name)
+  //     .filter((name): name is string => !!name);
+
+  //   const selectedSubjectCategoryNames = selectedSubjectCategories
+  //     .map((id) => {
+  //       const cat = subjectTypes.find((c) => c.id === id);
+  //       return cat?.code && cat.code.trim() ? cat.code : cat?.name;
+  //     })
+  //     .filter((name): name is string => !!name);
+
+  //   const handleRoomSelection = (room: RoomDto, selected: boolean) => {
+  //     if (selected) {
+  //       const maxStudentsPerBench = room.maxStudentsPerBench || 2;
+  //       const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
+  //       setSelectedRooms((prev) => [...prev, { ...room, capacity }]);
+  //     } else {
+  //       setSelectedRooms((prev) => prev.filter((r) => r.id !== room.id));
+  //     }
+  //   };
+
+  //   const handleMaxStudentsPerBenchOverride = (roomId: number, override: number | null) => {
+  //     setSelectedRooms((prev) =>
+  //       prev.map((r) => {
+  //         if (r.id === roomId) {
+  //           const maxStudentsPerBench = override || r.maxStudentsPerBench || 2;
+  //           const numberOfBenches = r.numberOfBenches || 0;
+  //           const capacity = numberOfBenches * maxStudentsPerBench;
+  //           return {
+  //             ...r,
+  //             maxStudentsPerBenchOverride: override || undefined,
+  //             capacity,
+  //           };
+  //         }
+  //         return r;
+  //       }),
+  //     );
+  //   };
+
+  // Rooms modal handlers
+  //   const openRoomsModalHandler = () => {
+  //     setTempSelectedRooms(selectedRooms.map((r) => r.id).filter((id): id is number => id !== undefined && id !== null));
+  //     const clone: Record<number, number> = {};
+  //     selectedRooms.forEach((r) => {
+  //       if (r.id !== undefined && r.id !== null && r.maxStudentsPerBenchOverride) {
+  //         clone[r.id] = r.maxStudentsPerBenchOverride;
+  //       }
+  //     });
+  //     setTempOverrides(clone);
+  //     setRoomsModalOpen(true);
+  //   };
+
+  const toggleTempRoom = (roomId: number) => {
+    setTempSelectedRooms((prev) => (prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId]));
+  };
+
+  const setTempOverride = (roomId: number, value: string) => {
+    const numValue = value === "" ? 0 : Number(value);
+    setTempOverrides((prev) => ({ ...prev, [roomId]: numValue }));
+  };
+
+  const applyRoomSelection = () => {
+    const newSelectedRooms: SelectedRoom[] = [];
+    tempSelectedRooms.forEach((roomId) => {
+      const room = rooms.find((r) => r.id === roomId);
+      if (room) {
+        const override = tempOverrides[roomId];
+        const maxStudentsPerBench =
+          override && override > 0 ? override : room.maxStudentsPerBench || studentsPerBench || 2;
+        const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
+        newSelectedRooms.push({
+          ...room,
+          capacity,
+          maxStudentsPerBenchOverride: override && override > 0 ? override : undefined,
+        });
+      }
+    });
+    setSelectedRooms(newSelectedRooms);
+    setRoomsModalOpen(false);
+  };
+
+  // Prepare room data for modal
+  const { roomIdMap, availableRoomsForModal, masterBenches } = useMemo(() => {
+    const idMap: Record<string, number> = {};
+    const available = rooms
+      .filter((r) => r.isActive !== false)
+      .map((r) => {
+        if (r.id) {
+          const floor = floors.find((f) => f.id === r.floor.id);
+          const roomKey = `${floor?.name || "N/A"} - ${r.name || `Room ${r.id}`}`;
+          idMap[roomKey] = r.id;
+          return roomKey;
+        }
+        return "";
+      })
+      .filter((s) => s !== "");
+
+    const benches: Record<string, number> = {};
+    rooms.forEach((room) => {
+      if (room.id) {
+        const floor = floors.find((f) => f.id === room.floor.id);
+        const roomKey = `${floor?.name || "N/A"} - ${room.name || `Room ${room.id}`}`;
+        benches[roomKey] = room.numberOfBenches || 0;
+      }
+    });
+
+    return { roomIdMap: idMap, availableRoomsForModal: available, masterBenches: benches };
+  }, [rooms, floors]);
+
+  //   const getScheduledPapers = () => {
+  //     return selectedSubjectIds.filter((id) => {
+  //       const schedule = subjectSchedules[id.toString()];
+  //       return schedule && schedule.date && schedule.startTime && schedule.endTime;
+  //     });
+  //   };
+
+  //   const exportCSV = () => {
+  //     if (studentsWithSeats.length === 0) {
+  //       toast.error("No assignments to export");
+  //       return;
+  //     }
+
+  //     const scheduledSubjectIds = getScheduledPapers();
+  //     const header = ["Sl. No.", "UID", "Student Name", "CU Roll No.", "CU Reg. No.", "Course"];
+
+  //     scheduledSubjectIds.forEach((subjectId) => {
+  //       const subject = subjects.find((s) => s.id === subjectId);
+  //       const subjectName = subject?.code || subject?.name || `Subject ${subjectId}`;
+  //       header.push(`Subject: ${subjectName}`);
+  //       const schedule = subjectSchedules[subjectId.toString()];
+  //       if (schedule) {
+  //         header.push(`Date: ${schedule.date}`);
+  //         header.push(`Time: ${schedule.startTime} - ${schedule.endTime}`);
+  //       }
+  //     });
+
+  //     header.push("Room", "Seat");
+
+  //     const rows = studentsWithSeats.map((student, idx) => {
+  //       const base = [
+  //         idx + 1,
+  //         student.uid,
+  //         student.name,
+  //         "N/A", // cuRollNo not available in StudentWithSeat type
+  //         student.cuRegistrationApplicationNumber || "N/A",
+  //         "N/A", // programCourseName not available in StudentWithSeat type
+  //       ];
+
+  //       const subjectData = scheduledSubjectIds.flatMap((subjectId) => {
+  //         const schedule = subjectSchedules[subjectId.toString()];
+  //         if (schedule) {
+  //           return [schedule.date || "—", `${schedule.startTime || "—"} - ${schedule.endTime || "—"}`];
+  //         }
+  //         return ["—", "—"];
+  //       });
+
+  //       return [...base, ...subjectData, student.roomName || "N/A", student.seatNumber || "N/A"];
+  //     });
+
+  //     const csv = [header, ...rows]
+  //       .map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(","))
+  //       .join("\n");
+  //     const blob = new Blob([csv], { type: "text/csv" });
+  //     const link = document.createElement("a");
+  //     link.href = URL.createObjectURL(blob);
+  //     link.download = "exam-assignments.csv";
+  //     link.click();
+  //   };
+
+  // Convert arrays to string arrays for MultiSelect
+  const programCourseNames = programCourses.filter((c) => c.isActive !== false).map((c) => c.name || `Course ${c.id}`);
+
+  const shiftNames = shifts.map((s) => s.name || `Shift ${s.id}`);
+
+  const subjectCategoryNames = subjectTypes
+    .filter((c) => c.isActive !== false)
+    .map((c) => (c.code && c.code.trim() ? c.code : c.name) || `Category ${c.id}`);
+
+  const selectedProgramCourseNames = selectedProgramCourses
+    .map((id) => programCourses.find((c) => c.id === id)?.name)
+    .filter((name): name is string => !!name);
+
+  const selectedShiftNames = selectedShifts
+    .map((id) => shifts.find((s) => s.id === id)?.name)
+    .filter((name): name is string => !!name);
+
+  const selectedSubjectCategoryNames = selectedSubjectCategories
+    .map((id) => {
+      const cat = subjectTypes.find((c) => c.id === id);
+      return cat?.code && cat.code.trim() ? cat.code : cat?.name;
+    })
+    .filter((name): name is string => !!name);
+
   return (
-    <div className="min-h-screen w-full bg-gray-50">
-      <div className="w-full flex">
-        {/* Header */}
-        {/* <div className="mb-4 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-white">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-purple-200">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-purple-500 flex items-center justify-center shadow-lg">
-              <GraduationCap className="w-7 h-7 text-white" />
+            <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
+              <FileSpreadsheet className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Exam Scheduler</h1>
-              <p className=" text-gray-500 mt-1">Configure exams, rooms, and student seating in one view</p>
+              <h1 className="text-xl font-bold text-gray-900">Exam Assignment</h1>
+              <p className="text-xs text-gray-600">Manage exam seating efficiently</p>
             </div>
           </div>
-          <Button
-            onClick={handleGenerate}
-            size="lg"
-            className="shadow-lg hover:shadow-xl transition-all bg-purple-500 hover:bg-purple-600 text-white"
-          >
-            <Calendar className="w-5 h-5 mr-2" /> Generate Assignments
-          </Button>
-        </div> */}
+          <div className="flex items-center gap-2">
+            <Button onClick={handleAssignExam} className="gap-2 bg-purple-500 text-white hover:bg-purple-600">
+              <Play className="w-4 h-4" />
+              <span className="hidden sm:inline">Assign</span>
+            </Button>
+            {/* <Button
+              onClick={exportCSV}
+              className="gap-2 bg-green-500 text-white hover:bg-green-600"
+              disabled={studentsWithSeats.length === 0}
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </Button> */}
+          </div>
+        </div>
+      </header>
 
-        <div className="flex-1">
-          {/* Top filter strip (A.Y, Aff, Reg, Exam type, Semester, Shifts, Program Course, Subject Category) */}
-          <Card className="mb-4 shadow-sm border">
-            <CardContent className="py-3 px-4">
-              <div className="flex flex-wrap gap-3 items-center">
-                {/* Academic Year */}
-                <div className="flex items-center">
-                  <Select
-                    value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
-                    onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
-                  >
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder="A.Y" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableAcademicYears.map((ay) => (
-                        <SelectItem key={ay.id} value={ay.id?.toString() || ""}>
-                          {ay.year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+      <main className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+        {/* Exam Information */}
+        <AccordionSection
+          title="Exam Information"
+          subtitle="Affiliation, Regulation, Exam Type, Course, Semester, Shift"
+          isOpen={openExamInfo}
+          onToggle={() => setOpenExamInfo((s) => !s)}
+          icon={BookOpen}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Academic Year</Label>
+              <Select
+                value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
+                onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
+              >
+                <SelectTrigger className="w-full bg-white border-purple-200">
+                  <SelectValue placeholder="Select Academic Year" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                  {availableAcademicYears.map((ay) => (
+                    <SelectItem key={ay.id} value={ay.id?.toString() || ""}>
+                      {ay.year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* Affiliation */}
-                <div className="flex items-center">
-                  <Select
-                    value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
-                    onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
-                    disabled={loading.affiliations}
-                  >
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder={loading.affiliations ? "Loading..." : "Aff."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {affiliations.map((aff) => (
-                        <SelectItem key={aff.id} value={aff.id?.toString() || ""}>
-                          {aff.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Affiliation</Label>
+              <Select
+                value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
+                onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
+                disabled={loading.affiliations}
+              >
+                <SelectTrigger className="w-full bg-white border-purple-200">
+                  <SelectValue placeholder={loading.affiliations ? "Loading..." : "Select Affiliation"} />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                  {affiliations.map((aff) => (
+                    <SelectItem key={aff.id} value={aff.id?.toString() || ""}>
+                      {aff.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* Regulation Type */}
-                <div className="flex items-center">
-                  <Select
-                    value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
-                    onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
-                    disabled={loading.regulationTypes}
-                  >
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Reg."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {regulationTypes.map((reg) => (
-                        <SelectItem key={reg.id} value={reg.id?.toString() || ""}>
-                          {reg.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Regulation</Label>
+              <Select
+                value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
+                onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
+                disabled={loading.regulationTypes}
+              >
+                <SelectTrigger className="w-full bg-white border-purple-200">
+                  <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Select Regulation"} />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                  {regulationTypes.map((reg) => (
+                    <SelectItem key={reg.id} value={reg.id?.toString() || ""}>
+                      {reg.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* Exam Type */}
-                <div className="flex items-center">
-                  <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder={loading.examTypes ? "Loading..." : "Exam Type"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {examTypes.map((type) => (
-                        <SelectItem key={type.id} value={type.id?.toString() || ""}>
-                          {type.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Exam Type</Label>
+              <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
+                <SelectTrigger className="w-full bg-white border-purple-200">
+                  <SelectValue placeholder={loading.examTypes ? "Loading..." : "Select Exam Type"} />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                  {examTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id?.toString() || ""}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* Semester */}
-                <div className="flex items-center">
-                  <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
-                    <SelectTrigger className="h-9 w-40  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder={loading.classes ? "Loading..." : "Semester"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {classes.map((cls) => (
-                        <SelectItem key={cls.id} value={cls.id?.toString() || ""}>
-                          {cls.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Semester</Label>
+              <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
+                <SelectTrigger className="w-full bg-white border-purple-200">
+                  <SelectValue placeholder={loading.classes ? "Loading..." : "Select Semester"} />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                  {classes.map((cls) => (
+                    <SelectItem key={cls.id} value={cls.id?.toString() || ""}>
+                      {cls.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* Shifts */}
-                <div className="flex items-center">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="h-9 min-w-[170px] justify-between  border-purple-300">
-                        Shift(s)
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-56 p-2" align="start">
-                      <div className="max-h-56 overflow-y-auto space-y-1">
-                        {shifts.map((shift) => (
-                          <button
-                            key={shift.id}
-                            type="button"
-                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
-                            onClick={() => shift.id && handleShiftToggle(shift.id)}
-                          >
-                            <Checkbox
-                              checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
-                              onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
-                              className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                            />
-                            <span className="text-center">{shift.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+            <MultiSelect
+              label="Program Course"
+              options={programCourseNames}
+              selected={selectedProgramCourseNames}
+              onChange={(selected) => {
+                const ids = selected
+                  .map((name) => programCourses.find((c) => c.name === name)?.id)
+                  .filter((id): id is number => id !== undefined);
+                setSelectedProgramCourses(ids);
+              }}
+              placeholder="Select Courses"
+            />
 
-                {/* Program Courses */}
-                <div className="flex items-center">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-9 min-w-[210px] justify-between  border-purple-300"
-                        disabled={loading.programCourses}
-                      >
-                        {loading.programCourses ? "Loading..." : "Program Course(s)"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-2" align="start">
-                      <div className="max-h-60 overflow-y-auto space-y-1">
-                        {programCourses
-                          .filter((course) => course.isActive !== false)
-                          .map((course) => (
-                            <button
-                              key={course.id}
-                              type="button"
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
-                              onClick={() => course.id && handleProgramCourseToggle(course.id)}
-                            >
-                              <Checkbox
-                                checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
-                                onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
-                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                              />
-                              <span className="text-left">{course.name}</span>
-                            </button>
-                          ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+            <MultiSelect
+              label="Shift"
+              options={shiftNames}
+              selected={selectedShiftNames}
+              onChange={(selected) => {
+                const ids = selected
+                  .map((name) => shifts.find((s) => s.name === name)?.id)
+                  .filter((id): id is number => id !== undefined);
+                setSelectedShifts(ids);
+              }}
+              placeholder="Select Shifts"
+            />
 
-                {/* Subject Category */}
-                <div className="flex items-center">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-9 min-w-[190px] justify-between  border-purple-300"
-                        disabled={loading.subjectTypes}
-                      >
-                        {loading.subjectTypes ? "Loading..." : "Subject Category"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="text-left p-2" align="start">
-                      <div className="max-h-56 overflow-y-auto space-y-1">
-                        {subjectTypes
-                          .filter((category) => category.isActive !== false)
-                          .map((category) => (
-                            <button
-                              key={category.id}
-                              type="button"
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
-                              onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
-                            >
-                              <Checkbox
-                                checked={category.id !== undefined && selectedSubjectCategories.includes(category.id)}
-                                onCheckedChange={() => category.id && handleSubjectCategoryToggle(category.id)}
-                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                              />
-                              <span className="text-left">
-                                {category.code && category.code.trim() ? category.code : category.name}
-                              </span>
-                            </button>
-                          ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                {/* Excel File Upload */}
+            <MultiSelect
+              label="Subject Category"
+              options={subjectCategoryNames}
+              selected={selectedSubjectCategoryNames}
+              onChange={(selected) => {
+                const ids = selected
+                  .map((name) => {
+                    const cat = subjectTypes.find((c) => (c.code && c.code.trim() ? c.code : c.name) === name);
+                    return cat?.id;
+                  })
+                  .filter((id): id is number => id !== undefined);
+                setSelectedSubjectCategories(ids);
+              }}
+              placeholder="Select Categories"
+            />
 
-                {examType && examTypes.find((e) => e.id.toString() === examType && e.name === "Test Exam") && (
-                  <div className="flex items-center">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="h-9 w-44 justify-between border-purple-300">
-                          <Upload className="w-4 h-4 mr-1" />
-                          {excelFile
-                            ? `File: ${excelFile.name.slice(0, 20)}${excelFile.name.length > 20 ? "..." : ""}`
-                            : "Upload Excel"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80 p-4" align="start">
-                        <div className="space-y-3">
-                          <Input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".xlsx,.xls"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full"
-                          >
-                            <Upload className="w-4 h-4 mr-2" />
-                            Choose Excel File (foil_number, uid)
-                          </Button>
-                          {excelFile && (
-                            <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
-                              <span className="text-sm text-green-700">{excelFile.name}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={removeExcelFile}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          )}
-                          <p className="text-xs text-gray-500">Upload XLSX with columns: foil_number, uid</p>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Subject Component</Label>
+              <Select
+                value={selectedExamComponent?.toString() || "all"}
+                onValueChange={(value) => {
+                  setSelectedExamComponent(value === "all" ? null : Number(value));
+                }}
+                disabled={loading.examComponents}
+              >
+                <SelectTrigger className="w-full bg-white border-purple-200">
+                  <SelectValue placeholder={loading.examComponents ? "Loading..." : "Select Component"} />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                  <SelectItem value="all">All</SelectItem>
+                  {examComponents
+                    .filter((comp) => !comp.disabled)
+                    .map((comp) => (
+                      <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
+                        {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Total Students</Label>
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-purple-50 rounded-lg">
+                <Users className="w-4 h-4 text-purple-500" />
+                <span className="font-semibold text-gray-900">{totalStudents || "—"}</span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </AccordionSection>
 
-          {/* Main layout: left sidebar, center content (rooms/students), right sidebar */}
-          <div className="flex gap-4 w-full">
-            {/* Left sidebar: Subjects + schedule + total + assign */}
-            <div className="w-[26%] flex-shrink-0">
-              <Card className="h-[calc(100vh-200px)] overflow-y-scroll flex flex-col shadow-lg border-2">
-                <CardContent className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
-                  {/* Subject list */}
-                  <div className="flex-1 min-h-0 flex flex-col">
-                    <div className="flex items-center justify-between mb-2 gap-2">
-                      <div className="flex items-center gap-2">
-                        {/* Multi-select subjects dropdown */}
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="h-8 min-w-[140px] justify-between border-purple-300"
-                              disabled={getDistinctSubjects().length === 0}
-                            >
-                              Subjects
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-56 p-2" align="start">
-                            <div className="max-h-60 overflow-y-auto space-y-1">
-                              {getDistinctSubjects().map((subject) => {
-                                if (subject.subjectId == null) return null;
-                                const isChecked = selectedSubjectIds.includes(subject.subjectId);
-                                return (
-                                  <button
-                                    key={subject.subjectId}
-                                    type="button"
-                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                                    onClick={() =>
-                                      setSelectedSubjectIds((prev) =>
-                                        isChecked
-                                          ? prev.filter((id) => id !== subject.subjectId)
-                                          : [...prev, subject.subjectId as number],
-                                      )
-                                    }
-                                  >
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={() =>
-                                        setSelectedSubjectIds((prev) =>
-                                          isChecked
-                                            ? prev.filter((id) => id !== subject.subjectId)
-                                            : [...prev, subject.subjectId as number],
-                                        )
-                                      }
-                                      className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                    />
-                                    <span className="text-sm text-center">
-                                      {subject.subjectCode && (
-                                        <span className="text-gray-500"> {subject.subjectCode}</span>
-                                      )}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+        {/* Room Selection */}
+        <AccordionSection
+          title="Room Selection"
+          subtitle="Choose rooms, benches and capacity settings"
+          isOpen={openRoomSelection}
+          onToggle={() => setOpenRoomSelection((s) => !s)}
+          icon={DoorOpen}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Select Rooms */}
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Select Rooms</Label>
+              <Button
+                variant="outline"
+                onClick={openRoomsModalHandler}
+                className="w-full justify-start bg-white border-purple-200 text-left font-normal hover:bg-purple-100"
+              >
+                {selectedRooms.length ? `${selectedRooms.length} room(s) selected` : "Click to select rooms..."}
+              </Button>
+            </div>
 
-                        {/* Exam component filter */}
-                        <Select
-                          value={selectedExamComponent?.toString() || "all"}
-                          onValueChange={(value) => {
-                            setSelectedExamComponent(value === "all" ? null : Number(value));
-                          }}
-                          disabled={loading.examComponents}
-                        >
-                          <SelectTrigger className="h-8 w-32 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue placeholder={loading.examComponents ? "Loading..." : "Component"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            {examComponents
-                              .filter((comp) => !comp.disabled)
-                              .map((comp) => (
-                                <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
-                                  {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-auto border rounded-lg bg-gray-50 p-2 space-y-2 scrollbar-hide">
-                      {loading.papers ? (
-                        <div className="flex items-center justify-center py-8 text-gray-500">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Loading papers...
-                        </div>
-                      ) : getDistinctSubjects().length === 0 ? (
-                        <p className="text-gray-500 text-center py-6">Select filters to load subjects</p>
-                      ) : selectedSubjectIds.length === 0 ? (
-                        <p className="text-gray-500 text-sm text-center py-4">
-                          Select subjects from the dropdown above
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {selectedSubjectIds.map((id) => {
-                            const subjectMeta = getDistinctSubjects().find((s) => s.subjectId === id);
-                            const subject = subjects.find((s) => s.id === id);
-                            const name = subjectMeta?.subjectName || subject?.name || `Subject ID: ${id}`;
-                            const code = subjectMeta?.subjectCode || subject?.code;
-                            const schedule = subjectSchedules[id.toString()] ?? {
-                              date: "",
-                              startTime: "",
-                              endTime: "",
-                            };
+            {/* Students per Bench */}
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Students per Bench</Label>
+              <Input
+                type="number"
+                value={studentsPerBench}
+                onChange={(e) => setStudentsPerBench(Number(e.target.value) || 2)}
+                min={1}
+                className="bg-white border-purple-200"
+              />
+            </div>
 
-                            return (
-                              <div
-                                key={id}
-                                className={`border rounded-lg bg-white p-3 cursor-pointer ${
-                                  selectedSubjectId === id
-                                    ? "border-purple-500 bg-purple-50"
-                                    : "hover:border-purple-400/60"
-                                }`}
-                                onClick={() => setSelectedSubjectId(id)}
-                              >
-                                <div className="flex items-center justify-between gap-2 mb-2">
-                                  <div>
-                                    <div className="font-semibold">
-                                      <span className="text-gray-500 font-normal"> {code ? code : name}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="col-span-2">
-                                    <Label className=" font-semibold mb-1 block">Exam Date</Label>
-                                    <Input
-                                      type="date"
-                                      value={schedule.date || ""}
-                                      onChange={(e) => handleScheduleChange(id, "date", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label className=" font-semibold mb-1 block">Start Time</Label>
-                                    <Input
-                                      type="time"
-                                      value={schedule.startTime || ""}
-                                      onChange={(e) => handleScheduleChange(id, "startTime", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label className=" font-semibold mb-1 block">End Time</Label>
-                                    <Input
-                                      type="time"
-                                      value={schedule.endTime || ""}
-                                      onChange={(e) => handleScheduleChange(id, "endTime", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+            {/* Assign By */}
+            <div>
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Assign By</Label>
+              <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
+                <SelectTrigger className="w-full bg-white border-purple-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-purple-200 shadow-lg z-50">
+                  <SelectItem value="UID">UID</SelectItem>
+                  <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
+                  <SelectItem value="CU_ROLL_NUMBER">CU Roll Number</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Upload Excel (Conditional) */}
+            {examType && examTypes.find((e) => e.id.toString() === examType && e.name === "Test Exam") && (
+              <div>
+                <Label className="block text-sm font-medium text-gray-900 mb-1.5">Upload Seating Excel</Label>
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between bg-white border-purple-200 font-normal">
+                      <span className="flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        {excelFile
+                          ? excelFile.name.length > 20
+                            ? `${excelFile.name.slice(0, 20)}...`
+                            : excelFile.name
+                          : "Upload Excel"}
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+
+                  <PopoverContent className="w-80 p-4" align="start">
+                    <div className="space-y-3">
+                      <Input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Choose Excel File
+                      </Button>
+
+                      {excelFile && (
+                        <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
+                          <span className="text-sm text-green-700">{excelFile.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={removeExcelFile}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
                         </div>
                       )}
+
+                      <p className="text-xs text-gray-500">
+                        Upload XLSX with columns:
+                        <br />
+                        <b>foil_number</b>, <b>uid</b>
+                      </p>
                     </div>
-                  </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
 
-                  {/* Total students + Assign button */}
-                  <div className="mt-auto space-y-3">
-                    <div className="p-3 bg-gray-100/60 rounded-lg border flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-purple-600" />
-                        <span className=" font-semibold">Students</span>
-                      </div>
-                      <span className="text-xl font-bold text-purple-600">{totalStudents}</span>
-                    </div>
-                    <Button
-                      //   onClick={handleGenerate}
-                      onClick={handleAssignExam}
-                      className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold"
-                    >
-                      Assign
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Total Capacity (LAST) */}
+            <div className="md:col-span-2 w-[50%]">
+              <Label className="block text-sm font-medium text-gray-900 mb-1.5">Total Capacity</Label>
 
-            {/* Center: Tabs (Rooms / Students) with table */}
-            <div className="flex-1 min-w-0">
-              <Card className="h-[calc(100vh-200px)] flex flex-col shadow-lg border-2">
-                <CardHeader className="border-b bg-gray-100/60 py-2 px-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setCenterTab("rooms")}
-                        className={`px-4 py-1.5 rounded-md border ${
-                          centerTab === "rooms"
-                            ? "bg-white border-purple-500 text-purple-700 font-semibold"
-                            : "bg-gray-100 border-transparent text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        Rooms
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCenterTab("students")}
-                        className={`px-4 py-1.5 rounded-md border ${
-                          centerTab === "students"
-                            ? "bg-white border-purple-500 text-purple-700 font-semibold"
-                            : "bg-gray-100 border-transparent text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        Students
-                      </button>
-                    </div>
+              <div className="flex items-center gap-2 px-3 py-3 bg-purple-50 rounded-lg">
+                <span className="font-semibold text-purple-600 text-lg">{totalCapacity || "—"}</span>
+              </div>
 
-                    <div className="flex flex-wrap gap-4">
-                      <div className="space-y-1">
-                        <Select value={gender || ""} onValueChange={(value) => setGender(value as typeof gender)}>
-                          <SelectTrigger className="h-8 w-40 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ALL">All Students</SelectItem>
-                            <SelectItem value="MALE">Male Only</SelectItem>
-                            <SelectItem value="FEMALE">Female Only</SelectItem>
-                            <SelectItem value="OTHER">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
-                          <SelectTrigger className="h-8 w-44 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="UID">UID</SelectItem>
-                            <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
-                            <SelectItem value="CU_ROLL_NUMBER">CU Roll Number</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
-                  {centerTab === "rooms" ? (
-                    <div className="p-4 flex flex-col gap-4 h-full">
-                      {/* Rooms selection table */}
-                      <div className="flex-1 min-h-0 border rounded-lg bg-white overflow-hidden">
-                        {loading.rooms ? (
-                          <div className="flex items-center justify-center py-12">
-                            <Loader2 className="h-6 w-6 animate-spin" />
-                            <span className="ml-2 text-gray-500">Loading rooms...</span>
-                          </div>
-                        ) : (
-                          <div className="h-full overflow-y-auto">
-                            <table className="w-full border-collapse table-fixed">
-                              <thead className="sticky top-0 z-10 bg-gray-100">
-                                <tr>
-                                  <th className="w-20 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Select
-                                  </th>
-                                  <th className="w-20 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Sr. No.
-                                  </th>
-                                  <th className="w-32 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Floor
-                                  </th>
-                                  <th className="w-32 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Room
-                                  </th>
-                                  <th className="w-24 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Benches
-                                  </th>
-                                  <th className="w-24 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Capacity
-                                  </th>
-                                  <th className="w-40 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Max Students per Bench
-                                  </th>
-                                  <th className="w-40 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Override
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {rooms
-                                  .filter((room) => room.isActive !== false)
-                                  .map((room, index) => {
-                                    const isSelected = selectedRooms.some((r) => r.id === room.id);
-                                    const selectedRoom = selectedRooms.find((r) => r.id === room.id);
-                                    const currentMaxStudentsPerBench =
-                                      selectedRoom?.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-                                    const calculatedCapacity = (room.numberOfBenches || 0) * currentMaxStudentsPerBench;
-                                    const floorName = room.floor.id!
-                                      ? floors.find((f) => f.id === room.floor.id)?.name
-                                      : "N/A";
-
-                                    return (
-                                      <tr
-                                        key={room.id}
-                                        className={`border-b hover:bg-gray-50 transition-colors ${
-                                          isSelected ? "bg-purple-50" : ""
-                                        }`}
-                                      >
-                                        <td className="px-4 py-3 border border-gray-300">
-                                          <div className="flex justify-center">
-                                            <Checkbox
-                                              checked={isSelected}
-                                              onCheckedChange={(checked) => handleRoomSelection(room, !!checked)}
-                                              className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 text-white focus:ring-2 focus:ring-purple-500"
-                                            />
-                                          </div>
-                                        </td>
-                                        <td className="px-4 py-3 font-medium text-gray-900 border border-gray-300">
-                                          {index + 1}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">{floorName}</td>
-                                        <td className="px-4 py-3 font-medium text-gray-900 border border-gray-300">
-                                          {room.name}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">
-                                          {room.numberOfBenches || 0}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">
-                                          {calculatedCapacity}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">
-                                          {currentMaxStudentsPerBench}
-                                        </td>
-                                        <td className="px-4 py-3 border border-gray-300 min-h-[80px]">
-                                          <div className="space-y-1 min-h-[60px]">
-                                            {isSelected ? (
-                                              <>
-                                                <Input
-                                                  type="number"
-                                                  min="1"
-                                                  max={room.maxStudentsPerBench || 2}
-                                                  placeholder={room.maxStudentsPerBench?.toString() || "2"}
-                                                  value={selectedRoom?.maxStudentsPerBenchOverride || ""}
-                                                  onChange={(e) => {
-                                                    const inputValue = e.target.value.trim();
-                                                    if (!inputValue) {
-                                                      handleMaxStudentsPerBenchOverride(room.id!, null);
-                                                      return;
-                                                    }
-
-                                                    const isPositiveInteger = /^\d+$/.test(inputValue);
-                                                    if (!isPositiveInteger) {
-                                                      return;
-                                                    }
-
-                                                    const val = parseInt(inputValue, 10);
-                                                    const maxAllowed = room.maxStudentsPerBench || 2;
-
-                                                    if (val > 0 && val <= maxAllowed) {
-                                                      handleMaxStudentsPerBenchOverride(room.id!, val);
-                                                    }
-                                                  }}
-                                                  className="h-8 w-full max-w-[80px]"
-                                                />
-                                                <div className="text-gray-400">
-                                                  Max: {room.maxStudentsPerBench || 2}
-                                                </div>
-                                              </>
-                                            ) : (
-                                              <div className="h-8 flex items-center">
-                                                <span className="text-gray-400">-</span>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Selected rooms list + capacity summary */}
-                      <div className="flex-1 min-h-0 flex flex-col gap-3">
-                        <div className="flex-1 min-h-0 border rounded-lg bg-gray-50 p-3 overflow-y-auto scrollbar-hide">
-                          {selectedRooms.length === 0 ? (
-                            <p className="text-gray-500 text-center py-10">No rooms selected</p>
-                          ) : (
-                            selectedRooms.map((room) => {
-                              const maxStudentsPerBench =
-                                room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-                              const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
-                              return (
-                                <div
-                                  key={room.id}
-                                  className="p-3 mb-2 bg-white rounded-lg border flex items-center justify-between hover:border-purple-400/60 transition-colors"
-                                >
-                                  <div>
-                                    <div className="font-semibold">Room {room.name}</div>
-                                    <div className="text-gray-500">
-                                      {room.numberOfBenches || 0} benches • Capacity: {capacity}
-                                    </div>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleRoomSelection(room, false)}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-
-                        <div
-                          className={`p-3 rounded-lg border ${
-                            capacityStatus ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            {capacityStatus ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <AlertCircle className="w-4 h-4 text-red-600" />
-                            )}
-                            <span className="font-bold">
-                              {capacityStatus ? "Capacity Sufficient" : "Insufficient Capacity"}
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex justify-between p-1.5 bg-white/60 rounded">
-                              <span>Total Capacity</span>
-                              <span className="font-bold">{totalCapacity} seats</span>
-                            </div>
-                            <div className="flex justify-between p-1.5 bg-white/60 rounded">
-                              <span>Total Students</span>
-                              <span className="font-bold">{totalStudents}</span>
-                            </div>
-                            <div className="flex justify-between p-1.5 bg-white/60 rounded">
-                              <span>Available</span>
-                              <span className={`font-bold ${capacityStatus ? "text-green-700" : "text-red-600"}`}>
-                                {totalCapacity - totalStudents} seats
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex flex-col overflow-scroll h-full">
-                      {/* Students table */}
-                      <div className="flex-1 min-h-0 overflow-scroll p-4">
-                        {loadingStudents ? (
-                          <div className="flex items-center justify-center py-12">
-                            <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-                            <span className="ml-2  text-gray-500">Loading students...</span>
-                          </div>
-                        ) : studentsWithSeats.length === 0 ? (
-                          <div className="text-center py-12">
-                            <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                            <p className="font-semibold text-gray-600">No Students Assigned</p>
-                            <p className=" text-gray-400 mt-1">
-                              Select rooms and generate assignments to see students here
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <div className="relative max-h-[calc(100vh-260px)] overflow-y-auto border border-gray-300 rounded-lg">
-                              <table className="w-full border-collapse">
-                                <thead className="sticky top-0 z-10 bg-gray-100">
-                                  <tr className="border-b-2 border-gray-300">
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Sr. No.
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Name
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      {assignBy === "UID" ? "UID" : "CU Reg. No."}
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Contact
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Subject
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Paper
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Location
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider bg-gray-100">
-                                      Seat Number
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {studentsWithSeats.map((student, idx) => (
-                                    <tr
-                                      key={student.studentId}
-                                      className={`border-b hover:bg-gray-100/60 transition-colors ${
-                                        idx % 2 === 0 ? "bg-gray-50" : ""
-                                      }`}
-                                    >
-                                      <td className="px-4 py-3  font-medium text-gray-900 border-r border-gray-300">
-                                        {idx + 1}
-                                      </td>
-                                      <td className="px-4 py-3  font-medium text-gray-900 border-r border-gray-300">
-                                        {student.name}
-                                      </td>
-                                      <td className="px-4 py-3  font-mono text-gray-700 border-r border-gray-300">
-                                        {assignBy === "UID"
-                                          ? student.uid
-                                          : student.cuRegistrationApplicationNumber || "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3  text-gray-700 border-r border-gray-300">
-                                        <div className="space-y-1">
-                                          <div>{student.email || "N/A"}</div>
-                                          <div className=" text-gray-500">WA: {student.whatsappPhone || "N/A"}</div>
-                                        </div>
-                                      </td>
-                                      <td className="px-4 py-3  text-gray-700 border-r border-gray-300">
-                                        {selectedSubjectId
-                                          ? (() => {
-                                              const subject = subjects.find((s) => s.id === selectedSubjectId);
-                                              const shortName =
-                                                (subject as { shortName?: string | null })?.shortName ?? null;
-                                              if (shortName && shortName.trim()) return shortName;
-                                              if (subject?.code && subject.code.trim()) return subject.code;
-                                              return subject?.name || "N/A";
-                                            })()
-                                          : "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3  text-gray-700 border-r border-gray-300">
-                                        {selectedSubjectId
-                                          ? (() => {
-                                              const subject = subjects.find((s) => s.id === selectedSubjectId);
-                                              const shortName =
-                                                (subject as { shortName?: string | null })?.shortName ?? null;
-                                              if (shortName && shortName.trim()) return shortName;
-                                              if (subject?.code && subject.code.trim()) return subject.code;
-                                              return subject?.name || "N/A";
-                                            })()
-                                          : "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3  text-gray-700 border-r border-gray-300">
-                                        {student.floorName && student.roomName
-                                          ? `${student.floorName}, ${student.roomName}`
-                                          : student.floorName || student.roomName || "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3  font-mono text-gray-700">{student.seatNumber}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {totalCapacity > 0 && totalStudents > 0 && totalCapacity < totalStudents && (
+                <div className="flex items-center gap-2 mt-2 text-red-500 text-sm">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Capacity is less than total students</span>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        </AccordionSection>
 
-        {/* Right sidebar: Selected filters summary (Program Courses, Subject Categories, Shift) */}
-        <div className="w-[16%] flex-shrink-0 space-y-4">
-          <Card className="h-[calc(100vh-200px)] flex flex-col shadow-lg border-2">
-            <CardContent className="p-4 flex-1 flex flex-col gap-4">
-              {/* Program Courses */}
-              <div className="border rounded-lg p-3 flex-1 flex flex-col">
-                <div className="font-semibold mb-2 border-b pb-1">Program Courses</div>
-                <div className="flex-1 overflow-y-auto">
-                  {selectedProgramCourses.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No program course selected</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProgramCourses.map((id) => {
-                        const course = programCourses.find((c) => c.id === id);
-                        const label = course?.name || `Course ${id}`;
-                        return (
-                          <Badge
-                            key={id}
-                            className="text-xs bg-purple-100 text-purple-800 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 pr-1"
-                          >
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedProgramCourses((prev) => prev.filter((pcId) => pcId !== id))}
-                              className="ml-1 text-purple-500 hover:text-purple-700"
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
+        {/* Exam Schedule */}
+        <AccordionSection
+          title="Exam Schedule"
+          subtitle="Set date and time for each subject"
+          isOpen={openSchedule}
+          onToggle={() => setOpenSchedule((s) => !s)}
+          icon={Calendar}
+        >
+          {getDistinctSubjects().length > 0 ? (
+            <div className="space-y-3">
+              {getDistinctSubjects()
+                .filter((s) => s.subjectId !== null && selectedSubjectIds.includes(s.subjectId!))
+                .map((subject) => {
+                  if (subject.subjectId === null) return null;
+                  const schedule = subjectSchedules[subject.subjectId.toString()] || {
+                    date: "",
+                    startTime: "",
+                    endTime: "",
+                  };
 
-              {/* Subject Categories */}
-              <div className="border rounded-lg p-3 flex-1 flex flex-col">
-                <div className="font-semibold mb-2 border-b pb-1">Subject Categories</div>
-                <div className="flex-1 overflow-y-auto">
-                  {selectedSubjectCategories.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No subject category selected</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedSubjectCategories.map((id) => {
-                        const category = subjectTypes.find((c) => c.id === id);
-                        const label = category?.code && category.code.trim() ? category.code : category?.name;
-                        return (
-                          <Badge
-                            key={id}
-                            className="text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-300 flex items-center gap-1 pr-1"
-                          >
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setSelectedSubjectCategories((prev) => prev.filter((catId) => catId !== id))
-                              }
-                              className="ml-1 text-blue-500 hover:text-blue-700"
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        );
-                      })}
+                  return (
+                    <div key={subject.subjectId} className="p-4 bg-purple-50 rounded-xl">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Calendar className="w-4 h-4 text-purple-500" />
+                        <span className="font-medium text-gray-900">{subject.subjectCode || subject.subjectName}</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <Label className="block text-xs text-gray-600 mb-1">Date</Label>
+                          <Input
+                            type="date"
+                            value={schedule.date}
+                            onChange={(e) => handleScheduleChange(subject.subjectId!, "date", e.target.value)}
+                            className="bg-white border-purple-200"
+                          />
+                        </div>
+                        <div>
+                          <Label className="block text-xs text-gray-600 mb-1">Start Time</Label>
+                          <Input
+                            type="time"
+                            value={schedule.startTime}
+                            onChange={(e) => handleScheduleChange(subject.subjectId!, "startTime", e.target.value)}
+                            className="bg-white border-purple-200"
+                          />
+                        </div>
+                        <div>
+                          <Label className="block text-xs text-gray-600 mb-1">End Time</Label>
+                          <Input
+                            type="time"
+                            value={schedule.endTime}
+                            onChange={(e) => handleScheduleChange(subject.subjectId!, "endTime", e.target.value)}
+                            className="bg-white border-purple-200"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
+                  );
+                })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-600">
+              <ClipboardList className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>No subjects available. Select filters to load subjects.</p>
+            </div>
+          )}
 
-              {/* Shifts */}
-              <div className="border rounded-lg p-3 flex-1 flex flex-col">
-                <div className="font-semibold mb-2 border-b pb-1">Shift(s)</div>
-                <div className="flex-1 overflow-y-auto">
-                  {selectedShifts.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No shift selected</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedShifts.map((id) => {
-                        const shift = shifts.find((s) => s.id === id);
-                        const label = shift?.name || `Shift ${id}`;
-                        return (
-                          <Badge
-                            key={id}
-                            className="text-xs bg-green-100 text-green-800 hover:bg-green-200 border border-green-300 flex items-center gap-1 pr-1"
-                          >
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedShifts((prev) => prev.filter((shiftId) => shiftId !== id))}
-                              className="ml-1 text-green-600 hover:text-green-800"
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+          {/* Subject Selection */}
+          {getDistinctSubjects().length > 0 && (
+            <div className="mt-4">
+              <Label className="block text-sm font-medium text-gray-900 mb-2">Select Subjects</Label>
+              <div className="flex flex-wrap gap-2">
+                {getDistinctSubjects()
+                  .filter((s) => s.subjectId !== null)
+                  .map((subject) => {
+                    const isSelected = selectedSubjectIds.includes(subject.subjectId!);
+                    return (
+                      <Badge
+                        key={subject.subjectId}
+                        className={`cursor-pointer ${isSelected ? "bg-purple-100 text-purple-800 hover:bg-purple-100  " : "bg-white text-purple-800 hover:bg-purple-50  border border-purple-200"}`}
+                        onClick={() => {
+                          setSelectedSubjectIds((prev) =>
+                            isSelected ? prev.filter((id) => id !== subject.subjectId!) : [...prev, subject.subjectId!],
+                          );
+                        }}
+                      >
+                        {subject.subjectCode || subject.subjectName}
+                      </Badge>
+                    );
+                  })}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            </div>
+          )}
+        </AccordionSection>
+
+        {/* Assignments */}
+        <AccordionSection
+          title="Assignments"
+          subtitle="Generated student to room/seat assignments"
+          isOpen={openAssignments}
+          onToggle={() => setOpenAssignments((s) => !s)}
+          icon={ClipboardList}
+        >
+          {loadingStudents ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+              <span className="ml-2 text-gray-600">Loading students...</span>
+            </div>
+          ) : studentsWithSeats.length > 0 ? (
+            <div className="overflow-x-auto overflow-y-auto max-h-[500px] -mx-5 px-5">
+              <Table className="min-w-auto">
+                <TableHeader>
+                  <TableRow className="border-b border-purple-200">
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Sl.</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">UID</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Name</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Roll No.</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Reg. No.</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Foil No.</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Email</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Phone</TableHead>
+
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Floor</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Room</TableHead>
+                    <TableHead className="text-xs font-semibold text-gray-600 uppercase">Seat</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {studentsWithSeats.map((student, idx) => (
+                    <TableRow
+                      key={student.studentId || idx}
+                      className="border-b border-purple-200/50 hover:bg-purple-50 transition-colors"
+                    >
+                      <TableCell className="text-gray-600">{idx + 1}</TableCell>
+
+                      <TableCell className="font-medium text-gray-900">{student.uid || "N/A"}</TableCell>
+
+                      <TableCell className="text-gray-900">{student.name || "N/A"}</TableCell>
+
+                      <TableCell className="text-gray-600">N/A</TableCell>
+
+                      <TableCell className="text-gray-600">
+                        {student.cuRegistrationApplicationNumber || "N/A"}
+                      </TableCell>
+                      <TableCell className="font-medium text-gray-900">{foilMap[student.uid] || "N/A"}</TableCell>
+
+                      <TableCell className="text-gray-600">{student.email || "N/A"}</TableCell>
+
+                      <TableCell className="text-gray-600">{student.whatsappPhone || "N/A"}</TableCell>
+
+                      <TableCell>
+                        <Badge className="bg-purple-100 text-purple-600 hover:bg-purple-100">
+                          {student.floorName || "N/A"}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge className="bg-purple-100 text-purple-600 hover:bg-purple-100">
+                          {student.roomName || "N/A"}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell className="font-medium text-gray-900">{student.seatNumber || "N/A"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-600">
+              <ClipboardList className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>No assignments generated yet. Click "Assign" to generate.</p>
+            </div>
+          )}
+        </AccordionSection>
+
+        <RoomsModal
+          isOpen={roomsModalOpen}
+          onClose={() => setRoomsModalOpen(false)}
+          availableRooms={availableRoomsForModal}
+          tempSelectedRooms={tempSelectedRooms
+            .map((id) => {
+              const room = rooms.find((r) => r.id === id);
+              if (room) {
+                const floor = floors.find((f) => f.id === room.floor.id);
+                return `${floor?.name || "N/A"} - ${room.name || `Room ${room.id}`}`;
+              }
+              return "";
+            })
+            .filter((s) => s !== "")}
+          tempOverrides={Object.fromEntries(
+            tempSelectedRooms
+              .map((id) => {
+                const room = rooms.find((r) => r.id === id);
+                if (room && tempOverrides[id]) {
+                  const floor = floors.find((f) => f.id === room.floor.id);
+                  const roomKey = `${floor?.name || "N/A"} - ${room.name || `Room ${room.id}`}`;
+                  return [roomKey, tempOverrides[id].toString()];
+                }
+                return null;
+              })
+              .filter((entry): entry is [string, string] => entry !== null),
+          )}
+          studentsPerBench={studentsPerBench}
+          masterBenches={masterBenches}
+          onToggleRoom={(roomKey) => {
+            const roomId = roomIdMap[roomKey];
+            if (roomId) {
+              toggleTempRoom(roomId);
+            }
+          }}
+          onSetOverride={(roomKey, value) => {
+            const roomId = roomIdMap[roomKey];
+            if (roomId) {
+              setTempOverride(roomId, value);
+            }
+          }}
+          onApply={applyRoomSelection}
+        />
+      </main>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import {
   notificationQueueModel,
   notificationModel,
 } from "@repo/db/schemas/models/notifications";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { sendWhatsAppMessage } from "@/providers/interakt.js";
 import { db } from "@/db";
 
@@ -11,7 +11,34 @@ const MAX_RETRIES = 7;
 
 export async function processDbQueueOnce() {
   // Fetch oldest pending
-  const rows = await db.select().from(notificationQueueModel).limit(BATCH_SIZE);
+  const rows = await db.transaction(async (tx) => {
+    const ids = await tx
+      .select({ id: notificationQueueModel.id })
+      .from(notificationQueueModel)
+      .where(
+        and(
+          eq(notificationQueueModel.isDeadLetter, false),
+          eq(notificationQueueModel.isProcessing, false),
+          inArray(notificationQueueModel.type, ["WHATSAPP_QUEUE"]),
+        ),
+      )
+      .orderBy(notificationQueueModel.createdAt)
+      .limit(BATCH_SIZE);
+
+    if (ids.length === 0) return [];
+
+    return tx
+      .update(notificationQueueModel)
+      .set({ isProcessing: true })
+      .where(
+        inArray(
+          notificationQueueModel.id,
+          ids.map((i) => i.id),
+        ),
+      )
+      .returning();
+  });
+
   for (const row of rows) {
     try {
       // Load minimal notification to get variant/user/message (join if needed)
@@ -22,8 +49,7 @@ export async function processDbQueueOnce() {
         .where(eq(notificationModel.id, row.notificationId));
       // Dead-letter instead of delete to preserve history
       await db
-        .update(notificationQueueModel)
-        .set({ isDeadLetter: true, deadLetterAt: new Date() })
+        .delete(notificationQueueModel)
         .where(eq(notificationQueueModel.id, row.id));
     } catch (err) {
       const attempts = (row.retryAttempts ?? 0) + 1;
@@ -38,12 +64,16 @@ export async function processDbQueueOnce() {
           .where(eq(notificationModel.id, row.notificationId));
         await db
           .update(notificationQueueModel)
-          .set({ isDeadLetter: true, deadLetterAt: new Date() })
+          .set({
+            isDeadLetter: true,
+            deadLetterAt: new Date(),
+            isProcessing: false,
+          })
           .where(eq(notificationQueueModel.id, row.id));
       } else {
         await db
           .update(notificationQueueModel)
-          .set({ retryAttempts: attempts })
+          .set({ retryAttempts: attempts, isProcessing: false })
           .where(eq(notificationQueueModel.id, row.id));
       }
     }

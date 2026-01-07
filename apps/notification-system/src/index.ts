@@ -55,12 +55,10 @@ function checkRequiredEnvs() {
     app.use("/api/notifications", notificationsRouter);
     app.get("/health", (_req, res) => res.json({ ok: true }));
     // Start workers before HTTP
-    const { startEmailWorker, stopEmailWorker } = await import(
-      "@/workers/email.worker.js"
-    );
-    const { startWhatsAppWorker, stopWhatsAppWorker } = await import(
-      "@/workers/whatsapp.worker.js"
-    );
+    const { startEmailWorker, stopEmailWorker } =
+      await import("@/workers/email.worker.js");
+    const { startWhatsAppWorker, stopWhatsAppWorker } =
+      await import("@/workers/whatsapp.worker.js");
     // Throttle worker start to avoid rapid loops
     setTimeout(() => startEmailWorker(), 1000);
     setTimeout(() => startWhatsAppWorker(), 1500);
