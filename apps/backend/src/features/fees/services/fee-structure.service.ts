@@ -338,6 +338,111 @@ export async function createFeeStructureByDto(
   return createdStructures;
 }
 
+/**
+ * Updates a fee structure by DTO with upsert logic for components, concession slabs, and installments
+ */
+export async function updateFeeStructureByDto(
+  feeStructureId: number,
+  givenDto: CreateFeeStructureDto,
+): Promise<FeeStructureDto | null> {
+  // Step 1: Check if fee structure exists
+  const [existingFeeStructure] = await db
+    .select()
+    .from(feeStructureModel)
+    .where(eq(feeStructureModel.id, feeStructureId));
+
+  if (!existingFeeStructure) {
+    return null;
+  }
+
+  // Step 2: Update the fee structure itself
+  const feeStructureDataToUpdate: Partial<FeeStructure> = {
+    academicYearId: givenDto.academicYearId,
+    classId: givenDto.classId,
+    receiptTypeId: givenDto.receiptTypeId,
+    baseAmount: givenDto.baseAmount,
+    programCourseId:
+      givenDto.programCourseIds[0] || existingFeeStructure.programCourseId, // For single structure update
+    shiftId: givenDto.shiftIds[0] || existingFeeStructure.shiftId, // For single structure update
+    closingDate: givenDto.closingDate,
+    startDate: givenDto.startDate,
+    endDate: givenDto.endDate,
+    onlineStartDate: givenDto.onlineStartDate,
+    onlineEndDate: givenDto.onlineEndDate,
+    numberOfInstallments: givenDto.numberOfInstallments,
+    advanceForProgramCourseId: givenDto.advanceForProgramCourseIds?.[0] || null,
+    advanceForClassId: null,
+  };
+
+  const [updatedFeeStructure] = await db
+    .update(feeStructureModel)
+    .set(feeStructureDataToUpdate)
+    .where(eq(feeStructureModel.id, feeStructureId))
+    .returning();
+
+  if (!updatedFeeStructure) {
+    return null;
+  }
+
+  // Step 3: Upsert components (delete existing and insert new)
+  // Delete existing components
+  await db
+    .delete(feeStructureComponentModel)
+    .where(eq(feeStructureComponentModel.feeStructureId, feeStructureId));
+
+  // Insert new components
+  if (givenDto.components && givenDto.components.length > 0) {
+    for (let k = 0; k < givenDto.components.length; k++) {
+      const component = givenDto.components[k];
+      await db.insert(feeStructureComponentModel).values({
+        ...component,
+        feeStructureId: feeStructureId,
+      });
+    }
+  }
+
+  // Step 4: Upsert concession slabs (delete existing and insert new)
+  // Delete existing concession slabs
+  await db
+    .delete(feeStructureConcessionSlabModel)
+    .where(eq(feeStructureConcessionSlabModel.feeStructureId, feeStructureId));
+
+  // Insert new concession slabs
+  if (
+    givenDto.feeStructureConcessionSlabs &&
+    givenDto.feeStructureConcessionSlabs.length > 0
+  ) {
+    for (let k = 0; k < givenDto.feeStructureConcessionSlabs.length; k++) {
+      const concessionSlab = givenDto.feeStructureConcessionSlabs[k];
+      await db.insert(feeStructureConcessionSlabModel).values({
+        feeStructureId: feeStructureId,
+        feeConcessionSlabId: concessionSlab.feeConcessionSlabId,
+        concessionRate: concessionSlab.concessionRate,
+      });
+    }
+  }
+
+  // Step 5: Upsert installments (delete existing and insert new)
+  // Delete existing installments
+  await db
+    .delete(feeStructureInstallmentModel)
+    .where(eq(feeStructureInstallmentModel.feeStructureId, feeStructureId));
+
+  // Insert new installments
+  if (givenDto.installments && givenDto.installments.length > 0) {
+    for (let k = 0; k < givenDto.installments.length; k++) {
+      const installment = givenDto.installments[k];
+      await db.insert(feeStructureInstallmentModel).values({
+        ...installment,
+        feeStructureId: feeStructureId,
+      });
+    }
+  }
+
+  // Convert to DTO and return
+  return await modelToDto(updatedFeeStructure);
+}
+
 export const getFeeStructureById = async (
   id: number,
 ): Promise<FeeStructureDto | null> => {
@@ -1062,4 +1167,164 @@ export const getAcademicYearsFromFeesStructures = async () => {
   return academicYears.filter(
     (ay): ay is NonNullable<typeof ay> => ay !== null,
   );
+};
+
+/**
+ * Checks if the fee structure amounts are unique for all concession slabs
+ * Calculated amounts should be unique across ALL fee structures, regardless of
+ * academic year, semester, program courses, or shifts
+ */
+export const checkUniqueFeeStructureAmounts = async (
+  academicYearId: number,
+  classId: number,
+  programCourseIds: number[],
+  shiftIds: number[],
+  baseAmount: number,
+  feeStructureConcessionSlabs: Array<{
+    feeConcessionSlabId: number;
+    concessionRate: number;
+  }>,
+  excludeFeeStructureId?: number, // For edit case, exclude current fee structure
+  page: number = 1,
+  pageSize: number = 10,
+): Promise<{
+  isUnique: boolean;
+  conflicts: PaginatedResponse<{
+    programCourseId: number;
+    shiftId: number;
+    concessionSlabId: number;
+    concessionSlabName: string;
+    conflictingAmount: number;
+    conflictingFeeStructureId: number;
+    academicYearId: number;
+    academicYearName: string | null;
+    classId: number;
+    className: string | null;
+    receiptTypeId: number;
+    receiptTypeName: string | null;
+  }>;
+}> => {
+  const conflicts: Array<{
+    programCourseId: number;
+    shiftId: number;
+    concessionSlabId: number;
+    concessionSlabName: string;
+    conflictingAmount: number;
+    conflictingFeeStructureId: number;
+    academicYearId: number;
+    academicYearName: string | null;
+    classId: number;
+    className: string | null;
+    receiptTypeId: number;
+    receiptTypeName: string | null;
+  }> = [];
+
+  // Use a Set to track unique conflicts (based on concessionSlabId + conflictingAmount + conflictingFeeStructureId)
+  const uniqueConflictKeys = new Set<string>();
+
+  // Get all existing fee structures (excluding the current one if editing)
+  const conditions = [];
+  if (excludeFeeStructureId) {
+    conditions.push(sql`${feeStructureModel.id} != ${excludeFeeStructureId}`);
+  }
+
+  const allExistingStructures = await db
+    .select()
+    .from(feeStructureModel)
+    .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+  // For each concession slab, calculate final amount and check for conflicts
+  for (const slab of feeStructureConcessionSlabs) {
+    const concessionAmount = (baseAmount * slab.concessionRate) / 100;
+    const finalAmount = baseAmount - concessionAmount;
+
+    // Check ALL existing fee structures (not filtered by academic year, class, program course, or shift)
+    for (const existingStructure of allExistingStructures) {
+      const existingConcessionSlabs = await db
+        .select()
+        .from(feeStructureConcessionSlabModel)
+        .where(
+          eq(
+            feeStructureConcessionSlabModel.feeStructureId,
+            existingStructure.id!,
+          ),
+        );
+
+      // Check if any existing slab has the same final amount for the same concession slab
+      for (const existingSlab of existingConcessionSlabs) {
+        if (existingSlab.feeConcessionSlabId === slab.feeConcessionSlabId) {
+          const existingConcessionAmount =
+            (existingStructure.baseAmount * existingSlab.concessionRate) / 100;
+          const existingFinalAmount =
+            existingStructure.baseAmount - existingConcessionAmount;
+
+          // Check if amounts match (with small tolerance for floating point)
+          if (Math.abs(existingFinalAmount - finalAmount) < 0.01) {
+            // Create a unique key for this conflict
+            const conflictKey = `${slab.feeConcessionSlabId}-${existingFinalAmount.toFixed(2)}-${existingStructure.id}`;
+
+            // Only add if we haven't seen this conflict before
+            if (!uniqueConflictKeys.has(conflictKey)) {
+              uniqueConflictKeys.add(conflictKey);
+
+              // Get concession slab name
+              const concessionSlab =
+                await feeConcessionSlabService.getFeeConcessionSlabById(
+                  slab.feeConcessionSlabId,
+                );
+
+              // Fetch related entities for the conflicting fee structure
+              const conflictingAcademicYear =
+                await academicYearService.findAcademicYearById(
+                  existingStructure.academicYearId,
+                );
+              const conflictingClass = await classService.findClassById(
+                existingStructure.classId,
+              );
+              const conflictingReceiptType =
+                await receiptTypeService.getReceiptTypeById(
+                  existingStructure.receiptTypeId,
+                );
+
+              // Since we're checking globally, all programCourseId + shiftId combinations will have the same conflicts
+              // Report each unique conflict only once, using the first combination as representative
+              // The frontend can use this to highlight all affected program courses and shifts
+              conflicts.push({
+                programCourseId: programCourseIds[0] || 0,
+                shiftId: shiftIds[0] || 0,
+                concessionSlabId: slab.feeConcessionSlabId,
+                concessionSlabName: concessionSlab?.name || "Unknown",
+                conflictingAmount: existingFinalAmount,
+                conflictingFeeStructureId: existingStructure.id!,
+                academicYearId: existingStructure.academicYearId,
+                academicYearName: conflictingAcademicYear?.year || null,
+                classId: existingStructure.classId,
+                className: conflictingClass?.name || null,
+                receiptTypeId: existingStructure.receiptTypeId,
+                receiptTypeName: conflictingReceiptType?.name || null,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Paginate conflicts
+  const offset = (page - 1) * pageSize;
+  const limit = Math.max(1, Math.min(100, pageSize)); // Limit pageSize between 1 and 100
+  const totalElements = conflicts.length;
+  const totalPages = Math.max(1, Math.ceil(totalElements / limit));
+  const paginatedConflicts = conflicts.slice(offset, offset + limit);
+
+  return {
+    isUnique: conflicts.length === 0,
+    conflicts: {
+      content: paginatedConflicts,
+      page,
+      pageSize: limit,
+      totalPages,
+      totalElements,
+    },
+  };
 };

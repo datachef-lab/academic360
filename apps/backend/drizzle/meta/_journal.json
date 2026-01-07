@@ -484,6 +484,13 @@
       "when": 1767598194148,
       "tag": "0068_unusual_lady_bullseye",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1767761648246,
+      "tag": "0069_wandering_post",
+      "breakpoints": true
     }
   ]
 }

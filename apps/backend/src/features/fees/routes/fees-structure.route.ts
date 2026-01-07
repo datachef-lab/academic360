@@ -5,6 +5,11 @@ const router = Router();
 
 router.post("/", feesStructureController.createFeeStructure);
 router.post("/by-dto", feesStructureController.createFeeStructureByDto);
+router.put("/by-dto/:id", feesStructureController.updateFeeStructureByDto);
+router.post(
+  "/check-unique-amounts",
+  feesStructureController.checkUniqueFeeStructureAmounts,
+);
 router.get(
   "/academic-years/all",
   feesStructureController.getAcademicYearsFromFeesStructures,

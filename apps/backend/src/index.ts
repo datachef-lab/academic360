@@ -55,7 +55,7 @@ function checkRequiredEnvs() {
       process.env.NODE_ENV === "development" ||
       process.env.NODE_ENV === "staging";
     if (shouldConnectMySQL) {
-      // await connectToMySQL();
+      await connectToMySQL();
     }
     httpServer.listen(PORT, async () => {
       console.log(

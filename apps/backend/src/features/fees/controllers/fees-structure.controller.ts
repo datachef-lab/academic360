@@ -288,9 +288,43 @@ export const createFeeStructureByDto = async (
       return;
     }
 
-    const created = await feeStructureService.createFeeStructureByDto(
-      parse.data as CreateFeeStructureDto,
-    );
+    const data = parse.data as CreateFeeStructureDto;
+
+    // Validate uniqueness before creating
+    const uniquenessCheck =
+      await feeStructureService.checkUniqueFeeStructureAmounts(
+        data.academicYearId,
+        data.classId,
+        data.programCourseIds,
+        data.shiftIds,
+        data.baseAmount,
+        data.feeStructureConcessionSlabs
+          .filter((slab) => slab.concessionRate !== undefined)
+          .map((slab) => ({
+            feeConcessionSlabId: slab.feeConcessionSlabId,
+            concessionRate: slab.concessionRate ?? 0,
+          })),
+        undefined, // No excludeFeeStructureId for new creation
+        1, // page
+        1, // pageSize - only need to check if conflicts exist
+      );
+
+    if (!uniquenessCheck.isUnique) {
+      res.status(400).json(
+        new ApiResponse(
+          400,
+          "CONFLICT_ERROR",
+          {
+            isUnique: false,
+            conflicts: uniquenessCheck.conflicts,
+          },
+          `Fee structure amounts have conflicts. ${uniquenessCheck.conflicts.totalElements} conflict(s) detected.`,
+        ),
+      );
+      return;
+    }
+
+    const created = await feeStructureService.createFeeStructureByDto(data);
 
     res
       .status(201)
@@ -300,6 +334,122 @@ export const createFeeStructureByDto = async (
           "CREATED",
           created,
           "Fee structures created successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const updateFeeStructureByDto = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
+      return;
+    }
+
+    const parse = z
+      .object({
+        academicYearId: z.number(),
+        classId: z.number(),
+        receiptTypeId: z.number(),
+        baseAmount: z.number(),
+        programCourseIds: z.array(z.number()),
+        shiftIds: z.array(z.number()),
+        components: z.array(z.any()),
+        feeStructureConcessionSlabs: z.array(z.any()),
+        installments: z.array(z.any()).optional(),
+        advanceForProgramCourseIds: z.array(z.number()).optional(),
+        closingDate: z.string().nullable().optional(),
+        startDate: z.string().nullable().optional(),
+        endDate: z.string().nullable().optional(),
+        onlineStartDate: z.string().nullable().optional(),
+        onlineEndDate: z.string().nullable().optional(),
+        numberOfInstallments: z.number().nullable().optional(),
+      })
+      .safeParse(req.body);
+
+    if (!parse.success) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "VALIDATION_ERROR",
+            null,
+            JSON.stringify(parse.error.flatten()),
+          ),
+        );
+      return;
+    }
+
+    const data = parse.data as CreateFeeStructureDto;
+
+    // Validate uniqueness before updating (exclude current fee structure)
+    const uniquenessCheck =
+      await feeStructureService.checkUniqueFeeStructureAmounts(
+        data.academicYearId,
+        data.classId,
+        data.programCourseIds,
+        data.shiftIds,
+        data.baseAmount,
+        data.feeStructureConcessionSlabs
+          .filter((slab) => slab.concessionRate !== undefined)
+          .map((slab) => ({
+            feeConcessionSlabId: slab.feeConcessionSlabId,
+            concessionRate: slab.concessionRate ?? 0,
+          })),
+        id, // Exclude current fee structure from conflict check
+        1, // page
+        1, // pageSize - only need to check if conflicts exist
+      );
+
+    if (!uniquenessCheck.isUnique) {
+      res.status(400).json(
+        new ApiResponse(
+          400,
+          "CONFLICT_ERROR",
+          {
+            isUnique: false,
+            conflicts: uniquenessCheck.conflicts,
+          },
+          `Fee structure amounts have conflicts. ${uniquenessCheck.conflicts.totalElements} conflict(s) detected.`,
+        ),
+      );
+      return;
+    }
+
+    const updated = await feeStructureService.updateFeeStructureByDto(id, data);
+
+    if (!updated) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Fee structure not found or update failed",
+          ),
+        );
+      return;
+    }
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "UPDATED",
+          updated,
+          "Fee structure updated successfully",
         ),
       );
   } catch (error) {
@@ -479,6 +629,86 @@ export const getAcademicYearsFromFeesStructures = async (
           "SUCCESS",
           academicYears,
           "Fetched academic years from fee structures",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const checkUniqueFeeStructureAmounts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const parse = z
+      .object({
+        academicYearId: z.number(),
+        classId: z.number(),
+        programCourseIds: z.array(z.number()),
+        shiftIds: z.array(z.number()),
+        baseAmount: z.number(),
+        feeStructureConcessionSlabs: z.array(
+          z.object({
+            feeConcessionSlabId: z.number(),
+            concessionRate: z.number(),
+          }),
+        ),
+        excludeFeeStructureId: z.number().optional(),
+        page: z.number().optional().default(1),
+        pageSize: z.number().optional().default(10),
+      })
+      .safeParse(req.body);
+
+    if (!parse.success) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "VALIDATION_ERROR",
+            null,
+            JSON.stringify(parse.error.flatten()),
+          ),
+        );
+      return;
+    }
+
+    const {
+      academicYearId,
+      classId,
+      programCourseIds,
+      shiftIds,
+      baseAmount,
+      feeStructureConcessionSlabs,
+      excludeFeeStructureId,
+      page,
+      pageSize,
+    } = parse.data;
+
+    const result = await feeStructureService.checkUniqueFeeStructureAmounts(
+      academicYearId,
+      classId,
+      programCourseIds,
+      shiftIds,
+      baseAmount,
+      feeStructureConcessionSlabs,
+      excludeFeeStructureId,
+      page,
+      pageSize,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          result.isUnique
+            ? "Fee structure amounts are unique"
+            : "Fee structure amounts have conflicts",
         ),
       );
   } catch (error) {

@@ -144,19 +144,17 @@ export const connectToDatabase = async () => {
 //     process.env.OLD_DB_PASSWORD!,
 //     process.env.OLD_DB_NAME!
 // )
-export let mysqlConnection: Connection | undefined;
+export const mysqlConnection = await createConnection({
+  host: process.env.OLD_DB_HOST!,
+  port: parseInt(process.env.OLD_DB_PORT!, 10),
+  user: process.env.OLD_DB_USER!,
+  password: process.env.OLD_DB_PASSWORD!,
+  database: process.env.OLD_DB_NAME!,
+});
 
 // Test MySQL Connection
 export const connectToMySQL = async () => {
   try {
-    mysqlConnection = await createConnection({
-      host: process.env.OLD_DB_HOST!,
-      port: parseInt(process.env.OLD_DB_PORT!, 10),
-      user: process.env.OLD_DB_USER!,
-      password: process.env.OLD_DB_PASSWORD!,
-      database: process.env.OLD_DB_NAME!,
-    });
-
     const [rows] = await mysqlConnection.query(
       "SELECT COUNT(*) AS totalRows FROM community",
     ); // Simple query to test the connection
