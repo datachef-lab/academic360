@@ -47,280 +47,311 @@ function readFromTemplateData(
 }
 
 async function processBatch() {
-  const rows = await db
-    .select()
-    .from(notificationQueueModel)
-    .where(
-      and(
-        eq(notificationQueueModel.type, "WHATSAPP_QUEUE" as any),
-        eq(notificationQueueModel.isDeadLetter, false as any),
-      ),
-    )
-    .limit(BATCH_SIZE);
-  if (rows.length === 0) {
-    return;
-  }
+  try {
+    const rows = await db
+      .select()
+      .from(notificationQueueModel)
+      .where(
+        and(
+          eq(notificationQueueModel.type, "WHATSAPP_QUEUE" as any),
+          eq(notificationQueueModel.isDeadLetter, false),
+        ),
+      )
+      .limit(BATCH_SIZE);
+    if (rows.length === 0) {
+      return;
+    }
 
-  for (const row of rows) {
-    try {
-      const [notif] = await db
-        .select()
-        .from(notificationModel)
-        .where(eq(notificationModel.id, row.notificationId))
-        .limit(1);
-      const { userModel } = await import("@repo/db/schemas/models/user");
-      const [user] = await db
-        .select()
-        .from(userModel)
-        .where(eq(userModel.id, notif.userId as number))
-        .limit(1);
-
-      const [content] = await db
-        .select()
-        .from(notificationContentModel)
-        .where(eq(notificationContentModel.notificationId, row.notificationId))
-        .limit(1);
-
-      // Safely parse JSON only if the first non-whitespace char suggests JSON
-      let dto: NotificationEventDto = {} as NotificationEventDto;
-      if (content && typeof content.content === "string") {
-        const trimmed = String(content.content).trim();
-        if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-          try {
-            dto = JSON.parse(trimmed) as NotificationEventDto;
-          } catch (e: any) {
-            console.log(
-              "[whatsapp.worker] skipped non-JSON content for dto due to parse error:",
-              e?.message || String(e),
-            );
-            dto = {} as NotificationEventDto;
-          }
-        }
-      }
-      const env = String(process.env.NODE_ENV || "development");
-      const devOnlyMeta = Boolean(dto?.meta?.devOnly);
-      // Resolve template via notification master id (preferred), fallback to dto
-      let templateName = asString(
-        dto?.notificationMaster?.template,
-        "generic_alert",
-      );
-      if (notif.notificationMasterId) {
-        const [master] = await db
+    for (const row of rows) {
+      try {
+        const [notif] = await db
           .select()
-          .from(notificationMasterModel)
-          .where(eq(notificationMasterModel.id, notif.notificationMasterId))
+          .from(notificationModel)
+          .where(eq(notificationModel.id, row.notificationId))
           .limit(1);
-        console.log(
-          "[whatsapp.worker] master check =>",
-          JSON.stringify({
-            id: notif.notificationMasterId,
-            isActive: master?.isActive,
-            template: master?.template,
-          }),
-        );
-        if (!master?.isActive) {
-          await db
-            .update(notificationModel)
-            .set({
-              status: "FAILED",
-              failedAt: new Date(),
-              failedReason: "Notification master inactive",
-            })
-            .where(eq(notificationModel.id, row.notificationId));
-          await db
-            .update(notificationQueueModel)
-            .set({
-              isDeadLetter: true,
-              deadLetterAt: new Date(),
-              failedReason: "Notification master inactive",
-            })
-            .where(eq(notificationQueueModel.id, row.id));
-          continue;
-        }
-        if (master?.template) templateName = String(master.template);
-      }
-
-      // Build body values using DB meta as the canonical sequence
-      const contents = await db
-        .select()
-        .from(notificationContentModel)
-        .where(eq(notificationContentModel.notificationId, row.notificationId));
-      const wc = contents
-        .filter((c) => typeof c.whatsappFieldId === "number")
-        .sort(
-          (a, b) =>
-            (a.createdAt?.getTime?.() || 0) - (b.createdAt?.getTime?.() || 0),
-        );
-      const mapFieldToContents = new Map<number, { content: string }[]>();
-      for (const c of wc) {
-        const fid = c.whatsappFieldId as number;
-        const arr = mapFieldToContents.get(fid) || [];
-        arr.push({ content: asString(c.content, "") });
-        mapFieldToContents.set(fid, arr);
-      }
-      // Use DB Meta (design-driven ordering and gating)
-      let metaEntries: {
-        notificationMasterFieldId: number;
-        sequence: number;
-      }[] = [];
-      if (notif.notificationMasterId) {
-        const metas = await db
-          .select()
-          .from(notificationMasterMetaModel)
-          .where(
-            and(
-              eq(
-                notificationMasterMetaModel.notificationMasterId,
-                notif.notificationMasterId,
-              ),
-              eq(notificationMasterMetaModel.flag, true),
-            ),
-          );
-        metaEntries = metas
-          .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
-          .map((m) => ({
-            notificationMasterFieldId: m.notificationMasterFieldId as number,
-            sequence: m.sequence as number,
-          }));
-      }
-      const bodyValues: string[] = [];
-      for (const m of metaEntries) {
-        const arr = mapFieldToContents.get(m.notificationMasterFieldId) || [];
-        const next = arr.shift();
-        bodyValues.push(next?.content ?? "");
-        mapFieldToContents.set(m.notificationMasterFieldId, arr);
-      }
-      // If none or only blank values, fallback to explicit bodyValues provided
-      const allBlank =
-        bodyValues.length === 0 ||
-        bodyValues.every((v) => String(v).trim().length === 0);
-      if (allBlank) {
-        // replace with provided dto body values
-        bodyValues.length = 0;
-        const fallback = asStringArray(dto?.bodyValues, []);
-        for (const v of fallback) bodyValues.push(v);
-      }
-      // Final fallback: if still empty, try to get bodyValues from notification message
-      if (bodyValues.length === 0) {
-        try {
-          // Check if message contains bodyValues (for notifications without fields)
-          const messageData = JSON.parse(notif.message || "{}");
-          if (messageData.bodyValues && Array.isArray(messageData.bodyValues)) {
-            for (const v of messageData.bodyValues) bodyValues.push(String(v));
-          }
-        } catch (e) {
-          // If parsing fails, leave bodyValues empty
-          console.log(
-            "[whatsapp.worker] Could not parse bodyValues from message:",
-            e,
-          );
-        }
-      }
-
-      // Extract button values from template data
-      let buttonValues: string[] = [];
-      console.log("[whatsapp.worker] DTO template data:", dto?.templateData);
-      console.log("[whatsapp.worker] DTO full:", JSON.stringify(dto, null, 2));
-
-      if (
-        dto?.templateData?.pdfAccessUrl &&
-        typeof dto.templateData.pdfAccessUrl === "string"
-      ) {
-        buttonValues.push(dto.templateData.pdfAccessUrl);
-        console.log(
-          "[whatsapp.worker] Found pdfAccessUrl:",
-          dto.templateData.pdfAccessUrl,
-        );
-      } else {
-        console.log("[whatsapp.worker] No pdfAccessUrl found in template data");
-
-        // Try to extract from notification message as fallback
-        try {
-          const messageData = JSON.parse(notif.message || "{}");
-          console.log(
-            "[whatsapp.worker] Message data:",
-            JSON.stringify(messageData, null, 2),
-          );
-
-          // Check if pdfAccessUrl is in notificationEvent.templateData
-          if (
-            messageData.notificationEvent?.templateData?.pdfAccessUrl &&
-            typeof messageData.notificationEvent.templateData.pdfAccessUrl ===
-              "string"
-          ) {
-            buttonValues.push(
-              messageData.notificationEvent.templateData.pdfAccessUrl,
-            );
-            console.log(
-              "[whatsapp.worker] Found pdfAccessUrl in message templateData:",
-              messageData.notificationEvent.templateData.pdfAccessUrl,
-            );
-          }
-          // Check if pdfAccessUrl is in bodyValues (third element)
-          else if (
-            messageData.bodyValues &&
-            Array.isArray(messageData.bodyValues) &&
-            messageData.bodyValues.length >= 3
-          ) {
-            const pdfUrl = messageData.bodyValues[2]; // Third element (index 2)
-            if (
-              typeof pdfUrl === "string" &&
-              pdfUrl.includes(
-                "/api/admissions/cu-registration-correction-requests/pdf/",
-              )
-            ) {
-              buttonValues.push(pdfUrl);
-              console.log(
-                "[whatsapp.worker] Found pdfAccessUrl in bodyValues:",
-                pdfUrl,
-              );
-            }
-          }
-        } catch (e) {
-          console.log("[whatsapp.worker] Could not parse message data:", e);
-        }
-      }
-
-      // Guard: ensure required placeholders have values; otherwise throw before provider call
-      const expectedCount = metaEntries.length;
-      const providedCount = bodyValues.filter(
-        (v) => String(v).length > 0,
-      ).length;
-      if (expectedCount > 0 && providedCount < expectedCount) {
-        throw new Error(
-          `Missing variable values for template's body, expected ${expectedCount}, got ${providedCount}`,
-        );
-      }
-
-      if (env === "staging") {
-        // Fan-out to all STAFF who opted-in and are active/not suspended
-        const staffUsers = await db
+        const { userModel } = await import("@repo/db/schemas/models/user");
+        const [user] = await db
           .select()
           .from(userModel)
+          .where(eq(userModel.id, notif.userId as number))
+          .limit(1);
+
+        const [content] = await db
+          .select()
+          .from(notificationContentModel)
           .where(
-            and(
-              eq(userModel.type, "STAFF"),
-              eq(userModel.sendStagingNotifications, true),
-              eq(userModel.isActive, true),
-              eq(userModel.isSuspended, false),
-            ),
+            eq(notificationContentModel.notificationId, row.notificationId),
           )
-          .limit(500);
-        if (staffUsers.length > 0) {
-          for (const staff of staffUsers) {
-            const recipient = asString(
-              staff.whatsappNumber || staff.phone,
-              process.env.DEVELOPER_PHONE!,
+          .limit(1);
+
+        // Safely parse JSON only if the first non-whitespace char suggests JSON
+        let dto: NotificationEventDto = {} as NotificationEventDto;
+        if (content && typeof content.content === "string") {
+          const trimmed = String(content.content).trim();
+          if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+            try {
+              dto = JSON.parse(trimmed) as NotificationEventDto;
+            } catch (e: any) {
+              console.log(
+                "[whatsapp.worker] skipped non-JSON content for dto due to parse error:",
+                e?.message || String(e),
+              );
+              dto = {} as NotificationEventDto;
+            }
+          }
+        }
+        const env = String(process.env.NODE_ENV || "development");
+        const devOnlyMeta = Boolean(dto?.meta?.devOnly);
+        // Resolve template via notification master id (preferred), fallback to dto
+        let templateName = asString(
+          dto?.notificationMaster?.template,
+          "generic_alert",
+        );
+        if (notif.notificationMasterId) {
+          const [master] = await db
+            .select()
+            .from(notificationMasterModel)
+            .where(eq(notificationMasterModel.id, notif.notificationMasterId))
+            .limit(1);
+          console.log(
+            "[whatsapp.worker] master check =>",
+            JSON.stringify({
+              id: notif.notificationMasterId,
+              isActive: master?.isActive,
+              template: master?.template,
+            }),
+          );
+          if (!master?.isActive) {
+            await db
+              .update(notificationModel)
+              .set({
+                status: "FAILED",
+                failedAt: new Date(),
+                failedReason: "Notification master inactive",
+              })
+              .where(eq(notificationModel.id, row.notificationId));
+            await db
+              .update(notificationQueueModel)
+              .set({
+                isDeadLetter: true,
+                deadLetterAt: new Date(),
+                failedReason: "Notification master inactive",
+              })
+              .where(eq(notificationQueueModel.id, row.id));
+            continue;
+          }
+          if (master?.template) templateName = String(master.template);
+        }
+
+        // Build body values using DB meta as the canonical sequence
+        const contents = await db
+          .select()
+          .from(notificationContentModel)
+          .where(
+            eq(notificationContentModel.notificationId, row.notificationId),
+          );
+        const wc = contents
+          .filter((c) => typeof c.whatsappFieldId === "number")
+          .sort(
+            (a, b) =>
+              (a.createdAt?.getTime?.() || 0) - (b.createdAt?.getTime?.() || 0),
+          );
+        const mapFieldToContents = new Map<number, { content: string }[]>();
+        for (const c of wc) {
+          const fid = c.whatsappFieldId as number;
+          const arr = mapFieldToContents.get(fid) || [];
+          arr.push({ content: asString(c.content, "") });
+          mapFieldToContents.set(fid, arr);
+        }
+        // Use DB Meta (design-driven ordering and gating)
+        let metaEntries: {
+          notificationMasterFieldId: number;
+          sequence: number;
+        }[] = [];
+        if (notif.notificationMasterId) {
+          const metas = await db
+            .select()
+            .from(notificationMasterMetaModel)
+            .where(
+              and(
+                eq(
+                  notificationMasterMetaModel.notificationMasterId,
+                  notif.notificationMasterId,
+                ),
+                eq(notificationMasterMetaModel.flag, true),
+              ),
             );
+          metaEntries = metas
+            .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
+            .map((m) => ({
+              notificationMasterFieldId: m.notificationMasterFieldId as number,
+              sequence: m.sequence as number,
+            }));
+        }
+        const bodyValues: string[] = [];
+        for (const m of metaEntries) {
+          const arr = mapFieldToContents.get(m.notificationMasterFieldId) || [];
+          const next = arr.shift();
+          bodyValues.push(next?.content ?? "");
+          mapFieldToContents.set(m.notificationMasterFieldId, arr);
+        }
+        // If none or only blank values, fallback to explicit bodyValues provided
+        const allBlank =
+          bodyValues.length === 0 ||
+          bodyValues.every((v) => String(v).trim().length === 0);
+        if (allBlank) {
+          // replace with provided dto body values
+          bodyValues.length = 0;
+          const fallback = asStringArray(dto?.bodyValues, []);
+          for (const v of fallback) bodyValues.push(v);
+        }
+        // Final fallback: if still empty, try to get bodyValues from notification message
+        if (bodyValues.length === 0) {
+          try {
+            // Check if message contains bodyValues (for notifications without fields)
+            const messageData = JSON.parse(notif.message || "{}");
+            if (
+              messageData.bodyValues &&
+              Array.isArray(messageData.bodyValues)
+            ) {
+              for (const v of messageData.bodyValues)
+                bodyValues.push(String(v));
+            }
+          } catch (e) {
+            // If parsing fails, leave bodyValues empty
+            console.log(
+              "[whatsapp.worker] Could not parse bodyValues from message:",
+              e,
+            );
+          }
+        }
+
+        // Extract button values from template data
+        let buttonValues: string[] = [];
+        console.log("[whatsapp.worker] DTO template data:", dto?.templateData);
+        console.log(
+          "[whatsapp.worker] DTO full:",
+          JSON.stringify(dto, null, 2),
+        );
+
+        if (
+          dto?.templateData?.pdfAccessUrl &&
+          typeof dto.templateData.pdfAccessUrl === "string"
+        ) {
+          buttonValues.push(dto.templateData.pdfAccessUrl);
+          console.log(
+            "[whatsapp.worker] Found pdfAccessUrl:",
+            dto.templateData.pdfAccessUrl,
+          );
+        } else {
+          console.log(
+            "[whatsapp.worker] No pdfAccessUrl found in template data",
+          );
+
+          // Try to extract from notification message as fallback
+          try {
+            const messageData = JSON.parse(notif.message || "{}");
+            console.log(
+              "[whatsapp.worker] Message data:",
+              JSON.stringify(messageData, null, 2),
+            );
+
+            // Check if pdfAccessUrl is in notificationEvent.templateData
+            if (
+              messageData.notificationEvent?.templateData?.pdfAccessUrl &&
+              typeof messageData.notificationEvent.templateData.pdfAccessUrl ===
+                "string"
+            ) {
+              buttonValues.push(
+                messageData.notificationEvent.templateData.pdfAccessUrl,
+              );
+              console.log(
+                "[whatsapp.worker] Found pdfAccessUrl in message templateData:",
+                messageData.notificationEvent.templateData.pdfAccessUrl,
+              );
+            }
+            // Check if pdfAccessUrl is in bodyValues (third element)
+            else if (
+              messageData.bodyValues &&
+              Array.isArray(messageData.bodyValues) &&
+              messageData.bodyValues.length >= 3
+            ) {
+              const pdfUrl = messageData.bodyValues[2]; // Third element (index 2)
+              if (
+                typeof pdfUrl === "string" &&
+                pdfUrl.includes(
+                  "/api/admissions/cu-registration-correction-requests/pdf/",
+                )
+              ) {
+                buttonValues.push(pdfUrl);
+                console.log(
+                  "[whatsapp.worker] Found pdfAccessUrl in bodyValues:",
+                  pdfUrl,
+                );
+              }
+            }
+          } catch (e) {
+            console.log("[whatsapp.worker] Could not parse message data:", e);
+          }
+        }
+
+        // Guard: ensure required placeholders have values; otherwise throw before provider call
+        const expectedCount = metaEntries.length;
+        const providedCount = bodyValues.filter(
+          (v) => String(v).length > 0,
+        ).length;
+        if (expectedCount > 0 && providedCount < expectedCount) {
+          throw new Error(
+            `Missing variable values for template's body, expected ${expectedCount}, got ${providedCount}`,
+          );
+        }
+
+        if (env === "staging") {
+          // Fan-out to all STAFF who opted-in and are active/not suspended
+          const staffUsers = await db
+            .select()
+            .from(userModel)
+            .where(
+              and(
+                eq(userModel.type, "STAFF"),
+                eq(userModel.sendStagingNotifications, true),
+                eq(userModel.isActive, true),
+                eq(userModel.isSuspended, false),
+              ),
+            )
+            .limit(500);
+          if (staffUsers.length > 0) {
+            for (const staff of staffUsers) {
+              const recipient = asString(
+                staff.whatsappNumber || staff.phone,
+                process.env.DEVELOPER_PHONE!,
+              );
+              console.log("[whatsapp.worker] sending =>", {
+                notifId: row.notificationId,
+                to: recipient,
+                templateName,
+                bodyValues,
+                headerMediaUrl: dto.whatsappHeaderMediaUrl,
+              });
+              const resp = await sendWhatsAppMessage(
+                recipient,
+                bodyValues,
+                templateName,
+                dto.whatsappHeaderMediaUrl,
+              );
+              if (!resp.ok) throw new Error(resp.error);
+              await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+            }
+          } else {
             console.log("[whatsapp.worker] sending =>", {
               notifId: row.notificationId,
-              to: recipient,
+              to: process.env.DEVELOPER_PHONE!,
               templateName,
               bodyValues,
               headerMediaUrl: dto.whatsappHeaderMediaUrl,
             });
             const resp = await sendWhatsAppMessage(
-              recipient,
+              process.env.DEVELOPER_PHONE!,
               bodyValues,
               templateName,
               dto.whatsappHeaderMediaUrl,
@@ -328,124 +359,122 @@ async function processBatch() {
             if (!resp.ok) throw new Error(resp.error);
             await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
           }
-        } else {
+        } else if (env === "development") {
+          // development -> always send to developer
+          const resolvedPhone = process.env.DEVELOPER_PHONE!;
           console.log("[whatsapp.worker] sending =>", {
             notifId: row.notificationId,
-            to: process.env.DEVELOPER_PHONE!,
+            to: resolvedPhone,
             templateName,
             bodyValues,
+            buttonValues,
             headerMediaUrl: dto.whatsappHeaderMediaUrl,
           });
           const resp = await sendWhatsAppMessage(
-            process.env.DEVELOPER_PHONE!,
+            resolvedPhone,
             bodyValues,
             templateName,
             dto.whatsappHeaderMediaUrl,
+            buttonValues,
+          );
+          if (!resp.ok) throw new Error(resp.error);
+          await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+        } else {
+          // production -> send to real user
+          const resolvedPhone = asString(
+            user?.whatsappNumber || user?.phone,
+            process.env.DEVELOPER_PHONE!,
+          );
+          console.log("[whatsapp.worker] sending =>", {
+            notifId: row.notificationId,
+            to: resolvedPhone,
+            templateName,
+            bodyValues,
+            buttonValues,
+            headerMediaUrl: dto.whatsappHeaderMediaUrl,
+          });
+          const resp = await sendWhatsAppMessage(
+            resolvedPhone,
+            bodyValues,
+            templateName,
+            dto.whatsappHeaderMediaUrl,
+            buttonValues,
           );
           if (!resp.ok) throw new Error(resp.error);
           await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
         }
-      } else if (env === "development") {
-        // development -> always send to developer
-        const resolvedPhone = process.env.DEVELOPER_PHONE!;
-        console.log("[whatsapp.worker] sending =>", {
-          notifId: row.notificationId,
-          to: resolvedPhone,
-          templateName,
-          bodyValues,
-          buttonValues,
-          headerMediaUrl: dto.whatsappHeaderMediaUrl,
-        });
-        const resp = await sendWhatsAppMessage(
-          resolvedPhone,
-          bodyValues,
-          templateName,
-          dto.whatsappHeaderMediaUrl,
-          buttonValues,
-        );
-        if (!resp.ok) throw new Error(resp.error);
-        await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
-      } else {
-        // production -> send to real user
-        const resolvedPhone = asString(
-          user?.whatsappNumber || user?.phone,
-          process.env.DEVELOPER_PHONE!,
-        );
-        console.log("[whatsapp.worker] sending =>", {
-          notifId: row.notificationId,
-          to: resolvedPhone,
-          templateName,
-          bodyValues,
-          buttonValues,
-          headerMediaUrl: dto.whatsappHeaderMediaUrl,
-        });
-        const resp = await sendWhatsAppMessage(
-          resolvedPhone,
-          bodyValues,
-          templateName,
-          dto.whatsappHeaderMediaUrl,
-          buttonValues,
-        );
-        if (!resp.ok) throw new Error(resp.error);
-        await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
-      }
 
-      await db
-        .update(notificationModel)
-        .set({ status: "SENT", sentAt: new Date() })
-        .where(eq(notificationModel.id, row.notificationId));
-      await db
-        .update(notificationQueueModel)
-        .set({ isDeadLetter: true, deadLetterAt: new Date() })
-        .where(eq(notificationQueueModel.id, row.id));
-
-      console.log("[whatsapp.worker] sent ->", {
-        notifId: row.notificationId,
-        to:
-          env === "development"
-            ? process.env.DEVELOPER_PHONE
-            : user?.whatsappNumber || user?.phone,
-      });
-
-      await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
-    } catch (err: any) {
-      // Reuse shared db; do not create new clients inside the loop
-      const attempts = (row.retryAttempts ?? 0) + 1;
-
-      // Extract proper error message (provider returns cleaned message)
-      let errorMessage = "Unknown error";
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (typeof err === "string") {
-        errorMessage = err;
-      } else if (err && typeof err === "object") {
-        errorMessage = (err as any).message || String(err);
-      }
-
-      if (attempts >= MAX_RETRIES) {
         await db
           .update(notificationModel)
-          .set({
-            status: "FAILED",
-            failedAt: new Date(),
-            failedReason: errorMessage,
-          })
+          .set({ status: "SENT", sentAt: new Date() })
           .where(eq(notificationModel.id, row.notificationId));
         await db
           .update(notificationQueueModel)
-          .set({
-            isDeadLetter: true,
-            deadLetterAt: new Date(),
-            failedReason: errorMessage,
-          })
+          .set({ isDeadLetter: true, deadLetterAt: new Date() })
           .where(eq(notificationQueueModel.id, row.id));
-      } else {
-        await db
-          .update(notificationQueueModel)
-          .set({ retryAttempts: attempts, failedReason: errorMessage })
-          .where(eq(notificationQueueModel.id, row.id));
+
+        console.log("[whatsapp.worker] sent ->", {
+          notifId: row.notificationId,
+          to:
+            env === "development"
+              ? process.env.DEVELOPER_PHONE
+              : user?.whatsappNumber || user?.phone,
+        });
+
+        await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+      } catch (err: any) {
+        // Reuse shared db; do not create new clients inside the loop
+        const attempts = (row.retryAttempts ?? 0) + 1;
+
+        // Extract proper error message (provider returns cleaned message)
+        let errorMessage = "Unknown error";
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        } else if (typeof err === "string") {
+          errorMessage = err;
+        } else if (err && typeof err === "object") {
+          errorMessage = (err as any).message || String(err);
+        }
+
+        if (attempts >= MAX_RETRIES) {
+          await db
+            .update(notificationModel)
+            .set({
+              status: "FAILED",
+              failedAt: new Date(),
+              failedReason: errorMessage,
+            })
+            .where(eq(notificationModel.id, row.notificationId));
+          await db
+            .update(notificationQueueModel)
+            .set({
+              isDeadLetter: true,
+              deadLetterAt: new Date(),
+              failedReason: errorMessage,
+            })
+            .where(eq(notificationQueueModel.id, row.id));
+        } else {
+          await db
+            .update(notificationQueueModel)
+            .set({ retryAttempts: attempts, failedReason: errorMessage })
+            .where(eq(notificationQueueModel.id, row.id));
+        }
       }
     }
+  } catch (error) {
+    console.error("[whatsapp.worker] processBatch error:", error);
+    if (error instanceof Error) {
+      console.error("[whatsapp.worker] Error message:", error.message);
+      console.error("[whatsapp.worker] Error stack:", error.stack);
+      // Log the SQL error details if available
+      if ((error as any).code) {
+        console.error("[whatsapp.worker] Error code:", (error as any).code);
+      }
+      if ((error as any).detail) {
+        console.error("[whatsapp.worker] Error detail:", (error as any).detail);
+      }
+    }
+    throw error; // Re-throw to be caught by caller
   }
 }
 
@@ -466,9 +495,18 @@ export function startWhatsAppWorker() {
   // Kick off immediately for visibility
   processBatch()
     .then(() => console.log("[whatsapp.worker] initial run complete"))
-    .catch((e) =>
-      console.log("[whatsapp.worker] initial run error:", e?.message || e),
-    );
+    .catch((e) => {
+      console.error("[whatsapp.worker] initial run error:", e);
+      if (e instanceof Error) {
+        console.error("[whatsapp.worker] Error message:", e.message);
+        console.error("[whatsapp.worker] Error stack:", e.stack);
+      }
+      // Log the full error object for debugging
+      console.error(
+        "[whatsapp.worker] Full error:",
+        JSON.stringify(e, Object.getOwnPropertyNames(e)),
+      );
+    });
 
   workerInterval = setInterval(() => {
     processBatch().catch(() => undefined);

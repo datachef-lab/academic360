@@ -491,6 +491,13 @@
       "when": 1767761648246,
       "tag": "0069_wandering_post",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1767782018486,
+      "tag": "0070_past_gabe_jones",
+      "breakpoints": true
     }
   ]
 }

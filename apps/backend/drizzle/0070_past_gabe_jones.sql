@@ -1,0 +1,1 @@
+ALTER TABLE "notification_queue" ADD COLUMN "is_processing" boolean DEFAULT false NOT NULL;

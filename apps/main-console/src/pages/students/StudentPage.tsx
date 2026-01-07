@@ -600,7 +600,7 @@ export default function StudentPage() {
                     studentPayload.cancelledAdmissionAt = null;
                   }
 
-                  await axiosInstance.put(`/api/gr/${studentId}/status`, studentPayload);
+                  await axiosInstance.put(`/api/students/${studentId}/status`, studentPayload);
 
                   // Invalidate queries to refresh the UI
                   await queryClient.invalidateQueries({ queryKey: ["student", studentIdOrUid] });
