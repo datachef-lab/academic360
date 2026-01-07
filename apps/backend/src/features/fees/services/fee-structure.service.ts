@@ -21,7 +21,17 @@ import {
   shiftModel,
 } from "@repo/db/schemas/models/academics";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
-import { and, eq, count, desc, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  count,
+  desc,
+  inArray,
+  sql,
+  ne,
+  not,
+  notInArray,
+} from "drizzle-orm";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import * as academicYearService from "@/features/academics/services/academic-year.service.js";
 import * as classService from "@/features/academics/services/class.service.js";
@@ -1219,13 +1229,125 @@ export const checkUniqueFeeStructureAmounts = async (
     receiptTypeName: string | null;
   }> = [];
 
-  // Use a Set to track unique conflicts (based on concessionSlabId + conflictingAmount + conflictingFeeStructureId)
+  // Use a Set to track unique conflicts
+  // Since amounts must be unique globally (regardless of program course, shift, etc.),
+  // we group conflicts by concessionSlabId + conflictingAmount only
+  // This eliminates redundancy where multiple fee structures have the same amount for the same concession slab
   const uniqueConflictKeys = new Set<string>();
+
+  // Map to store the first conflicting fee structure for each unique conflict
+  // Key: concessionSlabId-conflictingAmount, Value: first conflicting fee structure data
+  const conflictMap = new Map<
+    string,
+    {
+      programCourseId: number;
+      shiftId: number;
+      concessionSlabId: number;
+      concessionSlabName: string;
+      conflictingAmount: number;
+      conflictingFeeStructureId: number;
+      academicYearId: number;
+      academicYearName: string | null;
+      classId: number;
+      className: string | null;
+      receiptTypeId: number;
+      receiptTypeName: string | null;
+    }
+  >();
 
   // Get all existing fee structures (excluding the current one if editing)
   const conditions = [];
   if (excludeFeeStructureId) {
-    conditions.push(sql`${feeStructureModel.id} != ${excludeFeeStructureId}`);
+    conditions.push(not(eq(feeStructureModel.id, excludeFeeStructureId)));
+
+    // Also exclude fee structures that were created in the same batch
+    // (same baseAmount, academicYearId, classId, receiptTypeId, and same concession slabs)
+    // This prevents conflicts with other fee structures created together during multi-select creation
+
+    // First, get the current fee structure to find its "batch signature"
+    const [currentFeeStructure] = await db
+      .select()
+      .from(feeStructureModel)
+      .where(eq(feeStructureModel.id, excludeFeeStructureId));
+
+    if (currentFeeStructure) {
+      // Get all concession slabs for the current fee structure
+      const currentConcessionSlabs = await db
+        .select()
+        .from(feeStructureConcessionSlabModel)
+        .where(
+          eq(
+            feeStructureConcessionSlabModel.feeStructureId,
+            excludeFeeStructureId,
+          ),
+        );
+
+      // Find fee structures with the same "batch signature"
+      // (same baseAmount, academicYearId, classId, receiptTypeId)
+      const batchStructures = await db
+        .select()
+        .from(feeStructureModel)
+        .where(
+          and(
+            eq(feeStructureModel.baseAmount, currentFeeStructure.baseAmount),
+            eq(
+              feeStructureModel.academicYearId,
+              currentFeeStructure.academicYearId,
+            ),
+            eq(feeStructureModel.classId, currentFeeStructure.classId),
+            eq(
+              feeStructureModel.receiptTypeId,
+              currentFeeStructure.receiptTypeId,
+            ),
+            not(eq(feeStructureModel.id, excludeFeeStructureId)),
+          ),
+        );
+
+      // Check which of these have the same concession slabs
+      const batchStructureIds: number[] = [];
+      for (const batchStruct of batchStructures) {
+        const batchConcessionSlabs = await db
+          .select()
+          .from(feeStructureConcessionSlabModel)
+          .where(
+            eq(feeStructureConcessionSlabModel.feeStructureId, batchStruct.id!),
+          );
+
+        // Check if they have the same concession slabs (same IDs and rates)
+        if (batchConcessionSlabs.length === currentConcessionSlabs.length) {
+          const currentSlabsMap = new Map(
+            currentConcessionSlabs.map((s) => [
+              s.feeConcessionSlabId,
+              s.concessionRate,
+            ]),
+          );
+          const batchSlabsMap = new Map(
+            batchConcessionSlabs.map((s) => [
+              s.feeConcessionSlabId,
+              s.concessionRate,
+            ]),
+          );
+
+          // Check if all slabs match
+          let allMatch = true;
+          for (const [slabId, rate] of currentSlabsMap) {
+            if (batchSlabsMap.get(slabId) !== rate) {
+              allMatch = false;
+              break;
+            }
+          }
+
+          if (allMatch) {
+            batchStructureIds.push(batchStruct.id!);
+          }
+        }
+      }
+
+      // Exclude all fee structures from the same batch
+      if (batchStructureIds.length > 0) {
+        conditions.push(notInArray(feeStructureModel.id, batchStructureIds));
+      }
+    }
   }
 
   const allExistingStructures = await db
@@ -1260,10 +1382,11 @@ export const checkUniqueFeeStructureAmounts = async (
 
           // Check if amounts match (with small tolerance for floating point)
           if (Math.abs(existingFinalAmount - finalAmount) < 0.01) {
-            // Create a unique key for this conflict
-            const conflictKey = `${slab.feeConcessionSlabId}-${existingFinalAmount.toFixed(2)}-${existingStructure.id}`;
+            // Create a unique key based only on concessionSlabId and amount
+            // This ensures we report each unique conflict only once, regardless of how many fee structures have it
+            const conflictKey = `${slab.feeConcessionSlabId}-${existingFinalAmount.toFixed(2)}`;
 
-            // Only add if we haven't seen this conflict before
+            // Only process if we haven't seen this exact conflict before
             if (!uniqueConflictKeys.has(conflictKey)) {
               uniqueConflictKeys.add(conflictKey);
 
@@ -1286,12 +1409,10 @@ export const checkUniqueFeeStructureAmounts = async (
                   existingStructure.receiptTypeId,
                 );
 
-              // Since we're checking globally, all programCourseId + shiftId combinations will have the same conflicts
-              // Report each unique conflict only once, using the first combination as representative
-              // The frontend can use this to highlight all affected program courses and shifts
-              conflicts.push({
-                programCourseId: programCourseIds[0] || 0,
-                shiftId: shiftIds[0] || 0,
+              // Store the first conflicting fee structure for this unique conflict
+              conflictMap.set(conflictKey, {
+                programCourseId: existingStructure.programCourseId,
+                shiftId: existingStructure.shiftId,
                 concessionSlabId: slab.feeConcessionSlabId,
                 concessionSlabName: concessionSlab?.name || "Unknown",
                 conflictingAmount: existingFinalAmount,
@@ -1309,6 +1430,9 @@ export const checkUniqueFeeStructureAmounts = async (
       }
     }
   }
+
+  // Convert map to array of conflicts
+  conflicts.push(...Array.from(conflictMap.values()));
 
   // Paginate conflicts
   const offset = (page - 1) * pageSize;
