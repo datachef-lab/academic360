@@ -5,11 +5,11 @@ import { Outlet, useLocation } from "react-router-dom";
 
 const topLinks = [
   { title: "Home", url: "/dashboard/fees", icon: LayoutDashboard },
+  { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Receipt },
   { title: "Reports", url: "/dashboard/fees/reports", icon: BarChart2 },
 ];
 
 const mastersLinks = [
-  { title: "Fees Structure", url: "/dashboard/fees/structure", icon: Receipt },
   // { title: "Fees Slabs", url: "/dashboard/fees/slabs", icon: Layers },
   { title: "Fee Concession Slabs", url: "/dashboard/fees/fee-concession-slab", icon: Percent },
   { title: "Fees Heads", url: "/dashboard/fees/heads", icon: FileText },

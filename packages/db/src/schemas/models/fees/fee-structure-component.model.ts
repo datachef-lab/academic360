@@ -15,7 +15,7 @@ export const feeStructureComponentModel = pgTable("fee_structure_components", {
         .notNull(),
     isConcessionApplicable: boolean().notNull().default(false),
     feeHeadPercentage: doublePrecision().notNull().default(0),
-    sequence: integer().notNull(),
+    sequence: integer(),
     remarks: varchar({ length: 500 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

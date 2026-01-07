@@ -8,7 +8,7 @@ export const feeConcessionSlabModel = pgTable("fee_concession_slabs", {
     name: varchar({ length: 255 }).notNull(),
     description: varchar({ length: 500 }).notNull(),
     defaultConcessionRate: doublePrecision().default(0),
-    sequence: integer().unique(),
+    sequence: integer(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

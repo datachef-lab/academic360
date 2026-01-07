@@ -7,7 +7,7 @@ export const feeHeadModel = pgTable("fee_heads", {
     legacyFeeHeadId: integer(),
     name: varchar({ length: 255 }).notNull(),
     defaultPercentage: doublePrecision().default(0).notNull(),
-    sequence: integer().notNull().unique(),
+    sequence: integer(),
     remarks: varchar({ length: 500 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

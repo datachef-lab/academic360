@@ -4,8 +4,9 @@ import { Banknote, PlusCircle, Pencil } from "lucide-react";
 // import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureForm";
 import FeeStructureMaster from "@/components/fees/FeeStructureMaster";
 // import { getAllCourses } from "../../services/course-api";
-import { FeeStructureDto } from "@repo/db/dtos/fees";
+import { FeeStructureDto, CreateFeeStructureDto } from "@repo/db/dtos/fees";
 import { AcademicYear } from "@/types/academics/academic-year";
+import { updateFeeStructureByDto } from "@/services/fees-api";
 import { useFeesStructures, useAcademicYearsFromFeesStructures, useFeesHeads } from "@/hooks/useFees";
 import { useFeesReceiptTypes } from "@/hooks/useFees";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
@@ -22,10 +23,10 @@ const FeesStructurePage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [classes, setClasses] = useState<Class[]>([]);
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<AcademicYear | null>(null);
+  const [selectedFeeStructureForEdit, setSelectedFeeStructureForEdit] = useState<FeeStructureDto | null>(null);
   const [selectedConcessionSlabModal, setSelectedConcessionSlabModal] = useState<FeeStructureDto | null>(null);
   const [feesStructures, setFeesStructures] = useState<FeeStructureDto[]>([]);
-
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<AcademicYear | null>(null);
   const [selectedReceiptType, setSelectedReceiptType] = useState<FeesReceiptType | null>(null);
 
   // Use the fees API hook with pagination
@@ -76,11 +77,13 @@ const FeesStructurePage: React.FC = () => {
     [classes],
   );
 
-  const handleEdit = (_fs: FeeStructureDto) => {
+  const handleEdit = (fs: FeeStructureDto) => {
+    setSelectedFeeStructureForEdit(fs);
     setShowFeeStructureForm(true);
   };
 
   const handleCreate = () => {
+    setSelectedFeeStructureForEdit(null);
     setShowFeeStructureForm(true);
   };
 
@@ -154,25 +157,19 @@ const FeesStructurePage: React.FC = () => {
     setCurrentPage(1);
   }, [selectedAcademicYear, selectedReceiptType, selectedClassFilter]);
 
-  // Auto-select first academic year if not set (only run once)
+  // Auto-select current/active academic year if not set (prioritize isCurrentYear === true)
   useEffect(() => {
     if (!selectedAcademicYear && academicYears.length > 0) {
-      setSelectedAcademicYear(academicYears[0] || null);
+      // First, try to find the academic year marked as current
+      const currentYear = academicYears.find((year) => year.isCurrentYear === true);
+      if (currentYear) {
+        setSelectedAcademicYear(currentYear);
+      } else {
+        // Fallback to first academic year if no current year is found
+        setSelectedAcademicYear(academicYears[0] || null);
+      }
     }
-  }, [academicYears.length, selectedAcademicYear]);
-
-  // Get all unique fee heads from components for modal columns
-  const uniqueFeeHeads = useMemo(() => {
-    const feeHeadMap = new Map<number, FeeStructureDto["components"][0]["feeHead"]>();
-    memoizedFilteredFeesStructures.forEach((fs) => {
-      fs.components?.forEach((component) => {
-        if (component.feeHead?.id) {
-          feeHeadMap.set(component.feeHead.id, component.feeHead);
-        }
-      });
-    });
-    return Array.from(feeHeadMap.values());
-  }, [memoizedFilteredFeesStructures]);
+  }, [academicYears, selectedAcademicYear]);
 
   // Memoize sorted filtered structures to prevent unnecessary re-sorting
   const sortedFilteredFeesStructures = useMemo(() => {
@@ -182,16 +179,6 @@ const FeesStructurePage: React.FC = () => {
       return aName.localeCompare(bName);
     });
   }, [memoizedFilteredFeesStructures]);
-
-  // Color variants for components (cycling through different colors, excluding orange which is used for shift)
-  const componentColors = [
-    "border-blue-300 text-blue-700 bg-blue-50", // Light blue
-    "border-red-300 text-red-700 bg-red-50", // Red
-    "border-indigo-300 text-indigo-700 bg-indigo-50", // Indigo
-    "border-cyan-300 text-cyan-700 bg-cyan-50", // Cyan
-    "border-pink-300 text-pink-700 bg-pink-50", // Pink
-    "border-amber-300 text-amber-700 bg-amber-50", // Amber
-  ];
 
   if (academicYearsLoading || feesLoading || receiptTypesLoading || feesHeadsLoading) {
     return (
@@ -346,11 +333,11 @@ const FeesStructurePage: React.FC = () => {
                     <TableCell className="border-r">
                       {feeHeads.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5">
-                          {feeHeads.map((feeHead, index) => (
+                          {feeHeads.map((feeHead) => (
                             <Badge
                               key={feeHead.id}
                               variant="outline"
-                              className={componentColors[index % componentColors.length]}
+                              className="border-blue-300 text-blue-700 bg-blue-50"
                             >
                               {feeHead.name}
                             </Badge>
@@ -368,7 +355,7 @@ const FeesStructurePage: React.FC = () => {
                           onClick={() => setSelectedConcessionSlabModal(fs)}
                           className="text-xs"
                         >
-                          View Slabs ({fs.feeStructureConcessionSlabs?.length || 0})
+                          Summary ({fs.feeStructureConcessionSlabs?.length || 0})
                         </Button>
                       ) : (
                         <span className="text-gray-400 text-xs">-</span>
@@ -388,41 +375,29 @@ const FeesStructurePage: React.FC = () => {
                   </TableRow>
                 );
               })}
-              {sortedFilteredFeesStructures.length > 0 && (
-                <TableRow className="bg-gray-50 font-bold border-t-2">
-                  <TableCell className="border-r">Total</TableCell>
-                  <TableCell className="bg-yellow-200 text-yellow-900 text-lg border-r">
-                    ₹ {sortedFilteredFeesStructures.reduce((sum, fs) => sum + (fs.baseAmount || 0), 0).toLocaleString()}
-                  </TableCell>
-                  <TableCell className="border-r"></TableCell>
-                  <TableCell className="border-r"></TableCell>
-                  <TableCell className="border-r"></TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
-
-          {/* Pagination Controls */}
-          {pagination && pagination.totalElements > 0 && (
-            <div className="mt-4">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={pagination.totalPages}
-                totalItems={pagination.totalElements}
-                itemsPerPage={pageSize}
-                startIndex={(currentPage - 1) * pageSize}
-                endIndex={Math.min(currentPage * pageSize, pagination.totalElements)}
-                onPageChange={(page) => setCurrentPage(page)}
-                onItemsPerPageChange={(newPageSize) => {
-                  setPageSize(newPageSize);
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Pagination Controls */}
+      {pagination && pagination.totalElements > 0 && (
+        <div className="mt-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalElements}
+            itemsPerPage={pageSize}
+            startIndex={(currentPage - 1) * pageSize}
+            endIndex={Math.min(currentPage * pageSize, pagination.totalElements)}
+            onPageChange={(page) => setCurrentPage(page)}
+            onItemsPerPageChange={(newPageSize) => {
+              setPageSize(newPageSize);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+      )}
 
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent className="max-w-md">
@@ -495,157 +470,325 @@ const FeesStructurePage: React.FC = () => {
       </Dialog>
 
       {/* New Fee Structure Master Modal */}
-      {showFeeStructureForm && (
-        <FeeStructureMaster
-          open={showFeeStructureForm}
-          onClose={() => setShowFeeStructureForm(false)}
-          receiptTypes={feesReceiptTypes}
-          classes={classes}
-          onSave={async (data) => {
-            try {
-              await addFeesStructure(data as any);
-              setShowFeeStructureForm(false);
-              // Refresh the fees structures list
-              const filters: {
-                academicYearId?: number;
-                receiptTypeId?: number;
-                classId?: number;
-              } = {};
-              if (selectedAcademicYear?.id) {
-                filters.academicYearId = selectedAcademicYear.id;
-              }
-              if (selectedReceiptType?.id) {
-                filters.receiptTypeId = selectedReceiptType.id;
-              }
-              if (selectedClassFilter?.id) {
-                filters.classId = selectedClassFilter.id;
-              }
-              await fetchFeesStructuresPaginated(currentPage, pageSize, filters);
-            } catch (error) {
-              console.error("Error saving fee structure:", error);
-              alert("Failed to save fee structure. Please try again.");
+      <FeeStructureMaster
+        open={showFeeStructureForm}
+        onClose={() => {
+          setShowFeeStructureForm(false);
+          setSelectedFeeStructureForEdit(null);
+        }}
+        receiptTypes={feesReceiptTypes}
+        classes={classes}
+        feeStructure={selectedFeeStructureForEdit}
+        onSave={async (data: CreateFeeStructureDto) => {
+          try {
+            if (selectedFeeStructureForEdit?.id) {
+              // Update existing fee structure
+              await updateFeeStructureByDto(selectedFeeStructureForEdit.id, data);
+            } else {
+              // Create new fee structure
+              await addFeesStructure(data);
             }
-          }}
-        />
-      )}
+            setShowFeeStructureForm(false);
+            setSelectedFeeStructureForEdit(null);
+            // Refresh the fees structures list
+            const filters: {
+              academicYearId?: number;
+              receiptTypeId?: number;
+              classId?: number;
+            } = {};
+            if (selectedAcademicYear?.id) {
+              filters.academicYearId = selectedAcademicYear.id;
+            }
+            if (selectedReceiptType?.id) {
+              filters.receiptTypeId = selectedReceiptType.id;
+            }
+            if (selectedClassFilter?.id) {
+              filters.classId = selectedClassFilter.id;
+            }
+            await fetchFeesStructuresPaginated(currentPage, pageSize, filters);
+          } catch (error) {
+            console.error("Error saving fee structure:", error);
+            alert("Failed to save fee structure. Please try again.");
+          }
+        }}
+      />
 
-      {/* Concession Slab Modal */}
+      {/* Summary Modal - Reusing Preview Modal UI */}
       <Dialog
         open={!!selectedConcessionSlabModal}
         onOpenChange={(open) => !open && setSelectedConcessionSlabModal(null)}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Concession Slabs - {selectedConcessionSlabModal?.programCourse?.name || "N/A"}</DialogTitle>
-            <DialogDescription>View concession slab details and adjusted amounts for each fee head</DialogDescription>
+        <DialogContent className="max-w-7xl w-[95vw] max-h-[95vh] h-[95vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>Fee Structure – Summary</DialogTitle>
           </DialogHeader>
-
-          {selectedConcessionSlabModal?.feeStructureConcessionSlabs &&
-          selectedConcessionSlabModal.feeStructureConcessionSlabs.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b">
-                    <TableHead className="border-r">Concession Slab</TableHead>
-                    {uniqueFeeHeads
-                      .filter(
-                        (feeHead): feeHead is NonNullable<typeof feeHead> =>
-                          feeHead?.id !== null && feeHead?.id !== undefined,
-                      )
-                      .map((feeHead, index) => {
-                        // Use different colors for fee heads (not green, not orange - orange is for shift)
-                        const feeHeadColors = [
-                          "border-blue-300 text-blue-700 bg-blue-50",
-                          "border-red-300 text-red-700 bg-red-50",
-                          "border-indigo-300 text-indigo-700 bg-indigo-50",
-                          "border-cyan-300 text-cyan-700 bg-cyan-50",
-                          "border-pink-300 text-pink-700 bg-pink-50",
-                          "border-amber-300 text-amber-700 bg-amber-50",
-                        ];
-                        return (
-                          <TableHead key={feeHead.id} className="border-r">
-                            <Badge variant="outline" className={feeHeadColors[index % feeHeadColors.length]}>
-                              {feeHead.name || "-"}
+          {selectedConcessionSlabModal && (
+            <div className="space-y-6 flex-1 overflow-y-auto pr-2 min-h-0">
+              {/* Fee Structure Details */}
+              <div className="border-2 border-gray-400 rounded">
+                <Table className="table-fixed w-full">
+                  <TableHeader>
+                    <TableRow className="border-b-2 border-gray-400 bg-gray-100">
+                      <TableHead className="w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
+                        Academic Year
+                      </TableHead>
+                      <TableHead className="w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
+                        Class
+                      </TableHead>
+                      <TableHead className="w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
+                        Receipt Type
+                      </TableHead>
+                      <TableHead className="w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
+                        Amount
+                      </TableHead>
+                      <TableHead className="w-[250px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
+                        Program Course
+                      </TableHead>
+                      <TableHead className="w-[200px] p-2 text-center text-base font-semibold whitespace-nowrap">
+                        Shift
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="border-b-2 border-gray-400">
+                      <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[100px]">
+                        {selectedConcessionSlabModal.academicYear ? (
+                          <div className="flex justify-center">
+                            <Badge className="text-sm bg-blue-100 text-blue-800 border-blue-300">
+                              {selectedConcessionSlabModal.academicYear.year}
                             </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-gray-700 text-sm">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[100px]">
+                        {selectedConcessionSlabModal.class ? (
+                          <div className="flex justify-center">
+                            <Badge className="text-sm bg-green-100 text-green-800 border-green-300">
+                              {selectedConcessionSlabModal.class.name}
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-gray-700 text-sm">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[100px]">
+                        {selectedConcessionSlabModal.receiptType ? (
+                          <div className="flex justify-center">
+                            <Badge className="text-sm bg-purple-100 text-purple-800 border-purple-300">
+                              {selectedConcessionSlabModal.receiptType.name}
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-gray-700 text-sm">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[100px]">
+                        <div className="flex justify-center">
+                          <span className="text-gray-900 font-semibold">
+                            ₹{selectedConcessionSlabModal.baseAmount.toLocaleString()}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[100px]">
+                        {selectedConcessionSlabModal.programCourse ? (
+                          <div className="flex flex-wrap gap-1.5 justify-center">
+                            <Badge className="text-xs py-0.5 px-2 bg-indigo-100 text-indigo-800 border-indigo-300">
+                              {selectedConcessionSlabModal.programCourse.name}
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-gray-700 text-sm">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center p-2 min-h-[100px]">
+                        {selectedConcessionSlabModal.shift ? (
+                          <div className="flex flex-wrap gap-1.5 justify-center">
+                            <Badge className="text-xs py-0.5 px-2 bg-orange-100 text-orange-800 border-orange-300">
+                              {selectedConcessionSlabModal.shift.name}
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-gray-700 text-sm">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Concession Slab x Component Table */}
+              {selectedConcessionSlabModal.components &&
+                selectedConcessionSlabModal.components.length > 0 &&
+                selectedConcessionSlabModal.feeStructureConcessionSlabs &&
+                selectedConcessionSlabModal.feeStructureConcessionSlabs.length > 0 && (
+                  <div className="border-2 border-gray-400 rounded overflow-hidden">
+                    {/* Fee Components Header */}
+                    <div className="bg-gray-100 border-b-2 border-gray-400 p-3">
+                      <h3 className="text-lg font-semibold text-gray-900">Fee Components</h3>
+                    </div>
+                    <Table className="table-fixed w-full">
+                      <TableHeader>
+                        <TableRow className="border-b-2 border-gray-400">
+                          <TableHead className="w-[80px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap bg-blue-50">
+                            Sr. No
                           </TableHead>
-                        );
-                      })}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedConcessionSlabModal.feeStructureConcessionSlabs.map((slabMapping) => {
-                    const slabName = slabMapping.feeConcessionSlab?.name || "-";
-                    const concessionRate = slabMapping.concessionRate || 0;
-                    const baseAmount = selectedConcessionSlabModal.baseAmount || 0;
-
-                    return (
-                      <TableRow key={slabMapping.id || Math.random()} className="border-b">
-                        <TableCell className="font-medium border-r">
-                          {slabName !== "-" ? (
-                            <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                              {slabName}
-                            </Badge>
-                          ) : (
-                            "-"
-                          )}
-                          {concessionRate > 0 && (
-                            <Badge variant="outline" className="ml-2 border-green-300 text-green-700 bg-green-50">
-                              {concessionRate}%
-                            </Badge>
-                          )}
-                        </TableCell>
-                        {uniqueFeeHeads
-                          .filter(
-                            (feeHead): feeHead is NonNullable<typeof feeHead> =>
-                              feeHead?.id !== null && feeHead?.id !== undefined,
-                          )
-                          .map((feeHead, index) => {
-                            // Find if this component is concession applicable
-                            const component = selectedConcessionSlabModal.components.find(
-                              (c) => c.feeHead?.id === feeHead.id,
+                          <TableHead className="w-[200px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap bg-green-50">
+                            Fee Head
+                          </TableHead>
+                          <TableHead className="w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap bg-yellow-50">
+                            Allocation
+                          </TableHead>
+                          {selectedConcessionSlabModal.feeStructureConcessionSlabs.map((slabMapping, slabIndex) => {
+                            const slab = slabMapping.feeConcessionSlab;
+                            const concessionRate = slabMapping.concessionRate || 0;
+                            return (
+                              <TableHead
+                                key={slabMapping.id || slabIndex}
+                                className={`w-[150px] p-2 text-center text-base font-semibold whitespace-nowrap ${
+                                  slabIndex < selectedConcessionSlabModal.feeStructureConcessionSlabs.length - 1
+                                    ? "border-r-2 border-gray-400"
+                                    : ""
+                                }`}
+                                style={{
+                                  backgroundColor:
+                                    slabIndex % 4 === 0
+                                      ? "#fef3c7" // yellow-100
+                                      : slabIndex % 4 === 1
+                                        ? "#fce7f3" // pink-100
+                                        : slabIndex % 4 === 2
+                                          ? "#dbeafe" // blue-100
+                                          : "#e0e7ff", // indigo-100
+                                }}
+                              >
+                                {slab?.name || "-"} ({concessionRate}%)
+                              </TableHead>
                             );
-
-                            if (!component || !component.isConcessionApplicable) {
-                              return (
-                                <TableCell key={feeHead.id} className="text-gray-400 border-r">
-                                  -
-                                </TableCell>
+                          })}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedConcessionSlabModal.components.map((component, index) => {
+                          const componentAmount = Math.round(
+                            ((selectedConcessionSlabModal.baseAmount || 0) * (component.feeHeadPercentage || 0)) / 100,
+                          );
+                          return (
+                            <TableRow
+                              key={component.id || index}
+                              className="border-b-2 border-gray-400"
+                              style={{
+                                backgroundColor: index % 2 === 0 ? "#f9fafb" : "#ffffff",
+                              }}
+                            >
+                              <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-blue-50">
+                                {index + 1}
+                              </TableCell>
+                              <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-green-50">
+                                {component.feeHead?.name || "-"}{" "}
+                                <span className="text-red-600">({component.feeHeadPercentage || 0}%)</span>
+                              </TableCell>
+                              <TableCell className="text-center border-r-2 border-gray-400 p-2 font-semibold bg-yellow-50">
+                                ₹{componentAmount.toLocaleString()}
+                              </TableCell>
+                              {selectedConcessionSlabModal.feeStructureConcessionSlabs.map((slabMapping, slabIndex) => {
+                                const concessionRate = slabMapping.concessionRate || 0;
+                                // Calculate concession amount for this component with this slab
+                                const concessionAmount = Math.round((componentAmount * concessionRate) / 100);
+                                const totalAfterConcession = componentAmount - concessionAmount;
+                                const isLastColumn =
+                                  slabIndex === selectedConcessionSlabModal.feeStructureConcessionSlabs.length - 1;
+                                return (
+                                  <TableCell
+                                    key={slabMapping.id || slabIndex}
+                                    className={`text-center p-2 font-semibold ${
+                                      !isLastColumn ? "border-r-2 border-gray-400" : ""
+                                    }`}
+                                    style={{
+                                      backgroundColor:
+                                        slabIndex % 4 === 0
+                                          ? "#fef3c7" // yellow-100
+                                          : slabIndex % 4 === 1
+                                            ? "#fce7f3" // pink-100
+                                            : slabIndex % 4 === 2
+                                              ? "#dbeafe" // blue-100
+                                              : "#e0e7ff", // indigo-100
+                                    }}
+                                  >
+                                    ₹{totalAfterConcession.toLocaleString()}
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          );
+                        })}
+                        {/* Total Row */}
+                        <TableRow className="border-t-4 border-gray-600 bg-gray-100">
+                          <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-blue-50">
+                            Total
+                          </TableCell>
+                          <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-green-50">
+                            -
+                          </TableCell>
+                          <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-yellow-50">
+                            ₹{selectedConcessionSlabModal.baseAmount.toLocaleString()}
+                          </TableCell>
+                          {selectedConcessionSlabModal.feeStructureConcessionSlabs.map((slabMapping, slabIndex) => {
+                            const concessionRate = slabMapping.concessionRate || 0;
+                            // Calculate total for this slab column (sum of all components after concession)
+                            const columnTotal = selectedConcessionSlabModal.components.reduce((sum, component) => {
+                              const componentAmount = Math.round(
+                                ((selectedConcessionSlabModal.baseAmount || 0) * (component.feeHeadPercentage || 0)) /
+                                  100,
                               );
-                            }
-
-                            // Calculate concession amount for this component
-                            const componentAmount = (baseAmount * (component.feeHeadPercentage || 0)) / 100;
-                            const concessionAmount = componentAmount * (concessionRate / 100);
-                            const adjustedAmount = componentAmount - concessionAmount;
-
+                              const concessionAmount = Math.round((componentAmount * concessionRate) / 100);
+                              const totalAfterConcession = componentAmount - concessionAmount;
+                              return sum + totalAfterConcession;
+                            }, 0);
+                            const isLastColumn =
+                              slabIndex === selectedConcessionSlabModal.feeStructureConcessionSlabs.length - 1;
                             return (
                               <TableCell
-                                key={feeHead.id}
-                                className={
-                                  index <
-                                  uniqueFeeHeads.filter(
-                                    (fh): fh is NonNullable<typeof fh> => fh?.id !== null && fh?.id !== undefined,
-                                  ).length -
-                                    1
-                                    ? "border-r"
-                                    : ""
-                                }
+                                key={slabMapping.id || slabIndex}
+                                className={`text-center p-2 font-bold text-base ${
+                                  !isLastColumn ? "border-r-2 border-gray-400" : ""
+                                }`}
+                                style={{
+                                  backgroundColor:
+                                    slabIndex % 4 === 0
+                                      ? "#fef3c7" // yellow-100
+                                      : slabIndex % 4 === 1
+                                        ? "#fce7f3" // pink-100
+                                        : slabIndex % 4 === 2
+                                          ? "#dbeafe" // blue-100
+                                          : "#e0e7ff", // indigo-100
+                                }}
                               >
-                                <div className="font-medium">₹ {adjustedAmount.toLocaleString()}</div>
-                                {concessionAmount > 0 && (
-                                  <div className="text-xs text-green-700">-₹ {concessionAmount.toLocaleString()}</div>
-                                )}
+                                ₹{columnTotal.toLocaleString()}
                               </TableCell>
                             );
                           })}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+              {/* Notes Section */}
+              <div className="bg-gray-50 border-t-2 border-l-2 border-r-2 border-b-2 border-gray-300 px-6 py-4">
+                <h4 className="text-base font-semibold text-gray-900 mb-3">Notes:</h4>
+                <ol className="list-decimal list-inside space-y-2.5 text-sm text-gray-800">
+                  <li className="leading-relaxed">
+                    <span className="font-medium">No late fee charges will be applicable</span> as this fee structure is
+                    not configured with time-bound payment deadlines.
+                  </li>
+                  <li className="leading-relaxed">
+                    <span className="font-medium">Full payment is required upfront</span> as no installment plan has
+                    been configured for this fee structure.
+                  </li>
+                </ol>
+              </div>
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">No concession slabs found</div>
           )}
         </DialogContent>
       </Dialog>

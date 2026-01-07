@@ -95,8 +95,58 @@ export async function createFeesStructure(
 // Create fee structures by DTO (bulk creation for multiple program courses and shifts)
 export async function createFeeStructureByDto(
   createFeeStructureDto: CreateFeeStructureDto,
-): Promise<ApiResponse<FeesStructureDto[]>> {
+): Promise<ApiResponse<FeeStructureDto[]>> {
   const response = await axiosInstance.post(`${BASE_PATH}/structure/by-dto`, createFeeStructureDto);
+  return response.data;
+}
+
+// Update fee structure by DTO (with upsert for components, concession slabs, and installments)
+export async function updateFeeStructureByDto(
+  feeStructureId: number,
+  updateFeeStructureDto: CreateFeeStructureDto,
+): Promise<ApiResponse<FeeStructureDto>> {
+  const response = await axiosInstance.put(`${BASE_PATH}/structure/by-dto/${feeStructureId}`, updateFeeStructureDto);
+  return response.data;
+}
+
+// Check unique fee structure amounts
+export interface CheckUniqueAmountsRequest {
+  academicYearId: number;
+  classId: number;
+  programCourseIds: number[];
+  shiftIds: number[];
+  baseAmount: number;
+  feeStructureConcessionSlabs: Array<{
+    feeConcessionSlabId: number;
+    concessionRate: number;
+  }>;
+  excludeFeeStructureId?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CheckUniqueAmountsResponse {
+  isUnique: boolean;
+  conflicts: PaginatedResponse<{
+    programCourseId: number;
+    shiftId: number;
+    concessionSlabId: number;
+    concessionSlabName: string;
+    conflictingAmount: number;
+    conflictingFeeStructureId: number;
+    academicYearId: number;
+    academicYearName: string | null;
+    classId: number;
+    className: string | null;
+    receiptTypeId: number;
+    receiptTypeName: string | null;
+  }>;
+}
+
+export async function checkUniqueFeeStructureAmounts(
+  request: CheckUniqueAmountsRequest,
+): Promise<ApiResponse<CheckUniqueAmountsResponse>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/structure/check-unique-amounts`, request);
   return response.data;
 }
 
