@@ -36,12 +36,12 @@ const StudentFees: React.FC = () => {
     receiptNumber: null,
   });
 
-  const { 
-    studentFeesMappings, 
-    loading, 
-    addStudentFeesMapping, 
-    updateStudentFeesMappingById, 
-    deleteStudentFeesMappingById 
+  const {
+    studentFeesMappings,
+    loading,
+    addStudentFeesMapping,
+    updateStudentFeesMappingById,
+    deleteStudentFeesMappingById,
   } = useStudentFeesMappings();
 
   const { feesStructures } = useFeesStructures();
@@ -60,7 +60,7 @@ const StudentFees: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!form.studentId || !form.feesStructureId) return;
-    
+
     try {
       if (editingId) {
         await updateStudentFeesMappingById(editingId, form);
@@ -181,9 +181,9 @@ const StudentFees: React.FC = () => {
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="">Select Fees Structure</option>
-              {feesStructures.map(structure => (
+              {feesStructures.map((structure) => (
                 <option key={structure.id} value={structure.id}>
-                  {structure.course?.name} - {structure.academicYear?.year}
+                  {structure.programCourse?.name} - {structure.academicYear?.year}
                 </option>
               ))}
             </select>
@@ -221,7 +221,12 @@ const StudentFees: React.FC = () => {
             />
             <select
               value={form.paymentStatus}
-              onChange={(e) => setForm((p) => ({ ...p, paymentStatus: e.target.value as "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED" }))}
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  paymentStatus: e.target.value as "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED",
+                }))
+              }
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="PENDING">Pending</option>
@@ -248,9 +253,7 @@ const StudentFees: React.FC = () => {
               <Button variant="secondary" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit}>
-                {editingId ? 'Update' : 'Save'}
-              </Button>
+              <Button onClick={handleSubmit}>{editingId ? "Update" : "Save"}</Button>
             </div>
           </div>
         </div>
@@ -279,37 +282,35 @@ const StudentFees: React.FC = () => {
                   <TableCell className="text-center font-medium">{idx + 1}</TableCell>
                   <TableCell className="text-center">{row.studentId}</TableCell>
                   <TableCell className="text-center">
-                    {feesStructures.find(fs => fs.id === row.feesStructureId)?.course?.name || row.feesStructureId}
+                    {feesStructures.find((fs) => fs.id === row.feesStructureId)?.programCourse?.name ||
+                      row.feesStructureId}
                   </TableCell>
                   <TableCell className="text-center">{row.type}</TableCell>
                   <TableCell className="text-center">₹{row.baseAmount}</TableCell>
                   <TableCell className="text-center">₹{row.totalPayable}</TableCell>
                   <TableCell className="text-center">₹{row.amountPaid || 0}</TableCell>
                   <TableCell className="text-center">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      row.paymentStatus === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                      row.paymentStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                      row.paymentStatus === 'FAILED' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        row.paymentStatus === "COMPLETED"
+                          ? "bg-green-100 text-green-800"
+                          : row.paymentStatus === "PENDING"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : row.paymentStatus === "FAILED"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
                       {row.paymentStatus}
                     </span>
                   </TableCell>
-                  <TableCell className="text-center">{row.receiptNumber || '-'}</TableCell>
+                  <TableCell className="text-center">{row.receiptNumber || "-"}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(row)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(row)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(row.id!)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(row.id!)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

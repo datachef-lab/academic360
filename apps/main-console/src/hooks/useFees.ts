@@ -39,6 +39,7 @@ import {
   createFeeConcessionSlab,
   updateFeeConcessionSlab,
   deleteFeeConcessionSlab,
+  NewFeeConcessionSlab,
 
   // Student Fees Mapping
   getAllStudentFeesMappings,
@@ -54,7 +55,6 @@ import {
   FeesSlab,
   FeesReceiptType,
   AddOn,
-  FeeConcessionSlab,
   StudentFeesMapping,
   FeesSlabMapping,
   CreateFeesStructureDto,
@@ -63,11 +63,11 @@ import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Course } from "@/types/course-design";
 import {
-  getFeesStructures,
   getAcademicYearsFromFeesStructures,
   getCoursesFromFeesStructures,
   getFeesStructuresByAcademicYearAndCourse,
 } from "@/services/fees-api";
+import { FeeConcessionSlabT } from "@/schemas";
 
 // ==================== FEES STRUCTURE HOOKS ====================
 
@@ -145,7 +145,7 @@ export const useFeesStructures = () => {
   );
 
   const updateFeesStructureById = useCallback(
-    async (id: number, feesStructure: Partial<FeesStructureDto>) => {
+    async (id: number, feesStructure: Partial<FeeStructureDto>) => {
       try {
         const response = await updateFeesStructure(id, feesStructure);
         await fetchFeesStructures(1, 10);
@@ -193,7 +193,7 @@ export const useAcademicYearsFromFeesStructures = () => {
   const [loading, setLoading] = useState(true);
   const { showError } = useError();
 
-  const fetchAcademicYears = async () => {
+  const fetchAcademicYears = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getAcademicYearsFromFeesStructures();
@@ -203,11 +203,11 @@ export const useAcademicYearsFromFeesStructures = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
 
   useEffect(() => {
     fetchAcademicYears();
-  }, []);
+  }, [fetchAcademicYears]);
 
   return { academicYears, loading, refetch: fetchAcademicYears };
 };
@@ -235,7 +235,7 @@ export const useCoursesFromFeesStructures = (academicYearId: number | null) => {
     };
 
     fetchCourses();
-  }, [academicYearId]);
+  }, [academicYearId, showError]);
 
   return { courses, loading };
 };
@@ -263,7 +263,7 @@ export const useFeesStructuresByAcademicYearAndCourse = (academicYearId: number 
     };
 
     fetchFeesStructures();
-  }, [academicYearId, courseId]);
+  }, [academicYearId, courseId, showError]);
 
   return { feesStructures, loading };
 };
@@ -701,7 +701,7 @@ export const useFeesSlabMappings = () => {
 // ==================== FEE CONCESSION SLABS HOOKS ====================
 
 export const useFeeConcessionSlabs = () => {
-  const [concessionSlabs, setConcessionSlabs] = useState<FeeConcessionSlab[]>([]);
+  const [concessionSlabs, setConcessionSlabs] = useState<FeeConcessionSlabT[]>([]);
   const [loading, setLoading] = useState(true);
   const { showError } = useError();
 
@@ -724,9 +724,17 @@ export const useFeeConcessionSlabs = () => {
   }, [showError]);
 
   const addFeeConcessionSlab = useCallback(
-    async (newSlab: FeeConcessionSlab) => {
+    async (newSlab: FeeConcessionSlabT) => {
       try {
-        const response = await createFeeConcessionSlab(newSlab);
+        // Map FeeConcessionSlabT to NewFeeConcessionSlab format
+        const mappedSlab: NewFeeConcessionSlab = {
+          name: newSlab.name,
+          description: newSlab.description,
+          defaultConcessionRate: newSlab.defaultConcessionRate ?? 0,
+          sequence: newSlab.sequence ?? 0,
+          legacyFeeSlabId: newSlab.legacyFeeSlabId ?? null,
+        };
+        const response = await createFeeConcessionSlab(mappedSlab);
         await fetchFeeConcessionSlabs();
         return response.payload;
       } catch (error) {
@@ -739,9 +747,20 @@ export const useFeeConcessionSlabs = () => {
   );
 
   const updateFeeConcessionSlabById = useCallback(
-    async (id: number, slab: Partial<FeeConcessionSlab>) => {
+    async (id: number, slab: Partial<FeeConcessionSlabT>) => {
       try {
-        const response = await updateFeeConcessionSlab(id, slab);
+        // Map Partial<FeeConcessionSlabT> to Partial<NewFeeConcessionSlab> format
+        const mappedSlab: Partial<NewFeeConcessionSlab> = {
+          ...(slab.name !== undefined && { name: slab.name }),
+          ...(slab.description !== undefined && { description: slab.description }),
+          ...(slab.defaultConcessionRate !== undefined &&
+            slab.defaultConcessionRate !== null && {
+              defaultConcessionRate: slab.defaultConcessionRate,
+            }),
+          ...(slab.sequence !== undefined && slab.sequence !== null && { sequence: slab.sequence }),
+          ...(slab.legacyFeeSlabId !== undefined && { legacyFeeSlabId: slab.legacyFeeSlabId }),
+        };
+        const response = await updateFeeConcessionSlab(id, mappedSlab);
         await fetchFeeConcessionSlabs();
         return response.payload;
       } catch (error) {

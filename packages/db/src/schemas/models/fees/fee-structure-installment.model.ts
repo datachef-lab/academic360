@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { date, doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { feeStructureModel } from "@/schemas/models/fees";
 

@@ -14,16 +14,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { useFeeConcessionSlabs } from "@/hooks/useFees";
-import { FeeConcessionSlab } from "@/types/fees";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
+import { FeeConcessionSlabT } from "@/schemas";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 const FeeConcessionSlabPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingItem, setDeletingItem] = useState<FeeConcessionSlab | null>(null);
-  const [editingItem, setEditingItem] = useState<FeeConcessionSlab | null>(null);
+  const [deletingItem, setDeletingItem] = useState<FeeConcessionSlabT | null>(null);
+  const [editingItem, setEditingItem] = useState<FeeConcessionSlabT | null>(null);
   const [searchText, setSearchText] = useState("");
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [bulkFile, setBulkFile] = useState<File | null>(null);
@@ -101,15 +101,15 @@ const FeeConcessionSlabPage: React.FC = () => {
           let successCount = 0;
           let errorCount = 0;
 
-          for (const row of jsonData as any[]) {
+          for (const row of jsonData as Record<string, unknown>[]) {
             try {
               await addFeeConcessionSlab({
-                name: row["Slab Name"] || "",
-                description: row["Description"] || "",
-                defaultConcessionRate: parseFloat(row["Default Concession Rate (%)"] || "0"),
-                sequence: row["Sequence"] ? parseInt(row["Sequence"]) : undefined,
-                legacyFeeSlabId: row["Legacy Fee Slab ID"] || null,
-              } as FeeConcessionSlab);
+                name: String(row["Slab Name"] || ""),
+                description: String(row["Description"] || ""),
+                defaultConcessionRate: parseFloat(String(row["Default Concession Rate (%)"] || "0")),
+                sequence: row["Sequence"] ? parseInt(String(row["Sequence"])) : undefined,
+                legacyFeeSlabId: row["Legacy Fee Slab ID"] ? Number(row["Legacy Fee Slab ID"]) : null,
+              } as FeeConcessionSlabT);
               successCount++;
             } catch (error) {
               errorCount++;
@@ -209,7 +209,7 @@ const FeeConcessionSlabPage: React.FC = () => {
           defaultConcessionRate: form.defaultConcessionRate,
           sequence: form.sequence ?? 0,
           legacyFeeSlabId: form.legacyFeeSlabId || null,
-        } as FeeConcessionSlab);
+        } as FeeConcessionSlabT);
         if (!result) {
           toast.error("Failed to create fee concession slab. Please try again.");
           return;
@@ -235,14 +235,14 @@ const FeeConcessionSlabPage: React.FC = () => {
     });
   };
 
-  const handleEdit = (slab: FeeConcessionSlab) => {
+  const handleEdit = (slab: FeeConcessionSlabT) => {
     setEditingItem(slab);
     setForm({
       name: slab.name,
       description: slab.description || "",
-      defaultConcessionRate: slab.defaultConcessionRate,
-      sequence: slab.sequence,
-      legacyFeeSlabId: slab.legacyFeeSlabId || null,
+      defaultConcessionRate: slab.defaultConcessionRate ?? 0,
+      sequence: slab.sequence ?? undefined,
+      legacyFeeSlabId: slab.legacyFeeSlabId ?? null,
     });
     setShowModal(true);
   };
@@ -259,7 +259,7 @@ const FeeConcessionSlabPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDeleteClick = (slab: FeeConcessionSlab) => {
+  const handleDeleteClick = (slab: FeeConcessionSlabT) => {
     setDeletingItem(slab);
     setShowDeleteModal(true);
   };
@@ -504,8 +504,8 @@ const FeeConcessionSlabPage: React.FC = () => {
                         <TableCell style={{ width: 60 }}>{row.id}</TableCell>
                         <TableCell style={{ width: 200 }}>{row.name}</TableCell>
                         <TableCell style={{ width: 250 }}>{row.description || "-"}</TableCell>
-                        <TableCell style={{ width: 150 }}>{row.defaultConcessionRate}%</TableCell>
-                        <TableCell style={{ width: 100 }}>{row.sequence || "-"}</TableCell>
+                        <TableCell style={{ width: 150 }}>{row.defaultConcessionRate ?? 0}%</TableCell>
+                        <TableCell style={{ width: 100 }}>{row.sequence ?? "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">

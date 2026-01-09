@@ -1,7 +1,6 @@
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 import {
-  FeesStructureDto,
   FeesHead,
   FeesSlab,
   FeesReceiptType,
@@ -10,11 +9,11 @@ import {
   StudentFeesMapping,
   FeesSlabMapping,
   CreateFeesStructureDto,
-  FeeConcessionSlab,
 } from "@/types/fees";
 import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
 import { PaginatedResponse } from "@/types/pagination";
 import { AcademicYear } from "@/types/academics/academic-year";
+import type { FeeConcessionSlabT } from "@/schemas";
 
 const BASE_PATH = "/api/v1/fees";
 
@@ -79,7 +78,7 @@ export async function getAllFeesStructures(
 }
 
 // Get a single fees structure
-export async function getFeesStructure(feesStructureId: number): Promise<ApiResponse<FeesStructureDto>> {
+export async function getFeesStructure(feesStructureId: number): Promise<ApiResponse<FeeStructureDto>> {
   const response = await axiosInstance.get(`${BASE_PATH}/structure/${feesStructureId}`);
   return response.data;
 }
@@ -87,7 +86,7 @@ export async function getFeesStructure(feesStructureId: number): Promise<ApiResp
 // Create a new fees structure
 export async function createFeesStructure(
   newFeesStructure: CreateFeeStructureDto | CreateFeesStructureDto,
-): Promise<ApiResponse<FeesStructureDto>> {
+): Promise<ApiResponse<FeeStructureDto>> {
   const response = await axiosInstance.post(`${BASE_PATH}/structure`, newFeesStructure);
   return response.data;
 }
@@ -165,8 +164,8 @@ export async function checkFeesStructureExists(payload: {
 // Update a fees structure
 export async function updateFeesStructure(
   feesStructureId: number,
-  feesStructure: Partial<FeesStructureDto>,
-): Promise<ApiResponse<FeesStructureDto>> {
+  feesStructure: Partial<FeeStructureDto>,
+): Promise<ApiResponse<FeeStructureDto>> {
   const response = await axiosInstance.put(`${BASE_PATH}/structure/${feesStructureId}`, feesStructure);
   return response.data;
 }
@@ -453,7 +452,7 @@ export interface NewFeeConcessionSlab {
 }
 
 // Get all fee concession slabs
-export async function getAllFeeConcessionSlabs(): Promise<ApiResponse<FeeConcessionSlab[]>> {
+export async function getAllFeeConcessionSlabs(): Promise<ApiResponse<FeeConcessionSlabT[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/concession-slabs`);
 
   // Backend returns ApiResponse with { httpStatusCode, httpStatus, payload, message }
@@ -475,7 +474,7 @@ export async function getAllFeeConcessionSlabs(): Promise<ApiResponse<FeeConcess
 }
 
 // Get a single fee concession slab
-export async function getFeeConcessionSlab(slabId: number): Promise<ApiResponse<FeeConcessionSlab>> {
+export async function getFeeConcessionSlab(slabId: number): Promise<ApiResponse<FeeConcessionSlabT>> {
   const response = await axiosInstance.get(`${BASE_PATH}/concession-slabs/${slabId}`);
 
   // Backend returns ApiResponse format
@@ -491,7 +490,7 @@ export async function getFeeConcessionSlab(slabId: number): Promise<ApiResponse<
 }
 
 // Create a new fee concession slab
-export async function createFeeConcessionSlab(newSlab: NewFeeConcessionSlab): Promise<ApiResponse<FeeConcessionSlab>> {
+export async function createFeeConcessionSlab(newSlab: NewFeeConcessionSlab): Promise<ApiResponse<FeeConcessionSlabT>> {
   const response = await axiosInstance.post(`${BASE_PATH}/concession-slabs`, newSlab);
 
   // Backend returns ApiResponse format
@@ -510,7 +509,7 @@ export async function createFeeConcessionSlab(newSlab: NewFeeConcessionSlab): Pr
 export async function updateFeeConcessionSlab(
   slabId: number,
   slab: Partial<NewFeeConcessionSlab>,
-): Promise<ApiResponse<FeeConcessionSlab>> {
+): Promise<ApiResponse<FeeConcessionSlabT>> {
   const response = await axiosInstance.put(`${BASE_PATH}/concession-slabs/${slabId}`, slab);
 
   // Backend returns ApiResponse format
