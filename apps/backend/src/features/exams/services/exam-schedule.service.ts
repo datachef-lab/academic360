@@ -3103,8 +3103,11 @@ export async function downloadAttendanceSheetsByExamId(
     });
   }
 
+  console.log("Creating zip file...");
+
   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
+  console.log("sending zip file from service...");
   return {
     zipBuffer,
     roomCount: totalRooms,
