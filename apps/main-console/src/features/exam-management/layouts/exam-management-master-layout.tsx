@@ -14,8 +14,8 @@ import { Outlet, useLocation } from "react-router-dom";
 
 const topLinks = [
   { title: "Home", url: "/dashboard/exam-management", icon: LayoutDashboard },
-  { title: "Schedule Exam", url: "/dashboard/exam-management/schedule", icon: CalendarClock },
   { title: "Exams", url: "/dashboard/exam-management/exams", icon: BookOpen },
+  { title: "Schedule Exam", url: "/dashboard/exam-management/schedule", icon: CalendarClock },
 ];
 
 const mastersLinks = [

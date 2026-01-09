@@ -16,13 +16,14 @@ import {
   FileText,
   Clock,
   CheckCircle,
-  TrendingUp,
   BookOpen,
   GraduationCap,
   Star,
   Award,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { StatCard } from "./statcard";
 
 // Dummy data for the dashboard
 const examSummaryData = {
@@ -104,13 +105,123 @@ const examTypeConfig = {
 } satisfies ChartConfig;
 
 // Upcoming exams timeline
-const upcomingExamsData = [
-  { date: "2024-06-10", name: "Mathematics Mid-Term", students: 145, rooms: 3 },
-  { date: "2024-06-12", name: "Physics Quiz", students: 89, rooms: 2 },
-  { date: "2024-06-15", name: "Chemistry Final", students: 320, rooms: 5 },
-  { date: "2024-06-18", name: "Biology Practical", students: 67, rooms: 1 },
-  { date: "2024-06-20", name: "Computer Science Final", students: 234, rooms: 4 },
+interface UpcomingExam {
+  date: string;
+  startTime: string;
+  endTime: string;
+  semester: number;
+  name: string;
+  students: number;
+  rooms: number;
+}
+const today = new Date().toISOString().substring(0, 10);
+
+const upcomingExamsData: UpcomingExam[] = [
+  // 🔴 RECENT (Past - 4)
+  {
+    date: "2026-01-02",
+    startTime: "09:00",
+    endTime: "11:00",
+    semester: 1,
+    name: "Financial Accounting",
+    students: 180,
+    rooms: 4,
+  },
+  {
+    date: "2026-01-03",
+    startTime: "11:00",
+    endTime: "13:00",
+    semester: 2,
+    name: "Business Organisation & Management",
+    students: 165,
+    rooms: 3,
+  },
+  {
+    date: "2026-01-04",
+    startTime: "14:00",
+    endTime: "16:00",
+    semester: 3,
+    name: "Corporate Accounting",
+    students: 210,
+    rooms: 5,
+  },
+  {
+    date: "2026-01-05",
+    startTime: "10:00",
+    endTime: "12:00",
+    semester: 4,
+    name: "Cost & Management Accounting",
+    students: 190,
+    rooms: 4,
+  },
+
+  // 🟡 TODAY (5)
+
+  {
+    date: today,
+    startTime: "14:00",
+    endTime: "16:00",
+    semester: 2,
+    name: "Business Mathematics",
+    students: 185,
+    rooms: 4,
+  },
+  {
+    date: today,
+    startTime: "16:30",
+    endTime: "18:30",
+    semester: 1,
+    name: "Business Economics",
+    students: 170,
+    rooms: 3,
+  },
+  {
+    date: today,
+    startTime: "10:00",
+    endTime: "12:00",
+    semester: 3,
+    name: "Company Law",
+    students: 155,
+    rooms: 3,
+  },
+
+  // 🟢 UPCOMING (Future - 3)
+  {
+    date: "2026-01-10",
+    startTime: "09:30",
+    endTime: "11:30",
+    semester: 4,
+    name: "Indirect Tax (GST)",
+    students: 168,
+    rooms: 3,
+  },
+  {
+    date: "2026-01-12",
+    startTime: "13:00",
+    endTime: "15:00",
+    semester: 5,
+    name: "Banking & Insurance",
+    students: 172,
+    rooms: 4,
+  },
+  {
+    date: "2026-01-15",
+    startTime: "11:00",
+    endTime: "13:00",
+    semester: 6,
+    name: "Financial Management",
+    students: 160,
+    rooms: 3,
+  },
 ];
+
+// const upcomingExamsData = [
+//   { date: "2024-06-10", name: "Mathematics Mid-Term", students: 145, rooms: 3 },
+//   { date: "2024-06-12", name: "Physics Quiz", students: 89, rooms: 2 },
+//   { date: "2024-06-15", name: "Chemistry Final", students: 320, rooms: 5 },
+//   { date: "2024-06-18", name: "Biology Practical", students: 67, rooms: 1 },
+//   { date: "2024-06-20", name: "Computer Science Final", students: 234, rooms: 4 },
+// ];
 
 // Room utilization with usage frequency
 const roomUtilizationData = [
@@ -133,85 +244,107 @@ const roomUtilizationConfig = {
 } satisfies ChartConfig;
 
 // Stat Card Component
-function StatCard({
-  icon,
-  title,
-  value,
-  description,
-  trend,
-  color,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  value: string | number;
-  description?: string;
-  trend?: { value: number; isPositive: boolean };
-  color?: string;
-}) {
-  return (
-    <Card className="relative overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={`${color || "text-muted-foreground"}`}>{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
-        {trend && (
-          <div className={`flex items-center text-xs mt-2 ${trend.isPositive ? "text-green-600" : "text-red-600"}`}>
-            <TrendingUp className={`h-3 w-3 mr-1 ${!trend.isPositive && "rotate-180"}`} />
-            {Math.abs(trend.value)}% from last month
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+// function StatCard({
+//   icon,
+//   title,
+//   value,
+//   description,
+//   trend,
+//   color,
+// }: {
+//   icon: React.ReactNode;
+//   title: string;
+//   value: string | number;
+//   description?: string;
+//   trend?: { value: number; isPositive: boolean };
+//   color?: string;
+// }) {
+//   return (
+//     <Card className="relative overflow-hidden">
+//       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//         <CardTitle className="text-sm font-medium">{title}</CardTitle>
+//         <div className={`${color || "text-muted-foreground"}`}>{icon}</div>
+//       </CardHeader>
+//       <CardContent>
+//         <div className="text-2xl font-bold">{value}</div>
+//         {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+//         {trend && (
+//           <div className={`flex items-center text-xs mt-2 ${trend.isPositive ? "text-green-600" : "text-red-600"}`}>
+//             <TrendingUp className={`h-3 w-3 mr-1 ${!trend.isPositive && "rotate-180"}`} />
+//             {Math.abs(trend.value)}% from last month
+//           </div>
+//         )}
+//       </CardContent>
+//     </Card>
+//   );
+// }
 
 export default function HomePage() {
+  const [examTab, setExamTab] = useState<"upcoming" | "today" | "recent">("today");
+
+  const getFilteredExams = () => {
+    const now = new Date();
+    const todayStr = now.toISOString().substring(0, 10);
+
+    return upcomingExamsData.filter((exam) => {
+      const examStart = new Date(`${exam.date}T${exam.startTime}`);
+      const examEnd = new Date(`${exam.date}T${exam.endTime}`);
+
+      if (examTab === "today") {
+        return exam.date === todayStr;
+      }
+
+      if (examTab === "recent") {
+        return examEnd < now;
+      }
+
+      // upcoming
+      return examStart > now;
+    });
+  };
+
   return (
     <div className="space-y-6 p-4 md:p-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      {/* <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Exam Management Dashboard</h1>
           <p className="text-muted-foreground">Overview of exam schedules, students, and resources</p>
         </div>
-      </div>
+      </div> */}
 
       {/* Summary Cards Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
           icon={<Calendar className="h-4 w-4" />}
           title="Total Exams"
           value={examSummaryData.totalExams}
           description="All scheduled exams"
-          trend={{ value: 12, isPositive: true }}
-          color="text-blue-600"
+          variant="blue"
         />
-        <StatCard
-          icon={<Clock className="h-4 w-4" />}
-          title="Upcoming Exams"
-          value={examSummaryData.upcomingExams}
-          description="Scheduled this month"
-          trend={{ value: 5, isPositive: true }}
-          color="text-orange-600"
-        />
+
+        {/* <StatCard
+    icon={<Clock className="h-4 w-4" />}
+    title="Upcoming Exams"
+    value={examSummaryData.upcomingExams}
+    description="Scheduled this month"
+    variant="orange"
+  /> */}
+
         <StatCard
           icon={<Users className="h-4 w-4" />}
           title="Total Students"
           value={examSummaryData.totalStudents.toLocaleString()}
           description={`Avg ${examSummaryData.averageStudentsPerExam} per exam`}
-          trend={{ value: 8, isPositive: true }}
-          color="text-green-600"
+          variant="green"
         />
+
         <StatCard
           icon={<CheckCircle className="h-4 w-4" />}
           title="Completed Exams"
           value={examSummaryData.completedExams}
           description="Successfully conducted"
-          trend={{ value: 15, isPositive: true }}
-          color="text-purple-600"
+          variant="purple"
         />
       </div>
 
@@ -222,25 +355,165 @@ export default function HomePage() {
           title="Total Floors"
           value={examSummaryData.totalFloors}
           description="Active exam floors"
-          color="text-indigo-600"
+          variant="teal"
         />
+
         <StatCard
           icon={<DoorOpen className="h-4 w-4" />}
           title="Total Rooms"
           value={examSummaryData.totalRooms}
           description="Available exam rooms"
-          color="text-pink-600"
+          variant="pink"
         />
+
         <StatCard
           icon={<FileText className="h-4 w-4" />}
           title="Exams This Month"
           value={examSummaryData.examsThisMonth}
           description="June 2024"
-          trend={{ value: 20, isPositive: true }}
-          color="text-cyan-600"
+          variant="red"
         />
       </div>
 
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Scheduled Exams
+              </CardTitle>
+              <CardDescription>View today, upcoming and recent exams</CardDescription>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 bg-muted p-1 rounded-full">
+              {[
+                { key: "upcoming", label: "Upcoming" },
+                { key: "today", label: "Today" },
+                { key: "recent", label: "Recent" },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setExamTab(tab.key as "upcoming" | "today" | "recent")}
+                  className={`px-4 py-1.5 text-sm rounded-full transition font-medium ${
+                    examTab === tab.key ? "bg-white shadow text-indigo-700" : "text-muted-foreground hover:bg-white/60"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="overflow-x-auto ">
+            <table className="w-full border border-gray-200">
+              <thead>
+                <tr className="border-b bg-gray-100">
+                  <th className="text-left p-3 font-medium text-sm">Date</th>
+                  <th className="text-left p-3 font-medium text-sm">Time</th>
+                  <th className="text-left p-3 font-medium text-sm">Exam Name</th>
+                  <th className="text-center p-3 font-medium text-sm">Semester</th>
+                  <th className="text-center p-3 font-medium text-sm">Students</th>
+                  <th className="text-center p-3 font-medium text-sm">Rooms</th>
+                  <th className="text-center p-3 font-medium text-sm">Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {getFilteredExams().length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-6 text-sm text-muted-foreground">
+                      No exams found for this category
+                    </td>
+                  </tr>
+                )}
+
+                {getFilteredExams()
+                  .sort((a, b) => {
+                    const dateTimeA = new Date(`${a.date}T${a.startTime}`);
+                    const dateTimeB = new Date(`${b.date}T${b.startTime}`);
+                    return dateTimeA.getTime() - dateTimeB.getTime();
+                  })
+                  .map((exam, index) => {
+                    const formattedDate = new Date(exam.date).toLocaleDateString("en-GB"); // dd/mm/yyyy
+                    const timeRange = `${exam.startTime} - ${exam.endTime}`;
+
+                    const semesterColors: Record<number, string> = {
+                      1: "bg-indigo-50 text-indigo-700 border-indigo-200",
+                      2: "bg-pink-50 text-pink-700 border-pink-200",
+                      3: "bg-yellow-50 text-yellow-700 border-yellow-200",
+                      4: "bg-teal-50 text-teal-700 border-teal-200",
+                      5: "bg-cyan-50 text-cyan-700 border-cyan-200",
+                      6: "bg-rose-50 text-rose-700 border-rose-200",
+                    };
+
+                    const now = new Date();
+                    const examStart = new Date(`${exam.date}T${exam.startTime}`);
+                    const examEnd = new Date(`${exam.date}T${exam.endTime}`);
+
+                    let status = "Upcoming";
+                    let statusClass = "bg-blue-50 text-blue-700 border-blue-200";
+
+                    if (now >= examStart && now <= examEnd) {
+                      status = "Ongoing";
+                      statusClass = "bg-green-50 text-green-700 border-green-200";
+                    } else if (now > examEnd) {
+                      status = "Completed";
+                      statusClass = "bg-gray-50 text-gray-700 border-gray-200";
+                    }
+
+                    return (
+                      <tr key={index} className="border-b ">
+                        {/* Date */}
+                        <td className="p-3 text-sm font-medium">{formattedDate}</td>
+
+                        {/* Time */}
+                        <td className="p-3 text-sm">{timeRange}</td>
+
+                        {/* Exam Name */}
+                        <td className="p-3 text-sm font-medium">{exam.name}</td>
+
+                        {/* Semester */}
+                        <td className="p-3 text-sm text-center">
+                          <Badge
+                            variant="outline"
+                            className={semesterColors[exam.semester] || "bg-gray-50 text-gray-700 border-gray-200"}
+                          >
+                            Semester {exam.semester}
+                          </Badge>
+                        </td>
+
+                        {/* Students */}
+                        <td className="p-3 text-sm text-center">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            {exam.students}
+                          </Badge>
+                        </td>
+
+                        {/* Rooms */}
+                        <td className="p-3 text-sm text-center">
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            {exam.rooms}
+                          </Badge>
+                        </td>
+
+                        {/* Status */}
+                        <td className="p-3 text-center">
+                          <Badge variant="outline" className={statusClass}>
+                            {status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
       {/* Main Charts Grid */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Exams Over Time */}
@@ -483,60 +756,7 @@ export default function HomePage() {
       </div>
 
       {/* Upcoming Exams Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Upcoming Exams
-          </CardTitle>
-          <CardDescription>Exams scheduled for the next 2 weeks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3 font-medium text-sm">Date</th>
-                  <th className="text-left p-3 font-medium text-sm">Exam Name</th>
-                  <th className="text-center p-3 font-medium text-sm">Students</th>
-                  <th className="text-center p-3 font-medium text-sm">Rooms</th>
-                  <th className="text-center p-3 font-medium text-sm">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {upcomingExamsData.map((exam, index) => (
-                  <tr key={index} className="border-b hover:bg-muted/50">
-                    <td className="p-3 text-sm">
-                      <div className="font-medium">
-                        {new Date(exam.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(exam.date).toLocaleDateString("en-US", { weekday: "short" })}
-                      </div>
-                    </td>
-                    <td className="p-3 text-sm font-medium">{exam.name}</td>
-                    <td className="p-3 text-sm text-center">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        {exam.students}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-sm text-center">
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        {exam.rooms}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-center">
-                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                        Scheduled
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Scheduled Exams Table */}
 
       {/* Quick Stats Grid */}
       <div className="grid gap-4 md:grid-cols-3">
