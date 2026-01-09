@@ -174,6 +174,7 @@ const router = createBrowserRouter(
           element: <examManagementModule.ExamManagementMasterLayout />,
           children: [
             { path: "", element: <examManagementModule.HomePage /> },
+            { path: "schedule", element: <examManagementModule.ScheduleExamPage /> },
             { path: "exams", element: <examManagementModule.ExamsPage /> },
 
             // { path: "components", element: <examManagementModule.ExamComponentsPage /> },
@@ -183,7 +184,7 @@ const router = createBrowserRouter(
             // { path: "evaluation-types", element: <examManagementModule.EvaluationTypePage /> },
           ],
         },
-        { path: "exam-management/schedule", element: <examManagementModule.ScheduleExamPage /> },
+
         {
           path: "exam-management/exams/:examId",
           element: <examManagementModule.ExamLayoutMaster />,
