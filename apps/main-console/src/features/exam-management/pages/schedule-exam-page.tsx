@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Users, AlertCircle, CheckCircle2, Trash2, Loader2, Upload } from "lucide-react";
+import { Users, AlertCircle, CheckCircle2, Trash2, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { getAllExamTypes, ExamTypeT } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
@@ -1063,7 +1063,7 @@ export default function ScheduleExamPage() {
 
   return (
     <div className="min-h-screen w-full bg-gray-50">
-      <div className="w-full flex">
+      <div className="w-full flex flex-col gap-4">
         {/* Header */}
         {/* <div className="mb-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -1084,18 +1084,18 @@ export default function ScheduleExamPage() {
           </Button>
         </div> */}
 
-        <div className="flex-1">
+        <div className="w-full">
           {/* Top filter strip (A.Y, Aff, Reg, Exam type, Semester, Shifts, Program Course, Subject Category) */}
           <Card className="mb-4 shadow-sm border">
-            <CardContent className="py-3 px-4">
-              <div className="flex flex-wrap gap-3 items-center">
+            <CardContent className="py-3 px-3 sm:px-4">
+              <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
                 {/* Academic Year */}
-                <div className="flex items-center">
+                <div className="flex items-center w-full sm:w-auto">
                   <Select
                     value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
                     onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
                   >
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <SelectTrigger className="h-9 w-full sm:w-44 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
                       <SelectValue placeholder="A.Y" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1109,13 +1109,13 @@ export default function ScheduleExamPage() {
                 </div>
 
                 {/* Affiliation */}
-                <div className="flex items-center">
+                <div className="flex items-center w-full sm:w-auto">
                   <Select
                     value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
                     onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
                     disabled={loading.affiliations}
                   >
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <SelectTrigger className="h-9 w-full sm:w-44 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
                       <SelectValue placeholder={loading.affiliations ? "Loading..." : "Aff."} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1129,13 +1129,13 @@ export default function ScheduleExamPage() {
                 </div>
 
                 {/* Regulation Type */}
-                <div className="flex items-center">
+                <div className="flex items-center w-full sm:w-auto">
                   <Select
                     value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
                     onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
                     disabled={loading.regulationTypes}
                   >
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <SelectTrigger className="h-9 w-full sm:w-44 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
                       <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Reg."} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1149,9 +1149,9 @@ export default function ScheduleExamPage() {
                 </div>
 
                 {/* Exam Type */}
-                <div className="flex items-center">
+                <div className="flex items-center w-full sm:w-auto">
                   <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <SelectTrigger className="h-9 w-full sm:w-44 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
                       <SelectValue placeholder={loading.examTypes ? "Loading..." : "Exam Type"} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1165,9 +1165,9 @@ export default function ScheduleExamPage() {
                 </div>
 
                 {/* Semester */}
-                <div className="flex items-center">
+                <div className="flex items-center w-full sm:w-auto">
                   <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
-                    <SelectTrigger className="h-9 w-40  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <SelectTrigger className="h-9 w-full sm:w-40 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
                       <SelectValue placeholder={loading.classes ? "Loading..." : "Semester"} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1181,10 +1181,13 @@ export default function ScheduleExamPage() {
                 </div>
 
                 {/* Shifts */}
-                <div className="flex items-center">
+                <div className="flex items-center w-full sm:w-auto">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="h-9 min-w-[170px] justify-between  border-purple-300">
+                      <Button
+                        variant="outline"
+                        className="h-9 w-full sm:min-w-[170px] justify-between border-purple-300 text-sm"
+                      >
                         Shift(s)
                       </Button>
                     </PopoverTrigger>
@@ -1211,12 +1214,12 @@ export default function ScheduleExamPage() {
                 </div>
 
                 {/* Program Courses */}
-                <div className="flex items-center">
+                <div className="flex items-center w-full sm:w-auto">
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className="h-9 min-w-[210px] justify-between  border-purple-300"
+                        className="h-9 w-full sm:min-w-[210px] justify-between border-purple-300 text-sm"
                         disabled={loading.programCourses}
                       >
                         {loading.programCourses ? "Loading..." : "Program Course(s)"}
@@ -1247,12 +1250,12 @@ export default function ScheduleExamPage() {
                 </div>
 
                 {/* Subject Category */}
-                <div className="flex items-center">
+                <div className="flex items-center w-full sm:w-auto">
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className="h-9 min-w-[190px] justify-between  border-purple-300"
+                        className="h-9 w-full sm:min-w-[190px] justify-between border-purple-300 text-sm"
                         disabled={loading.subjectTypes}
                       >
                         {loading.subjectTypes ? "Loading..." : "Subject Category"}
@@ -1283,6 +1286,99 @@ export default function ScheduleExamPage() {
                     </PopoverContent>
                   </Popover>
                 </div>
+
+                {/* Subjects */}
+                <div className="flex items-center w-full sm:w-auto">
+                  {getDistinctSubjects().length === 0 && !loading.papers ? (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
+                      <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">
+                        Select filters to load subjects
+                      </span>
+                    </div>
+                  ) : (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-9 w-full sm:min-w-[180px] justify-between border-purple-300 text-sm"
+                          disabled={getDistinctSubjects().length === 0}
+                        >
+                          <span className="text-sm">Subjects</span>
+                          {selectedSubjectIds.length > 0 && (
+                            <span className="text-xs text-gray-500 ml-1">({selectedSubjectIds.length})</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="max-h-60 overflow-y-auto space-y-1">
+                          {getDistinctSubjects().map((subject) => {
+                            if (subject.subjectId == null) return null;
+                            const isChecked = selectedSubjectIds.includes(subject.subjectId);
+                            return (
+                              <button
+                                key={subject.subjectId}
+                                type="button"
+                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
+                                onClick={() =>
+                                  setSelectedSubjectIds((prev) =>
+                                    isChecked
+                                      ? prev.filter((id) => id !== subject.subjectId)
+                                      : [...prev, subject.subjectId as number],
+                                  )
+                                }
+                              >
+                                <Checkbox
+                                  checked={isChecked}
+                                  onCheckedChange={() =>
+                                    setSelectedSubjectIds((prev) =>
+                                      isChecked
+                                        ? prev.filter((id) => id !== subject.subjectId)
+                                        : [...prev, subject.subjectId as number],
+                                    )
+                                  }
+                                  className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                />
+                                <span className="text-sm text-left flex-1">
+                                  {subject.subjectCode ? (
+                                    <span className="text-gray-700 font-medium">{subject.subjectCode}</span>
+                                  ) : (
+                                    <span className="text-gray-500">{subject.subjectName}</span>
+                                  )}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+
+                {/* Component */}
+                <div className="flex items-center w-full sm:w-auto">
+                  <Select
+                    value={selectedExamComponent?.toString() || "all"}
+                    onValueChange={(value) => {
+                      setSelectedExamComponent(value === "all" ? null : Number(value));
+                    }}
+                    disabled={loading.examComponents}
+                  >
+                    <SelectTrigger className="h-9 w-full sm:w-40 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                      <SelectValue placeholder={loading.examComponents ? "Loading..." : "Component"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {examComponents
+                        .filter((comp) => !comp.disabled)
+                        .map((comp) => (
+                          <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
+                            {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Excel File Upload */}
 
                 {examType && examTypes.find((e) => e.id.toString() === examType && e.name === "Test Exam") && (
@@ -1337,106 +1433,127 @@ export default function ScheduleExamPage() {
             </CardContent>
           </Card>
 
-          {/* Main layout: left sidebar, center content (rooms/students), right sidebar */}
-          <div className="flex gap-4 w-full">
-            {/* Left sidebar: Subjects + schedule + total + assign */}
-            <div className="w-[26%] flex-shrink-0">
-              <Card className="h-[calc(100vh-200px)] overflow-y-scroll flex flex-col shadow-lg border-2">
-                <CardContent className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
-                  {/* Subject list */}
-                  <div className="flex-1 min-h-0 flex flex-col">
-                    <div className="flex items-center justify-between mb-2 gap-2">
-                      <div className="flex items-center gap-2">
-                        {/* Multi-select subjects dropdown */}
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="h-8 min-w-[140px] justify-between border-purple-300"
-                              disabled={getDistinctSubjects().length === 0}
-                            >
-                              Subjects
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-56 p-2" align="start">
-                            <div className="max-h-60 overflow-y-auto space-y-1">
-                              {getDistinctSubjects().map((subject) => {
-                                if (subject.subjectId == null) return null;
-                                const isChecked = selectedSubjectIds.includes(subject.subjectId);
-                                return (
-                                  <button
-                                    key={subject.subjectId}
-                                    type="button"
-                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                                    onClick={() =>
-                                      setSelectedSubjectIds((prev) =>
-                                        isChecked
-                                          ? prev.filter((id) => id !== subject.subjectId)
-                                          : [...prev, subject.subjectId as number],
-                                      )
-                                    }
-                                  >
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={() =>
-                                        setSelectedSubjectIds((prev) =>
-                                          isChecked
-                                            ? prev.filter((id) => id !== subject.subjectId)
-                                            : [...prev, subject.subjectId as number],
-                                        )
-                                      }
-                                      className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                    />
-                                    <span className="text-sm text-center">
-                                      {subject.subjectCode && (
-                                        <span className="text-gray-500"> {subject.subjectCode}</span>
-                                      )}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-
-                        {/* Exam component filter */}
-                        <Select
-                          value={selectedExamComponent?.toString() || "all"}
-                          onValueChange={(value) => {
-                            setSelectedExamComponent(value === "all" ? null : Number(value));
-                          }}
-                          disabled={loading.examComponents}
-                        >
-                          <SelectTrigger className="h-8 w-32 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue placeholder={loading.examComponents ? "Loading..." : "Component"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            {examComponents
-                              .filter((comp) => !comp.disabled)
-                              .map((comp) => (
-                                <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
-                                  {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+          {/* Selected Filters Display */}
+          {(selectedShifts.length > 0 || selectedProgramCourses.length > 0 || selectedSubjectCategories.length > 0) && (
+            <Card className="mb-4 shadow-sm border bg-gradient-to-r from-purple-50 to-blue-50">
+              <CardContent className="py-3 px-3 sm:px-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm font-semibold text-gray-700">Active Filters:</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Shifts */}
+                  {selectedShifts.length > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-green-100 text-green-800 hover:bg-green-200 border border-green-300 flex items-center justify-between gap-2 px-3 py-2 text-sm w-full"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <span className="font-medium whitespace-nowrap">Shift:</span>
+                        <span className="truncate">
+                          {selectedShifts
+                            .map((id) => {
+                              const shift = shifts.find((s) => s.id === id);
+                              return shift?.name || `Shift ${id}`;
+                            })
+                            .join(", ")}
+                        </span>
                       </div>
-                    </div>
-                    <div className="flex-1 overflow-auto border rounded-lg bg-gray-50 p-2 space-y-2 scrollbar-hide">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedShifts([])}
+                        className="ml-1 hover:bg-green-300 rounded-full p-0.5 transition-colors flex-shrink-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {/* Program Courses */}
+                  {selectedProgramCourses.length > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-purple-100 text-purple-800 hover:bg-purple-200 border border-purple-300 flex items-center justify-between gap-2 px-3 py-2 text-sm w-full"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <span className="font-medium whitespace-nowrap">Course:</span>
+                        <span className="truncate">
+                          {selectedProgramCourses
+                            .map((id) => {
+                              const course = programCourses.find((c) => c.id === id);
+                              return course?.name || `Course ${id}`;
+                            })
+                            .join(", ")}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProgramCourses([])}
+                        className="ml-1 hover:bg-purple-300 rounded-full p-0.5 transition-colors flex-shrink-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  )}
+
+                  {/* Subject Categories */}
+                  {selectedSubjectCategories.length > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-300 flex items-center justify-between gap-2 px-3 py-2 text-sm w-full"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <span className="font-medium whitespace-nowrap">Category:</span>
+                        <span className="truncate">
+                          {selectedSubjectCategories
+                            .map((id) => {
+                              const category = subjectTypes.find((c) => c.id === id);
+                              return category?.code && category.code.trim()
+                                ? category.code
+                                : category?.name || `Category ${id}`;
+                            })
+                            .join(", ")}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSubjectCategories([])}
+                        className="ml-1 hover:bg-blue-300 rounded-full p-0.5 transition-colors flex-shrink-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Main layout: left sidebar, center content (rooms/students), right sidebar */}
+          <div className="flex flex-col gap-4 w-full">
+            {/* Left sidebar: Subjects + schedule + total + assign */}
+            <div className="w-full flex-shrink-0">
+              <Card className="overflow-y-auto flex flex-col shadow-lg border-2">
+                <CardContent className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
+                  {/* Subject schedule list */}
+                  <div className="flex-1 min-h-0 flex flex-col">
+                    <div className="flex-1 overflow-auto border rounded-lg bg-gray-50 p-3 scrollbar-hide">
                       {loading.papers ? (
                         <div className="flex items-center justify-center py-8 text-gray-500">
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           Loading papers...
                         </div>
                       ) : getDistinctSubjects().length === 0 ? (
-                        <p className="text-gray-500 text-center py-6">Select filters to load subjects</p>
+                        <div className="flex flex-col items-center justify-center py-8 px-2">
+                          <p className="text-gray-400 text-xs sm:text-sm text-center">No subjects available</p>
+                        </div>
                       ) : selectedSubjectIds.length === 0 ? (
-                        <p className="text-gray-500 text-sm text-center py-4">
-                          Select subjects from the dropdown above
-                        </p>
+                        <div className="flex flex-col items-center justify-center py-6 px-2">
+                          <p className="text-gray-500 text-xs sm:text-sm text-center">
+                            Select subjects from the dropdown above
+                          </p>
+                        </div>
                       ) : (
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {selectedSubjectIds.map((id) => {
                             const subjectMeta = getDistinctSubjects().find((s) => s.subjectId === id);
                             const subject = subjects.find((s) => s.id === id);
@@ -1451,47 +1568,56 @@ export default function ScheduleExamPage() {
                             return (
                               <div
                                 key={id}
-                                className={`border rounded-lg bg-white p-3 cursor-pointer ${
+                                className={`border rounded-lg bg-white p-3 cursor-pointer transition-all h-fit ${
                                   selectedSubjectId === id
-                                    ? "border-purple-500 bg-purple-50"
-                                    : "hover:border-purple-400/60"
+                                    ? "border-purple-500 bg-purple-50 shadow-sm ring-2 ring-purple-200"
+                                    : "hover:border-purple-400/60 hover:shadow-sm"
                                 }`}
                                 onClick={() => setSelectedSubjectId(id)}
                               >
-                                <div className="flex items-center justify-between gap-2 mb-2">
-                                  <div>
+                                <div className="flex items-center justify-between gap-2 mb-3">
+                                  <div className="min-w-0 flex-1">
                                     <div className="font-semibold">
-                                      <span className="text-gray-500 font-normal"> {code ? code : name}</span>
+                                      <span className="text-xs sm:text-sm text-gray-700 font-medium truncate block">
+                                        {code ? code : name}
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="col-span-2">
-                                    <Label className=" font-semibold mb-1 block">Exam Date</Label>
+                                <div className="space-y-2">
+                                  <div>
+                                    <Label className="text-xs font-semibold mb-1 block text-gray-600">Exam Date</Label>
                                     <Input
                                       type="date"
                                       value={schedule.date || ""}
                                       onChange={(e) => handleScheduleChange(id, "date", e.target.value)}
-                                      className="h-8"
+                                      className="h-8 text-sm"
+                                      onClick={(e) => e.stopPropagation()}
                                     />
                                   </div>
-                                  <div>
-                                    <Label className=" font-semibold mb-1 block">Start Time</Label>
-                                    <Input
-                                      type="time"
-                                      value={schedule.startTime || ""}
-                                      onChange={(e) => handleScheduleChange(id, "startTime", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label className=" font-semibold mb-1 block">End Time</Label>
-                                    <Input
-                                      type="time"
-                                      value={schedule.endTime || ""}
-                                      onChange={(e) => handleScheduleChange(id, "endTime", e.target.value)}
-                                      className="h-8"
-                                    />
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <Label className="text-xs font-semibold mb-1 block text-gray-600">
+                                        Start Time
+                                      </Label>
+                                      <Input
+                                        type="time"
+                                        value={schedule.startTime || ""}
+                                        onChange={(e) => handleScheduleChange(id, "startTime", e.target.value)}
+                                        className="h-8 text-sm"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs font-semibold mb-1 block text-gray-600">End Time</Label>
+                                      <Input
+                                        type="time"
+                                        value={schedule.endTime || ""}
+                                        onChange={(e) => handleScheduleChange(id, "endTime", e.target.value)}
+                                        className="h-8 text-sm"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -1503,18 +1629,19 @@ export default function ScheduleExamPage() {
                   </div>
 
                   {/* Total students + Assign button */}
-                  <div className="mt-auto space-y-3">
-                    <div className="p-3 bg-gray-100/60 rounded-lg border flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-purple-600" />
-                        <span className=" font-semibold">Students</span>
+                  <div className="mt-auto flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1 p-3 bg-gray-100/60 rounded-lg border flex items-center justify-between min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Users className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                        <span className="text-sm sm:text-base font-semibold whitespace-nowrap">Students</span>
                       </div>
-                      <span className="text-xl font-bold text-purple-600">{totalStudents}</span>
+                      <span className="text-lg sm:text-xl font-bold text-purple-600 ml-2 flex-shrink-0">
+                        {totalStudents}
+                      </span>
                     </div>
                     <Button
-                      //   onClick={handleGenerate}
                       onClick={handleAssignExam}
-                      className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold"
+                      className="w-full sm:w-auto sm:min-w-[120px] bg-purple-500 hover:bg-purple-600 text-white font-semibold px-4"
                     >
                       Assign
                     </Button>
@@ -1524,17 +1651,17 @@ export default function ScheduleExamPage() {
             </div>
 
             {/* Center: Tabs (Rooms / Students) with table */}
-            <div className="flex-1 min-w-0">
-              <Card className="h-[calc(100vh-200px)] flex flex-col shadow-lg border-2">
-                <CardHeader className="border-b bg-gray-100/60 py-2 px-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
+            <div className="flex-1 w-full md:w-auto">
+              <Card className="h-[calc(100vh-200px)] md:h-[calc(100vh-200px)] flex flex-col shadow-lg border-2">
+                <CardHeader className="border-b bg-gray-100/60 py-2 px-3 sm:px-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setCenterTab("rooms")}
-                        className={`px-4 py-1.5 rounded-md border ${
+                        className={`px-3 sm:px-4 py-1.5 rounded-md border text-sm transition-all ${
                           centerTab === "rooms"
-                            ? "bg-white border-purple-500 text-purple-700 font-semibold"
+                            ? "bg-white border-purple-500 text-purple-700 font-semibold shadow-sm"
                             : "bg-gray-100 border-transparent text-gray-600 hover:bg-gray-200"
                         }`}
                       >
@@ -1543,9 +1670,9 @@ export default function ScheduleExamPage() {
                       <button
                         type="button"
                         onClick={() => setCenterTab("students")}
-                        className={`px-4 py-1.5 rounded-md border ${
+                        className={`px-3 sm:px-4 py-1.5 rounded-md border text-sm transition-all ${
                           centerTab === "students"
-                            ? "bg-white border-purple-500 text-purple-700 font-semibold"
+                            ? "bg-white border-purple-500 text-purple-700 font-semibold shadow-sm"
                             : "bg-gray-100 border-transparent text-gray-600 hover:bg-gray-200"
                         }`}
                       >
@@ -1553,10 +1680,10 @@ export default function ScheduleExamPage() {
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap gap-4">
-                      <div className="space-y-1">
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
+                      <div className="flex-1 sm:flex-initial min-w-[140px]">
                         <Select value={gender || ""} onValueChange={(value) => setGender(value as typeof gender)}>
-                          <SelectTrigger className="h-8 w-40 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                          <SelectTrigger className="h-8 w-full sm:w-40 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1567,9 +1694,9 @@ export default function ScheduleExamPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-1">
+                      <div className="flex-1 sm:flex-initial min-w-[140px]">
                         <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
-                          <SelectTrigger className="h-8 w-44 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                          <SelectTrigger className="h-8 w-full sm:w-44 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1586,39 +1713,39 @@ export default function ScheduleExamPage() {
                   {centerTab === "rooms" ? (
                     <div className="p-4 flex flex-col gap-4 h-full">
                       {/* Rooms selection table */}
-                      <div className="flex-1 min-h-0 border rounded-lg bg-white overflow-hidden">
+                      <div className="flex-1 min-h-0 border rounded-lg bg-white overflow-hidden w-full">
                         {loading.rooms ? (
                           <div className="flex items-center justify-center py-12">
                             <Loader2 className="h-6 w-6 animate-spin" />
                             <span className="ml-2 text-gray-500">Loading rooms...</span>
                           </div>
                         ) : (
-                          <div className="h-full overflow-y-auto">
-                            <table className="w-full border-collapse table-fixed">
+                          <div className="h-full w-full overflow-x-auto overflow-y-auto">
+                            <table className="w-full border-collapse">
                               <thead className="sticky top-0 z-10 bg-gray-100">
                                 <tr>
-                                  <th className="w-20 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                  <th className="w-20 px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
                                     Select
                                   </th>
-                                  <th className="w-20 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                  <th className="w-20 px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
                                     Sr. No.
                                   </th>
-                                  <th className="w-32 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                  <th className="w-32 px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
                                     Floor
                                   </th>
-                                  <th className="w-32 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                  <th className="w-32 px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
                                     Room
                                   </th>
-                                  <th className="w-24 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                  <th className="w-24 px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
                                     Benches
                                   </th>
-                                  <th className="w-24 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                  <th className="w-24 px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
                                     Capacity
                                   </th>
-                                  <th className="w-40 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                  <th className="w-40 px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
                                     Max Students per Bench
                                   </th>
-                                  <th className="w-40 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                                  <th className="w-40 px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
                                     Override
                                   </th>
                                 </tr>
@@ -1643,7 +1770,7 @@ export default function ScheduleExamPage() {
                                           isSelected ? "bg-purple-50" : ""
                                         }`}
                                       >
-                                        <td className="px-4 py-3 border border-gray-300">
+                                        <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-300">
                                           <div className="flex justify-center">
                                             <Checkbox
                                               checked={isSelected}
@@ -1652,23 +1779,25 @@ export default function ScheduleExamPage() {
                                             />
                                           </div>
                                         </td>
-                                        <td className="px-4 py-3 font-medium text-gray-900 border border-gray-300">
+                                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900 border border-gray-300">
                                           {index + 1}
                                         </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">{floorName}</td>
-                                        <td className="px-4 py-3 font-medium text-gray-900 border border-gray-300">
+                                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700 border border-gray-300">
+                                          {floorName}
+                                        </td>
+                                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900 border border-gray-300">
                                           {room.name}
                                         </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">
+                                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700 border border-gray-300">
                                           {room.numberOfBenches || 0}
                                         </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">
+                                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700 border border-gray-300">
                                           {calculatedCapacity}
                                         </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">
+                                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700 border border-gray-300">
                                           {currentMaxStudentsPerBench}
                                         </td>
-                                        <td className="px-4 py-3 border border-gray-300 min-h-[80px]">
+                                        <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-300 min-h-[80px]">
                                           <div className="space-y-1 min-h-[60px]">
                                             {isSelected ? (
                                               <>
@@ -1906,111 +2035,6 @@ export default function ScheduleExamPage() {
               </Card>
             </div>
           </div>
-        </div>
-
-        {/* Right sidebar: Selected filters summary (Program Courses, Subject Categories, Shift) */}
-        <div className="w-[16%] flex-shrink-0 space-y-4">
-          <Card className="h-[calc(100vh-200px)] flex flex-col shadow-lg border-2">
-            <CardContent className="p-4 flex-1 flex flex-col gap-4">
-              {/* Program Courses */}
-              <div className="border rounded-lg p-3 flex-1 flex flex-col">
-                <div className="font-semibold mb-2 border-b pb-1">Program Courses</div>
-                <div className="flex-1 overflow-y-auto">
-                  {selectedProgramCourses.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No program course selected</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProgramCourses.map((id) => {
-                        const course = programCourses.find((c) => c.id === id);
-                        const label = course?.name || `Course ${id}`;
-                        return (
-                          <Badge
-                            key={id}
-                            className="text-xs bg-purple-100 text-purple-800 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 pr-1"
-                          >
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedProgramCourses((prev) => prev.filter((pcId) => pcId !== id))}
-                              className="ml-1 text-purple-500 hover:text-purple-700"
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Subject Categories */}
-              <div className="border rounded-lg p-3 flex-1 flex flex-col">
-                <div className="font-semibold mb-2 border-b pb-1">Subject Categories</div>
-                <div className="flex-1 overflow-y-auto">
-                  {selectedSubjectCategories.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No subject category selected</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedSubjectCategories.map((id) => {
-                        const category = subjectTypes.find((c) => c.id === id);
-                        const label = category?.code && category.code.trim() ? category.code : category?.name;
-                        return (
-                          <Badge
-                            key={id}
-                            className="text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-300 flex items-center gap-1 pr-1"
-                          >
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setSelectedSubjectCategories((prev) => prev.filter((catId) => catId !== id))
-                              }
-                              className="ml-1 text-blue-500 hover:text-blue-700"
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Shifts */}
-              <div className="border rounded-lg p-3 flex-1 flex flex-col">
-                <div className="font-semibold mb-2 border-b pb-1">Shift(s)</div>
-                <div className="flex-1 overflow-y-auto">
-                  {selectedShifts.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No shift selected</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedShifts.map((id) => {
-                        const shift = shifts.find((s) => s.id === id);
-                        const label = shift?.name || `Shift ${id}`;
-                        return (
-                          <Badge
-                            key={id}
-                            className="text-xs bg-green-100 text-green-800 hover:bg-green-200 border border-green-300 flex items-center gap-1 pr-1"
-                          >
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedShifts((prev) => prev.filter((shiftId) => shiftId !== id))}
-                              className="ml-1 text-green-600 hover:text-green-800"
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
