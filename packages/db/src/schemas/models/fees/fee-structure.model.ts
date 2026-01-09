@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { date, doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { receiptTypeModel } from "@/schemas/models/fees";
-import { courseModel, programCourseModel } from "@/schemas/models/course-design";
+import {  programCourseModel } from "@/schemas/models/course-design";
 import { academicYearModel, classModel, shiftModel } from "@/schemas/models/academics";
 
 export const feeStructureModel = pgTable("fee_structures", {
