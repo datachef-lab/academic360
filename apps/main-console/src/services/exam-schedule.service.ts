@@ -1,5 +1,6 @@
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
+import type { ExamDto } from "@repo/db/index";
 
 export interface CountStudentsParams {
   classId: number;
@@ -133,7 +134,7 @@ export interface CheckDuplicateExamResponse {
   message?: string;
 }
 
-export async function checkDuplicateExam(dto: any): Promise<ApiResponse<CheckDuplicateExamResponse>> {
+export async function checkDuplicateExam(dto: ExamDto): Promise<ApiResponse<CheckDuplicateExamResponse>> {
   try {
     const response = await axiosInstance.post<ApiResponse<CheckDuplicateExamResponse>>(
       "/api/exams/schedule/check-duplicate",
