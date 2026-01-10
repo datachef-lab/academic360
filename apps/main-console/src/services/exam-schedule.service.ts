@@ -1,5 +1,6 @@
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
+import type { ExamDto } from "@repo/db/index";
 
 export interface CountStudentsParams {
   classId: number;
@@ -125,4 +126,60 @@ export async function getStudentsForExam(
   });
 
   return response.data;
+}
+
+export interface CheckDuplicateExamResponse {
+  isDuplicate: boolean;
+  duplicateExamId?: number;
+  message?: string;
+}
+
+export async function checkDuplicateExam(dto: ExamDto): Promise<ApiResponse<CheckDuplicateExamResponse>> {
+  try {
+    const response = await axiosInstance.post<ApiResponse<CheckDuplicateExamResponse>>(
+      "/api/exams/schedule/check-duplicate",
+      dto,
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error checking duplicate exam:", error);
+    throw error;
+  }
+}
+
+export interface GetEligibleRoomsParams {
+  examSubjects: Array<{
+    subjectId: number;
+    startTime: string | Date;
+    endTime: string | Date;
+  }>;
+}
+
+export interface GetEligibleRoomsResponse {
+  rooms: Array<{
+    id?: number;
+    name: string;
+    shortName?: string | null;
+    floorId?: number | null;
+    numberOfBenches?: number | null;
+    maxStudentsPerBench?: number | null;
+    isActive?: boolean | null;
+    floor?: {
+      id?: number;
+      name: string;
+    } | null;
+  }>;
+}
+
+export async function getEligibleRooms(params: GetEligibleRoomsParams): Promise<ApiResponse<GetEligibleRoomsResponse>> {
+  try {
+    const response = await axiosInstance.post<ApiResponse<GetEligibleRoomsResponse>>(
+      "/api/exams/schedule/eligible-rooms",
+      params,
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching eligible rooms:", error);
+    throw error;
+  }
 }

@@ -4,6 +4,7 @@ import fs from "fs";
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import {
+  checkDuplicateExam,
   countStudentsByPapers,
   createExamAssignment,
   downloadAdmitCardsAsZip,
@@ -15,6 +16,7 @@ import {
   findByStudentId,
   findExamPapersByExamId,
   findExamsByStudentId,
+  getEligibleRooms,
   getExamCandidatesByStudentIdAndExamId,
   getStudentsByPapers,
   sendExamAdmitCardEmails,
@@ -22,6 +24,7 @@ import {
 } from "../services/exam-schedule.service.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { handleError } from "@/utils/handleError.js";
+import { ExamDto } from "@repo/db/dtos/exams";
 
 export const countStudentsForExam = async (req: Request, res: Response) => {
   try {
@@ -855,5 +858,80 @@ export const getExamPapersByExamIdController = async (
   } catch (error) {
     console.error("[GET-STUDENT-EXAMS] Error:", error);
     handleError(error, res, next);
+  }
+};
+
+/**
+ * Check if an exam with the same configuration already exists
+ */
+export const checkDuplicateExamController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const dto = req.body as ExamDto;
+    const result = await checkDuplicateExam(dto);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          result.isDuplicate
+            ? "Duplicate exam found"
+            : "No duplicate exam found",
+        ),
+      );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("[CHECK-DUPLICATE-EXAM] Error:", error);
+    return res.status(500).json(new ApiResponse(500, "ERROR", null, message));
+  }
+};
+
+/**
+ * Get eligible rooms based on exam schedule (date and time)
+ */
+export const getEligibleRoomsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { examSubjects } = req.body as {
+      examSubjects: Array<{
+        subjectId: number;
+        startTime: string | Date;
+        endTime: string | Date;
+      }>;
+    };
+
+    if (!examSubjects || !Array.isArray(examSubjects)) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(400, "ERROR", null, "examSubjects array is required"),
+        );
+    }
+
+    const eligibleRooms = await getEligibleRooms(examSubjects);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { rooms: eligibleRooms },
+          "Eligible rooms fetched successfully",
+        ),
+      );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("[GET-ELIGIBLE-ROOMS] Error:", error);
+    return res.status(500).json(new ApiResponse(500, "ERROR", null, message));
   }
 };

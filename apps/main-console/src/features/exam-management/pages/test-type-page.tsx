@@ -13,20 +13,10 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import {
-  getAllExamTypes,
-  createExamType,
-  updateExamType,
-  deleteExamType,
-  type ExamTypeT,
-} from "@/services/exam-type.service";
+import { getAllExamTypes, createExamType, updateExamType, deleteExamType } from "@/services/exam-type.service";
+import type { ExamTypeT } from "@repo/db/schemas/models/exams";
 
-type ExamTypeFormValues = {
-  name: string;
-  shortName?: string;
-  legacyExamTypeId?: number;
-  isActive: boolean;
-};
+type ExamTypeFormValues = Pick<ExamTypeT, "name" | "shortName" | "isActive" | "foilNumberRequired">;
 
 type ExamTypeFormProps = {
   initialData?: ExamTypeT;
@@ -38,22 +28,20 @@ type ExamTypeFormProps = {
 function ExamTypeForm({ initialData, onSubmit, onCancel, isSubmitting = false }: ExamTypeFormProps) {
   const [name, setName] = useState(initialData?.name ?? "");
   const [shortName, setShortName] = useState(initialData?.shortName ?? "");
-  const [legacyExamTypeId, setLegacyExamTypeId] = useState<number | undefined>(
-    initialData?.legacyExamTypeId ?? undefined,
-  );
   const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
+  const [foilNumberRequired, setFoilNumberRequired] = useState(initialData?.foilNumberRequired ?? false);
 
   useEffect(() => {
     if (initialData) {
       setName(initialData.name ?? "");
       setShortName(initialData.shortName ?? "");
-      setLegacyExamTypeId(initialData.legacyExamTypeId ?? undefined);
       setIsActive(initialData.isActive ?? true);
+      setFoilNumberRequired(initialData.foilNumberRequired ?? false);
     } else {
       setName("");
       setShortName("");
-      setLegacyExamTypeId(undefined);
       setIsActive(true);
+      setFoilNumberRequired(false);
     }
   }, [initialData]);
 
@@ -65,9 +53,9 @@ function ExamTypeForm({ initialData, onSubmit, onCancel, isSubmitting = false }:
 
     onSubmit({
       name: name.trim(),
-      shortName: shortName.trim() || undefined,
-      legacyExamTypeId,
+      shortName: shortName.trim() || null,
       isActive,
+      foilNumberRequired,
     });
   };
 
@@ -93,19 +81,23 @@ function ExamTypeForm({ initialData, onSubmit, onCancel, isSubmitting = false }:
             placeholder="Enter optional short name"
           />
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="legacy-id">Legacy Exam Type ID</Label>
-          <Input
-            id="legacy-id"
-            type="number"
-            value={legacyExamTypeId ?? ""}
-            onChange={(e) => setLegacyExamTypeId(e.target.value ? Number(e.target.value) : undefined)}
-            placeholder="Enter legacy id (optional)"
+        <div className="flex items-center gap-2 mt-2">
+          <Switch
+            id="is-active"
+            checked={isActive}
+            onCheckedChange={setIsActive}
+            className="data-[state=checked]:bg-purple-600"
           />
+          <Label htmlFor="is-active">Active</Label>
         </div>
         <div className="flex items-center gap-2 mt-2">
-          <Switch id="is-active" checked={isActive} onCheckedChange={setIsActive} />
-          <Label htmlFor="is-active">Active</Label>
+          <Switch
+            id="foil-number-required"
+            checked={foilNumberRequired}
+            onCheckedChange={setFoilNumberRequired}
+            className="data-[state=checked]:bg-purple-600"
+          />
+          <Label htmlFor="foil-number-required">Foil Number Required</Label>
         </div>
       </div>
       <div className="flex justify-end gap-2">
@@ -173,7 +165,7 @@ export default function TestTypePage() {
         examType.id?.toString() ?? "",
         examType.name ?? "",
         examType.shortName ?? "",
-        examType.legacyExamTypeId?.toString() ?? "",
+        examType.foilNumberRequired ? "Yes" : "No",
       ];
       return candidates.some((value) => value.toLowerCase().includes(query));
     });
@@ -216,8 +208,8 @@ export default function TestTypePage() {
       const payload: Partial<ExamTypeT> = {
         name: form.name,
         shortName: form.shortName,
-        legacyExamTypeId: form.legacyExamTypeId,
         isActive: form.isActive,
+        foilNumberRequired: form.foilNumberRequired,
       };
 
       if (selectedExamType) {
@@ -309,7 +301,7 @@ export default function TestTypePage() {
         <CardContent className="px-0">
           <div className="bg-background p-4 border-b flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <Input
-              placeholder="Search by name, short name, or legacy id..."
+              placeholder="Search by name, short name, or foil number required..."
               className="w-full md:w-80"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -333,8 +325,8 @@ export default function TestTypePage() {
                   <div className="flex-shrink-0 basis-[16%] px-3 py-2 border-r border-slate-300 flex items-center">
                     Short Name
                   </div>
-                  <div className="flex-shrink-0 basis-[14%] px-3 py-2 border-r border-slate-300 flex items-center">
-                    Legacy ID
+                  <div className="flex-shrink-0 basis-[14%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
+                    Foil Number Required
                   </div>
                   <div className="flex-shrink-0 basis-[16%] px-3 py-2 border-r border-slate-300 flex items-center">
                     Updated On
@@ -374,8 +366,14 @@ export default function TestTypePage() {
                       <div className="flex-shrink-0 basis-[16%] px-3 py-3 border-r border-slate-200 flex items-center">
                         {examType.shortName ?? <span className="text-slate-400">—</span>}
                       </div>
-                      <div className="flex-shrink-0 basis-[14%] px-3 py-3 border-r border-slate-200 flex items-center">
-                        {examType.legacyExamTypeId ?? <span className="text-slate-400">—</span>}
+                      <div className="flex-shrink-0 basis-[14%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            examType.foilNumberRequired ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {examType.foilNumberRequired ? "Yes" : "No"}
+                        </span>
                       </div>
                       <div className="flex-shrink-0 basis-[16%] px-3 py-3 border-r border-slate-200 flex items-center">
                         {formatDate(examType.updatedAt ?? examType.createdAt)}
