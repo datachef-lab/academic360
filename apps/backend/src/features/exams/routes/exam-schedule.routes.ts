@@ -1,5 +1,6 @@
 import { NextFunction, Response, Router } from "express";
 import {
+  checkDuplicateExamController,
   countStudentsForExam,
   createExamAssignmenthandler,
   downloadAdmitCardsController,
@@ -7,6 +8,7 @@ import {
   downloadExamCandidatesController,
   downloadSingleAdmitCardController,
   getAllExamsController,
+  getEligibleRoomsController,
   getExamByIdController,
   getExamCandiatesByStudentIdAndExamIdController,
   getExamPapersByExamIdController,
@@ -60,5 +62,15 @@ router.get("/exam-papers/:id", getExamPapersByExamIdController);
  * Get paginated exams for a student
  */
 router.get("/student/:studentId/exams", getExamsByStudentController);
+
+/**
+ * Check for duplicate exam
+ */
+router.post("/check-duplicate", verifyJWT, checkDuplicateExamController);
+
+/**
+ * Get eligible rooms based on exam schedule
+ */
+router.post("/eligible-rooms", verifyJWT, getEligibleRoomsController);
 
 export default router;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +31,12 @@ import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
 import { getAllRooms } from "@/services/room.service";
 import { getAllFloors } from "@/services/floor.service";
-import { countStudentsForExam, getStudentsForExam } from "@/services/exam-schedule.service";
+import {
+  checkDuplicateExam,
+  countStudentsForExam,
+  getEligibleRooms,
+  getStudentsForExam,
+} from "@/services/exam-schedule.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, RoomDto, ExamProgramCourseDto } from "@repo/db/index";
 import { ExamComponent } from "@/types/course-design";
@@ -91,7 +97,7 @@ export default function ScheduleExamPage() {
     queryFn: async () => {
       const res = await getAllExamTypes();
       if (res.httpStatus === "SUCCESS" && res.payload) {
-        return res.payload;
+        return res.payload.filter((et) => et.isActive !== false);
       }
       return [];
     },
@@ -105,7 +111,7 @@ export default function ScheduleExamPage() {
     queryKey: ["classes"],
     queryFn: async () => {
       const data = await getAllClasses();
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data) ? data.filter((c) => !c.disabled) : [];
     },
     onError: (error) => {
       console.error("Error fetching classes:", error);
@@ -117,7 +123,7 @@ export default function ScheduleExamPage() {
     queryKey: ["programCourses"],
     queryFn: async () => {
       const data = await getProgramCourseDtos();
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data) ? data.filter((pc) => pc.isActive !== false) : [];
     },
     onError: (error) => {
       console.error("Error fetching program courses:", error);
@@ -129,7 +135,7 @@ export default function ScheduleExamPage() {
     queryKey: ["shifts"],
     queryFn: async () => {
       const data = await getAllShifts();
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data) ? data.filter((s) => !s.disabled) : [];
     },
     onError: (error) => {
       console.error("Error fetching shifts:", error);
@@ -141,7 +147,7 @@ export default function ScheduleExamPage() {
     queryKey: ["subjectTypes"],
     queryFn: async () => {
       const data = await getSubjectTypes();
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data) ? data.filter((st) => st.isActive !== false) : [];
     },
     onError: (error) => {
       console.error("Error fetching subject types:", error);
@@ -153,7 +159,7 @@ export default function ScheduleExamPage() {
     queryKey: ["subjects"],
     queryFn: async () => {
       const data = await getAllSubjects();
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data) ? data.filter((s) => !s.disabled) : [];
     },
     onError: (error) => {
       console.error("Error fetching subjects:", error);
@@ -165,7 +171,7 @@ export default function ScheduleExamPage() {
     queryKey: ["affiliations"],
     queryFn: async () => {
       const data = await getAffiliations();
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data) ? data.filter((a) => a.isActive !== false) : [];
     },
     onError: (error) => {
       console.error("Error fetching affiliations:", error);
@@ -177,7 +183,7 @@ export default function ScheduleExamPage() {
     queryKey: ["regulationTypes"],
     queryFn: async () => {
       const data = await getRegulationTypes();
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data) ? data.filter((r) => r.isActive !== false) : [];
     },
     onError: (error) => {
       console.error("Error fetching regulation types:", error);
@@ -185,27 +191,14 @@ export default function ScheduleExamPage() {
     },
   });
 
-  const { data: rooms = [], isLoading: loadingRooms } = useQuery({
-    queryKey: ["rooms"],
-    queryFn: async () => {
-      const res = await getAllRooms();
-      if (res.httpStatus === "SUCCESS" && res.payload) {
-        return res.payload;
-      }
-      return [];
-    },
-    onError: (error) => {
-      console.error("Error fetching rooms:", error);
-      toast.error("Failed to load rooms");
-    },
-  });
+  // Fetch eligible rooms based on exam schedule
 
   const { data: floors = [], isLoading: loadingFloors } = useQuery({
     queryKey: ["floors"],
     queryFn: async () => {
       const res = await getAllFloors();
       if (res.httpStatus === "SUCCESS" && res.payload) {
-        return res.payload;
+        return res.payload.filter((f) => f.isActive !== false);
       }
       return [];
     },
@@ -220,17 +213,20 @@ export default function ScheduleExamPage() {
     queryFn: async () => {
       const data = await getExamComponents();
       // Map API response to match ExamComponent type (API returns isActive, type expects disabled)
+      // Filter to only include active components
       const mappedComponents: ExamComponent[] = Array.isArray(data)
-        ? data.map((comp) => ({
-            id: comp.id,
-            name: comp.name,
-            shortName: comp.shortName ?? null,
-            code: comp.code ?? null,
-            sequence: comp.sequence ?? null,
-            disabled: (comp as { isActive?: boolean | null }).isActive === false,
-            createdAt: comp.createdAt,
-            updatedAt: comp.updatedAt,
-          }))
+        ? data
+            .filter((comp) => (comp as { isActive?: boolean | null }).isActive !== false)
+            .map((comp) => ({
+              id: comp.id,
+              name: comp.name,
+              shortName: comp.shortName ?? null,
+              code: comp.code ?? null,
+              sequence: comp.sequence ?? null,
+              disabled: false, // All filtered items are active, so disabled is false
+              createdAt: comp.createdAt,
+              updatedAt: comp.updatedAt,
+            }))
         : [];
       return mappedComponents;
     },
@@ -263,9 +259,82 @@ export default function ScheduleExamPage() {
   const [subjectSchedules, setSubjectSchedules] = useState<Record<string, Schedule>>({});
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
 
+  // Fetch all rooms for statistics
+  const { data: allRooms = [], isLoading: loadingAllRooms } = useQuery({
+    queryKey: ["allRooms"],
+    queryFn: async () => {
+      const res = await getAllRooms();
+      if (res.httpStatus === "SUCCESS" && res.payload) {
+        return res.payload.filter((room) => room.isActive !== false);
+      }
+      return [];
+    },
+    onError: (error) => {
+      console.error("Error fetching all rooms:", error);
+    },
+  });
+
+  // Fetch eligible rooms based on exam schedule
+  const { data: rooms = [], isLoading: loadingRooms } = useQuery({
+    queryKey: ["eligibleRooms", selectedSubjectIds, subjectSchedules],
+    queryFn: async () => {
+      // If no subjects selected, return all active rooms
+      if (selectedSubjectIds.length === 0) {
+        const res = await getAllRooms();
+        if (res.httpStatus === "SUCCESS" && res.payload) {
+          return res.payload
+            .filter((room) => room.isActive !== false)
+            .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        }
+        return [];
+      }
+
+      // Build exam subjects array from selected subjects and schedules
+      const examSubjects = selectedSubjectIds
+        .map((subjectId) => {
+          const schedule = subjectSchedules[subjectId.toString()];
+          if (!schedule?.date || !schedule?.startTime || !schedule?.endTime) {
+            return null;
+          }
+          const startDateTime = `${schedule.date}T${schedule.startTime}:00+05:30`;
+          const endDateTime = `${schedule.date}T${schedule.endTime}:00+05:30`;
+          return {
+            subjectId,
+            startTime: new Date(startDateTime),
+            endTime: new Date(endDateTime),
+          };
+        })
+        .filter((subject): subject is { subjectId: number; startTime: Date; endTime: Date } => subject !== null);
+
+      // If no valid schedules, return all active rooms
+      if (examSubjects.length === 0) {
+        const res = await getAllRooms();
+        if (res.httpStatus === "SUCCESS" && res.payload) {
+          return res.payload
+            .filter((room) => room.isActive !== false)
+            .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        }
+        return [];
+      }
+
+      // Fetch eligible rooms
+      const res = await getEligibleRooms({ examSubjects });
+      if (res.httpStatus === "SUCCESS" && res.payload) {
+        return res.payload.rooms.sort((a, b) => (a.name || "").localeCompare(b.name || "")) as RoomDto[];
+      }
+      return [];
+    },
+    enabled: true, // Always enabled, will handle empty case
+    onError: (error) => {
+      console.error("Error fetching eligible rooms:", error);
+      toast.error("Failed to load eligible rooms");
+    },
+  });
+
   // Excel file upload state
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [foilNumberMap, setFoilNumberMap] = useState<Record<string, string>>({});
 
   // Assignments (kept for potential future use)
 
@@ -275,7 +344,7 @@ export default function ScheduleExamPage() {
   }, [loadAcademicYears]);
 
   // Handle Excel file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       // Validate file type
@@ -291,12 +360,52 @@ export default function ScheduleExamPage() {
         return;
       }
       setExcelFile(file);
+
+      // Parse Excel file to extract foil numbers
+      try {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName!];
+            const jsonData = XLSX.utils.sheet_to_json(sheet!) as Array<{
+              foil_number?: string | number;
+              uid?: string;
+            }>;
+
+            // Create a map of UID to foil_number
+            const foilMap: Record<string, string> = {};
+            jsonData.forEach((row) => {
+              if (row.uid && row.foil_number !== undefined) {
+                const uid = String(row.uid).trim();
+                const foilNumber = String(row.foil_number).trim();
+                if (uid && foilNumber) {
+                  foilMap[uid] = foilNumber;
+                }
+              }
+            });
+            setFoilNumberMap(foilMap);
+            console.log("[EXCEL] Parsed foil numbers:", Object.keys(foilMap).length);
+          } catch (error) {
+            console.error("Error parsing Excel file:", error);
+            setFoilNumberMap({});
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (error) {
+        console.error("Error reading Excel file:", error);
+        setFoilNumberMap({});
+      }
+
       toast.success(`Uploaded: ${file.name}`);
     }
   };
 
   const removeExcelFile = () => {
     setExcelFile(null);
+    setFoilNumberMap({});
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -346,7 +455,7 @@ export default function ScheduleExamPage() {
             });
             if (papersData?.content) {
               for (const paper of papersData.content) {
-                if (paper.id && !seenPaperIds.has(paper.id)) {
+                if (paper.id && !seenPaperIds.has(paper.id) && paper.isActive !== false) {
                   seenPaperIds.add(paper.id);
                   allPapers.push(paper);
                 }
@@ -839,6 +948,31 @@ export default function ScheduleExamPage() {
   const handleScheduleChange = (subjectId: number | string | null, field: keyof Schedule, value: string) => {
     if (subjectId === null) return;
     const id = typeof subjectId === "number" ? subjectId.toString() : subjectId;
+    const currentSchedule = subjectSchedules[id] || { date: "", startTime: "", endTime: "" };
+
+    // Validate end time is not less than start time
+    if (field === "endTime" && currentSchedule.startTime && value) {
+      const startTime = currentSchedule.startTime;
+      const endTime = value;
+
+      // Compare time strings (HH:MM format)
+      if (endTime < startTime) {
+        toast.error("End time cannot be less than start time");
+        return;
+      }
+    }
+
+    // If start time is changed and end time exists, validate end time is not less than new start time
+    if (field === "startTime" && currentSchedule.endTime && value) {
+      const startTime = value;
+      const endTime = currentSchedule.endTime;
+
+      if (endTime < startTime) {
+        toast.error("End time cannot be less than start time. Please update end time.");
+        // Optionally clear end time or keep it and let user fix
+      }
+    }
+
     setSubjectSchedules((prev) => ({
       ...prev,
       [id]: {
@@ -935,6 +1069,193 @@ export default function ScheduleExamPage() {
     }
   }, [currentAcademicYear, selectedAcademicYearId]);
 
+  // Reset selected subjects when program courses, subject categories, or semester change
+  useEffect(() => {
+    setSelectedSubjectIds([]);
+    setSubjectSchedules({});
+    setSelectedSubjectId(null);
+  }, [selectedProgramCourses, selectedSubjectCategories, semester]);
+
+  // Auto-select first subject/paper when subjects become available
+  useEffect(() => {
+    if (papers.length === 0 || loadingPapers || fetchingPapers) return;
+
+    const distinctSubjects = getDistinctSubjects();
+    if (distinctSubjects.length > 0 && selectedSubjectId === null) {
+      const firstSubject = distinctSubjects[0];
+      if (firstSubject && firstSubject.subjectId !== null) {
+        setSelectedSubjectId(firstSubject.subjectId);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [papers, selectedExamComponent, selectedSubjectId, loadingPapers, fetchingPapers]);
+
+  // Real-time duplicate exam check state
+  const [duplicateCheckResult, setDuplicateCheckResult] = useState<{
+    isDuplicate: boolean;
+    duplicateExamId?: number;
+    message?: string;
+  } | null>(null);
+
+  // Real-time duplicate exam check - check as soon as we have enough info (don't require rooms)
+  const canCheckDuplicate =
+    selectedAcademicYearId &&
+    examType &&
+    semester &&
+    selectedProgramCourses.length > 0 &&
+    selectedShifts.length > 0 &&
+    selectedSubjectCategories.length > 0 &&
+    selectedSubjectIds.length > 0 &&
+    Object.keys(subjectSchedules).length > 0 &&
+    // Check that all selected subjects have complete schedules
+    selectedSubjectIds.every((id) => {
+      const schedule = subjectSchedules[id.toString()];
+      return schedule?.date && schedule?.startTime && schedule?.endTime;
+    });
+
+  // Check for duplicate exam in real-time
+  useEffect(() => {
+    let isCancelled = false;
+
+    const checkDuplicate = async () => {
+      console.log("[DUPLICATE-CHECK] canCheckDuplicate:", canCheckDuplicate);
+      if (!canCheckDuplicate) {
+        setDuplicateCheckResult(null);
+        return;
+      }
+
+      console.log("[DUPLICATE-CHECK] Starting duplicate check...");
+      try {
+        const examSubjects: ExamSubjectT[] = [];
+        for (const subjectId of selectedSubjectIds) {
+          const schedule = subjectSchedules[subjectId];
+          if (!schedule?.date || !schedule?.startTime || !schedule?.endTime) {
+            continue;
+          }
+
+          const startDateTime = `${schedule.date}T${schedule.startTime}:00+05:30`;
+          const endDateTime = `${schedule.date}T${schedule.endTime}:00+05:30`;
+
+          examSubjects.push({
+            subjectId: subjectId,
+            startTime: new Date(startDateTime),
+            endTime: new Date(endDateTime),
+            examId: 0,
+            id: 0,
+            createdAt: null,
+            updatedAt: null,
+          });
+        }
+
+        if (examSubjects.length === 0) {
+          if (!isCancelled) setDuplicateCheckResult({ isDuplicate: false });
+          return;
+        }
+
+        // For duplicate check, we can use empty locations array if rooms aren't selected yet
+        // The backend validation will still check rooms when creating, but for duplicate detection
+        // we want to check even without rooms selected
+        const locations: ExamRoomDto[] =
+          selectedRooms.length > 0
+            ? selectedRooms.map((room) => ({
+                roomId: room.id!,
+                studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
+                capacity: room.capacity,
+                room: rooms.find((r) => r.id === room.id)!,
+                examId: 0,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                id: 0,
+              }))
+            : [];
+
+        const tmpExamAssignment: ExamDto = {
+          orderType: assignBy,
+          academicYear: availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)!,
+          class: classes.find((c) => c.id?.toString() === semester)!,
+          examType: examTypes.find((et) => et.id?.toString() === examType)!,
+          examProgramCourses: programCourses
+            .filter((pc) => selectedProgramCourses.includes(pc.id!))
+            .map(
+              (pc): ExamProgramCourseDto => ({
+                examId: 0,
+                programCourse: pc,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                id: 0,
+              }),
+            ),
+          examShifts: shifts
+            .filter((s) => selectedShifts.includes(s.id!))
+            .map((sh) => ({
+              examId: 0,
+              shift: sh,
+            })),
+          examSubjectTypes: subjectTypes
+            .filter((st) => selectedSubjectCategories.includes(st.id!))
+            .map((st) => ({
+              examId: 0,
+              subjectType: st,
+            })),
+          gender: gender === "ALL" ? null : gender,
+          examSubjects: examSubjects.map((es) => ({
+            ...es,
+            subject: subjects.find((ele) => ele.id === es.subjectId)!,
+          })),
+          locations,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          id: 0,
+          legacyExamAssginmentId: null,
+        };
+
+        const result = await checkDuplicateExam(tmpExamAssignment);
+        console.log("[DUPLICATE-CHECK] API Response:", result);
+        if (!isCancelled) {
+          const payload = result.payload || { isDuplicate: false };
+          console.log("[DUPLICATE-CHECK] Setting result:", payload);
+          setDuplicateCheckResult(payload);
+        }
+      } catch (error) {
+        console.error("Error checking duplicate exam:", error);
+        if (!isCancelled) {
+          setDuplicateCheckResult({ isDuplicate: false });
+        }
+      }
+    };
+
+    // Debounce the check to avoid too many API calls (reduced to 200ms for faster feedback)
+    const timeoutId = setTimeout(() => {
+      void checkDuplicate();
+    }, 200);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [
+    canCheckDuplicate,
+    selectedAcademicYearId,
+    examType,
+    semester,
+    selectedProgramCourses,
+    selectedShifts,
+    selectedSubjectCategories,
+    selectedSubjectIds,
+    selectedRooms,
+    subjectSchedules,
+    assignBy,
+    gender,
+    availableAcademicYears,
+    classes,
+    examTypes,
+    programCourses,
+    shifts,
+    subjectTypes,
+    subjects,
+    rooms,
+  ]);
+
   const assignExamMutation = useMutation({
     mutationFn: async () => {
       const examSubjects: ExamSubjectT[] = [];
@@ -1019,6 +1340,16 @@ export default function ScheduleExamPage() {
         id: 0,
         legacyExamAssginmentId: null,
       };
+
+      // Check for duplicate exam before creating
+      console.log("Checking for duplicate exam...");
+      const duplicateCheck = await checkDuplicateExam(tmpExamAssignment);
+      if (duplicateCheck.payload?.isDuplicate) {
+        throw new Error(
+          duplicateCheck.payload.message ||
+            `An exam with the same configuration already exists (Exam ID: ${duplicateCheck.payload.duplicateExamId}).`,
+        );
+      }
 
       console.log("Before calling doAssignExam with:", tmpExamAssignment);
       const response = await doAssignExam(
@@ -1211,23 +1542,21 @@ export default function ScheduleExamPage() {
                             </PopoverTrigger>
                             <PopoverContent className="w-64 p-2" align="start">
                               <div className="max-h-60 overflow-y-auto space-y-1">
-                                {programCourses
-                                  .filter((course) => course.isActive !== false)
-                                  .map((course) => (
-                                    <button
-                                      key={course.id}
-                                      type="button"
-                                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
-                                      onClick={() => course.id && handleProgramCourseToggle(course.id)}
-                                    >
-                                      <Checkbox
-                                        checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
-                                        onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
-                                        className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                      />
-                                      <span className=" text-left">{course.name}</span>
-                                    </button>
-                                  ))}
+                                {programCourses.map((course) => (
+                                  <button
+                                    key={course.id}
+                                    type="button"
+                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
+                                    onClick={() => course.id && handleProgramCourseToggle(course.id)}
+                                  >
+                                    <Checkbox
+                                      checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
+                                      onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
+                                      className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                    />
+                                    <span className=" text-left">{course.name}</span>
+                                  </button>
+                                ))}
                               </div>
                             </PopoverContent>
                           </Popover>
@@ -1248,27 +1577,25 @@ export default function ScheduleExamPage() {
                             </PopoverTrigger>
                             <PopoverContent className="text-left p-2" align="start">
                               <div className="max-h-56 overflow-y-auto space-y-1">
-                                {subjectTypes
-                                  .filter((category) => category.isActive !== false)
-                                  .map((category) => (
-                                    <button
-                                      key={category.id}
-                                      type="button"
-                                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
-                                      onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
-                                    >
-                                      <Checkbox
-                                        checked={
-                                          category.id !== undefined && selectedSubjectCategories.includes(category.id)
-                                        }
-                                        onCheckedChange={() => category.id && handleSubjectCategoryToggle(category.id)}
-                                        className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                      />
-                                      <span className=" text-left">
-                                        {category.code && category.code.trim() ? category.code : category.name}
-                                      </span>
-                                    </button>
-                                  ))}
+                                {subjectTypes.map((category) => (
+                                  <button
+                                    key={category.id}
+                                    type="button"
+                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
+                                    onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
+                                  >
+                                    <Checkbox
+                                      checked={
+                                        category.id !== undefined && selectedSubjectCategories.includes(category.id)
+                                      }
+                                      onCheckedChange={() => category.id && handleSubjectCategoryToggle(category.id)}
+                                      className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                    />
+                                    <span className=" text-left">
+                                      {category.code && category.code.trim() ? category.code : category.name}
+                                    </span>
+                                  </button>
+                                ))}
                               </div>
                             </PopoverContent>
                           </Popover>
@@ -1600,10 +1927,10 @@ export default function ScheduleExamPage() {
                   </h3>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-5 pb-14">
+              <CardContent className="space-y-6 pb-16">
                 {/* Capacity Summary */}
                 <div
-                  className={`p-3 rounded-lg border ${
+                  className={`p-4 rounded-lg border shadow-sm ${
                     capacityStatus ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
                   }`}
                 >
@@ -1636,10 +1963,16 @@ export default function ScheduleExamPage() {
                 </div>
 
                 {/* Filter Controls */}
-                <div className="flex flex-wrap gap-2 sm:gap-3">
-                  <div className="flex-1 sm:flex-initial min-w-[140px]">
+                <div className="flex flex-wrap gap-4 sm:gap-6 items-end">
+                  <div className="flex-1 sm:flex-initial min-w-[180px]">
+                    <Label htmlFor="gender-select" className="text-sm font-medium text-gray-700 mb-2 block">
+                      Gender
+                    </Label>
                     <Select value={gender || ""} onValueChange={(value) => setGender(value as typeof gender)}>
-                      <SelectTrigger className="h-8 w-full sm:w-40 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                      <SelectTrigger
+                        id="gender-select"
+                        className="h-9 w-full sm:w-48 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1650,9 +1983,15 @@ export default function ScheduleExamPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex-1 sm:flex-initial min-w-[140px]">
+                  <div className="flex-1 sm:flex-initial min-w-[180px]">
+                    <Label htmlFor="order-by-select" className="text-sm font-medium text-gray-700 mb-2 block">
+                      Order By
+                    </Label>
                     <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
-                      <SelectTrigger className="h-8 w-full sm:w-44 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                      <SelectTrigger
+                        id="order-by-select"
+                        className="h-9 w-full sm:w-52 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1665,7 +2004,7 @@ export default function ScheduleExamPage() {
                 </div>
 
                 {/* Excel File Upload */}
-                {examType && examTypes.find((e) => e.id.toString() === examType && e.name === "Test Exam") && (
+                {examType && examTypes.find((e) => e.id.toString() === examType)?.foilNumberRequired === true && (
                   <div className="flex flex-col gap-1">
                     <Label className="font-medium text-gray-700">Upload Excel</Label>
                     <Popover>
@@ -1719,11 +2058,27 @@ export default function ScheduleExamPage() {
                 )}
 
                 {/* Modal Buttons */}
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3 pt-2">
                   <Button
                     onClick={() => setRoomsModalOpen(true)}
                     variant="outline"
-                    className="flex-1 sm:flex-initial border-purple-300 hover:bg-purple-50"
+                    disabled={
+                      selectedSubjectIds.length === 0 ||
+                      !selectedSubjectIds.every((id) => {
+                        const schedule = subjectSchedules[id.toString()];
+                        return schedule?.date && schedule?.startTime && schedule?.endTime;
+                      })
+                    }
+                    className="flex-1 sm:flex-initial border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={
+                      selectedSubjectIds.length === 0 ||
+                      !selectedSubjectIds.every((id) => {
+                        const schedule = subjectSchedules[id.toString()];
+                        return schedule?.date && schedule?.startTime && schedule?.endTime;
+                      })
+                        ? "Please add date, start time, and end time for all selected subjects"
+                        : "View and select rooms"
+                    }
                   >
                     <DoorOpen className="w-4 h-4 mr-2" />
                     View Rooms ({selectedRooms.length})
@@ -1731,7 +2086,7 @@ export default function ScheduleExamPage() {
                   <Button
                     onClick={() => setStudentsModalOpen(true)}
                     variant="outline"
-                    className="flex-1 sm:flex-initial border-purple-300 hover:bg-purple-50"
+                    className="flex-1 sm:flex-initial border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50"
                     disabled={studentsWithSeats.length === 0}
                   >
                     <Users className="w-4 h-4 mr-2" />
@@ -1742,21 +2097,74 @@ export default function ScheduleExamPage() {
             </Card>
           </div>
 
-          {/* Total students + Assign button */}
-          <div className="mt-auto flex flex-col sm:flex-row gap-3">
-            <div className="flex-1 p-3 bg-gray-100/60 rounded-lg border flex items-center justify-between min-w-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <Users className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                <span className="text-sm sm:text-base font-semibold whitespace-nowrap">Students</span>
+          {/* Duplicate Exam Warning */}
+          {duplicateCheckResult?.isDuplicate && (
+            <div className="mt-6 p-5 bg-red-50 border-2 border-red-400 rounded-lg flex items-start gap-4 shadow-lg">
+              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5 animate-pulse" />
+              <div className="flex-1">
+                <p className="font-bold text-red-900 text-base mb-2">⚠️ Duplicate Exam Detected</p>
+                <p className="text-sm text-red-800 font-medium mb-3">
+                  {duplicateCheckResult.message ||
+                    `An exam with the same configuration already exists${duplicateCheckResult.duplicateExamId ? ` (Exam ID: ${duplicateCheckResult.duplicateExamId})` : ""}. Please modify your selections to create a unique exam.`}
+                </p>
+                {duplicateCheckResult.duplicateExamId && (
+                  <Link
+                    to={`/dashboard/exam-management/exams/${duplicateCheckResult.duplicateExamId}`}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-red-700 hover:text-red-900 underline transition-colors"
+                  >
+                    <span>View Duplicate Exam</span>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </Link>
+                )}
               </div>
-              <span className="text-lg sm:text-xl font-bold text-purple-600 ml-2 flex-shrink-0">{totalStudents}</span>
+            </div>
+          )}
+
+          {/* Debug info - remove in production */}
+          {process.env.NODE_ENV === "development" && canCheckDuplicate && (
+            <div className="mt-2 p-2 bg-gray-100 border border-gray-300 rounded text-xs">
+              <p>Duplicate Check Status: ✅ Ready</p>
+              {duplicateCheckResult && (
+                <p>Result: {duplicateCheckResult.isDuplicate ? "🔴 Duplicate Found" : "✅ No Duplicate"}</p>
+              )}
+            </div>
+          )}
+
+          {/* Total students + Assign button */}
+          <div className="mt-8 flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 p-4 bg-gray-100/60 rounded-lg border shadow-sm flex items-center justify-between min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Users className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                <span className="text-sm sm:text-base font-semibold whitespace-nowrap">Total Students</span>
+              </div>
+              <span className="text-xl sm:text-2xl font-bold text-purple-600 ml-2 flex-shrink-0">{totalStudents}</span>
             </div>
             <Button
               onClick={handleAssignExam}
-              disabled={assignExamMutation.status === "loading"}
-              className="w-full sm:w-auto sm:min-w-[120px] bg-purple-500 hover:bg-purple-600 text-white font-semibold px-4"
+              disabled={assignExamMutation.status === "loading" || duplicateCheckResult?.isDuplicate}
+              className="w-full sm:w-auto sm:min-w-[140px] h-12 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all"
             >
-              {assignExamMutation.status === "loading" ? "Assigning..." : "Assign"}
+              {assignExamMutation.status === "loading" ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                  Assigning...
+                </>
+              ) : (
+                "Assign Exam"
+              )}
             </Button>
           </div>
         </div>
@@ -1777,10 +2185,32 @@ export default function ScheduleExamPage() {
             </div>
           </DialogHeader>
           <div className="p-4">
-            {loading.rooms ? (
+            {/* Rooms Statistics */}
+            <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="text-xs text-blue-600 font-medium mb-1">Total Rooms</div>
+                <div className="text-lg font-bold text-blue-900">{allRooms.length}</div>
+              </div>
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="text-xs text-green-600 font-medium mb-1">Eligible Rooms</div>
+                <div className="text-lg font-bold text-green-900">{rooms.length}</div>
+              </div>
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="text-xs text-purple-600 font-medium mb-1">Selected Rooms</div>
+                <div className="text-lg font-bold text-purple-900">{selectedRooms.length}</div>
+              </div>
+            </div>
+
+            {loadingRooms || loadingAllRooms ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin" />
                 <span className="ml-2 text-gray-500">Loading rooms...</span>
+              </div>
+            ) : rooms.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <DoorOpen className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                <p className="font-medium">No eligible rooms available</p>
+                <p className="text-sm mt-1">All rooms may be occupied during the selected exam schedule</p>
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
@@ -1932,7 +2362,7 @@ export default function ScheduleExamPage() {
 
       {/* Students Modal */}
       <Dialog open={studentsModalOpen} onOpenChange={setStudentsModalOpen}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden p-0">
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden p-0">
           <DialogHeader className="p-5 border-b">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -1971,6 +2401,9 @@ export default function ScheduleExamPage() {
                         <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
                           {assignBy === "UID" ? "UID" : "CU Reg. No."}
                         </th>
+                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-center align-middle font-medium text-sm border-r border-border">
+                          Foil Number
+                        </th>
                         <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
                           Email
                         </th>
@@ -2006,6 +2439,9 @@ export default function ScheduleExamPage() {
                           </td>
                           <td className="p-4 align-middle border-r border-border text-sm font-mono">
                             {assignBy === "UID" ? student.uid : student.cuRegistrationApplicationNumber || "N/A"}
+                          </td>
+                          <td className="p-4 align-middle border-r border-border text-sm text-center font-mono">
+                            {foilNumberMap[student.uid] || "0"}
                           </td>
                           <td className="p-4 align-middle border-r border-border text-sm">{student.email || "N/A"}</td>
                           <td className="p-4 align-middle border-r border-border text-sm">
@@ -2072,6 +2508,7 @@ export default function ScheduleExamPage() {
                           Name: student.name || "N/A",
                           UID: assignBy === "UID" ? student.uid || "N/A" : "N/A",
                           "CU Reg. No.": assignBy !== "UID" ? student.cuRegistrationApplicationNumber || "N/A" : "N/A",
+                          "Foil Number": foilNumberMap[student.uid] || "0",
                           Email: student.email || "N/A",
                           WhatsApp: student.whatsappPhone || "N/A",
                           Subject: subjectName,

@@ -28,6 +28,7 @@ import {
   ExamShiftDto,
   ExamSubjectDto,
   ExamSubjectTypeDto,
+  RoomDto,
 } from "@repo/db/dtos/exams";
 import {
   academicYearModel,
@@ -917,6 +918,461 @@ function generateSeatPositions(maxStudentsPerBench: number): string[] {
   return positions;
 }
 
+/**
+ * Checks if an exam with the same configuration already exists (without transaction)
+ * Returns duplicate exam ID if found, null otherwise
+ */
+export async function checkDuplicateExam(
+  dto: ExamDto,
+): Promise<{
+  isDuplicate: boolean;
+  duplicateExamId?: number;
+  message?: string;
+}> {
+  const academicYearId = dto.academicYear.id!;
+  const examTypeId = dto.examType.id!;
+  const classId = dto.class.id!;
+  const programCourseIds = dto.examProgramCourses.map(
+    (pc) => pc.programCourse.id!,
+  );
+  const shiftIds = dto.examShifts.map((s) => s.shift.id!);
+  const subjectTypeIds = dto.examSubjectTypes.map((st) => st.subjectType.id!);
+  const roomIds = dto.locations.map((loc) => loc.room.id!);
+
+  // Get affiliation and regulation from papers
+  const paperRows = await db.execute(
+    sql`
+      SELECT DISTINCT p.affiliation_id_fk, p.regulation_type_id_fk
+      FROM papers p
+      WHERE p.class_id_fk = ${classId}
+        AND p.programe_course_id_fk = ANY(ARRAY[${sql.join(programCourseIds, sql`, `)}]::int[])
+        AND p.academic_year_id_fk = ${academicYearId}
+        AND p.is_active = TRUE
+    `,
+  );
+
+  if (paperRows.rows.length === 0) {
+    return { isDuplicate: false };
+  }
+
+  const affiliationIds = Array.from(
+    new Set(
+      paperRows.rows
+        .map((r: any) => Number(r.affiliation_id_fk))
+        .filter((id: number) => !isNaN(id)),
+    ),
+  );
+  const regulationTypeIds = Array.from(
+    new Set(
+      paperRows.rows
+        .map((r: any) => Number(r.regulation_type_id_fk))
+        .filter((id: number) => !isNaN(id)),
+    ),
+  );
+
+  // Find existing exams with same academic-year, exam-type, and semester
+  const existingExams = await db
+    .select({
+      id: examModel.id,
+    })
+    .from(examModel)
+    .where(
+      and(
+        eq(examModel.academicYearId, academicYearId),
+        eq(examModel.examTypeId, examTypeId),
+        eq(examModel.classId, classId),
+      ),
+    );
+
+  if (existingExams.length === 0) {
+    return { isDuplicate: false };
+  }
+
+  const existingExamIds = existingExams.map((e) => e.id);
+
+  // For each existing exam, check if it matches all criteria
+  for (const existingExamId of existingExamIds) {
+    // Check shifts
+    const existingShifts = await db
+      .select({ shiftId: examShiftModel.shiftId })
+      .from(examShiftModel)
+      .where(eq(examShiftModel.examId, existingExamId));
+
+    const existingShiftIds = existingShifts.map((s) => s.shiftId).sort();
+    const newShiftIds = [...shiftIds].sort();
+
+    if (
+      existingShiftIds.length !== newShiftIds.length ||
+      !existingShiftIds.every((id, idx) => id === newShiftIds[idx])
+    ) {
+      continue; // Shifts don't match, check next exam
+    }
+
+    // Check program courses
+    const existingProgramCourses = await db
+      .select({ programCourseId: examProgramCourseModel.programCourseId })
+      .from(examProgramCourseModel)
+      .where(eq(examProgramCourseModel.examId, existingExamId));
+
+    const existingProgramCourseIds = existingProgramCourses
+      .map((pc) => pc.programCourseId)
+      .sort();
+    const newProgramCourseIds = [...programCourseIds].sort();
+
+    if (
+      existingProgramCourseIds.length !== newProgramCourseIds.length ||
+      !existingProgramCourseIds.every(
+        (id, idx) => id === newProgramCourseIds[idx],
+      )
+    ) {
+      continue; // Program courses don't match, check next exam
+    }
+
+    // Check subject types
+    const existingSubjectTypes = await db
+      .select({ subjectTypeId: examSubjectTypeModel.subjectTypeId })
+      .from(examSubjectTypeModel)
+      .where(eq(examSubjectTypeModel.examId, existingExamId));
+
+    const existingSubjectTypeIds = existingSubjectTypes
+      .map((st) => st.subjectTypeId)
+      .sort();
+    const newSubjectTypeIds = [...subjectTypeIds].sort();
+
+    if (
+      existingSubjectTypeIds.length !== newSubjectTypeIds.length ||
+      !existingSubjectTypeIds.every((id, idx) => id === newSubjectTypeIds[idx])
+    ) {
+      continue; // Subject types don't match, check next exam
+    }
+
+    // Check rooms (only if rooms are provided in the new exam)
+    if (roomIds.length > 0) {
+      const existingRooms = await db
+        .select({ roomId: examRoomModel.roomId })
+        .from(examRoomModel)
+        .where(eq(examRoomModel.examId, existingExamId));
+
+      const existingRoomIds = existingRooms.map((r) => r.roomId).sort();
+      const newRoomIds = [...roomIds].sort();
+
+      if (
+        existingRoomIds.length !== newRoomIds.length ||
+        !existingRoomIds.every((id, idx) => id === newRoomIds[idx])
+      ) {
+        continue; // Rooms don't match, check next exam
+      }
+    }
+    // If no rooms provided in new exam, skip room comparison (allows early duplicate detection)
+
+    // Check subjects with same date and time
+    const existingSubjects = await db
+      .select({
+        subjectId: examSubjectModel.subjectId,
+        startTime: examSubjectModel.startTime,
+        endTime: examSubjectModel.endTime,
+      })
+      .from(examSubjectModel)
+      .where(eq(examSubjectModel.examId, existingExamId));
+
+    // Must have same number of subjects
+    if (existingSubjects.length !== dto.examSubjects.length) {
+      continue; // Different number of subjects, check next exam
+    }
+
+    // Check if all new subjects match existing subjects (same subjectId, startTime, endTime)
+    const normalizeTime = (time: Date | null): number | null => {
+      if (!time) return null;
+      return new Date(time).getTime();
+    };
+
+    const allNewSubjectsMatch = dto.examSubjects.every((newSubject) => {
+      const newSubjectId = newSubject.subject.id!;
+      const newStartTime = normalizeTime(
+        newSubject.startTime ? new Date(newSubject.startTime) : null,
+      );
+      const newEndTime = normalizeTime(
+        newSubject.endTime ? new Date(newSubject.endTime) : null,
+      );
+
+      return existingSubjects.some((existingSubject) => {
+        if (existingSubject.subjectId !== newSubjectId) return false;
+
+        const existingStartTime = normalizeTime(
+          existingSubject.startTime
+            ? new Date(existingSubject.startTime)
+            : null,
+        );
+        const existingEndTime = normalizeTime(
+          existingSubject.endTime ? new Date(existingSubject.endTime) : null,
+        );
+
+        return (
+          newStartTime === existingStartTime && newEndTime === existingEndTime
+        );
+      });
+    });
+
+    const allExistingSubjectsMatch = existingSubjects.every(
+      (existingSubject) => {
+        const existingSubjectId = existingSubject.subjectId;
+        const existingStartTime = normalizeTime(
+          existingSubject.startTime
+            ? new Date(existingSubject.startTime)
+            : null,
+        );
+        const existingEndTime = normalizeTime(
+          existingSubject.endTime ? new Date(existingSubject.endTime) : null,
+        );
+
+        return dto.examSubjects.some((newSubject) => {
+          const newSubjectId = newSubject.subject.id!;
+          if (newSubjectId !== existingSubjectId) return false;
+
+          const newStartTime = normalizeTime(
+            newSubject.startTime ? new Date(newSubject.startTime) : null,
+          );
+          const newEndTime = normalizeTime(
+            newSubject.endTime ? new Date(newSubject.endTime) : null,
+          );
+
+          return (
+            newStartTime === existingStartTime && newEndTime === existingEndTime
+          );
+        });
+      },
+    );
+
+    if (!allNewSubjectsMatch || !allExistingSubjectsMatch) {
+      continue; // Subjects don't match, check next exam
+    }
+
+    // Check affiliation and regulation via papers
+    const existingPaperRows = await db.execute(
+      sql`
+        SELECT DISTINCT p.affiliation_id_fk, p.regulation_type_id_fk
+        FROM papers p
+        JOIN exam_program_courses epc ON epc.program_course_id_fk = p.programe_course_id_fk
+        WHERE epc.exam_id_fk = ${existingExamId}
+          AND p.class_id_fk = ${classId}
+          AND p.academic_year_id_fk = ${academicYearId}
+          AND p.is_active = TRUE
+      `,
+    );
+
+    const existingAffiliationIds = Array.from(
+      new Set(
+        existingPaperRows.rows
+          .map((r: any) => Number(r.affiliation_id_fk))
+          .filter((id: number) => !isNaN(id)),
+      ),
+    ).sort();
+    const existingRegulationTypeIds = Array.from(
+      new Set(
+        existingPaperRows.rows
+          .map((r: any) => Number(r.regulation_type_id_fk))
+          .filter((id: number) => !isNaN(id)),
+      ),
+    ).sort();
+
+    const newAffiliationIds = [...affiliationIds].sort();
+    const newRegulationTypeIds = [...regulationTypeIds].sort();
+
+    if (
+      existingAffiliationIds.length !== newAffiliationIds.length ||
+      !existingAffiliationIds.every(
+        (id, idx) => id === newAffiliationIds[idx],
+      ) ||
+      existingRegulationTypeIds.length !== newRegulationTypeIds.length ||
+      !existingRegulationTypeIds.every(
+        (id, idx) => id === newRegulationTypeIds[idx],
+      )
+    ) {
+      continue; // Affiliation/regulation don't match, check next exam
+    }
+
+    // All criteria match - duplicate found!
+    return {
+      isDuplicate: true,
+      duplicateExamId: existingExamId,
+      message: `An exam with the same configuration already exists (Exam ID: ${existingExamId}).`,
+    };
+  }
+
+  return { isDuplicate: false };
+}
+
+/**
+ * Validates if an exam with the same configuration already exists (within transaction)
+ * Checks for duplicates based on:
+ * - academic-year, exam-type, semester
+ * - shifts, program-courses, subject-categories/types
+ * - rooms
+ * - subjects with same date and time
+ * - affiliation and regulation (via papers)
+ */
+async function validateDuplicateExam(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  dto: ExamDto,
+): Promise<void> {
+  // Use the same logic but within transaction context
+  // We'll reuse the checkDuplicateExam logic but adapt it for transaction
+  const duplicateCheck = await checkDuplicateExam(dto);
+  if (duplicateCheck.isDuplicate) {
+    throw new Error(
+      duplicateCheck.message ||
+        `An exam with the same configuration already exists (Exam ID: ${duplicateCheck.duplicateExamId}).`,
+    );
+  }
+}
+
+/**
+ * Gets eligible rooms for exam scheduling based on date and time slots
+ * Filters out rooms that are already booked during the specified time periods
+ */
+export async function getEligibleRooms(
+  examSubjects: Array<{
+    subjectId: number;
+    startTime: Date | string;
+    endTime: Date | string;
+  }>,
+): Promise<RoomDto[]> {
+  // Get all active rooms
+  const allRooms = await db
+    .select()
+    .from(roomModel)
+    .where(eq(roomModel.isActive, true));
+
+  if (allRooms.length === 0) {
+    return [];
+  }
+
+  // If no exam subjects provided, return all active rooms sorted by name
+  if (examSubjects.length === 0) {
+    const dtos: RoomDto[] = [];
+    for (const room of allRooms) {
+      let floor = null;
+      if (room.floorId) {
+        const [foundFloor] = await db
+          .select()
+          .from(floorModel)
+          .where(eq(floorModel.id, room.floorId));
+        floor = foundFloor || null;
+      }
+      dtos.push({
+        ...room,
+        floor: floor!,
+      });
+    }
+    return dtos.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  }
+
+  // Get all exam subjects with their time slots
+  const allExamSubjects = await db
+    .select({
+      examId: examSubjectModel.examId,
+      startTime: examSubjectModel.startTime,
+      endTime: examSubjectModel.endTime,
+    })
+    .from(examSubjectModel);
+
+  // Get all exam rooms
+  const allExamRooms = await db
+    .select({
+      examId: examRoomModel.examId,
+      roomId: examRoomModel.roomId,
+    })
+    .from(examRoomModel);
+
+  // Create a map of roomId -> examIds that use this room
+  const roomToExams = new Map<number, Set<number>>();
+  for (const examRoom of allExamRooms) {
+    if (!roomToExams.has(examRoom.roomId)) {
+      roomToExams.set(examRoom.roomId, new Set());
+    }
+    roomToExams.get(examRoom.roomId)!.add(examRoom.examId);
+  }
+
+  // Create a map of examId -> time slots
+  const examToTimeSlots = new Map<number, Array<{ start: Date; end: Date }>>();
+  for (const examSubject of allExamSubjects) {
+    if (!examToTimeSlots.has(examSubject.examId)) {
+      examToTimeSlots.set(examSubject.examId, []);
+    }
+    const startTime = new Date(examSubject.startTime);
+    const endTime = new Date(examSubject.endTime);
+    examToTimeSlots
+      .get(examSubject.examId)!
+      .push({ start: startTime, end: endTime });
+  }
+
+  // Helper function to check if two time ranges overlap
+  const timeRangesOverlap = (
+    start1: Date,
+    end1: Date,
+    start2: Date,
+    end2: Date,
+  ): boolean => {
+    return start1 < end2 && start2 < end1;
+  };
+
+  // Filter eligible rooms
+  const eligibleRooms: RoomDto[] = [];
+
+  for (const room of allRooms) {
+    const examIdsUsingRoom = roomToExams.get(room.id!) || new Set();
+
+    // Check if this room is booked during any of the requested time slots
+    let isBooked = false;
+
+    for (const requestedSubject of examSubjects) {
+      const requestedStart = new Date(requestedSubject.startTime);
+      const requestedEnd = new Date(requestedSubject.endTime);
+
+      // Check if any exam using this room has overlapping time slots
+      for (const examId of examIdsUsingRoom) {
+        const timeSlots = examToTimeSlots.get(examId) || [];
+        for (const slot of timeSlots) {
+          if (
+            timeRangesOverlap(
+              requestedStart,
+              requestedEnd,
+              slot.start,
+              slot.end,
+            )
+          ) {
+            isBooked = true;
+            break;
+          }
+        }
+        if (isBooked) break;
+      }
+      if (isBooked) break;
+    }
+
+    // If room is not booked during requested times, it's eligible
+    if (!isBooked) {
+      let floor = null;
+      if (room.floorId) {
+        const [foundFloor] = await db
+          .select()
+          .from(floorModel)
+          .where(eq(floorModel.id, room.floorId));
+        floor = foundFloor || null;
+      }
+      eligibleRooms.push({
+        ...room,
+        floor: floor!,
+      });
+    }
+  }
+
+  // Sort by name
+  return eligibleRooms.sort((a, b) =>
+    (a.name || "").localeCompare(b.name || ""),
+  );
+}
+
 export async function createExamAssignment(
   dto: ExamDto,
   excelStudents: { foil_number: string; uid: string }[],
@@ -926,6 +1382,9 @@ export async function createExamAssignment(
       "[EXAM-SCHEDULE:createExamAssignment] Creating exam assignment:",
       dto,
     );
+
+    // Validate for duplicate exams before creating
+    await validateDuplicateExam(tx, dto);
 
     console.log(dto.academicYear);
     console.log(dto.class);
