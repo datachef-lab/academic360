@@ -4,6 +4,7 @@ import fs from "fs";
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import {
+  allotExamRoomsAndStudents,
   checkDuplicateExam,
   countStudentsByPapers,
   createExamAssignment,
@@ -932,6 +933,136 @@ export const getEligibleRoomsController = async (
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[GET-ELIGIBLE-ROOMS] Error:", error);
+    return res.status(500).json(new ApiResponse(500, "ERROR", null, message));
+  }
+};
+
+/**
+ * Allot rooms and students to an existing exam
+ */
+export const allotExamRoomsAndStudentsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { examId } = req.params;
+
+    // Parse locations from FormData (it comes as JSON string)
+    let locations: any;
+    if (typeof req.body.locations === "string") {
+      try {
+        locations = JSON.parse(req.body.locations);
+      } catch (e) {
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "ERROR",
+              null,
+              "Invalid locations format. Expected JSON array.",
+            ),
+          );
+      }
+    } else {
+      locations = req.body.locations;
+    }
+
+    const orderType = req.body.orderType;
+    // Handle gender - convert empty string to null
+    const gender =
+      req.body.gender === "" || req.body.gender === undefined
+        ? null
+        : req.body.gender;
+
+    if (!examId) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "examId is required"));
+    }
+
+    const examIdNum = Number(examId);
+    if (isNaN(examIdNum)) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid examId"));
+    }
+
+    if (!locations || !Array.isArray(locations) || locations.length === 0) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "ERROR",
+            null,
+            "locations array is required and must not be empty",
+          ),
+        );
+    }
+
+    if (!orderType) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "orderType is required"));
+    }
+
+    // Parse Excel file if provided
+    let excelStudents: { foil_number: string; uid: string }[] = [];
+    if (req.file) {
+      if (!req.file.mimetype || !req.file.mimetype.includes("spreadsheetml")) {
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "ERROR",
+              null,
+              "Invalid file type. Please upload a valid XLSX file.",
+            ),
+          );
+      }
+
+      const buffer = fs.readFileSync(req.file.path);
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        throw new Error("No sheets found in Excel file");
+      }
+      const sheet = workbook.Sheets[sheetName];
+      excelStudents = XLSX.utils.sheet_to_json(sheet) as {
+        foil_number: string;
+        uid: string;
+      }[];
+    }
+
+    const result = await allotExamRoomsAndStudents(
+      examIdNum,
+      {
+        locations,
+        orderType: orderType as
+          | "CU_ROLL_NUMBER"
+          | "UID"
+          | "CU_REGISTRATION_NUMBER",
+        gender: gender || null,
+      },
+      excelStudents,
+    );
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Rooms and students allotted successfully",
+        ),
+      );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("[ALLOT-EXAM] Error:", error);
     return res.status(500).json(new ApiResponse(500, "ERROR", null, message));
   }
 };

@@ -85,3 +85,56 @@ export async function doAssignExam(dto: ExamDto, file: File | null): Promise<Api
     throw new Error("Failed to assign exam");
   }
 }
+
+export interface AllotExamParams {
+  locations: Array<{
+    roomId: number;
+    studentsPerBench: number;
+    capacity: number;
+    room: {
+      id: number;
+      name: string;
+      floor?: {
+        id: number;
+        name: string;
+      } | null;
+    };
+  }>;
+  orderType: "CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER";
+  gender: "MALE" | "FEMALE" | "OTHER" | null;
+}
+
+export async function allotExamRoomsAndStudents(
+  examId: number,
+  params: AllotExamParams,
+  file: File | null,
+): Promise<ApiResponse<{ examId: number; totalStudentsAssigned: number; roomsAssigned: number; message: string }>> {
+  try {
+    const formData = new FormData();
+
+    console.log("in ui, allotExamRoomsAndStudents(), sending params + file:", params);
+
+    // Send locations, orderType, and gender as JSON
+    formData.append("locations", JSON.stringify(params.locations));
+    formData.append("orderType", params.orderType);
+    // Always send gender, even if null
+    formData.append("gender", params.gender || "");
+
+    // Send file
+    if (file) {
+      formData.append("file", file);
+    }
+
+    const response = await axiosInstance.post(`${BASE_URL}/${examId}/allot`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    console.log("In allotExamRoomsAndStudents(), response:", response);
+    return response.data;
+  } catch (error) {
+    console.error("Error allotting exam rooms and students:", error);
+    throw new Error("Failed to allot exam rooms and students");
+  }
+}

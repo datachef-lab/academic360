@@ -505,6 +505,13 @@
       "when": 1768038982974,
       "tag": "0071_unknown_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1768218768102,
+      "tag": "0072_worthless_silver_fox",
+      "breakpoints": true
     }
   ]
 }

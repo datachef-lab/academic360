@@ -2,7 +2,7 @@ import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { examModel } from "./exam.model";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
-import { subjectModel } from "../course-design";
+import { paperModel, subjectModel } from "../course-design";
 
 export const examSubjectModel = pgTable("exam_subjects", {
     id: serial().primaryKey(),
@@ -12,6 +12,8 @@ export const examSubjectModel = pgTable("exam_subjects", {
     subjectId: integer("subject_id_fk")
         .references(() => subjectModel.id)
         .notNull(),
+    paperId: integer("paper_id_fk")
+        .references(() => paperModel.id),
     startTime: timestamp("start_time", { withTimezone: true }).notNull(),
     endTime: timestamp("end_time", { withTimezone: true }).notNull(),
 

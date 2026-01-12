@@ -175,6 +175,7 @@ const router = createBrowserRouter(
           children: [
             { path: "", element: <examManagementModule.HomePage /> },
             { path: "schedule", element: <examManagementModule.ScheduleExamPage /> },
+            { path: "allot", element: <examManagementModule.AllotExamPage /> },
             { path: "exams", element: <examManagementModule.ExamsPage /> },
 
             // { path: "components", element: <examManagementModule.ExamComponentsPage /> },
@@ -208,7 +209,7 @@ const router = createBrowserRouter(
             { path: "invigilators", element: <examManagementModule.InvigilatorsPage /> },
             { path: "support-staff", element: <examManagementModule.SupportStaffPage /> },
             { path: "examiners", element: <examManagementModule.ExaminersPage /> },
-            { path: "allot", element: <examManagementModule.AllotAnswerscriptsPage /> },
+
             { path: "collect", element: <examManagementModule.CollectAnswerscriptsPage /> },
           ],
         },

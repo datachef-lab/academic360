@@ -15,6 +15,7 @@ import SupportStaffPage from "./support-staff-page";
 import ExamPage from "./exam-page";
 import TestTypePage from "./test-type-page";
 import EvaluationTypePage from "./evaluation-type-page";
+import AllotExamPage from "./allot-exam-page";
 
 export {
   AllotAnswerscriptsPage,
@@ -34,4 +35,5 @@ export {
   SupportStaffPage,
   TestTypePage,
   EvaluationTypePage,
+  AllotExamPage,
 };

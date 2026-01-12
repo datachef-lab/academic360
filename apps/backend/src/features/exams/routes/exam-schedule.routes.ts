@@ -1,5 +1,6 @@
 import { NextFunction, Response, Router } from "express";
 import {
+  allotExamRoomsAndStudentsController,
   checkDuplicateExamController,
   countStudentsForExam,
   createExamAssignmenthandler,
@@ -56,7 +57,6 @@ router.get("/", getAllExamsController);
 // router.post("/student/:studentId", verifyJWT, uploadExcelMiddleware, getExamsByStudentController);
 router.get("/admit-card/download/single", downloadSingleAdmitCardController);
 router.get("/candidates", getExamCandiatesByStudentIdAndExamIdController);
-router.get("/:id", getExamByIdController);
 router.get("/exam-papers/:id", getExamPapersByExamIdController);
 /**
  * Get paginated exams for a student
@@ -72,5 +72,18 @@ router.post("/check-duplicate", verifyJWT, checkDuplicateExamController);
  * Get eligible rooms based on exam schedule
  */
 router.post("/eligible-rooms", verifyJWT, getEligibleRoomsController);
+
+/**
+ * Allot rooms and students to an existing exam
+ * IMPORTANT: This route must come before /:id to avoid route conflicts
+ */
+router.post(
+  "/:examId/allot",
+  verifyJWT,
+  uploadExcelMiddleware,
+  allotExamRoomsAndStudentsController,
+);
+
+router.get("/:id", getExamByIdController);
 
 export default router;

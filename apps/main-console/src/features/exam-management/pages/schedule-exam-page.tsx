@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,18 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  Users,
-  AlertCircle,
-  CheckCircle2,
-  Trash2,
-  Loader2,
-  Upload,
-  X,
-  ChevronDown,
-  DoorOpen,
-  Download,
-} from "lucide-react";
+import { AlertCircle, Trash2, Loader2, X, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllExamTypes } from "@/services/exam-type.service";
@@ -29,33 +18,14 @@ import { getAllShifts } from "@/services/academic";
 import { getSubjectTypes, getExamComponents } from "@/services/course-design.api";
 import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
-import { getAllRooms } from "@/services/room.service";
-import { getAllFloors } from "@/services/floor.service";
-import {
-  checkDuplicateExam,
-  countStudentsForExam,
-  getEligibleRooms,
-  getStudentsForExam,
-} from "@/services/exam-schedule.service";
+import { checkDuplicateExam } from "@/services/exam-schedule.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, RoomDto, ExamProgramCourseDto } from "@repo/db/index";
+import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto } from "@repo/db/index";
 import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import * as XLSX from "xlsx";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 
-interface SelectedRoom extends RoomDto {
-  capacity: number;
-  maxStudentsPerBenchOverride?: number;
-}
+// Room and student interfaces moved to allot-exam-page
 
 // interface Student {
 //   uid: string;
@@ -193,20 +163,7 @@ export default function ScheduleExamPage() {
 
   // Fetch eligible rooms based on exam schedule
 
-  const { data: floors = [], isLoading: loadingFloors } = useQuery({
-    queryKey: ["floors"],
-    queryFn: async () => {
-      const res = await getAllFloors();
-      if (res.httpStatus === "SUCCESS" && res.payload) {
-        return res.payload.filter((f) => f.isActive !== false);
-      }
-      return [];
-    },
-    onError: (error) => {
-      console.error("Error fetching floors:", error);
-      toast.error("Failed to load floors");
-    },
-  });
+  // Floors query moved to allot-exam-page
 
   const { data: examComponents = [], isLoading: loadingExamComponents } = useQuery({
     queryKey: ["examComponents"],
@@ -249,92 +206,32 @@ export default function ScheduleExamPage() {
   const [selectedRegulationTypeId, setSelectedRegulationTypeId] = useState<number | null>(null);
   //   const [examAssignment, setExamAssignment] = useState<ExamDto | null>(null);
 
-  // Step 2: Room Selection
-  const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
-  const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
-  const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
-  const [totalCapacity, setTotalCapacity] = useState(0);
+  // Step 2: Room Selection - REMOVED (moved to allot-exam-page)
+  // const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
+  // const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
+  // const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
+  // const [totalCapacity, setTotalCapacity] = useState(0);
 
-  // Step 3: Exam Schedule (keyed by subjectId)
-  const [subjectSchedules, setSubjectSchedules] = useState<Record<string, Schedule>>({});
+  // Step 3: Exam Schedule - now tracks subject+paper combinations
+  interface SubjectPaperSchedule {
+    subjectId: number;
+    paperId: number;
+    schedule: Schedule;
+  }
+  const [selectedSubjectPapers, setSelectedSubjectPapers] = useState<SubjectPaperSchedule[]>([]);
+  // Keep selectedSubjectIds for backward compatibility with subject selection UI
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
-
-  // Fetch all rooms for statistics
-  const { data: allRooms = [], isLoading: loadingAllRooms } = useQuery({
-    queryKey: ["allRooms"],
-    queryFn: async () => {
-      const res = await getAllRooms();
-      if (res.httpStatus === "SUCCESS" && res.payload) {
-        return res.payload.filter((room) => room.isActive !== false);
-      }
-      return [];
-    },
-    onError: (error) => {
-      console.error("Error fetching all rooms:", error);
-    },
+  // Keep subjectSchedules as derived state for backward compatibility (will be removed later)
+  const subjectSchedules: Record<string, Schedule> = {};
+  selectedSubjectPapers.forEach((sp) => {
+    const key = `${sp.subjectId}`;
+    if (!subjectSchedules[key] || sp.schedule.date) {
+      subjectSchedules[key] = sp.schedule;
+    }
   });
 
-  // Fetch eligible rooms based on exam schedule
-  const { data: rooms = [], isLoading: loadingRooms } = useQuery({
-    queryKey: ["eligibleRooms", selectedSubjectIds, subjectSchedules],
-    queryFn: async () => {
-      // If no subjects selected, return all active rooms
-      if (selectedSubjectIds.length === 0) {
-        const res = await getAllRooms();
-        if (res.httpStatus === "SUCCESS" && res.payload) {
-          return res.payload
-            .filter((room) => room.isActive !== false)
-            .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-        }
-        return [];
-      }
-
-      // Build exam subjects array from selected subjects and schedules
-      const examSubjects = selectedSubjectIds
-        .map((subjectId) => {
-          const schedule = subjectSchedules[subjectId.toString()];
-          if (!schedule?.date || !schedule?.startTime || !schedule?.endTime) {
-            return null;
-          }
-          const startDateTime = `${schedule.date}T${schedule.startTime}:00+05:30`;
-          const endDateTime = `${schedule.date}T${schedule.endTime}:00+05:30`;
-          return {
-            subjectId,
-            startTime: new Date(startDateTime),
-            endTime: new Date(endDateTime),
-          };
-        })
-        .filter((subject): subject is { subjectId: number; startTime: Date; endTime: Date } => subject !== null);
-
-      // If no valid schedules, return all active rooms
-      if (examSubjects.length === 0) {
-        const res = await getAllRooms();
-        if (res.httpStatus === "SUCCESS" && res.payload) {
-          return res.payload
-            .filter((room) => room.isActive !== false)
-            .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-        }
-        return [];
-      }
-
-      // Fetch eligible rooms
-      const res = await getEligibleRooms({ examSubjects });
-      if (res.httpStatus === "SUCCESS" && res.payload) {
-        return res.payload.rooms.sort((a, b) => (a.name || "").localeCompare(b.name || "")) as RoomDto[];
-      }
-      return [];
-    },
-    enabled: true, // Always enabled, will handle empty case
-    onError: (error) => {
-      console.error("Error fetching eligible rooms:", error);
-      toast.error("Failed to load eligible rooms");
-    },
-  });
-
-  // Excel file upload state
-  const [excelFile, setExcelFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [foilNumberMap, setFoilNumberMap] = useState<Record<string, string>>({});
+  // Room and student selection moved to allot-exam-page
+  // Excel file upload moved to allot-exam-page
 
   // Assignments (kept for potential future use)
 
@@ -343,74 +240,7 @@ export default function ScheduleExamPage() {
     void loadAcademicYears();
   }, [loadAcademicYears]);
 
-  // Handle Excel file upload
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.name.toLowerCase().match(/\.(xlsx|xls)$/)) {
-        toast.error("Please upload a valid Excel file (.xlsx or .xls)");
-        event.target.value = "";
-        return;
-      }
-      if (file.size > 100 * 1024 * 1024) {
-        // 100MB limit
-        toast.error("File size must be less than 100MB");
-        event.target.value = "";
-        return;
-      }
-      setExcelFile(file);
-
-      // Parse Excel file to extract foil numbers
-      try {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer);
-            const workbook = XLSX.read(data, { type: "array" });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName!];
-            const jsonData = XLSX.utils.sheet_to_json(sheet!) as Array<{
-              foil_number?: string | number;
-              uid?: string;
-            }>;
-
-            // Create a map of UID to foil_number
-            const foilMap: Record<string, string> = {};
-            jsonData.forEach((row) => {
-              if (row.uid && row.foil_number !== undefined) {
-                const uid = String(row.uid).trim();
-                const foilNumber = String(row.foil_number).trim();
-                if (uid && foilNumber) {
-                  foilMap[uid] = foilNumber;
-                }
-              }
-            });
-            setFoilNumberMap(foilMap);
-            console.log("[EXCEL] Parsed foil numbers:", Object.keys(foilMap).length);
-          } catch (error) {
-            console.error("Error parsing Excel file:", error);
-            setFoilNumberMap({});
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      } catch (error) {
-        console.error("Error reading Excel file:", error);
-        setFoilNumberMap({});
-      }
-
-      toast.success(`Uploaded: ${file.name}`);
-    }
-  };
-
-  const removeExcelFile = () => {
-    setExcelFile(null);
-    setFoilNumberMap({});
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    toast.info("Excel file removed");
-  };
+  // Excel file upload moved to allot-exam-page
 
   // Fetch papers when filters change
   const isPapersQueryEnabled = selectedProgramCourses.length > 0 && !!semester;
@@ -513,8 +343,6 @@ export default function ScheduleExamPage() {
     subjectTypes: loadingSubjectTypes,
     papers: isPapersQueryEnabled && (loadingPapers || fetchingPapers),
     subjects: loadingSubjects,
-    rooms: loadingRooms,
-    floors: loadingFloors,
     examComponents: loadingExamComponents,
     affiliations: loadingAffiliations,
     regulationTypes: loadingRegulationTypes,
@@ -710,10 +538,7 @@ export default function ScheduleExamPage() {
     }));
   };
 
-  const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
-    if (!selectedSubjectId) return [];
-    return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
-  }, [selectedSubjectId, getAvailablePapers]);
+  // getPapersForSelectedSubject moved to allot-exam-page
 
   //   const createFormData = useCallback((params: any) => {
   //     const formData = new FormData();
@@ -732,174 +557,7 @@ export default function ScheduleExamPage() {
   //     return formData;
   //   }, [excelFile]);
 
-  // Fetch student count from API based on selected subject
-  const { data: totalStudents = 0 } = useQuery({
-    queryKey: [
-      "studentCount",
-      selectedProgramCourses,
-      selectedShifts,
-      semester,
-      selectedSubjectId,
-      selectedAcademicYearId,
-      currentAcademicYear?.id,
-      gender,
-      excelFile?.name,
-    ],
-    queryFn: async () => {
-      // Check if currentAcademicYear is available
-      if (!currentAcademicYear?.id) {
-        console.log("[SCHEDULE-EXAM] Waiting for academic year to be loaded...");
-        return 0;
-      }
-
-      if (selectedProgramCourses.length === 0 || !semester || !selectedSubjectId) {
-        return 0;
-      }
-
-      const papersForSubject = getPapersForSelectedSubject();
-      const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
-
-      if (paperIds.length === 0) {
-        return 0;
-      }
-
-      const classObj = classes.find((c) => c.id?.toString() === semester);
-      if (!classObj?.id) {
-        return 0;
-      }
-
-      console.log("[SCHEDULE-EXAM] Fetching student count with params:", {
-        classId: classObj.id,
-        programCourseIds: selectedProgramCourses,
-        paperIds,
-        academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-        shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-      });
-
-      const response = await countStudentsForExam(
-        {
-          classId: classObj.id,
-          programCourseIds: selectedProgramCourses,
-          paperIds,
-          academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-          gender: gender === "ALL" ? null : gender,
-        },
-        excelFile,
-      );
-
-      console.log("[SCHEDULE-EXAM] Student count response:", response);
-
-      if (response.httpStatus === "SUCCESS" && response.payload) {
-        return response.payload.count;
-      } else {
-        console.warn("[SCHEDULE-EXAM] Unexpected response:", response);
-        return 0;
-      }
-    },
-    enabled:
-      !!currentAcademicYear?.id &&
-      selectedProgramCourses.length > 0 &&
-      !!semester &&
-      !!selectedSubjectId &&
-      getPapersForSelectedSubject().length > 0,
-    onError: (error) => {
-      console.error("[SCHEDULE-EXAM] Error fetching student count:", error);
-    },
-  });
-
-  useEffect(() => {
-    const capacity = selectedRooms.reduce((total, room) => {
-      const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-      const numberOfBenches = room.numberOfBenches || 0;
-      return total + numberOfBenches * maxStudentsPerBench;
-    }, 0);
-    setTotalCapacity(capacity);
-  }, [selectedRooms]);
-
-  // Fetch students with seat assignments when rooms are selected
-  const { data: studentsWithSeats = [], isLoading: loadingStudents } = useQuery({
-    queryKey: [
-      "studentsWithSeats",
-      selectedRooms,
-      selectedProgramCourses,
-      selectedShifts,
-      semester,
-      selectedSubjectId,
-      selectedAcademicYearId,
-      currentAcademicYear?.id,
-      assignBy,
-      gender,
-      excelFile?.name,
-    ],
-    queryFn: async () => {
-      if (
-        selectedRooms.length === 0 ||
-        selectedProgramCourses.length === 0 ||
-        !semester ||
-        !selectedSubjectId ||
-        !currentAcademicYear?.id
-      ) {
-        return [];
-      }
-
-      const papersForSubject = getPapersForSelectedSubject();
-      const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
-
-      if (paperIds.length === 0) {
-        return [];
-      }
-
-      const classObj = classes.find((c) => c.id?.toString() === semester);
-      if (!classObj?.id) {
-        return [];
-      }
-
-      // Prepare room assignments
-      const roomAssignments = selectedRooms.map((room) => {
-        const floor = floors.find((f) => f.id === room.floor.id);
-        const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-        return {
-          roomId: room.id!,
-          floorId: room.floor.id,
-          floorName: floor?.name || null,
-          roomName: room.name || `Room ${room.id}`,
-          maxStudentsPerBench,
-          numberOfBenches: room.numberOfBenches || 0,
-        };
-      });
-
-      const response = await getStudentsForExam(
-        {
-          classId: classObj.id,
-          programCourseIds: selectedProgramCourses,
-          paperIds,
-          academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-          assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
-          roomAssignments,
-          gender: gender == "ALL" ? null : gender,
-        },
-        excelFile,
-      );
-
-      if (response.httpStatus === "SUCCESS" && response.payload) {
-        return response.payload.students;
-      } else {
-        return [];
-      }
-    },
-    enabled:
-      selectedRooms.length > 0 &&
-      selectedProgramCourses.length > 0 &&
-      !!semester &&
-      !!selectedSubjectId &&
-      !!currentAcademicYear?.id &&
-      getPapersForSelectedSubject().length > 0,
-    onError: (error) => {
-      console.error("[SCHEDULE-EXAM] Error fetching students with seats:", error);
-    },
-  });
+  // Student count and seat assignment queries moved to allot-exam-page
 
   const handleProgramCourseToggle = (courseId: number) => {
     setSelectedProgramCourses((prev) =>
@@ -917,38 +575,101 @@ export default function ScheduleExamPage() {
     );
   };
 
-  const handleRoomSelection = (room: RoomDto, selected: boolean) => {
-    if (selected) {
-      const maxStudentsPerBench = room.maxStudentsPerBench || 2;
-      const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
-      setSelectedRooms((prev) => [...prev, { ...room, capacity }]);
-    } else {
-      setSelectedRooms((prev) => prev.filter((r) => r.id !== room.id));
-    }
+  // Helper to get papers for a subject
+  const getPapersForSubject = useCallback(
+    (subjectId: number): PaperDto[] => {
+      return papers.filter((paper) => paper.subjectId === subjectId && paper.isActive !== false);
+    },
+    [papers],
+  );
+
+  // Normalize paper code for comparison (trim and lowercase)
+  const normalizePaperCode = (code: string | null | undefined): string => {
+    return (code || "").trim().toLowerCase();
   };
 
-  const handleMaxStudentsPerBenchOverride = (roomId: number, override: number | null) => {
-    setSelectedRooms((prev) =>
-      prev.map((r) => {
-        if (r.id === roomId) {
-          const maxStudentsPerBench = override || r.maxStudentsPerBench || 2;
-          const numberOfBenches = r.numberOfBenches || 0;
-          const capacity = numberOfBenches * maxStudentsPerBench;
-          return {
-            ...r,
-            maxStudentsPerBenchOverride: override || undefined,
-            capacity,
-          };
-        }
-        return r;
-      }),
-    );
+  // Handle subject selection - when subject is selected, auto-select ALL its papers
+  const handleSubjectToggle = (subjectId: number) => {
+    setSelectedSubjectIds((prev) => {
+      if (prev.includes(subjectId)) {
+        // Remove subject and all its papers
+        setSelectedSubjectPapers((prevPapers) => prevPapers.filter((sp) => sp.subjectId !== subjectId));
+        return prev.filter((id) => id !== subjectId);
+      } else {
+        // Add subject - auto-select ALL papers for this subject
+        const subjectPapers = getPapersForSubject(subjectId);
+        const newPapers: SubjectPaperSchedule[] = subjectPapers
+          .filter((paper) => paper.id)
+          .map((paper) => ({
+            subjectId,
+            paperId: paper.id!,
+            schedule: { date: "", startTime: "", endTime: "" },
+          }));
+
+        setSelectedSubjectPapers((prev) => [...prev, ...newPapers]);
+        return [...prev, subjectId];
+      }
+    });
   };
 
-  const handleScheduleChange = (subjectId: number | string | null, field: keyof Schedule, value: string) => {
-    if (subjectId === null) return;
-    const id = typeof subjectId === "number" ? subjectId.toString() : subjectId;
-    const currentSchedule = subjectSchedules[id] || { date: "", startTime: "", endTime: "" };
+  // Room selection handlers moved to allot-exam-page
+
+  // Group papers by subjectId and normalized paper code
+  const getGroupedSubjectPapers = useCallback(() => {
+    const grouped = new Map<
+      string,
+      {
+        subjectId: number;
+        normalizedCode: string;
+        papers: Array<{ paperId: number; paper: PaperDto; schedule: Schedule }>;
+        representativeSchedule: Schedule; // Use the first paper's schedule as representative
+      }
+    >();
+
+    selectedSubjectPapers.forEach((sp) => {
+      const paper = papers.find((p) => p.id === sp.paperId);
+      if (!paper) return;
+
+      const normalizedCode = normalizePaperCode(paper.code);
+      const groupKey = `${sp.subjectId}|${normalizedCode}`;
+
+      if (!grouped.has(groupKey)) {
+        grouped.set(groupKey, {
+          subjectId: sp.subjectId,
+          normalizedCode,
+          papers: [],
+          representativeSchedule: sp.schedule,
+        });
+      }
+
+      const group = grouped.get(groupKey)!;
+      group.papers.push({
+        paperId: sp.paperId,
+        paper,
+        schedule: sp.schedule,
+      });
+      // Update representative schedule if this one has more complete data
+      if (sp.schedule.date && !group.representativeSchedule.date) {
+        group.representativeSchedule = sp.schedule;
+      }
+    });
+
+    return Array.from(grouped.values());
+  }, [selectedSubjectPapers, papers]);
+
+  // Handle schedule change for a group of papers (same subject + normalized code)
+  const handleScheduleChange = (subjectId: number, normalizedCode: string, field: keyof Schedule, value: string) => {
+    // Find all papers in this group
+    const groupPapers = selectedSubjectPapers.filter((sp) => {
+      const paper = papers.find((p) => p.id === sp.paperId);
+      if (!paper) return false;
+      return sp.subjectId === subjectId && normalizePaperCode(paper.code) === normalizedCode;
+    });
+
+    if (groupPapers.length === 0) return;
+
+    // Get current schedule from first paper in group
+    const currentSchedule = groupPapers[0]?.schedule || { date: "", startTime: "", endTime: "" };
 
     // Validate end time is not less than start time
     if (field === "endTime" && currentSchedule.startTime && value) {
@@ -973,13 +694,25 @@ export default function ScheduleExamPage() {
       }
     }
 
-    setSubjectSchedules((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: value,
-      } as Schedule,
-    }));
+    // Update all papers in the group
+    setSelectedSubjectPapers((prev) =>
+      prev.map((sp) => {
+        const paper = papers.find((p) => p.id === sp.paperId);
+        if (!paper) return sp;
+
+        const spNormalizedCode = normalizePaperCode(paper.code);
+        if (sp.subjectId === subjectId && spNormalizedCode === normalizedCode) {
+          return {
+            ...sp,
+            schedule: {
+              ...sp.schedule,
+              [field]: value,
+            },
+          };
+        }
+        return sp;
+      }),
+    );
   };
 
   //   const formatTime = (time24?: string) => {
@@ -1058,9 +791,7 @@ export default function ScheduleExamPage() {
   //     toast.success(`Successfully assigned ${newAssignments.length} students`);
   //   };
 
-  const capacityStatus = totalCapacity >= totalStudents;
-  const [roomsModalOpen, setRoomsModalOpen] = useState(false);
-  const [studentsModalOpen, setStudentsModalOpen] = useState(false);
+  // Room and student modals moved to allot-exam-page
 
   // Keep selected academic year in sync with current academic year by default
   useEffect(() => {
@@ -1072,7 +803,7 @@ export default function ScheduleExamPage() {
   // Reset selected subjects when program courses, subject categories, or semester change
   useEffect(() => {
     setSelectedSubjectIds([]);
-    setSubjectSchedules({});
+    setSelectedSubjectPapers([]);
     setSelectedSubjectId(null);
   }, [selectedProgramCourses, selectedSubjectCategories, semester]);
 
@@ -1127,8 +858,8 @@ export default function ScheduleExamPage() {
       console.log("[DUPLICATE-CHECK] Starting duplicate check...");
       try {
         const examSubjects: ExamSubjectT[] = [];
-        for (const subjectId of selectedSubjectIds) {
-          const schedule = subjectSchedules[subjectId];
+        for (const subjectPaper of selectedSubjectPapers) {
+          const schedule = subjectPaper.schedule;
           if (!schedule?.date || !schedule?.startTime || !schedule?.endTime) {
             continue;
           }
@@ -1137,7 +868,8 @@ export default function ScheduleExamPage() {
           const endDateTime = `${schedule.date}T${schedule.endTime}:00+05:30`;
 
           examSubjects.push({
-            subjectId: subjectId,
+            subjectId: subjectPaper.subjectId,
+            paperId: subjectPaper.paperId, // Include paperId
             startTime: new Date(startDateTime),
             endTime: new Date(endDateTime),
             examId: 0,
@@ -1152,25 +884,11 @@ export default function ScheduleExamPage() {
           return;
         }
 
-        // For duplicate check, we can use empty locations array if rooms aren't selected yet
-        // The backend validation will still check rooms when creating, but for duplicate detection
-        // we want to check even without rooms selected
-        const locations: ExamRoomDto[] =
-          selectedRooms.length > 0
-            ? selectedRooms.map((room) => ({
-                roomId: room.id!,
-                studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
-                capacity: room.capacity,
-                room: rooms.find((r) => r.id === room.id)!,
-                examId: 0,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                id: 0,
-              }))
-            : [];
+        // For duplicate check, use empty locations array (rooms not selected in schedule step)
+        const locations: ExamRoomDto[] = [];
 
         const tmpExamAssignment: ExamDto = {
-          orderType: assignBy,
+          orderType: "UID", // Default, will be set during allotment
           academicYear: availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)!,
           class: classes.find((c) => c.id?.toString() === semester)!,
           examType: examTypes.find((et) => et.id?.toString() === examType)!,
@@ -1197,12 +915,12 @@ export default function ScheduleExamPage() {
               examId: 0,
               subjectType: st,
             })),
-          gender: gender === "ALL" ? null : gender,
+          gender: null, // Will be set during allotment
           examSubjects: examSubjects.map((es) => ({
             ...es,
             subject: subjects.find((ele) => ele.id === es.subjectId)!,
           })),
-          locations,
+          locations, // Empty array - no rooms assigned yet
           createdAt: new Date(),
           updatedAt: new Date(),
           id: 0,
@@ -1242,10 +960,7 @@ export default function ScheduleExamPage() {
     selectedShifts,
     selectedSubjectCategories,
     selectedSubjectIds,
-    selectedRooms,
     subjectSchedules,
-    assignBy,
-    gender,
     availableAcademicYears,
     classes,
     examTypes,
@@ -1253,20 +968,21 @@ export default function ScheduleExamPage() {
     shifts,
     subjectTypes,
     subjects,
-    rooms,
   ]);
 
   const assignExamMutation = useMutation({
     mutationFn: async () => {
       const examSubjects: ExamSubjectT[] = [];
-      console.log("[SCHEDULE-EXAM] Selected subject IDs:", selectedSubjectIds);
-      console.log("[SCHEDULE-EXAM] Subject schedules:", subjectSchedules);
+      console.log("[SCHEDULE-EXAM] Selected subject papers:", selectedSubjectPapers);
 
-      for (const subjectId of selectedSubjectIds) {
-        const schedule = subjectSchedules[subjectId];
+      for (const subjectPaper of selectedSubjectPapers) {
+        const schedule = subjectPaper.schedule;
 
         if (!schedule?.date || !schedule?.startTime || !schedule?.endTime) {
-          console.warn(`[SCHEDULE-EXAM] Incomplete schedule for subject ${subjectId}`, schedule);
+          console.warn(
+            `[SCHEDULE-EXAM] Incomplete schedule for subject ${subjectPaper.subjectId} paper ${subjectPaper.paperId}`,
+            schedule,
+          );
           continue;
         }
 
@@ -1274,7 +990,8 @@ export default function ScheduleExamPage() {
         const endDateTime = `${schedule.date}T${schedule.endTime}:00+05:30`;
 
         examSubjects.push({
-          subjectId: subjectId,
+          subjectId: subjectPaper.subjectId,
+          paperId: subjectPaper.paperId, // Now includes paperId
           startTime: new Date(startDateTime),
           endTime: new Date(endDateTime),
           examId: 0,
@@ -1284,25 +1001,18 @@ export default function ScheduleExamPage() {
         });
 
         console.log("[SCHEDULE-EXAM] Exam subject pushed:", {
-          subjectId,
+          subjectId: subjectPaper.subjectId,
+          paperId: subjectPaper.paperId,
           startDateTime,
           endDateTime,
         });
       }
 
-      const locations: ExamRoomDto[] = selectedRooms.map((room) => ({
-        roomId: room.id!,
-        studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
-        capacity: room.capacity,
-        room: rooms.find((r) => r.id === room.id)!,
-        examId: 0, // will be set backend
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        id: 0,
-      }));
+      // No rooms/students in schedule step - empty locations array
+      const locations: ExamRoomDto[] = [];
 
       const tmpExamAssignment: ExamDto = {
-        orderType: assignBy,
+        orderType: "UID", // Default, will be set during allotment
         academicYear: availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)!,
         class: classes.find((c) => c.id?.toString() === semester)!,
         examType: examTypes.find((et) => et.id?.toString() === examType)!,
@@ -1329,7 +1039,7 @@ export default function ScheduleExamPage() {
             examId: 0,
             subjectType: st,
           })),
-        gender: gender === "ALL" ? null : gender,
+        gender: null, // Will be set during allotment
         examSubjects: examSubjects.map((es) => ({
           ...es,
           subject: subjects.find((ele) => ele.id === es.subjectId)!,
@@ -1352,29 +1062,47 @@ export default function ScheduleExamPage() {
       }
 
       console.log("Before calling doAssignExam with:", tmpExamAssignment);
-      const response = await doAssignExam(
-        {
-          ...tmpExamAssignment,
-          gender: (tmpExamAssignment.gender as string) === "ALL" ? null : tmpExamAssignment.gender,
-        },
-        excelFile,
-      );
+      // No Excel file needed for scheduling - only for allotment
+      const response = await doAssignExam(tmpExamAssignment, null);
       console.log("In exam assignment post api, response:", response);
       return response;
     },
-    onSuccess: () => {
-      toast.success(`Successfully assigned exam to the students`);
+    onSuccess: (response) => {
+      toast.success(`Exam scheduled successfully! You can now allot rooms and students.`);
       // Invalidate relevant queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["studentsWithSeats"] });
-      queryClient.invalidateQueries({ queryKey: ["studentCount"] });
+      queryClient.invalidateQueries({ queryKey: ["exams"] });
+      // Reset form after successful creation
+      resetForm();
+      // Optionally redirect to allot exam page with exam ID
+      if (response.payload?.id) {
+        // Could navigate to allot page here if needed
+        console.log("Exam scheduled with ID:", response.payload.id);
+      }
     },
     onError: (error) => {
-      console.log("In exam assignment post api, error:", error);
-      toast.error(`Something went wrong while assigning exam!`);
+      console.log("In exam scheduling post api, error:", error);
+      toast.error(`Something went wrong while scheduling exam!`);
     },
   });
 
-  const handleAssignExam = () => {
+  // Reset form function
+  const resetForm = () => {
+    setExamType("");
+    setSemester("");
+    setSelectedProgramCourses([]);
+    setSelectedShifts([]);
+    setSelectedSubjectCategories([]);
+    setSelectedSubjectId(null);
+    setSelectedExamComponent(null);
+    setSelectedAcademicYearId(null);
+    setSelectedAffiliationId(null);
+    setSelectedRegulationTypeId(null);
+    setSelectedSubjectPapers([]);
+    setSelectedSubjectIds([]);
+    setDuplicateCheckResult(null);
+  };
+
+  const handleScheduleExam = () => {
     assignExamMutation.mutate();
   };
 
@@ -1382,17 +1110,15 @@ export default function ScheduleExamPage() {
     <div className="min-h-screen w-full p-7 py-4">
       <div className=" w-full flex flex-col gap-4">
         <div className="w-full  px-4 mx-auto">
+          {/* Page Heading */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-800">Schedule Exam</h1>
+            <p className="text-gray-600 mt-1">Create and schedule exams for your academic year</p>
+          </div>
           {/* Top filter strip (A.Y, Aff, Reg, Exam type, Semester, Shifts, Program Course, Subject Category) */}
           <div className="mb-4 mt-3 space-y-6">
-            <Card className="border border-slate-500 shadow-none ">
-              <CardHeader className="border-b border-slate-500 pb-2 mb-7">
-                <CardTitle>
-                  <h3 className="scroll-m-20 text-slate-600 italic text-2xl font-semibold tracking-tight">
-                    Step 1: Select the filters to schedule the exam.
-                  </h3>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5 pb-14">
+            <Card className="border-0 shadow-none">
+              <CardContent className="space-y-5 pb-14 pt-4">
                 {/* First Row: Main Filters - Full Width */}
                 <div className="flex flex-wrap gap-3 pb-4 sm:gap-4 items-start w-full">
                   {/* Academic Year */}
@@ -1677,7 +1403,7 @@ export default function ScheduleExamPage() {
                                   <Badge
                                     key={categoryId}
                                     variant="outline"
-                                    className=" border-purple-300 text-purple-700 bg-purple-50 flex items-center gap-1"
+                                    className=" border-green-300 text-green-700 bg-green-50 flex items-center gap-1"
                                   >
                                     {category.code && category.code.trim() ? category.code : category.name}
                                     <button
@@ -1705,15 +1431,8 @@ export default function ScheduleExamPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-slate-500 shadow-none">
-              <CardHeader className="border-b border-slate-500 pb-2 mb-7">
-                <CardTitle>
-                  <h3 className="scroll-m-20 text-slate-600 italic text-2xl font-semibold tracking-tight">
-                    Step 2: Select the subjects to schedule the exam.
-                  </h3>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5 pb-14">
+            <Card className="border-0 shadow-none">
+              <CardContent className="space-y-5 pb-14 pt-4">
                 {/* Third Row: Other Filters - Full Width */}
                 <div className="flex flex-wrap gap-3 sm:gap-4 items-start w-full ">
                   {/* Subjects */}
@@ -1737,33 +1456,30 @@ export default function ScheduleExamPage() {
                             )}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-64 p-2" align="start">
+                        <PopoverContent className="w-80 p-2" align="start">
                           <div className="max-h-60 overflow-y-auto space-y-1">
                             {getDistinctSubjects().map((subject) => {
                               if (subject.subjectId == null) return null;
                               const isChecked = selectedSubjectIds.includes(subject.subjectId);
+
                               return (
                                 <button
                                   key={subject.subjectId}
                                   type="button"
                                   className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
-                                  onClick={() =>
-                                    setSelectedSubjectIds((prev) =>
-                                      isChecked
-                                        ? prev.filter((id) => id !== subject.subjectId)
-                                        : [...prev, subject.subjectId as number],
-                                    )
-                                  }
+                                  onClick={() => {
+                                    if (subject.subjectId) {
+                                      handleSubjectToggle(subject.subjectId);
+                                    }
+                                  }}
                                 >
                                   <Checkbox
                                     checked={isChecked}
-                                    onCheckedChange={() =>
-                                      setSelectedSubjectIds((prev) =>
-                                        isChecked
-                                          ? prev.filter((id) => id !== subject.subjectId)
-                                          : [...prev, subject.subjectId as number],
-                                      )
-                                    }
+                                    onCheckedChange={() => {
+                                      if (subject.subjectId) {
+                                        handleSubjectToggle(subject.subjectId);
+                                      }
+                                    }}
                                     className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                   />
                                   <span className="text-sm text-left flex-1">
@@ -1820,85 +1536,207 @@ export default function ScheduleExamPage() {
                               Loading papers...
                             </div>
                           ) : (
-                            <div className="border rounded-lg overflow-hidden">
+                            <div className="border border-gray-400 rounded-lg overflow-hidden">
                               <Table>
                                 <TableHeader>
-                                  <TableRow className="bg-gray-100">
-                                    <TableHead className="w-[50px] text-center  font-medium">Sr. No.</TableHead>
-                                    <TableHead className=" font-medium">Subject</TableHead>
-                                    <TableHead className=" font-medium">Date</TableHead>
-                                    <TableHead className=" font-medium">Start Time</TableHead>
-                                    <TableHead className=" font-medium">End Time</TableHead>
-                                    <TableHead className="w-[100px] text-center  font-medium">Action</TableHead>
+                                  <TableRow className="border-b border-gray-400">
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[5%]">
+                                      <div className="font-medium">Sr. No.</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[15%]">
+                                      <div className="font-medium">Program Course</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[25%]">
+                                      <div className="font-medium">Subject & Paper</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
+                                      <div className="font-medium">Code</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
+                                      <div className="font-medium">Subject Category</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[12%]">
+                                      <div className="font-medium">Date</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center bg-gray-100 w-[13%]">
+                                      <div className="font-medium">Time</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center bg-gray-100 w-[10%]">
+                                      <div className="font-medium">Action</div>
+                                    </TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {selectedSubjectIds.length === 0 ? (
+                                  {selectedSubjectPapers.length === 0 ? (
                                     <TableRow>
-                                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground ">
+                                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                                         {getDistinctSubjects().length === 0
                                           ? "No subjects available"
-                                          : "Select subjects from the dropdown above"}
+                                          : "Select subjects from the dropdown above and choose papers"}
                                       </TableCell>
                                     </TableRow>
                                   ) : (
-                                    selectedSubjectIds.map((id, index) => {
-                                      const subjectMeta = getDistinctSubjects().find((s) => s.subjectId === id);
-                                      const subject = subjects.find((s) => s.id === id);
-                                      const name = subjectMeta?.subjectName || subject?.name || `Subject ID: ${id}`;
-                                      const code = subjectMeta?.subjectCode || subject?.code;
-                                      const schedule = subjectSchedules[id.toString()] ?? {
-                                        date: "",
-                                        startTime: "",
-                                        endTime: "",
-                                      };
+                                    getGroupedSubjectPapers().map((group, index) => {
+                                      // Use first paper as representative for display
+                                      const representativePaper = group.papers[0]?.paper;
+                                      const subject = subjects.find((s) => s.id === group.subjectId);
+                                      if (!representativePaper || !subject) return null;
+
+                                      const programCourse = programCourses.find(
+                                        (pc) => pc.id === representativePaper.programCourseId,
+                                      );
+                                      const subjectType = subjectTypes.find(
+                                        (st) => st.id === representativePaper.subjectTypeId,
+                                      );
+
+                                      // Use representative schedule (from first paper or most complete one)
+                                      const schedule = group.representativeSchedule;
+                                      const dateValue = schedule.date || "";
+                                      const startTimeValue = schedule.startTime || "";
+                                      const endTimeValue = schedule.endTime || "";
+
+                                      // Show count if multiple papers in group
+                                      const paperCount = group.papers.length;
+                                      const showCount = paperCount > 1;
 
                                       return (
                                         <TableRow
-                                          key={id}
-                                          className={`cursor-pointer ${selectedSubjectId === id ? "bg-muted" : ""}`}
-                                          onClick={() => setSelectedSubjectId(id)}
+                                          key={`${group.subjectId}-${group.normalizedCode}-${index}`}
+                                          className="border-b border-gray-400"
                                         >
-                                          <TableCell className="text-center ">{index + 1}</TableCell>
-                                          <TableCell className="font-medium ">{code ? code : name}</TableCell>
-                                          <TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400">
+                                            {index + 1}
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400">
+                                            {programCourse ? (
+                                              <Badge
+                                                variant="outline"
+                                                className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                                              >
+                                                {programCourse.name}
+                                              </Badge>
+                                            ) : (
+                                              <span className="text-muted-foreground">-</span>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400">
+                                            <div className="flex flex-col gap-1.5 items-center">
+                                              <span className="text-sm font-medium">
+                                                {representativePaper.name || "-"}
+                                                {representativePaper.isOptional === false && (
+                                                  <span className="text-red-500 ml-1">*</span>
+                                                )}
+                                                {showCount && (
+                                                  <span className="text-gray-500 text-xs ml-1">({paperCount})</span>
+                                                )}
+                                              </span>
+                                              <Badge
+                                                variant="outline"
+                                                className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50 w-fit"
+                                              >
+                                                {subject.code || subject.name}
+                                              </Badge>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400 text-sm font-mono">
+                                            {representativePaper.code || "-"}
+                                            {showCount && (
+                                              <span className="text-gray-500 text-xs ml-1">({paperCount})</span>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400">
+                                            {subjectType ? (
+                                              <Badge
+                                                variant="outline"
+                                                className="text-xs border-green-300 text-green-700 bg-green-50"
+                                              >
+                                                {subjectType.code || subjectType.name}
+                                              </Badge>
+                                            ) : (
+                                              <span className="text-muted-foreground">-</span>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400">
                                             <Input
                                               type="date"
-                                              value={schedule.date || ""}
-                                              onChange={(e) => handleScheduleChange(id, "date", e.target.value)}
-                                              className="h-8 w-full "
-                                              onClick={(e) => e.stopPropagation()}
+                                              value={dateValue}
+                                              onChange={(e) =>
+                                                handleScheduleChange(
+                                                  group.subjectId,
+                                                  group.normalizedCode,
+                                                  "date",
+                                                  e.target.value,
+                                                )
+                                              }
+                                              className="h-8 w-full text-sm"
                                             />
                                           </TableCell>
-                                          <TableCell>
-                                            <Input
-                                              type="time"
-                                              value={schedule.startTime || ""}
-                                              onChange={(e) => handleScheduleChange(id, "startTime", e.target.value)}
-                                              className="h-8 w-full "
-                                              onClick={(e) => e.stopPropagation()}
-                                            />
+                                          <TableCell className="p-2 text-center">
+                                            <div className="flex flex-col gap-1">
+                                              <Input
+                                                type="time"
+                                                value={startTimeValue}
+                                                onChange={(e) =>
+                                                  handleScheduleChange(
+                                                    group.subjectId,
+                                                    group.normalizedCode,
+                                                    "startTime",
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                className="h-8 w-full text-sm"
+                                                placeholder="Start"
+                                              />
+                                              <Input
+                                                type="time"
+                                                value={endTimeValue}
+                                                onChange={(e) =>
+                                                  handleScheduleChange(
+                                                    group.subjectId,
+                                                    group.normalizedCode,
+                                                    "endTime",
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                className="h-8 w-full text-sm"
+                                                placeholder="End"
+                                              />
+                                            </div>
                                           </TableCell>
-                                          <TableCell>
-                                            <Input
-                                              type="time"
-                                              value={schedule.endTime || ""}
-                                              onChange={(e) => handleScheduleChange(id, "endTime", e.target.value)}
-                                              className="h-8 w-full "
-                                              onClick={(e) => e.stopPropagation()}
-                                            />
-                                          </TableCell>
-                                          <TableCell className="text-center">
+                                          <TableCell className="p-2 text-center">
                                             <Button
                                               variant="ghost"
                                               size="sm"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedSubjectIds((prev) =>
-                                                  prev.filter((subjectId) => subjectId !== id),
+                                              onClick={() => {
+                                                // Remove all papers in this group
+                                                setSelectedSubjectPapers((prev) =>
+                                                  prev.filter((sp) => {
+                                                    const paper = papers.find((p) => p.id === sp.paperId);
+                                                    if (!paper) return true;
+                                                    const spNormalizedCode = normalizePaperCode(paper.code);
+                                                    return !(
+                                                      sp.subjectId === group.subjectId &&
+                                                      spNormalizedCode === group.normalizedCode
+                                                    );
+                                                  }),
                                                 );
+                                                // Check if this was the last group for this subject
+                                                const remainingPapersForSubject = selectedSubjectPapers.filter((sp) => {
+                                                  const paper = papers.find((p) => p.id === sp.paperId);
+                                                  if (!paper) return false;
+                                                  const spNormalizedCode = normalizePaperCode(paper.code);
+                                                  return (
+                                                    sp.subjectId === group.subjectId &&
+                                                    spNormalizedCode !== group.normalizedCode
+                                                  );
+                                                });
+                                                if (remainingPapersForSubject.length === 0) {
+                                                  setSelectedSubjectIds((prev) =>
+                                                    prev.filter((id) => id !== group.subjectId),
+                                                  );
+                                                }
                                               }}
-                                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                                             >
                                               <Trash2 className="w-4 h-4" />
                                             </Button>
@@ -1915,183 +1753,6 @@ export default function ScheduleExamPage() {
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-slate-500 shadow-none">
-              <CardHeader className="border-b border-slate-500 pb-2 mb-7">
-                <CardTitle>
-                  <h3 className="scroll-m-20 text-slate-600 italic text-2xl font-semibold tracking-tight">
-                    Step 3: Select the rooms and students to schedule the exam.
-                  </h3>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6 pb-16">
-                {/* Capacity Summary */}
-                <div
-                  className={`p-4 rounded-lg border shadow-sm ${
-                    capacityStatus ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    {capacityStatus ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 text-red-600" />
-                    )}
-                    <span className="font-bold">
-                      {capacityStatus ? "Capacity Sufficient" : "Insufficient Capacity"}
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between p-1.5 bg-white/60 rounded">
-                      <span>Total Capacity</span>
-                      <span className="font-bold">{totalCapacity} seats</span>
-                    </div>
-                    <div className="flex justify-between p-1.5 bg-white/60 rounded">
-                      <span>Total Students</span>
-                      <span className="font-bold">{totalStudents}</span>
-                    </div>
-                    <div className="flex justify-between p-1.5 bg-white/60 rounded">
-                      <span>Available</span>
-                      <span className={`font-bold ${capacityStatus ? "text-green-700" : "text-red-600"}`}>
-                        {totalCapacity - totalStudents} seats
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Filter Controls */}
-                <div className="flex flex-wrap gap-4 sm:gap-6 items-end">
-                  <div className="flex-1 sm:flex-initial min-w-[180px]">
-                    <Label htmlFor="gender-select" className="text-sm font-medium text-gray-700 mb-2 block">
-                      Gender
-                    </Label>
-                    <Select value={gender || ""} onValueChange={(value) => setGender(value as typeof gender)}>
-                      <SelectTrigger
-                        id="gender-select"
-                        className="h-9 w-full sm:w-48 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">All Students</SelectItem>
-                        <SelectItem value="MALE">Male Only</SelectItem>
-                        <SelectItem value="FEMALE">Female Only</SelectItem>
-                        <SelectItem value="OTHER">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex-1 sm:flex-initial min-w-[180px]">
-                    <Label htmlFor="order-by-select" className="text-sm font-medium text-gray-700 mb-2 block">
-                      Order By
-                    </Label>
-                    <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
-                      <SelectTrigger
-                        id="order-by-select"
-                        className="h-9 w-full sm:w-52 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="UID">UID</SelectItem>
-                        <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
-                        <SelectItem value="CU_ROLL_NUMBER">CU Roll Number</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Excel File Upload */}
-                {examType && examTypes.find((e) => e.id.toString() === examType)?.foilNumberRequired === true && (
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Upload Excel</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="h-8 w-full sm:w-auto sm:min-w-[200px] justify-between border-purple-300"
-                        >
-                          <Upload className="w-3 h-3 mr-1" />
-                          {excelFile
-                            ? `File: ${excelFile.name.slice(0, 20)}${excelFile.name.length > 20 ? "..." : ""}`
-                            : "Upload Excel"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80 p-4" align="start">
-                        <div className="space-y-3">
-                          <Input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".xlsx,.xls"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full"
-                          >
-                            <Upload className="w-4 h-4 mr-2" />
-                            Choose Excel File (foil_number, uid)
-                          </Button>
-                          {excelFile && (
-                            <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
-                              <span className="text-sm text-green-700">{excelFile.name}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={removeExcelFile}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          )}
-                          <p className="text-gray-500">Upload XLSX with columns: foil_number, uid</p>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
-
-                {/* Modal Buttons */}
-                <div className="flex flex-wrap gap-3 pt-2">
-                  <Button
-                    onClick={() => setRoomsModalOpen(true)}
-                    variant="outline"
-                    disabled={
-                      selectedSubjectIds.length === 0 ||
-                      !selectedSubjectIds.every((id) => {
-                        const schedule = subjectSchedules[id.toString()];
-                        return schedule?.date && schedule?.startTime && schedule?.endTime;
-                      })
-                    }
-                    className="flex-1 sm:flex-initial border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={
-                      selectedSubjectIds.length === 0 ||
-                      !selectedSubjectIds.every((id) => {
-                        const schedule = subjectSchedules[id.toString()];
-                        return schedule?.date && schedule?.startTime && schedule?.endTime;
-                      })
-                        ? "Please add date, start time, and end time for all selected subjects"
-                        : "View and select rooms"
-                    }
-                  >
-                    <DoorOpen className="w-4 h-4 mr-2" />
-                    View Rooms ({selectedRooms.length})
-                  </Button>
-                  <Button
-                    onClick={() => setStudentsModalOpen(true)}
-                    variant="outline"
-                    className="flex-1 sm:flex-initial border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50"
-                    disabled={studentsWithSeats.length === 0}
-                  >
-                    <Users className="w-4 h-4 mr-2" />
-                    View Students ({studentsWithSeats.length})
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -2143,416 +1804,33 @@ export default function ScheduleExamPage() {
             </div>
           )}
 
-          {/* Total students + Assign button */}
-          <div className="mt-8 flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 p-4 bg-gray-100/60 rounded-lg border shadow-sm flex items-center justify-between min-w-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <Users className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                <span className="text-sm sm:text-base font-semibold whitespace-nowrap">Total Students</span>
-              </div>
-              <span className="text-xl sm:text-2xl font-bold text-purple-600 ml-2 flex-shrink-0">{totalStudents}</span>
-            </div>
+          {/* Schedule Exam button */}
+          <div className="mt-8 flex justify-end">
             <Button
-              onClick={handleAssignExam}
-              disabled={assignExamMutation.status === "loading" || duplicateCheckResult?.isDuplicate}
-              className="w-full sm:w-auto sm:min-w-[140px] h-12 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all"
+              onClick={handleScheduleExam}
+              disabled={
+                assignExamMutation.status === "loading" ||
+                duplicateCheckResult?.isDuplicate ||
+                selectedSubjectPapers.length === 0 ||
+                !selectedSubjectPapers.every((sp) => {
+                  const schedule = sp.schedule;
+                  return schedule?.date && schedule?.startTime && schedule?.endTime;
+                })
+              }
+              className="w-full sm:w-auto sm:min-w-[180px] h-12 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all"
             >
               {assignExamMutation.status === "loading" ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
-                  Assigning...
+                  Scheduling...
                 </>
               ) : (
-                "Assign Exam"
+                "Schedule Exam"
               )}
             </Button>
           </div>
         </div>
       </div>
-
-      {/* Rooms Modal */}
-      <Dialog open={roomsModalOpen} onOpenChange={setRoomsModalOpen}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden p-0">
-          <DialogHeader className="p-5 border-b">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <DoorOpen className="w-5 h-5 text-purple-500" />
-              </div>
-              <div>
-                <DialogTitle className="text-lg font-semibold">Select Rooms</DialogTitle>
-                <DialogDescription>Choose rooms and optionally override capacity</DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-          <div className="p-4">
-            {/* Rooms Statistics */}
-            <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="text-xs text-blue-600 font-medium mb-1">Total Rooms</div>
-                <div className="text-lg font-bold text-blue-900">{allRooms.length}</div>
-              </div>
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="text-xs text-green-600 font-medium mb-1">Eligible Rooms</div>
-                <div className="text-lg font-bold text-green-900">{rooms.length}</div>
-              </div>
-              <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                <div className="text-xs text-purple-600 font-medium mb-1">Selected Rooms</div>
-                <div className="text-lg font-bold text-purple-900">{selectedRooms.length}</div>
-              </div>
-            </div>
-
-            {loadingRooms || loadingAllRooms ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="ml-2 text-gray-500">Loading rooms...</span>
-              </div>
-            ) : rooms.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <DoorOpen className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p className="font-medium">No eligible rooms available</p>
-                <p className="text-sm mt-1">All rooms may be occupied during the selected exam schedule</p>
-              </div>
-            ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-y-auto max-h-[60vh] relative">
-                  <table className="w-full caption-bottom text-sm border-collapse">
-                    <thead className="sticky top-0 z-10 bg-gray-100">
-                      <tr className="border-b bg-gray-100">
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-center align-middle font-medium text-sm border-r border-border w-20">
-                          <Checkbox
-                            checked={
-                              rooms.filter((room) => room.isActive !== false).length > 0 &&
-                              rooms
-                                .filter((room) => room.isActive !== false)
-                                .every((room) => selectedRooms.some((r) => r.id === room.id))
-                            }
-                            onCheckedChange={(checked) => {
-                              const activeRooms = rooms.filter((room) => room.isActive !== false);
-                              if (checked) {
-                                activeRooms.forEach((room) => {
-                                  if (!selectedRooms.some((r) => r.id === room.id)) {
-                                    handleRoomSelection(room, true);
-                                  }
-                                });
-                              } else {
-                                activeRooms.forEach((room) => {
-                                  if (selectedRooms.some((r) => r.id === room.id)) {
-                                    handleRoomSelection(room, false);
-                                  }
-                                });
-                              }
-                            }}
-                            className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                          />
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-center align-middle font-medium text-sm border-r border-border w-20">
-                          Sr. No.
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Floor
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Room
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Benches
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Capacity
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Max Students per Bench
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm">
-                          Override
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="[&_tr:last-child]:border-0">
-                      {rooms
-                        .filter((room) => room.isActive !== false)
-                        .map((room, index) => {
-                          const isSelected = selectedRooms.some((r) => r.id === room.id);
-                          const selectedRoom = selectedRooms.find((r) => r.id === room.id);
-                          const currentMaxStudentsPerBench =
-                            selectedRoom?.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-                          const calculatedCapacity = (room.numberOfBenches || 0) * currentMaxStudentsPerBench;
-                          const floorName = room.floor.id! ? floors.find((f) => f.id === room.floor.id)?.name : "N/A";
-
-                          return (
-                            <tr
-                              key={room.id}
-                              className={`border-b transition-colors hover:bg-gray-50 ${isSelected ? "bg-purple-50" : ""}`}
-                            >
-                              <td className="p-4 align-middle border-r border-border text-center">
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={(checked) => handleRoomSelection(room, !!checked)}
-                                  className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                />
-                              </td>
-                              <td className="p-4 align-middle border-r border-border text-center text-sm">
-                                {index + 1}
-                              </td>
-                              <td className="p-4 align-middle border-r border-border text-sm">{floorName}</td>
-                              <td className="p-4 align-middle border-r border-border text-sm font-medium">
-                                {room.name}
-                              </td>
-                              <td className="p-4 align-middle border-r border-border text-sm">
-                                {room.numberOfBenches || 0}
-                              </td>
-                              <td className="p-4 align-middle border-r border-border text-sm">{calculatedCapacity}</td>
-                              <td className="p-4 align-middle border-r border-border text-sm">
-                                {currentMaxStudentsPerBench}
-                              </td>
-                              <td className="p-4 align-middle text-sm">
-                                {isSelected ? (
-                                  <div className="space-y-1">
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max={room.maxStudentsPerBench || 2}
-                                      placeholder={room.maxStudentsPerBench?.toString() || "2"}
-                                      value={selectedRoom?.maxStudentsPerBenchOverride || ""}
-                                      onChange={(e) => {
-                                        const inputValue = e.target.value.trim();
-                                        if (!inputValue) {
-                                          handleMaxStudentsPerBenchOverride(room.id!, null);
-                                          return;
-                                        }
-                                        const isPositiveInteger = /^\d+$/.test(inputValue);
-                                        if (!isPositiveInteger) {
-                                          return;
-                                        }
-                                        const val = parseInt(inputValue, 10);
-                                        const maxAllowed = room.maxStudentsPerBench || 2;
-                                        if (val > 0 && val <= maxAllowed) {
-                                          handleMaxStudentsPerBenchOverride(room.id!, val);
-                                        }
-                                      }}
-                                      className="h-8 w-20 text-sm"
-                                    />
-                                    <div className="text-sm text-gray-400">Max: {room.maxStudentsPerBench || 2}</div>
-                                  </div>
-                                ) : (
-                                  <span className="text-sm text-gray-400">-</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter className="p-5 border-t">
-            <div className="flex items-center justify-between w-full">
-              <p className="text-sm text-gray-600">
-                <span className="font-medium text-gray-900">{selectedRooms.length}</span> room(s) selected
-              </p>
-              <Button onClick={() => setRoomsModalOpen(false)} variant="outline">
-                Close
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Students Modal */}
-      <Dialog open={studentsModalOpen} onOpenChange={setStudentsModalOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden p-0">
-          <DialogHeader className="p-5 border-b">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-purple-500" />
-              </div>
-              <div>
-                <DialogTitle className="text-lg font-semibold">Students Assigned</DialogTitle>
-                <DialogDescription>View students with their assigned seats and locations</DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-          <div className="p-4">
-            {loadingStudents ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-                <span className="ml-2 text-gray-500">Loading students...</span>
-              </div>
-            ) : studentsWithSeats.length === 0 ? (
-              <div className="text-center py-12">
-                <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                <p className="font-semibold text-gray-600">No Students Assigned</p>
-                <p className="text-gray-400 mt-1 text-sm">Select rooms and generate assignments to see students here</p>
-              </div>
-            ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-y-auto max-h-[60vh] relative">
-                  <table className="w-full caption-bottom text-sm border-collapse">
-                    <thead className="sticky top-0 z-10 bg-gray-100">
-                      <tr className="border-b bg-gray-100">
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-center align-middle font-medium text-sm border-r border-border">
-                          Sr. No.
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Name
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          {assignBy === "UID" ? "UID" : "CU Reg. No."}
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-center align-middle font-medium text-sm border-r border-border">
-                          Foil Number
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Email
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          WhatsApp
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Subject
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Paper
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Floor
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
-                          Room
-                        </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm">
-                          Seat Number
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="[&_tr:last-child]:border-0">
-                      {studentsWithSeats.map((student, idx) => (
-                        <tr
-                          key={student.studentId}
-                          className={`border-b transition-colors hover:bg-gray-100 ${idx % 2 === 0 ? "bg-gray-50" : ""}`}
-                        >
-                          <td className="p-4 align-middle border-r border-border text-center text-sm">{idx + 1}</td>
-                          <td className="p-4 align-middle border-r border-border text-sm font-medium">
-                            {student.name}
-                          </td>
-                          <td className="p-4 align-middle border-r border-border text-sm font-mono">
-                            {assignBy === "UID" ? student.uid : student.cuRegistrationApplicationNumber || "N/A"}
-                          </td>
-                          <td className="p-4 align-middle border-r border-border text-sm text-center font-mono">
-                            {foilNumberMap[student.uid] || "0"}
-                          </td>
-                          <td className="p-4 align-middle border-r border-border text-sm">{student.email || "N/A"}</td>
-                          <td className="p-4 align-middle border-r border-border text-sm">
-                            {student.whatsappPhone || "N/A"}
-                          </td>
-                          <td className="p-4 align-middle border-r border-border text-sm">
-                            {selectedSubjectId
-                              ? (() => {
-                                  const subject = subjects.find((s) => s.id === selectedSubjectId);
-                                  const shortName = (subject as { shortName?: string | null })?.shortName ?? null;
-                                  if (shortName && shortName.trim()) return shortName;
-                                  if (subject?.code && subject.code.trim()) return subject.code;
-                                  return subject?.name || "N/A";
-                                })()
-                              : "N/A"}
-                          </td>
-                          <td className="p-4 align-middle border-r border-border text-sm">
-                            {selectedSubjectId
-                              ? (() => {
-                                  const subject = subjects.find((s) => s.id === selectedSubjectId);
-                                  const shortName = (subject as { shortName?: string | null })?.shortName ?? null;
-                                  if (shortName && shortName.trim()) return shortName;
-                                  if (subject?.code && subject.code.trim()) return subject.code;
-                                  return subject?.name || "N/A";
-                                })()
-                              : "N/A"}
-                          </td>
-                          <td className="p-4 align-middle border-r border-border text-sm">
-                            {student.floorName || "N/A"}
-                          </td>
-                          <td className="p-4 align-middle border-r border-border text-sm">
-                            {student.roomName || "N/A"}
-                          </td>
-                          <td className="p-4 align-middle text-sm font-mono">{student.seatNumber}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter className="p-5 border-t">
-            <div className="flex items-center justify-between w-full">
-              <p className="text-sm text-gray-600">
-                <span className="font-medium text-gray-900">{studentsWithSeats.length}</span> student(s) assigned
-              </p>
-              <div className="flex items-center gap-3">
-                {studentsWithSeats.length > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      const exportData = studentsWithSeats.map((student, idx) => {
-                        const subject = selectedSubjectId ? subjects.find((s) => s.id === selectedSubjectId) : null;
-                        const subjectName = subject
-                          ? (subject as { shortName?: string | null })?.shortName?.trim() ||
-                            subject.code?.trim() ||
-                            subject.name ||
-                            "N/A"
-                          : "N/A";
-
-                        return {
-                          "Sr. No.": idx + 1,
-                          Name: student.name || "N/A",
-                          UID: assignBy === "UID" ? student.uid || "N/A" : "N/A",
-                          "CU Reg. No.": assignBy !== "UID" ? student.cuRegistrationApplicationNumber || "N/A" : "N/A",
-                          "Foil Number": foilNumberMap[student.uid] || "0",
-                          Email: student.email || "N/A",
-                          WhatsApp: student.whatsappPhone || "N/A",
-                          Subject: subjectName,
-                          Paper: subjectName,
-                          Floor: student.floorName || "N/A",
-                          Room: student.roomName || "N/A",
-                          "Seat Number": student.seatNumber || "N/A",
-                        };
-                      });
-
-                      const workbook = XLSX.utils.book_new();
-                      const worksheet = XLSX.utils.json_to_sheet(exportData);
-
-                      // Set column widths
-                      const maxWidths: { [key: string]: number } = {};
-                      exportData.forEach((row) => {
-                        Object.keys(row).forEach((key) => {
-                          const value = String(row[key as keyof typeof row] || "");
-                          maxWidths[key] = Math.max(maxWidths[key] || 0, value.length, key.length);
-                        });
-                      });
-
-                      worksheet["!cols"] = Object.keys(exportData[0] || {}).map((key) => ({
-                        wch: Math.max(15, (maxWidths[key] || 10) + 2),
-                      }));
-
-                      XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
-                      XLSX.writeFile(workbook, `Students_Assignment_${new Date().toISOString().split("T")[0]}.xlsx`);
-                      toast.success("Students list exported successfully");
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Export
-                  </Button>
-                )}
-                <Button onClick={() => setStudentsModalOpen(false)} variant="outline">
-                  Close
-                </Button>
-              </div>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
