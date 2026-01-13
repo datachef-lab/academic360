@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertCircle, Trash2, Loader2, X, ChevronDown } from "lucide-react";
+import { AlertCircle, Trash2, Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllExamTypes } from "@/services/exam-type.service";
@@ -1119,16 +1119,16 @@ export default function ScheduleExamPage() {
           <div className="mb-4 mt-3 space-y-3">
             <Card className="border-0 shadow-none">
               <CardContent className="space-y-5 pb-4 pt-4">
-                {/* First Row: Main Filters - Full Width */}
-                <div className="flex flex-wrap gap-3 pb-4 sm:gap-4 items-start w-full">
+                {/* First Row: Academic Year, Affiliation, Regulation, Exam Type */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {/* Academic Year */}
-                  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                    <Label className=" font-medium text-gray-700">Academic Year</Label>
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Academic Year</Label>
                     <Select
                       value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
                       onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
                     >
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ">
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                         <SelectValue placeholder="A.Y" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1142,14 +1142,14 @@ export default function ScheduleExamPage() {
                   </div>
 
                   {/* Affiliation */}
-                  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                    <Label className=" font-medium text-gray-700">Affiliation</Label>
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Affiliation</Label>
                     <Select
                       value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
                       onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
                       disabled={loading.affiliations}
                     >
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ">
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                         <SelectValue placeholder={loading.affiliations ? "Loading..." : "Aff."} />
                       </SelectTrigger>
                       <SelectContent>
@@ -1163,14 +1163,14 @@ export default function ScheduleExamPage() {
                   </div>
 
                   {/* Regulation Type */}
-                  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                    <Label className=" font-medium text-gray-700">Regulation</Label>
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Regulation</Label>
                     <Select
                       value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
                       onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
                       disabled={loading.regulationTypes}
                     >
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ">
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                         <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Reg."} />
                       </SelectTrigger>
                       <SelectContent>
@@ -1184,10 +1184,10 @@ export default function ScheduleExamPage() {
                   </div>
 
                   {/* Exam Type */}
-                  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                    <Label className=" font-medium text-gray-700">Exam Type</Label>
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Exam Type</Label>
                     <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ">
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                         <SelectValue placeholder={loading.examTypes ? "Loading..." : "Exam Type"} />
                       </SelectTrigger>
                       <SelectContent>
@@ -1199,12 +1199,14 @@ export default function ScheduleExamPage() {
                       </SelectContent>
                     </Select>
                   </div>
-
+                </div>
+                {/* Second Row: Semester, Shift(s), Program Course(s), Subject Category */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {/* Semester */}
-                  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                    <Label className=" font-medium text-gray-700">Semester</Label>
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Semester</Label>
                     <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ">
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                         <SelectValue placeholder={loading.classes ? "Loading..." : "Semester"} />
                       </SelectTrigger>
                       <SelectContent>
@@ -1216,217 +1218,119 @@ export default function ScheduleExamPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                {/* Second Row: Table Format Filters - Full Width */}
-                <div className="w-full border border-gray-400 rounded-lg overflow-hidden">
-                  <Table className="w-full">
-                    <TableHeader>
-                      <TableRow className="bg-gray-100">
-                        <TableHead className="w-[20%] p-2 relative text-center whitespace-nowrap border-r border-gray-400">
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className="absolute inset-0 w-full h-full cursor-pointer"
-                                aria-label="Select Shifts"
+                  {/* Shift(s) */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Shift(s)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          disabled={loading.shifts}
+                        >
+                          <span className="text-gray-600">{loading.shifts ? "Loading..." : "Select Shifts"}</span>
+                          <ChevronDown className="w-4 h-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="max-h-56 overflow-y-auto space-y-1">
+                          {shifts.map((shift) => (
+                            <button
+                              key={shift.id}
+                              type="button"
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                              onClick={() => shift.id && handleShiftToggle(shift.id)}
+                            >
+                              <Checkbox
+                                checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
+                                onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
+                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                               />
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-2" align="start">
-                              <div className="max-h-56 overflow-y-auto space-y-1">
-                                {shifts.map((shift) => (
-                                  <button
-                                    key={shift.id}
-                                    type="button"
-                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
-                                    onClick={() => shift.id && handleShiftToggle(shift.id)}
-                                  >
-                                    <Checkbox
-                                      checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
-                                      onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
-                                      className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                    />
-                                    <span className=" text-center">{shift.name}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                          <div className="font-medium pointer-events-none flex items-center justify-center gap-1">
-                            Shift(s)
-                            <ChevronDown className="w-4 h-4" />
-                          </div>
-                        </TableHead>
-                        <TableHead className="w-[60%] p-2 relative text-center whitespace-nowrap border-r border-gray-400">
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className="absolute inset-0 w-full h-full cursor-pointer"
-                                aria-label="Select Program Courses"
-                                disabled={loading.programCourses}
+                              <span className="text-center">{shift.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Program Course(s) */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Program Course(s)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          disabled={loading.programCourses}
+                        >
+                          <span className="text-gray-600">
+                            {loading.programCourses ? "Loading..." : "Select Program Courses"}
+                          </span>
+                          <ChevronDown className="w-4 h-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="max-h-60 overflow-y-auto space-y-1">
+                          {programCourses.map((course) => (
+                            <button
+                              key={course.id}
+                              type="button"
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                              onClick={() => course.id && handleProgramCourseToggle(course.id)}
+                            >
+                              <Checkbox
+                                checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
+                                onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
+                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                               />
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-2" align="start">
-                              <div className="max-h-60 overflow-y-auto space-y-1">
-                                {programCourses.map((course) => (
-                                  <button
-                                    key={course.id}
-                                    type="button"
-                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
-                                    onClick={() => course.id && handleProgramCourseToggle(course.id)}
-                                  >
-                                    <Checkbox
-                                      checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
-                                      onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
-                                      className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                    />
-                                    <span className=" text-left">{course.name}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                          <div className="font-medium pointer-events-none flex items-center justify-center gap-1">
-                            Program Course(s)
-                            <ChevronDown className="w-4 h-4" />
-                          </div>
-                        </TableHead>
-                        <TableHead className="w-[20%] p-2 relative text-center whitespace-nowrap">
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className="absolute inset-0 w-full h-full cursor-pointer"
-                                aria-label="Select Subject Categories"
-                                disabled={loading.subjectTypes}
+                              <span className="text-left">{course.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Subject Category */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Subject Category</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          disabled={loading.subjectTypes}
+                        >
+                          <span className="text-gray-600">
+                            {loading.subjectTypes ? "Loading..." : "Select Subject Categories"}
+                          </span>
+                          <ChevronDown className="w-4 h-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="max-h-56 overflow-y-auto space-y-1">
+                          {subjectTypes.map((category) => (
+                            <button
+                              key={category.id}
+                              type="button"
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                              onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
+                            >
+                              <Checkbox
+                                checked={category.id !== undefined && selectedSubjectCategories.includes(category.id)}
+                                onCheckedChange={() => category.id && handleSubjectCategoryToggle(category.id)}
+                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                               />
-                            </PopoverTrigger>
-                            <PopoverContent className="text-left p-2" align="start">
-                              <div className="max-h-56 overflow-y-auto space-y-1">
-                                {subjectTypes.map((category) => (
-                                  <button
-                                    key={category.id}
-                                    type="button"
-                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
-                                    onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
-                                  >
-                                    <Checkbox
-                                      checked={
-                                        category.id !== undefined && selectedSubjectCategories.includes(category.id)
-                                      }
-                                      onCheckedChange={() => category.id && handleSubjectCategoryToggle(category.id)}
-                                      className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                    />
-                                    <span className=" text-left">
-                                      {category.code && category.code.trim() ? category.code : category.name}
-                                    </span>
-                                  </button>
-                                ))}
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                          <div className="font-medium pointer-events-none flex items-center justify-center gap-1">
-                            Subject Category
-                            <ChevronDown className="w-4 h-4" />
-                          </div>
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow className="border-t border-gray-400 ">
-                        <TableCell className="text-center p-2 border-r border-gray-400">
-                          {selectedShifts.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5 justify-center">
-                              {selectedShifts.map((shiftId) => {
-                                const shift = shifts.find((s) => s.id === shiftId);
-                                return shift ? (
-                                  <Badge
-                                    key={shiftId}
-                                    variant="outline"
-                                    className=" border-orange-300 text-orange-700 bg-orange-50 flex items-center gap-1"
-                                  >
-                                    {shift.name}
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (shift.id) handleShiftToggle(shift.id);
-                                      }}
-                                      className="hover:text-destructive"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </Badge>
-                                ) : null;
-                              })}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center p-2 border-r border-gray-400">
-                          {selectedProgramCourses.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5 justify-center">
-                              {selectedProgramCourses.map((courseId) => {
-                                const course = programCourses.find((c) => c.id === courseId);
-                                return course ? (
-                                  <Badge
-                                    key={courseId}
-                                    variant="outline"
-                                    className=" border-blue-300 text-blue-700 bg-blue-50 flex items-center gap-1"
-                                  >
-                                    {course.name}
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (course.id) handleProgramCourseToggle(course.id);
-                                      }}
-                                      className="hover:text-destructive"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </Badge>
-                                ) : null;
-                              })}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center p-2">
-                          {selectedSubjectCategories.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5 justify-center">
-                              {selectedSubjectCategories.map((categoryId) => {
-                                const category = subjectTypes.find((c) => c.id === categoryId);
-                                return category ? (
-                                  <Badge
-                                    key={categoryId}
-                                    variant="outline"
-                                    className=" border-green-300 text-green-700 bg-green-50 flex items-center gap-1"
-                                  >
-                                    {category.code && category.code.trim() ? category.code : category.name}
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (category.id) handleSubjectCategoryToggle(category.id);
-                                      }}
-                                      className="hover:text-destructive"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  </Badge>
-                                ) : null;
-                              })}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                              <span className="text-left">
+                                {category.code && category.code.trim() ? category.code : category.name}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
               </CardContent>
             </Card>
