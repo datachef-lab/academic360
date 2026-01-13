@@ -1111,14 +1111,14 @@ export default function ScheduleExamPage() {
       <div className=" w-full flex flex-col gap-4">
         <div className="w-full  px-4 mx-auto">
           {/* Page Heading */}
-          <div className="mb-6">
+          <div className="mb-6 border-b pb-3">
             <h1 className="text-3xl font-bold text-gray-800">Schedule Exam</h1>
             <p className="text-gray-600 mt-1">Create and schedule exams for your academic year</p>
           </div>
           {/* Top filter strip (A.Y, Aff, Reg, Exam type, Semester, Shifts, Program Course, Subject Category) */}
-          <div className="mb-4 mt-3 space-y-6">
+          <div className="mb-4 mt-3 space-y-3">
             <Card className="border-0 shadow-none">
-              <CardContent className="space-y-5 pb-14 pt-4">
+              <CardContent className="space-y-5 pb-4 pt-4">
                 {/* First Row: Main Filters - Full Width */}
                 <div className="flex flex-wrap gap-3 pb-4 sm:gap-4 items-start w-full">
                   {/* Academic Year */}
@@ -1222,7 +1222,7 @@ export default function ScheduleExamPage() {
                   <Table className="w-full">
                     <TableHeader>
                       <TableRow className="bg-gray-100">
-                        <TableHead className="w-[33.33%] p-2 relative text-center whitespace-nowrap border-r border-gray-400">
+                        <TableHead className="w-[20%] p-2 relative text-center whitespace-nowrap border-r border-gray-400">
                           <Popover>
                             <PopoverTrigger asChild>
                               <button
@@ -1256,7 +1256,7 @@ export default function ScheduleExamPage() {
                             <ChevronDown className="w-4 h-4" />
                           </div>
                         </TableHead>
-                        <TableHead className="w-[33.33%] p-2 relative text-center whitespace-nowrap border-r border-gray-400">
+                        <TableHead className="w-[60%] p-2 relative text-center whitespace-nowrap border-r border-gray-400">
                           <Popover>
                             <PopoverTrigger asChild>
                               <button
@@ -1291,7 +1291,7 @@ export default function ScheduleExamPage() {
                             <ChevronDown className="w-4 h-4" />
                           </div>
                         </TableHead>
-                        <TableHead className="w-[33.33%] p-2 relative text-center whitespace-nowrap">
+                        <TableHead className="w-[20%] p-2 relative text-center whitespace-nowrap">
                           <Popover>
                             <PopoverTrigger asChild>
                               <button
@@ -1432,7 +1432,7 @@ export default function ScheduleExamPage() {
             </Card>
 
             <Card className="border-0 shadow-none">
-              <CardContent className="space-y-5 pb-14 pt-4">
+              <CardContent className="space-y-5 pb-4 pt-2">
                 {/* Third Row: Other Filters - Full Width */}
                 <div className="flex flex-wrap gap-3 sm:gap-4 items-start w-full ">
                   {/* Subjects */}
@@ -1582,9 +1582,18 @@ export default function ScheduleExamPage() {
                                       const subject = subjects.find((s) => s.id === group.subjectId);
                                       if (!representativePaper || !subject) return null;
 
-                                      const programCourse = programCourses.find(
-                                        (pc) => pc.id === representativePaper.programCourseId,
-                                      );
+                                      // Collect all unique program courses for this group
+                                      const uniqueProgramCourseIds = new Set<number>();
+                                      group.papers.forEach(({ paper }) => {
+                                        if (paper.programCourseId) {
+                                          uniqueProgramCourseIds.add(paper.programCourseId);
+                                        }
+                                      });
+
+                                      const programCoursesForGroup = Array.from(uniqueProgramCourseIds)
+                                        .map((pcId) => programCourses.find((pc) => pc.id === pcId))
+                                        .filter((pc): pc is NonNullable<typeof pc> => pc !== undefined);
+
                                       const subjectType = subjectTypes.find(
                                         (st) => st.id === representativePaper.subjectTypeId,
                                       );
@@ -1608,16 +1617,21 @@ export default function ScheduleExamPage() {
                                             {index + 1}
                                           </TableCell>
                                           <TableCell className="p-2 text-center border-r border-gray-400">
-                                            {programCourse ? (
-                                              <Badge
-                                                variant="outline"
-                                                className="text-xs border-blue-300 text-blue-700 bg-blue-50"
-                                              >
-                                                {programCourse.name}
-                                              </Badge>
-                                            ) : (
-                                              <span className="text-muted-foreground">-</span>
-                                            )}
+                                            <div className="flex flex-wrap gap-1 justify-center">
+                                              {programCoursesForGroup.length > 0 ? (
+                                                programCoursesForGroup.map((pc) => (
+                                                  <Badge
+                                                    key={pc.id}
+                                                    variant="outline"
+                                                    className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                                                  >
+                                                    {pc.name}
+                                                  </Badge>
+                                                ))
+                                              ) : (
+                                                <span className="text-muted-foreground">-</span>
+                                              )}
+                                            </div>
                                           </TableCell>
                                           <TableCell className="p-2 text-center border-r border-gray-400">
                                             <div className="flex flex-col gap-1.5 items-center">

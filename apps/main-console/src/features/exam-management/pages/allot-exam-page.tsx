@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllRooms } from "@/services/room.service";
 import { getAllFloors } from "@/services/floor.service";
-import { getEligibleRooms, getStudentsForExam } from "@/services/exam-schedule.service";
+import { getEligibleRooms, getStudentsForExam, countStudentsForExam } from "@/services/exam-schedule.service";
 import { fetchExams, fetchExamById } from "@/services/exam.service";
 import { allotExamRoomsAndStudents, type AllotExamParams } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
@@ -87,16 +87,22 @@ export default function AllotExamPage() {
   });
 
   // Fetch papers for the selected exam
-  const { data: papersForExam = [], isLoading: loadingPapers } = useQuery({
+  const {
+    data: papersForExam = [],
+    isLoading: loadingPapers,
+    isError: papersError,
+    refetch: refetchPapers,
+  } = useQuery({
     queryKey: ["papersForExam", selectedExam?.id],
     queryFn: async () => {
       if (!selectedExam) return [];
       return await getPapersForExam();
     },
     enabled: !!selectedExam,
+    retry: false, // Don't retry automatically to avoid multiple error toasts
     onError: (error) => {
       console.error("Error fetching papers for exam:", error);
-      toast.error("Failed to load papers data");
+      // Don't show toast here as the error will be displayed in the table
     },
   });
 
@@ -113,21 +119,6 @@ export default function AllotExamPage() {
     onError: (error) => {
       console.error("Error fetching floors:", error);
       toast.error("Failed to load floors");
-    },
-  });
-
-  // Fetch all rooms for statistics
-  const { data: allRooms = [], isLoading: loadingAllRooms } = useQuery({
-    queryKey: ["allRooms"],
-    queryFn: async () => {
-      const res = await getAllRooms();
-      if (res.httpStatus === "SUCCESS" && res.payload) {
-        return res.payload.filter((room) => room.isActive !== false);
-      }
-      return [];
-    },
-    onError: (error) => {
-      console.error("Error fetching all rooms:", error);
     },
   });
 
@@ -231,6 +222,11 @@ export default function AllotExamPage() {
     toast.info("Excel file removed");
   };
 
+  // Normalize paper code for comparison (trim and lowercase)
+  const normalizePaperCode = (code: string | null | undefined): string => {
+    return (code || "").trim().toLowerCase();
+  };
+
   // Get papers for selected exam
   const getPapersForExam = useCallback(async (): Promise<PaperDto[]> => {
     if (!selectedExam) return [];
@@ -276,6 +272,43 @@ export default function AllotExamPage() {
     }
     return allPapers;
   }, [selectedExam]);
+
+  // Fetch total eligible students count
+  const { data: totalEligibleStudents = 0, isLoading: loadingTotalStudents } = useQuery({
+    queryKey: ["totalEligibleStudents", selectedExam?.id, gender, excelFile?.name],
+    queryFn: async () => {
+      if (!selectedExam) return 0;
+
+      const papers = await getPapersForExam();
+      const paperIds = papers.map((p) => p.id).filter((id): id is number => id !== undefined);
+
+      if (paperIds.length === 0) return 0;
+
+      const programCourseIds = selectedExam.examProgramCourses.map((epc) => epc.programCourse.id!);
+      const shiftIds = selectedExam.examShifts.map((es) => es.shift.id!);
+
+      const response = await countStudentsForExam(
+        {
+          classId: selectedExam.class.id!,
+          programCourseIds,
+          paperIds,
+          academicYearIds: [selectedExam.academicYear.id!],
+          shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
+          gender: gender === "ALL" ? null : gender,
+        },
+        excelFile,
+      );
+
+      if (response.httpStatus === "SUCCESS" && response.payload) {
+        return response.payload.count;
+      }
+      return 0;
+    },
+    enabled: !!selectedExam,
+    onError: (error) => {
+      console.error("[ALLOT-EXAM] Error fetching total student count:", error);
+    },
+  });
 
   // Fetch students with seat assignments
   const { data: studentsWithSeats = [], isLoading: loadingStudents } = useQuery({
@@ -435,7 +468,7 @@ export default function AllotExamPage() {
       <div className="w-full flex flex-col gap-4">
         <div className="w-full px-4 mx-auto">
           {/* Page Heading */}
-          <div className="mb-6">
+          <div className="mb-6 border-b pb-3">
             <h1 className="text-3xl font-bold text-gray-800">Allot Exam</h1>
             <p className="text-gray-600 mt-1">Assign rooms and students to scheduled exams</p>
           </div>
@@ -702,26 +735,66 @@ export default function AllotExamPage() {
                         <TableBody>
                           {loadingPapers ? (
                             <TableRow>
-                              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                 Loading papers data...
+                              </TableCell>
+                            </TableRow>
+                          ) : papersError ? (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-8">
+                                <div className="flex flex-col items-center gap-2">
+                                  <span className="text-red-600 font-medium">Error 404</span>
+                                  <span className="text-muted-foreground">An error occurred.</span>
+                                  <Button variant="outline" size="sm" onClick={() => refetchPapers()} className="mt-2">
+                                    Retry
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ) : papersForExam.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                 No papers found for this exam configuration.
                               </TableCell>
                             </TableRow>
                           ) : (
-                            papersForExam.map((paper, index) => {
-                              // Find exam subject for this paper's subject
-                              const examSubject = selectedExam.examSubjects.find(
-                                (es) => es.subject.id === paper.subjectId,
-                              );
-                              if (!examSubject) return null;
+                            (() => {
+                              // Group papers by subjectId and normalized code
+                              const grouped = new Map<
+                                string,
+                                {
+                                  subjectId: number;
+                                  normalizedCode: string;
+                                  papers: Array<{ paper: PaperDto; examSubject: any }>;
+                                  representativePaper: PaperDto;
+                                  representativeExamSubject: any;
+                                }
+                              >();
 
-                              const startDate = new Date(examSubject.startTime);
-                              const endDate = new Date(examSubject.endTime);
+                              papersForExam.forEach((paper) => {
+                                const examSubject = selectedExam.examSubjects.find(
+                                  (es) => es.subject.id === paper.subjectId,
+                                );
+                                if (!examSubject) return;
+
+                                const normalizedCode = normalizePaperCode(paper.code);
+                                const groupKey = `${paper.subjectId}|${normalizedCode}`;
+
+                                if (!grouped.has(groupKey)) {
+                                  grouped.set(groupKey, {
+                                    subjectId: paper.subjectId!,
+                                    normalizedCode,
+                                    papers: [],
+                                    representativePaper: paper,
+                                    representativeExamSubject: examSubject,
+                                  });
+                                }
+
+                                const group = grouped.get(groupKey)!;
+                                group.papers.push({ paper, examSubject });
+                              });
+
+                              const groupedArray = Array.from(grouped.values());
 
                               // Format date as dd/mm/yyyy
                               const formatDateDDMMYYYY = (date: Date): string => {
@@ -740,75 +813,109 @@ export default function AllotExamPage() {
                                 });
                               };
 
-                              const startDateStr = formatDateDDMMYYYY(startDate);
-                              const endDateStr = formatDateDDMMYYYY(endDate);
-                              const dateDisplay =
-                                startDateStr === endDateStr ? startDateStr : `${startDateStr} - ${endDateStr}`;
-                              const timeDisplay = `${formatTime(startDate)} - ${formatTime(endDate)}`;
+                              return groupedArray.map((group, index) => {
+                                const { representativePaper, representativeExamSubject } = group;
+                                const startDate = new Date(representativeExamSubject.startTime);
+                                const endDate = new Date(representativeExamSubject.endTime);
 
-                              // Find program course for this paper
-                              const programCourse = selectedExam.examProgramCourses.find(
-                                (epc) => epc.programCourse.id === paper.programCourseId,
-                              );
+                                const startDateStr = formatDateDDMMYYYY(startDate);
+                                const endDateStr = formatDateDDMMYYYY(endDate);
+                                const dateDisplay =
+                                  startDateStr === endDateStr ? startDateStr : `${startDateStr} - ${endDateStr}`;
+                                const timeDisplay = `${formatTime(startDate)} - ${formatTime(endDate)}`;
 
-                              // Find subject type for this paper
-                              const subjectType = selectedExam.examSubjectTypes.find(
-                                (est) => est.subjectType.id === paper.subjectTypeId,
-                              );
+                                // Collect all unique program courses for this group
+                                const uniqueProgramCourseIds = new Set<number>();
+                                group.papers.forEach(({ paper }) => {
+                                  if (paper.programCourseId) {
+                                    uniqueProgramCourseIds.add(paper.programCourseId);
+                                  }
+                                });
 
-                              return (
-                                <TableRow key={`${paper.id}-${index}`} className="border-b border-gray-400">
-                                  <TableCell className="p-2 text-center border-r border-gray-400">
-                                    {index + 1}
-                                  </TableCell>
-                                  <TableCell className="p-2 text-center border-r border-gray-400">
-                                    {programCourse ? (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs border-blue-300 text-blue-700 bg-blue-50"
-                                      >
-                                        {programCourse.programCourse.name}
-                                      </Badge>
-                                    ) : (
-                                      <span className="text-muted-foreground">-</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="p-2 text-center border-r border-gray-400">
-                                    <div className="flex flex-col gap-1.5 items-center">
-                                      <span className="text-sm font-medium">
-                                        {paper.name || "-"}
-                                        {paper.isOptional === false && <span className="text-red-500 ml-1">*</span>}
-                                      </span>
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50 w-fit"
-                                      >
-                                        {examSubject.subject.code || examSubject.subject.name}
-                                      </Badge>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="p-2 text-center border-r border-gray-400 text-sm font-mono">
-                                    {paper.code || "-"}
-                                  </TableCell>
-                                  <TableCell className="p-2 text-center border-r border-gray-400">
-                                    {subjectType ? (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs border-green-300 text-green-700 bg-green-50"
-                                      >
-                                        {subjectType.subjectType.code || subjectType.subjectType.name}
-                                      </Badge>
-                                    ) : (
-                                      <span className="text-muted-foreground">-</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
-                                    {dateDisplay}
-                                  </TableCell>
-                                  <TableCell className="p-2 text-center text-sm">{timeDisplay}</TableCell>
-                                </TableRow>
-                              );
-                            })
+                                const programCoursesForGroup = Array.from(uniqueProgramCourseIds)
+                                  .map((pcId) =>
+                                    selectedExam.examProgramCourses.find((epc) => epc.programCourse.id === pcId),
+                                  )
+                                  .filter((epc): epc is NonNullable<typeof epc> => epc !== undefined);
+
+                                // Find subject type for representative paper
+                                const subjectType = selectedExam.examSubjectTypes.find(
+                                  (est) => est.subjectType.id === representativePaper.subjectTypeId,
+                                );
+
+                                // Show count if multiple papers in group
+                                const paperCount = group.papers.length;
+                                const showCount = paperCount > 1;
+
+                                return (
+                                  <TableRow
+                                    key={`${group.subjectId}-${group.normalizedCode}-${index}`}
+                                    className="border-b border-gray-400"
+                                  >
+                                    <TableCell className="p-2 text-center border-r border-gray-400">
+                                      {index + 1}
+                                    </TableCell>
+                                    <TableCell className="p-2 text-center border-r border-gray-400">
+                                      <div className="flex flex-wrap gap-1 justify-center">
+                                        {programCoursesForGroup.length > 0 ? (
+                                          programCoursesForGroup.map((epc) => (
+                                            <Badge
+                                              key={epc.programCourse.id}
+                                              variant="outline"
+                                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                                            >
+                                              {epc.programCourse.name}
+                                            </Badge>
+                                          ))
+                                        ) : (
+                                          <span className="text-muted-foreground">-</span>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="p-2 text-center border-r border-gray-400">
+                                      <div className="flex flex-col gap-1.5 items-center">
+                                        <span className="text-sm font-medium">
+                                          {representativePaper.name || "-"}
+                                          {representativePaper.isOptional === false && (
+                                            <span className="text-red-500 ml-1">*</span>
+                                          )}
+                                          {showCount && (
+                                            <span className="text-gray-500 ml-1 text-xs">({paperCount})</span>
+                                          )}
+                                        </span>
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50 w-fit"
+                                        >
+                                          {representativeExamSubject.subject.code ||
+                                            representativeExamSubject.subject.name}
+                                        </Badge>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="p-2 text-center border-r border-gray-400 text-sm font-mono">
+                                      {representativePaper.code || "-"}
+                                      {showCount && <span className="text-gray-500 ml-1 text-xs">({paperCount})</span>}
+                                    </TableCell>
+                                    <TableCell className="p-2 text-center border-r border-gray-400">
+                                      {subjectType ? (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs border-green-300 text-green-700 bg-green-50"
+                                        >
+                                          {subjectType.subjectType.code || subjectType.subjectType.name}
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-muted-foreground">-</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
+                                      {dateDisplay}
+                                    </TableCell>
+                                    <TableCell className="p-2 text-center text-sm">{timeDisplay}</TableCell>
+                                  </TableRow>
+                                );
+                              });
+                            })()
                           )}
                         </TableBody>
                       </Table>
@@ -901,7 +1008,7 @@ export default function AllotExamPage() {
 
       {/* Rooms Modal */}
       <Dialog open={roomsModalOpen} onOpenChange={setRoomsModalOpen}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden p-0">
+        <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-hidden p-0">
           <DialogHeader className="p-5 border-b">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -914,23 +1021,85 @@ export default function AllotExamPage() {
             </div>
           </DialogHeader>
           <div className="p-4">
-            {/* Rooms Statistics */}
-            <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Capacity and Student Statistics */}
+            <div className="mb-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="text-xs text-blue-600 font-medium mb-1">Total Rooms</div>
-                <div className="text-lg font-bold text-blue-900">{allRooms.length}</div>
+                <div className="text-xs text-blue-600 font-medium mb-1">Total Capacity</div>
+                <div className="text-lg font-bold text-blue-900">
+                  {selectedRooms.reduce((total, room) => {
+                    const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                    const numberOfBenches = room.numberOfBenches || 0;
+                    return total + numberOfBenches * maxStudentsPerBench;
+                  }, 0)}
+                </div>
               </div>
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="text-xs text-green-600 font-medium mb-1">Eligible Rooms</div>
-                <div className="text-lg font-bold text-green-900">{rooms.length}</div>
+                <div className="text-xs text-green-600 font-medium mb-1">Total Students</div>
+                <div className="text-lg font-bold text-green-900">
+                  {loadingTotalStudents ? <Loader2 className="h-4 w-4 animate-spin inline" /> : totalEligibleStudents}
+                </div>
               </div>
               <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                <div className="text-xs text-purple-600 font-medium mb-1">Selected Rooms</div>
-                <div className="text-lg font-bold text-purple-900">{selectedRooms.length}</div>
+                <div className="text-xs text-purple-600 font-medium mb-1">Available Seats</div>
+                <div className="text-lg font-bold text-purple-900">
+                  {(() => {
+                    const totalCapacity = selectedRooms.reduce((total, room) => {
+                      const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                      const numberOfBenches = room.numberOfBenches || 0;
+                      return total + numberOfBenches * maxStudentsPerBench;
+                    }, 0);
+                    const totalStudents = loadingTotalStudents ? 0 : totalEligibleStudents;
+                    const insufficientCapacity = Math.max(0, totalStudents - totalCapacity);
+                    // Occupied Seats = Total Students - Insufficient Capacity
+                    const occupiedSeats = totalStudents - insufficientCapacity;
+                    // Available Seats = Total Capacity - Occupied Seats
+                    return Math.max(0, totalCapacity - occupiedSeats);
+                  })()}
+                </div>
+              </div>
+              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="text-xs text-orange-600 font-medium mb-1">Occupied Seats</div>
+                <div className="text-lg font-bold text-orange-900">
+                  {(() => {
+                    if (loadingTotalStudents) {
+                      return <Loader2 className="h-4 w-4 animate-spin inline" />;
+                    }
+                    const totalCapacity = selectedRooms.reduce((total, room) => {
+                      const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                      const numberOfBenches = room.numberOfBenches || 0;
+                      return total + numberOfBenches * maxStudentsPerBench;
+                    }, 0);
+                    const totalStudents = totalEligibleStudents;
+                    const insufficientCapacity = Math.max(0, totalStudents - totalCapacity);
+                    // Occupied Seats = Total Students - Insufficient Capacity
+                    // When insufficient: Occupied = Total Students - (Total Students - Total Capacity) = Total Capacity
+                    // When sufficient: Occupied = Total Students - 0 = Total Students
+                    return totalStudents - insufficientCapacity;
+                  })()}
+                </div>
               </div>
             </div>
+            {/* Insufficient Capacity Warning */}
+            {!loadingTotalStudents &&
+              (() => {
+                const totalCapacity = selectedRooms.reduce((total, room) => {
+                  const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+                  const numberOfBenches = room.numberOfBenches || 0;
+                  return total + numberOfBenches * maxStudentsPerBench;
+                }, 0);
+                const insufficientCapacity = totalEligibleStudents > totalCapacity;
+                const shortage = totalEligibleStudents - totalCapacity;
 
-            {loadingRooms || loadingAllRooms ? (
+                return insufficientCapacity ? (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="text-sm font-bold text-red-900">
+                      ⚠️ Insufficient Capacity: {shortage} more seat(s) needed
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+            {loadingRooms ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin" />
                 <span className="ml-2 text-gray-500">Loading rooms...</span>
@@ -943,7 +1112,7 @@ export default function AllotExamPage() {
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-y-auto max-h-[60vh] relative">
+                <div className="overflow-y-auto max-h-[60vh] relative custom-scrollbar">
                   <table className="w-full caption-bottom text-sm border-collapse">
                     <thead className="sticky top-0 z-10 bg-gray-100">
                       <tr className="border-b bg-gray-100">
@@ -992,7 +1161,7 @@ export default function AllotExamPage() {
                         <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm border-r border-border">
                           Max Students per Bench
                         </th>
-                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm">
+                        <th className="sticky top-0 z-10 bg-gray-100 h-12 px-4 text-left align-middle font-medium text-sm w-[180px]">
                           Override
                         </th>
                       </tr>
@@ -1034,38 +1203,42 @@ export default function AllotExamPage() {
                               <td className="p-4 align-middle border-r border-border text-sm">
                                 {currentMaxStudentsPerBench}
                               </td>
-                              <td className="p-4 align-middle text-sm">
-                                {isSelected ? (
-                                  <div className="space-y-1">
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max={room.maxStudentsPerBench || 2}
-                                      placeholder={room.maxStudentsPerBench?.toString() || "2"}
-                                      value={selectedRoom?.maxStudentsPerBenchOverride || ""}
-                                      onChange={(e) => {
-                                        const inputValue = e.target.value.trim();
-                                        if (!inputValue) {
-                                          handleMaxStudentsPerBenchOverride(room.id!, null);
-                                          return;
-                                        }
-                                        const isPositiveInteger = /^\d+$/.test(inputValue);
-                                        if (!isPositiveInteger) {
-                                          return;
-                                        }
-                                        const val = parseInt(inputValue, 10);
-                                        const maxAllowed = room.maxStudentsPerBench || 2;
-                                        if (val > 0 && val <= maxAllowed) {
-                                          handleMaxStudentsPerBenchOverride(room.id!, val);
-                                        }
-                                      }}
-                                      className="h-8 w-20 text-sm"
-                                    />
-                                    <div className="text-sm text-gray-400">Max: {room.maxStudentsPerBench || 2}</div>
-                                  </div>
-                                ) : (
-                                  <span className="text-sm text-gray-400">-</span>
-                                )}
+                              <td className="p-4 align-middle text-sm w-[180px] h-[56px]">
+                                <div className="h-full flex items-center">
+                                  {isSelected ? (
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        max={room.maxStudentsPerBench || 2}
+                                        placeholder={room.maxStudentsPerBench?.toString() || "2"}
+                                        value={selectedRoom?.maxStudentsPerBenchOverride || ""}
+                                        onChange={(e) => {
+                                          const inputValue = e.target.value.trim();
+                                          if (!inputValue) {
+                                            handleMaxStudentsPerBenchOverride(room.id!, null);
+                                            return;
+                                          }
+                                          const isPositiveInteger = /^\d+$/.test(inputValue);
+                                          if (!isPositiveInteger) {
+                                            return;
+                                          }
+                                          const val = parseInt(inputValue, 10);
+                                          const maxAllowed = room.maxStudentsPerBench || 2;
+                                          if (val > 0 && val <= maxAllowed) {
+                                            handleMaxStudentsPerBenchOverride(room.id!, val);
+                                          }
+                                        }}
+                                        className="h-8 w-20 text-sm"
+                                      />
+                                      <span className="text-xs text-gray-400 whitespace-nowrap">
+                                        Max: {room.maxStudentsPerBench || 2}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-gray-400">-</span>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
