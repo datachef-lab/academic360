@@ -341,10 +341,16 @@ const ExamsPage = () => {
   const userId = user?.id?.toString();
   const { socket, isConnected } = useSocket({
     userId,
-    onNotification: (data: any) => {
-      console.log("[Exams Page] Notification received:", data);
-    },
   });
+
+  // Memoize fetch function to avoid recreating on every render
+  const refetchExams = React.useCallback(() => {
+    fetchExams(currentPage, itemsPerPage).then((data) => {
+      setExams(data.content);
+      setTotalPages(data.totalPages);
+      setTotalItems(data.totalElements);
+    });
+  }, [currentPage, itemsPerPage]);
 
   // Listen for exam creation/update events
   React.useEffect(() => {
@@ -355,12 +361,7 @@ const ExamsPage = () => {
       toast.info("A new exam has been created. Refreshing...", {
         duration: 3000,
       });
-      // Refetch exams
-      fetchExams(currentPage, itemsPerPage).then((data) => {
-        setExams(data.content);
-        setTotalPages(data.totalPages);
-        setTotalItems(data.totalElements);
-      });
+      refetchExams();
     };
 
     const handleExamUpdated = (data: { examId: number; type: string; message: string }) => {
@@ -368,12 +369,7 @@ const ExamsPage = () => {
       toast.info("An exam has been updated. Refreshing...", {
         duration: 3000,
       });
-      // Refetch exams
-      fetchExams(currentPage, itemsPerPage).then((data) => {
-        setExams(data.content);
-        setTotalPages(data.totalPages);
-        setTotalItems(data.totalElements);
-      });
+      refetchExams();
     };
 
     socket.on("exam_created", handleExamCreated);
@@ -383,7 +379,7 @@ const ExamsPage = () => {
       socket.off("exam_created", handleExamCreated);
       socket.off("exam_updated", handleExamUpdated);
     };
-  }, [socket, isConnected, currentPage, itemsPerPage]);
+  }, [socket, isConnected, refetchExams]);
 
   useEffect(() => {
     // Only fetch data when authentication is ready, and only on initial mount

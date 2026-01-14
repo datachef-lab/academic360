@@ -32,12 +32,12 @@ import { useStudent } from "@/providers/student-provider";
 import { fetchStudentSubjectSelections } from "@/services/subject-selection";
 import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { ExamDto } from "@/dtos";
-// import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isNestedIframe = window.self !== window.top;
   const pathname = usePathname();
-  //   const { user } = useAuth();
+  const { user } = useAuth();
   const { accessControl, student } = useStudent();
   const [upcomingExamCount, setUpcomingExamCount] = React.useState<number>(0);
   const socketRef = React.useRef<any | null>(null);
@@ -54,17 +54,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     fetchExamsByStudentId(student.id)
       .then((data) => {
         const now = new Date();
-        // Filter exams: only count upcoming exams (not completed and admit card available)
+        const nowTime = now.getTime();
+        // Filter exams: Badge should NOT count if:
+        // 1. Admit card start date is not there
+        // 2. Admit card start date > current time
+        // 3. Admit card end date < current time (if exists)
         const upcomingExams = (data.payload.content || []).filter((exam) => {
-          // If no admit card start date, don't count
+          // 1. If no admit card start date, don't count
           if (!exam.admitCardStartDownloadDate) {
             return false;
           }
 
-          // Check if admit card download date has passed (must be less than or equal to current time)
+          // 2. Check if admit card start date is greater than current time
           const startDate = new Date(exam.admitCardStartDownloadDate);
-          if (startDate > now) {
+          const startTime = startDate.getTime();
+
+          if (startTime > nowTime) {
             return false; // Admit card download hasn't started yet
+          }
+
+          // 3. Check if admit card end date exists and is less than current time
+          if (exam.admitCardLastDownloadDate) {
+            const endDate = new Date(exam.admitCardLastDownloadDate);
+            const endTime = endDate.getTime();
+
+            if (endTime < nowTime) {
+              return false; // Admit card download period has ended
+            }
           }
 
           // Check if exam has subjects
@@ -72,14 +88,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             return false;
           }
 
-          // Check if exam is completed (all subjects have ended)
-          const allCompleted = exam.examSubjects.every((subject) => {
-            const endTime = new Date(subject.endTime);
-            return endTime < now;
-          });
+          // Check if exam is completed: exam start date and last end time have passed
+          const firstSubjectStart = new Date(exam.examSubjects[0].startTime);
+          const lastSubjectEnd = new Date(exam.examSubjects[exam.examSubjects.length - 1].endTime);
 
-          // Only count if exam is NOT completed
-          return !allCompleted;
+          const firstStartTime = firstSubjectStart.getTime();
+          const lastEndTime = lastSubjectEnd.getTime();
+
+          // Don't count if exam start date and last end time have both passed
+          // This means the exam is fully completed
+          if (firstStartTime <= nowTime && lastEndTime <= nowTime) {
+            return false; // Exam is completed
+          }
+
+          // Count if all conditions are met
+          return true;
         });
         setUpcomingExamCount(upcomingExams.length);
       })
@@ -138,8 +161,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         socketRef.current = socket;
 
         socket.on("connect", () => {
-          if (student?.id) {
-            socket.emit("authenticate", student.id.toString());
+          // Authenticate with user id (so backend can classify STUDENT correctly)
+          if (user?.id) {
+            socket.emit("authenticate", user.id.toString());
           }
         });
 

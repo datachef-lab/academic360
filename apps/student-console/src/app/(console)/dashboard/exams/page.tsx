@@ -25,9 +25,11 @@ import { format, parseISO } from "date-fns";
 import { ExamDto } from "@/dtos";
 import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { ExamPapersModal } from "./exam-papers-modal";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function ExamsContent() {
   const { student } = useStudent();
+  const { user } = useAuth();
   const [exams, setExams] = useState<ExamDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,15 +113,21 @@ export default function ExamsContent() {
     fetchExamsByStudentId(student.id)
       .then((data) => {
         console.log("Fetched exams via service:", data, data.payload.content);
-        // Filter exams: only show if admitCardStartDownloadDate is less than current time
+        // Filter exams: show if admitCardStartDownloadDate exists and is less than or equal to current time
+        // Show all exams (including completed) as long as admit card start date has passed
         const now = new Date();
+        const nowTime = now.getTime();
         const filteredExams = (data.payload.content || []).filter((exam) => {
           // If no admit card start date is set, don't show the exam
           if (!exam.admitCardStartDownloadDate) {
             return false;
           }
           const startDate = new Date(exam.admitCardStartDownloadDate);
-          return startDate <= now;
+          const startTime = startDate.getTime();
+
+          // Show if start date time is less than or equal to current time
+          // This includes both active and completed exams
+          return startTime <= nowTime;
         });
         setExams(filteredExams);
       })
@@ -182,9 +190,9 @@ export default function ExamsContent() {
 
         socket.on("connect", () => {
           console.log("[Student Console] Socket connected:", socket.id);
-          // Authenticate with student ID
-          if (student?.id) {
-            socket.emit("authenticate", student.id.toString());
+          // Authenticate with USER id (so backend can classify STUDENT correctly)
+          if (user?.id) {
+            socket.emit("authenticate", user.id.toString());
           }
         });
 

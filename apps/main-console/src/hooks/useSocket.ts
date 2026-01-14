@@ -22,9 +22,6 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketResult {
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
-  // Debug: Log hook usage
-  console.log("useSocket hook called", { userId, isConnected, error });
-
   // Memoize event handlers to prevent infinite re-renders
   const handleProgressUpdate = useCallback(
     (data: ProgressUpdate) => {
@@ -47,6 +44,12 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketResult {
   );
 
   useEffect(() => {
+    // Only create socket if it doesn't exist
+    if (socketRef.current?.connected) {
+      console.log("Socket already connected, skipping re-initialization");
+      return;
+    }
+
     // Initialize socket connection
     const backendEnv = import.meta.env.VITE_APP_BACKEND_URL || "http://localhost:3000";
     // Support backends mounted under a path prefix like `/backend`
@@ -86,22 +89,34 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketResult {
       setIsConnected(false);
     });
 
-    // Progress update handlers
-    socket.on("progress_update", handleProgressUpdate);
-    socket.on("download_progress", handleProgressUpdate);
-
-    // Notification handler
-    socket.on("notification", handleNotification);
-
-    // Make socket available globally for other components
-    (window as unknown as { socket: Socket | null }).socket = socket;
-
     // Cleanup on unmount
     return () => {
       socket.disconnect();
       (window as unknown as { socket: Socket | null }).socket = null;
     };
-  }, [userId, handleProgressUpdate, handleNotification]);
+  }, [userId]); // Only depend on userId, not callbacks
+
+  // Set up event listeners separately - this allows callbacks to change without recreating socket
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    // Remove old listeners before adding new ones
+    socket.off("progress_update", handleProgressUpdate);
+    socket.off("download_progress", handleProgressUpdate);
+    socket.off("notification", handleNotification);
+
+    // Add new listeners
+    socket.on("progress_update", handleProgressUpdate);
+    socket.on("download_progress", handleProgressUpdate);
+    socket.on("notification", handleNotification);
+
+    return () => {
+      socket.off("progress_update", handleProgressUpdate);
+      socket.off("download_progress", handleProgressUpdate);
+      socket.off("notification", handleNotification);
+    };
+  }, [handleProgressUpdate, handleNotification]);
 
   // Re-authenticate when userId changes
   useEffect(() => {

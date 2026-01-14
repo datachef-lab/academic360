@@ -12,20 +12,36 @@ interface ExamWidgetProps {
 }
 
 export default function ExamWidget({ exams }: ExamWidgetProps) {
-  // Filter exams: only show upcoming exams (not completed and admit card available)
-  // This logic must match exactly with the sidebar badge count logic
+  // Filter exams: only show if admit card dates are valid
+  // Widget should NOT display if:
+  // 1. Admit card start date is not there
+  // 2. Admit card start date > current time
+  // 3. Admit card end date < current time (if exists)
   const upcomingExams = exams.filter((exam) => {
     const now = new Date();
+    const nowTime = now.getTime();
 
-    // If no admit card start date, don't show
+    // 1. If no admit card start date, don't show
     if (!exam.admitCardStartDownloadDate) {
       return false;
     }
 
-    // Check if admit card download date has passed (must be less than or equal to current time)
+    // 2. Check if admit card start date is greater than current time
     const startDate = new Date(exam.admitCardStartDownloadDate);
-    if (startDate > now) {
+    const startTime = startDate.getTime();
+
+    if (startTime > nowTime) {
       return false; // Admit card download hasn't started yet
+    }
+
+    // 3. Check if admit card end date exists and is less than current time
+    if (exam.admitCardLastDownloadDate) {
+      const endDate = new Date(exam.admitCardLastDownloadDate);
+      const endTime = endDate.getTime();
+
+      if (endTime < nowTime) {
+        return false; // Admit card download period has ended
+      }
     }
 
     // Check if exam has subjects
@@ -33,14 +49,21 @@ export default function ExamWidget({ exams }: ExamWidgetProps) {
       return false;
     }
 
-    // Check if exam is completed (all subjects have ended)
-    const allCompleted = exam.examSubjects.every((subject) => {
-      const endTime = new Date(subject.endTime);
-      return endTime < now;
-    });
+    // Get the first subject start time and last subject end time
+    const firstSubjectStart = new Date(exam.examSubjects[0].startTime);
+    const lastSubjectEnd = new Date(exam.examSubjects[exam.examSubjects.length - 1].endTime);
 
-    // Only show if exam is NOT completed
-    return !allCompleted;
+    const firstStartTime = firstSubjectStart.getTime();
+    const lastEndTime = lastSubjectEnd.getTime();
+
+    // Don't show in widget if exam start date and last end time have both passed
+    // This means the exam is fully completed
+    if (firstStartTime <= nowTime && lastEndTime <= nowTime) {
+      return false; // Exam is completed
+    }
+
+    // Show if all conditions are met
+    return true;
   });
 
   // Sort by start time (earliest first) and take the first one

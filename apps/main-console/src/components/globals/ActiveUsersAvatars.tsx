@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 export function ActiveUsersAvatars() {
   const { user } = useAuth();
-  const { activeUsers, isConnected } = useActiveUsers({
+  const { activeUsers, studentsOnlineCount, isConnected } = useActiveUsers({
     userId: user?.id?.toString(),
   });
 
@@ -30,13 +30,17 @@ export function ActiveUsersAvatars() {
                 <UserAvatar
                   user={{ name: activeUser.name, image: activeUser.image || undefined }}
                   size="sm"
-                  className="border-2 border-white hover:border-purple-300 transition-colors cursor-pointer bg-white"
+                  className={[
+                    "border-2 border-white hover:border-purple-300 transition-colors cursor-pointer bg-white",
+                    activeUser.tabActive === false ? "opacity-70 blur-[1px]" : "",
+                  ].join(" ")}
                 />
               </TooltipTrigger>
               <TooltipContent>
                 <div className="text-xs">
                   <div className="font-semibold">{activeUser.name}</div>
                   <div className="text-gray-500">{activeUser.type}</div>
+                  {activeUser.tabActive === false && <div className="text-gray-500">Online • Tab inactive</div>}
                 </div>
               </TooltipContent>
             </Tooltip>
@@ -61,6 +65,21 @@ export function ActiveUsersAvatars() {
           className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-green-500 border-2 border-white flex-shrink-0"
           title={`${otherActiveUsers.length} active ${otherActiveUsers.length === 1 ? "user" : "users"}`}
         />
+        {studentsOnlineCount > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="ml-1 hidden sm:flex items-center justify-center px-2 h-6 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold"
+                title={`${studentsOnlineCount} students online`}
+              >
+                Students: {studentsOnlineCount}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-xs">{studentsOnlineCount} students online</div>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </TooltipProvider>
   );

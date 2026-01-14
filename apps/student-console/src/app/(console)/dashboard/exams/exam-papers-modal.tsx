@@ -206,21 +206,31 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
               <DialogTitle className="text-2xl font-semibold text-white tracking-tight">Exam Schedule</DialogTitle>
               <p className="text-white/80 text-sm font-medium"></p>
             </div>
-            {paperDetails.length > 0 && (
-              <Button
-                onClick={handleDownloadAdmitCard}
-                disabled={downloading || loading}
-                title="Download admit card (PDF)"
-                className="h-10 w-10 mr-3 rounded-full flex items-center justify-center bg-indigo-00/40 drop-shadow-sm text-white hover:bg-indigo-700 shadow-sm"
-                aria-label="Download admit card"
-              >
-                {downloading ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-white" />
-                ) : (
-                  <Download className="h-5 w-5 text-white" />
-                )}
-              </Button>
-            )}
+            {paperDetails.length > 0 &&
+              (() => {
+                const now = new Date();
+                const nowTime = now.getTime();
+                // Disable download if admit card last download date has passed
+                const isDownloadDisabled = exam?.admitCardLastDownloadDate
+                  ? new Date(exam.admitCardLastDownloadDate).getTime() < nowTime
+                  : false;
+
+                return (
+                  <Button
+                    onClick={handleDownloadAdmitCard}
+                    disabled={downloading || loading || isDownloadDisabled}
+                    title={isDownloadDisabled ? "Admit card download period has ended" : "Download admit card (PDF)"}
+                    className="h-10 w-10 mr-3 rounded-full flex items-center justify-center bg-indigo-00/40 drop-shadow-sm text-white hover:bg-indigo-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Download admit card"
+                  >
+                    {downloading ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    ) : (
+                      <Download className="h-5 w-5 text-white" />
+                    )}
+                  </Button>
+                );
+              })()}
           </div>
         </DialogHeader>
 
