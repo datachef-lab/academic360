@@ -18,7 +18,7 @@ import { getAllShifts } from "@/services/academic";
 import { getSubjectTypes, getExamComponents } from "@/services/course-design.api";
 import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
-import { checkDuplicateExam } from "@/services/exam-schedule.service";
+import { checkDuplicateExam, countStudentsBreakdownForExam } from "@/services/exam-schedule.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto } from "@repo/db/index";
 import { ExamComponent } from "@/types/course-design";
@@ -43,6 +43,14 @@ interface Schedule {
   date: string;
   startTime: string;
   endTime: string;
+}
+
+interface StudentCountBreakdown {
+  programCourseId: number;
+  programCourseName: string;
+  shiftId: number;
+  shiftName: string;
+  count: number;
 }
 
 // interface Assignment {
@@ -79,7 +87,7 @@ export default function ScheduleExamPage() {
     },
   });
 
-  const { data: classes = [], isLoading: loadingClasses } = useQuery({
+  const { data: classesData, isLoading: loadingClasses } = useQuery({
     queryKey: ["classes"],
     queryFn: async () => {
       const data = await getAllClasses();
@@ -90,6 +98,9 @@ export default function ScheduleExamPage() {
       toast.error("Failed to load classes");
     },
   });
+
+  // Ensure classes is always an array to prevent .map() errors
+  const classes = Array.isArray(classesData) ? classesData : [];
 
   const { data: programCourses = [], isLoading: loadingProgramCourses } = useQuery({
     queryKey: ["programCourses"],
@@ -273,63 +284,75 @@ export default function ScheduleExamPage() {
       const seenPaperIds = new Set<number>();
       // If no subject categories selected, fetch for all program courses
       const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
+
+      // Build all API call promises
+      const apiCalls: Promise<{ content?: PaperDto[] }>[] = [];
+
       // If no subject types selected, fetch papers for all program courses with class filter
       if (subjectTypesToUse.length === 0) {
+        // Create API calls for each program course
         for (const programCourseId of selectedProgramCourses) {
-          try {
-            const papersData = await getPapersPaginated(1, 1000, {
+          apiCalls.push(
+            getPapersPaginated(1, 1000, {
               academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
               affiliationId: selectedAffiliationId ?? null,
               regulationTypeId: selectedRegulationTypeId ?? null,
               programCourseId: programCourseId,
               classId: classId ?? null,
               subjectTypeId: null,
-            });
-            if (papersData?.content) {
-              for (const paper of papersData.content) {
-                if (paper.id && !seenPaperIds.has(paper.id) && paper.isActive !== false) {
-                  seenPaperIds.add(paper.id);
-                  allPapers.push(paper);
-                }
-              }
-            }
-          } catch (error) {
-            console.error(`Error fetching papers for program course ${programCourseId}:`, error);
-          }
+            }).catch((error) => {
+              console.error(`Error fetching papers for program course ${programCourseId}:`, error);
+              return { content: [] };
+            }),
+          );
         }
       } else {
         // Fetch papers for each combination of program course and subject type
         for (const programCourseId of selectedProgramCourses) {
           for (const subjectTypeId of subjectTypesToUse) {
-            try {
-              const papersData = await getPapersPaginated(1, 1000, {
+            apiCalls.push(
+              getPapersPaginated(1, 1000, {
                 academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
                 affiliationId: selectedAffiliationId ?? null,
                 regulationTypeId: selectedRegulationTypeId ?? null,
                 programCourseId: programCourseId,
                 classId: classId ?? null,
                 subjectTypeId: subjectTypeId,
-              });
-              if (papersData?.content) {
-                for (const paper of papersData.content) {
-                  if (paper.id && !seenPaperIds.has(paper.id)) {
-                    seenPaperIds.add(paper.id);
-                    allPapers.push(paper);
-                  }
-                }
-              }
-            } catch (error) {
-              console.error(
-                `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
-                error,
-              );
+              }).catch((error) => {
+                console.error(
+                  `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
+                  error,
+                );
+                return { content: [] };
+              }),
+            );
+          }
+        }
+      }
+
+      // Execute all API calls in parallel for maximum speed
+      // Increased from batched to fully parallel since server can handle it
+      const results = await Promise.all(apiCalls);
+
+      // Combine results and deduplicate
+      for (const result of results) {
+        if (result?.content) {
+          for (const paper of result.content) {
+            if (paper.id && !seenPaperIds.has(paper.id) && paper.isActive !== false) {
+              seenPaperIds.add(paper.id);
+              allPapers.push(paper);
             }
           }
         }
       }
+
       return allPapers;
     },
     enabled: isPapersQueryEnabled,
+    staleTime: 60000, // Cache results for 60 seconds to prevent unnecessary refetches
+    cacheTime: 300000, // Keep in cache for 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnMount: false, // Don't refetch on mount if data is fresh
     onError: (error) => {
       console.error("Error fetching papers:", error);
       toast.error("Failed to load papers");
@@ -974,7 +997,102 @@ export default function ScheduleExamPage() {
     shifts,
     subjectTypes,
     subjects,
+    user?.id,
   ]);
+
+  // Student count query - fetch count based on selected filters
+  // Show breakdown as soon as class, program courses, and shifts are selected
+  // Papers are still needed for the count, but schedules don't need to be complete
+  const canFetchStudentCount =
+    selectedAcademicYearId &&
+    semester &&
+    selectedProgramCourses.length > 0 &&
+    selectedShifts.length > 0 &&
+    selectedSubjectPapers.length > 0; // Just need papers selected, schedules can be incomplete
+
+  // Fetch student count breakdown by program course and shift (single API call)
+  const { data: studentCountData, isLoading: loadingStudentCount } = useQuery(
+    [
+      "studentCountBreakdown",
+      selectedAcademicYearId,
+      semester,
+      selectedProgramCourses,
+      selectedShifts,
+      selectedSubjectPapers.map((sp) => sp.paperId).sort(),
+    ],
+    async () => {
+      // Enable query as soon as class, program courses, and shifts are selected
+      if (!selectedAcademicYearId || !semester || selectedProgramCourses.length === 0 || selectedShifts.length === 0) {
+        return { breakdown: [], total: 0 };
+      }
+
+      const classObj = classes.find((c) => c.id?.toString() === semester);
+      const classId = classObj?.id;
+      if (!classId) return { breakdown: [], total: 0 };
+
+      // Get paper IDs - use all selected papers even if schedules aren't complete
+      const paperIds = selectedSubjectPapers.map((sp) => sp.paperId).filter((id): id is number => id !== undefined);
+
+      // If no papers selected yet, return empty (but query is still enabled for when papers are added)
+      if (paperIds.length === 0) return { breakdown: [], total: 0 };
+
+      // Build all combinations
+      const combinations: Array<{ programCourseId: number; shiftId: number }> = [];
+      for (const programCourseId of selectedProgramCourses) {
+        for (const shiftId of selectedShifts) {
+          combinations.push({ programCourseId, shiftId });
+        }
+      }
+
+      if (combinations.length === 0) return { breakdown: [], total: 0 };
+
+      try {
+        const response = await countStudentsBreakdownForExam(
+          {
+            classId,
+            paperIds,
+            academicYearIds: [selectedAcademicYearId],
+            combinations,
+            gender: null,
+          },
+          null, // No Excel file
+        );
+
+        if (response.httpStatus === "SUCCESS" && response.payload) {
+          // Transform results into breakdown format with names
+          const breakdown: StudentCountBreakdown[] = response.payload.breakdown.map((item) => {
+            const programCourse = programCourses.find((pc) => pc.id === item.programCourseId);
+            const shift = shifts.find((s) => s.id === item.shiftId);
+            return {
+              programCourseId: item.programCourseId,
+              programCourseName: programCourse?.name || `Program Course ${item.programCourseId}`,
+              shiftId: item.shiftId,
+              shiftName: shift?.name || `Shift ${item.shiftId}`,
+              count: item.count,
+            };
+          });
+
+          return {
+            breakdown,
+            total: response.payload.total,
+          };
+        }
+        return { breakdown: [], total: 0 };
+      } catch (error) {
+        console.error("[SCHEDULE-EXAM] Error fetching student count breakdown:", error);
+        return { breakdown: [], total: 0 };
+      }
+    },
+    {
+      // Enable as soon as class, program courses, and shifts are selected
+      enabled: !!selectedAcademicYearId && !!semester && selectedProgramCourses.length > 0 && selectedShifts.length > 0,
+      staleTime: 30000, // Cache for 30 seconds
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+    },
+  );
+
+  const totalStudentCount = studentCountData?.total ?? 0;
+  const studentCountBreakdown = studentCountData?.breakdown ?? [];
 
   const assignExamMutation = useMutation({
     mutationFn: async () => {
@@ -1238,7 +1356,13 @@ export default function ScheduleExamPage() {
                           className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                           disabled={loading.shifts}
                         >
-                          <span className="text-gray-600">{loading.shifts ? "Loading..." : "Select Shifts"}</span>
+                          <span className="text-gray-600">
+                            {loading.shifts
+                              ? "Loading..."
+                              : selectedShifts.length > 0
+                                ? `Select Shifts (${selectedShifts.length})`
+                                : "Select Shifts"}
+                          </span>
                           <ChevronDown className="w-4 h-4 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -1275,7 +1399,11 @@ export default function ScheduleExamPage() {
                           disabled={loading.programCourses}
                         >
                           <span className="text-gray-600">
-                            {loading.programCourses ? "Loading..." : "Select Program Courses"}
+                            {loading.programCourses
+                              ? "Loading..."
+                              : selectedProgramCourses.length > 0
+                                ? `Select Program Courses (${selectedProgramCourses.length})`
+                                : "Select Program Courses"}
                           </span>
                           <ChevronDown className="w-4 h-4 opacity-50" />
                         </Button>
@@ -1313,7 +1441,11 @@ export default function ScheduleExamPage() {
                           disabled={loading.subjectTypes}
                         >
                           <span className="text-gray-600">
-                            {loading.subjectTypes ? "Loading..." : "Select Subject Categories"}
+                            {loading.subjectTypes
+                              ? "Loading..."
+                              : selectedSubjectCategories.length > 0
+                                ? `Select Subject Categories (${selectedSubjectCategories.length})`
+                                : "Select Subject Categories"}
                           </span>
                           <ChevronDown className="w-4 h-4 opacity-50" />
                         </Button>
@@ -1684,6 +1816,203 @@ export default function ScheduleExamPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Student Count Display - Show only when subjects are selected */}
+            {selectedSubjectPapers.length > 0 && (
+              <Card className="border-0 shadow-none mt-6">
+                <CardContent className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-blue-900">Eligible Students</h3>
+                    {loadingStudentCount ? (
+                      <div className="flex items-center gap-2 text-blue-700">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">Counting...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-bold text-blue-900">{Number(totalStudentCount) || 0}</span>
+                        <span className="text-sm text-blue-700">students</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Breakdown by Program Course and Shift - Table Format */}
+                  {(() => {
+                    // Show actual data when available
+                    // Transform data into table format: rows = program courses, columns = shifts
+                    if (!Array.isArray(studentCountBreakdown) || studentCountBreakdown.length === 0) {
+                      // Build empty table structure based on selected program courses and shifts
+                      const sortedProgramCourses = selectedProgramCourses
+                        .map((pcId) => {
+                          const pc = programCourses.find((p) => p.id === pcId);
+                          return { id: pcId, name: pc?.name || `Program Course ${pcId}` };
+                        })
+                        .sort((a, b) => a.name.localeCompare(b.name));
+
+                      const sortedShifts = selectedShifts
+                        .map((shiftId) => {
+                          const shift = shifts.find((s) => s.id === shiftId);
+                          return { id: shiftId, name: shift?.name || `Shift ${shiftId}` };
+                        })
+                        .sort((a, b) => a.name.localeCompare(b.name));
+
+                      if (sortedProgramCourses.length === 0 || sortedShifts.length === 0) {
+                        return null;
+                      }
+
+                      return (
+                        <div className="mt-3 pt-3 border-t border-blue-200">
+                          <p className="text-xs font-medium text-blue-800 mb-3">Breakdown by Program Course & Shift:</p>
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
+                              <thead>
+                                <tr className="bg-blue-100">
+                                  <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
+                                    Sr. No.
+                                  </th>
+                                  <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
+                                    Program Course
+                                  </th>
+                                  {sortedShifts.map((shift) => (
+                                    <th
+                                      key={shift.id}
+                                      className="border border-blue-200 px-3 py-2 text-center text-xs font-semibold text-blue-900"
+                                    >
+                                      {shift.name}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {sortedProgramCourses.map((pc, index) => (
+                                  <tr key={pc.id} className="hover:bg-blue-50">
+                                    <td className="border border-blue-200 px-3 py-2 text-xs text-gray-700 text-center">
+                                      {index + 1}
+                                    </td>
+                                    <td className="border border-blue-200 px-3 py-2 text-xs font-medium text-gray-700">
+                                      {pc.name}
+                                    </td>
+                                    {sortedShifts.map((shift) => (
+                                      <td
+                                        key={shift.id}
+                                        className="border border-blue-200 px-3 py-2 text-xs text-gray-700 text-center"
+                                      >
+                                        {loadingStudentCount ? (
+                                          <Loader2 className="w-3 h-3 animate-spin inline" />
+                                        ) : (
+                                          "-"
+                                        )}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Show actual data when available
+                    // Transform data into table format: rows = program courses, columns = shifts
+                    const programCourseMap = new Map<
+                      number,
+                      { name: string; shifts: Map<number, { name: string; count: number }> }
+                    >();
+
+                    // Get all unique shifts
+                    const allShiftIds = new Set<number>();
+                    const shiftIdToName = new Map<number, string>();
+
+                    for (const item of studentCountBreakdown) {
+                      allShiftIds.add(item.shiftId);
+                      shiftIdToName.set(item.shiftId, item.shiftName);
+
+                      if (!programCourseMap.has(item.programCourseId)) {
+                        programCourseMap.set(item.programCourseId, {
+                          name: item.programCourseName,
+                          shifts: new Map(),
+                        });
+                      }
+
+                      const pcData = programCourseMap.get(item.programCourseId)!;
+                      pcData.shifts.set(item.shiftId, { name: item.shiftName, count: item.count });
+                    }
+
+                    // Sort shifts by name for consistent column order
+                    const sortedShiftIds = Array.from(allShiftIds).sort((a, b) => {
+                      const nameA = shiftIdToName.get(a) || "";
+                      const nameB = shiftIdToName.get(b) || "";
+                      return nameA.localeCompare(nameB);
+                    });
+
+                    // Sort program courses by name
+                    const sortedProgramCourses = Array.from(programCourseMap.entries()).sort((a, b) =>
+                      a[1].name.localeCompare(b[1].name),
+                    );
+
+                    return (
+                      <div className="mt-3 pt-3 border-t border-blue-200">
+                        <p className="text-xs font-medium text-blue-800 mb-3">Breakdown by Program Course & Shift:</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
+                            <thead>
+                              <tr className="bg-blue-100">
+                                <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
+                                  Sr. No.
+                                </th>
+                                <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
+                                  Program Course
+                                </th>
+                                {sortedShiftIds.map((shiftId) => (
+                                  <th
+                                    key={shiftId}
+                                    className="border border-blue-200 px-3 py-2 text-center text-xs font-semibold text-blue-900"
+                                  >
+                                    {shiftIdToName.get(shiftId) || `Shift ${shiftId}`}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sortedProgramCourses.map(([programCourseId, pcData], index) => (
+                                <tr key={programCourseId} className="hover:bg-blue-50">
+                                  <td className="border border-blue-200 px-3 py-2 text-xs text-gray-700 text-center">
+                                    {index + 1}
+                                  </td>
+                                  <td className="border border-blue-200 px-3 py-2 text-xs font-medium text-gray-700">
+                                    {pcData.name}
+                                  </td>
+                                  {sortedShiftIds.map((shiftId) => {
+                                    const shiftData = pcData.shifts.get(shiftId);
+                                    return (
+                                      <td
+                                        key={shiftId}
+                                        className="border border-blue-200 px-3 py-2 text-xs text-gray-700 text-center"
+                                      >
+                                        {shiftData ? shiftData.count : "-"}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {totalStudentCount === 0 && !loadingStudentCount && (
+                    <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                      <p className="text-xs text-yellow-800">
+                        ⚠️ No eligible students found. Please check your filters (Program Courses, Shifts, Subjects).
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Duplicate Exam Warning */}
@@ -1743,7 +2072,9 @@ export default function ScheduleExamPage() {
                 !selectedSubjectPapers.every((sp) => {
                   const schedule = sp.schedule;
                   return schedule?.date && schedule?.startTime && schedule?.endTime;
-                })
+                }) ||
+                (canFetchStudentCount && totalStudentCount === 0) ||
+                loadingStudentCount
               }
               className="w-full sm:w-auto sm:min-w-[180px] h-12 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all"
             >

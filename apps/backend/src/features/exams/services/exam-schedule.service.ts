@@ -32,8 +32,11 @@ import {
 } from "@repo/db/dtos/exams";
 import {
   academicYearModel,
+  affiliationModel,
   classModel,
+  courseLevelModel,
   courseModel,
+  courseTypeModel,
   ExamCandidate,
   examCandidateModel,
   examModel,
@@ -55,10 +58,12 @@ import {
   paperModel,
   programCourseModel,
   promotionModel,
+  regulationTypeModel,
   roomModel,
   sectionModel,
   sessionModel,
   shiftModel,
+  streamModel,
   subjectModel,
   subjectTypeModel,
 } from "@repo/db/schemas";
@@ -605,6 +610,59 @@ export async function countStudentsByPapers(
   return eligibleIds.length;
 }
 
+export interface CountStudentsBreakdownParams {
+  classId: number;
+  paperIds: number[];
+  academicYearIds: number[];
+  combinations: Array<{ programCourseId: number; shiftId: number }>;
+  gender?: string | null;
+  excelStudents?: { foil_number: string; uid: string }[];
+}
+
+export interface StudentCountBreakdownResult {
+  programCourseId: number;
+  shiftId: number;
+  count: number;
+}
+
+export async function countStudentsByPapersBreakdown(
+  params: CountStudentsBreakdownParams,
+): Promise<{ breakdown: StudentCountBreakdownResult[]; total: number }> {
+  const { combinations, ...baseParams } = params;
+
+  if (combinations.length === 0) {
+    return { breakdown: [], total: 0 };
+  }
+
+  // Execute all count queries in parallel
+  const countPromises = combinations.map(async (combo) => {
+    const eligibleIds = await getEligibleStudentIds({
+      ...baseParams,
+      programCourseIds: [combo.programCourseId],
+      shiftIds: combo.shiftId ? [combo.shiftId] : [],
+      gender:
+        baseParams.gender === null || baseParams.gender === undefined
+          ? null
+          : baseParams.gender === "MALE" ||
+              baseParams.gender === "FEMALE" ||
+              baseParams.gender === "OTHER"
+            ? baseParams.gender
+            : null,
+      excelStudents: baseParams.excelStudents || [],
+    });
+    return {
+      programCourseId: combo.programCourseId,
+      shiftId: combo.shiftId,
+      count: eligibleIds.length,
+    };
+  });
+
+  const breakdown = await Promise.all(countPromises);
+  const total = breakdown.reduce((sum, item) => sum + item.count, 0);
+
+  return { breakdown, total };
+}
+
 export interface GetStudentsByPapersParams extends CountStudentsByPapersParams {
   assignBy: "CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER";
 }
@@ -619,6 +677,8 @@ export interface StudentWithSeat {
   floorName: string | null;
   roomName: string;
   seatNumber: string;
+  programCourseId: number | null;
+  shiftId: number | null;
 }
 
 /**
@@ -781,6 +841,7 @@ export async function getStudentsByPapers(
   //     )
   //     .where(inArray(studentModel.id, studentIds));
 
+  // Fetch students
   const students = await db
     .select({
       studentId: studentModel.id,
@@ -805,6 +866,59 @@ export async function getStudentsByPapers(
       eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
     )
     .where(inArray(studentModel.id, studentIds));
+
+  // Fetch latest promotions for these students to get programCourseId and shiftId
+  const promotionMap = new Map<
+    number,
+    { programCourseId: number | null; shiftId: number | null }
+  >();
+  if (students.length > 0) {
+    const promotionSubquery = db
+      .select({
+        studentId: promotionModel.studentId,
+        programCourseId: promotionModel.programCourseId,
+        shiftId: promotionModel.shiftId,
+        rn: sql<number>`ROW_NUMBER() OVER (
+          PARTITION BY ${promotionModel.studentId}
+          ORDER BY ${promotionModel.startDate} DESC NULLS LAST,
+                   ${promotionModel.createdAt} DESC,
+                   ${promotionModel.id} DESC
+        )`.as("rn"),
+      })
+      .from(promotionModel)
+      .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+      .where(
+        and(
+          inArray(
+            promotionModel.studentId,
+            students.map((s) => s.studentId),
+          ),
+          eq(promotionModel.classId, params.classId),
+          inArray(promotionModel.programCourseId, params.programCourseIds),
+          inArray(sessionModel.academicYearId, params.academicYearIds),
+          params.shiftIds && params.shiftIds.length > 0
+            ? inArray(promotionModel.shiftId, params.shiftIds)
+            : sql`TRUE`,
+        ),
+      )
+      .as("promotion_subquery");
+
+    const latestPromotions = await db
+      .select({
+        studentId: promotionSubquery.studentId,
+        programCourseId: promotionSubquery.programCourseId,
+        shiftId: promotionSubquery.shiftId,
+      })
+      .from(promotionSubquery)
+      .where(eq(promotionSubquery.rn, 1));
+
+    latestPromotions.forEach((p) => {
+      promotionMap.set(p.studentId, {
+        programCourseId: p.programCourseId,
+        shiftId: p.shiftId,
+      });
+    });
+  }
 
   //   console.log("[EXAM-SCHEDULE] Students:", students);
 
@@ -837,6 +951,7 @@ export async function getStudentsByPapers(
       const seatNumber = `${bench}${letter}`;
 
       const s = students[studentIdx++];
+      const promotion = promotionMap.get(s.studentId);
       result.push({
         studentId: s.studentId,
         uid: s.uid || "",
@@ -847,6 +962,8 @@ export async function getStudentsByPapers(
         floorName: room.floorName,
         roomName: room.roomName,
         seatNumber,
+        programCourseId: promotion?.programCourseId ?? null,
+        shiftId: promotion?.shiftId ?? null,
       });
       seatIdx++;
     }
@@ -2437,99 +2554,254 @@ export async function findAll(
 async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
   if (!model) return null;
 
-  const foundAcademicYear = await findAcademicYearById(model.academicYearId);
+  // Execute all independent queries in parallel
+  const [
+    foundAcademicYear,
+    foundExamTypeResult,
+    foundClass,
+    foundExamProgramCourses,
+    foundExamShifts,
+    foundExamSubjects,
+    foundExamSubjectType,
+    foundExamRooms,
+  ] = await Promise.all([
+    findAcademicYearById(model.academicYearId),
+    db
+      .select()
+      .from(examTypeModel)
+      .where(eq(examTypeModel.id, model.examTypeId)),
+    findClassById(model.classId),
+    db
+      .select()
+      .from(examProgramCourseModel)
+      .leftJoin(examModel, eq(examProgramCourseModel.examId, examModel.id))
+      .where(eq(examModel.id, model.id)),
+    db
+      .select()
+      .from(examShiftModel)
+      .leftJoin(examModel, eq(examShiftModel.examId, examModel.id))
+      .where(eq(examModel.id, model.id)),
+    db
+      .select()
+      .from(examSubjectModel)
+      .where(eq(examSubjectModel.examId, model.id)),
+    db
+      .select()
+      .from(examSubjectTypeModel)
+      .where(eq(examSubjectTypeModel.examId, model.id)),
+    db.select().from(examRoomModel).where(eq(examRoomModel.examId, model.id!)),
+  ]);
 
-  const [foundExamType] = await db
-    .select()
-    .from(examTypeModel)
-    .where(eq(examTypeModel.id, model.examTypeId));
+  const [foundExamType] = foundExamTypeResult;
 
-  const foundClass = await findClassById(model.classId);
+  // Extract unique IDs for batch fetching
+  const programCourseIds = foundExamProgramCourses.map(
+    (epc) => epc.exam_program_courses.programCourseId,
+  );
+  const shiftIds = foundExamShifts.map((es) => es.exam_shifts.shiftId);
+  const subjectIds = foundExamSubjects.map((es) => es.subjectId);
+  const subjectTypeIds = foundExamSubjectType.map((est) => est.subjectTypeId);
+  const roomIds = foundExamRooms.map((l) => l.roomId);
 
-  const foundExamProgramCourses = await db
-    .select()
-    .from(examProgramCourseModel)
-    .leftJoin(examModel, eq(examProgramCourseModel.examId, examModel.id))
-    .where(eq(examModel.id, model.id));
+  // Batch fetch all related entities in parallel
+  const [programCourses, shifts, subjects, subjectTypes, rooms] =
+    await Promise.all([
+      programCourseIds.length > 0
+        ? db
+            .select()
+            .from(programCourseModel)
+            .where(inArray(programCourseModel.id, programCourseIds))
+        : [],
+      shiftIds.length > 0
+        ? db.select().from(shiftModel).where(inArray(shiftModel.id, shiftIds))
+        : [],
+      subjectIds.length > 0
+        ? db
+            .select()
+            .from(subjectModel)
+            .where(inArray(subjectModel.id, subjectIds))
+        : [],
+      subjectTypeIds.length > 0
+        ? db
+            .select()
+            .from(subjectTypeModel)
+            .where(inArray(subjectTypeModel.id, subjectTypeIds))
+        : [],
+      roomIds.length > 0
+        ? db.select().from(roomModel).where(inArray(roomModel.id, roomIds))
+        : [],
+    ]);
 
-  const examProgramCourses = await Promise.all(
-    foundExamProgramCourses.map(async (epc): Promise<ExamProgramCourseDto> => {
-      const programCourse = (await programCourseServices.findById(
+  // Extract IDs for nested program course entities
+  const streamIds = programCourses
+    .map((pc) => pc.streamId)
+    .filter((id): id is number => id !== null && id !== undefined);
+  const courseIds = programCourses
+    .map((pc) => pc.courseId)
+    .filter((id): id is number => id !== null && id !== undefined);
+  const courseTypeIds = programCourses
+    .map((pc) => pc.courseTypeId)
+    .filter((id): id is number => id !== null && id !== undefined);
+  const courseLevelIds = programCourses
+    .map((pc) => pc.courseLevelId)
+    .filter((id): id is number => id !== null && id !== undefined);
+  const affiliationIds = programCourses
+    .map((pc) => pc.affiliationId)
+    .filter((id): id is number => id !== null && id !== undefined);
+  const regulationTypeIds = programCourses
+    .map((pc) => pc.regulationTypeId)
+    .filter((id): id is number => id !== null && id !== undefined);
+
+  // Batch fetch nested entities for program courses and floors for rooms
+  const [
+    streams,
+    courses,
+    courseTypes,
+    courseLevels,
+    affiliations,
+    regulationTypes,
+    floors,
+  ] = await Promise.all([
+    streamIds.length > 0
+      ? db.select().from(streamModel).where(inArray(streamModel.id, streamIds))
+      : [],
+    courseIds.length > 0
+      ? db.select().from(courseModel).where(inArray(courseModel.id, courseIds))
+      : [],
+    courseTypeIds.length > 0
+      ? db
+          .select()
+          .from(courseTypeModel)
+          .where(inArray(courseTypeModel.id, courseTypeIds))
+      : [],
+    courseLevelIds.length > 0
+      ? db
+          .select()
+          .from(courseLevelModel)
+          .where(inArray(courseLevelModel.id, courseLevelIds))
+      : [],
+    affiliationIds.length > 0
+      ? db
+          .select()
+          .from(affiliationModel)
+          .where(inArray(affiliationModel.id, affiliationIds))
+      : [],
+    regulationTypeIds.length > 0
+      ? db
+          .select()
+          .from(regulationTypeModel)
+          .where(inArray(regulationTypeModel.id, regulationTypeIds))
+      : [],
+    (() => {
+      const floorIds = rooms
+        .map((r) => r.floorId)
+        .filter((id): id is number => id !== null && id !== undefined);
+      return floorIds.length > 0
+        ? db.select().from(floorModel).where(inArray(floorModel.id, floorIds))
+        : [];
+    })(),
+  ]);
+
+  // Create lookup maps for O(1) access
+  const streamMap = new Map(streams.map((s) => [s.id, s]));
+  const courseMap = new Map(courses.map((c) => [c.id, c]));
+  const courseTypeMap = new Map(courseTypes.map((ct) => [ct.id, ct]));
+  const courseLevelMap = new Map(courseLevels.map((cl) => [cl.id, cl]));
+  const affiliationMap = new Map(affiliations.map((a) => [a.id, a]));
+  const regulationTypeMap = new Map(regulationTypes.map((rt) => [rt.id, rt]));
+  const floorMap = new Map(floors.map((f) => [f.id, f]));
+  const shiftMap = new Map(shifts.map((s) => [s.id, s]));
+  const subjectMap = new Map(subjects.map((s) => [s.id, s]));
+  const subjectTypeMap = new Map(subjectTypes.map((st) => [st.id, st]));
+
+  // Build program course DTOs with nested entities
+  const programCourseDtoMap = new Map(
+    programCourses.map((pc) => [
+      pc.id,
+      {
+        ...pc,
+        stream: pc.streamId ? streamMap.get(pc.streamId) || null : null,
+        course: pc.courseId ? courseMap.get(pc.courseId) || null : null,
+        courseType: pc.courseTypeId
+          ? courseTypeMap.get(pc.courseTypeId) || null
+          : null,
+        courseLevel: pc.courseLevelId
+          ? courseLevelMap.get(pc.courseLevelId) || null
+          : null,
+        affiliation: pc.affiliationId
+          ? affiliationMap.get(pc.affiliationId) || null
+          : null,
+        regulationType: pc.regulationTypeId
+          ? regulationTypeMap.get(pc.regulationTypeId) || null
+          : null,
+      },
+    ]),
+  );
+
+  const roomMap = new Map(
+    rooms.map((r) => [
+      r.id,
+      {
+        ...r,
+        floor: r.floorId
+          ? floorMap.get(r.floorId) || {
+              id: 0,
+              name: "Unknown",
+              shortName: null,
+              sequence: null,
+              isActive: true,
+              legacyFloorId: null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            }
+          : {
+              id: 0,
+              name: "Unknown",
+              shortName: null,
+              sequence: null,
+              isActive: true,
+              legacyFloorId: null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+      },
+    ]),
+  );
+
+  // Build exam program courses with batch-fetched data
+  const examProgramCourses: ExamProgramCourseDto[] =
+    foundExamProgramCourses.map((epc) => ({
+      ...epc.exam_program_courses,
+      programCourse: programCourseDtoMap.get(
         epc.exam_program_courses.programCourseId,
-      ))!;
-      return {
-        ...epc.exam_program_courses,
-        programCourse,
-      };
+      )!,
+    }));
+
+  // Build exam shifts with batch-fetched data
+  const examShifts: ExamShiftDto[] = foundExamShifts.map((es) => ({
+    ...es.exam_shifts,
+    shift: shiftMap.get(es.exam_shifts.shiftId)!,
+  }));
+
+  // Build exam subjects with batch-fetched data
+  const examSubjects: ExamSubjectDto[] = foundExamSubjects.map((es) => ({
+    ...es,
+    subject: subjectMap.get(es.subjectId)!,
+  }));
+
+  // Build exam subject types with batch-fetched data
+  const examSubjectTypes: ExamSubjectTypeDto[] = foundExamSubjectType.map(
+    (est) => ({
+      ...est,
+      subjectType: subjectTypeMap.get(est.subjectTypeId)!,
     }),
   );
 
-  const foundExamShifts = await db
-    .select()
-    .from(examShiftModel)
-    .leftJoin(examModel, eq(examShiftModel.examId, examModel.id))
-    .where(eq(examModel.id, model.id));
-
-  const examShifts = await Promise.all(
-    foundExamShifts.map(async (es): Promise<ExamShiftDto> => {
-      const shift = (await shiftService.findById(es.exam_shifts.shiftId))!;
-      return {
-        ...es.exam_shifts,
-        shift,
-      };
-    }),
-  );
-
-  const foundExamSubjects = await db
-    .select()
-    .from(examSubjectModel)
-    .where(eq(examSubjectModel.examId, model.id));
-
-  const examSubjects = await Promise.all(
-    foundExamSubjects.map(async (es): Promise<ExamSubjectDto> => {
-      const [subject] = await db
-        .select()
-        .from(subjectModel)
-        .where(eq(subjectModel.id, es.subjectId));
-      return {
-        ...es,
-        subject: subject!,
-      };
-    }),
-  );
-
-  const foundExamSubjectType = await db
-    .select()
-    .from(examSubjectTypeModel)
-    .where(eq(examSubjectTypeModel.examId, model.id));
-
-  const examSubjectTypes = await Promise.all(
-    foundExamSubjectType.map(async (est): Promise<ExamSubjectTypeDto> => {
-      const [subjectType] = await db
-        .select()
-        .from(subjectTypeModel)
-        .where(eq(subjectTypeModel.id, est.subjectTypeId));
-      return {
-        ...est,
-        subjectType: subjectType!,
-      };
-    }),
-  );
-
-  const foundExamRooms = await db
-    .select()
-    .from(examRoomModel)
-    .where(eq(examRoomModel.examId, model.id!));
-
-  const locations = await Promise.all(
-    foundExamRooms.map(async (l): Promise<ExamRoomDto> => {
-      const room = await roomServices.findById(l.roomId);
-      return {
-        ...l,
-        room: room!,
-      };
-    }),
-  );
+  // Build locations with batch-fetched data
+  const locations: ExamRoomDto[] = foundExamRooms.map((l) => ({
+    ...l,
+    room: roomMap.get(l.roomId)!,
+  }));
 
   return {
     ...model,
@@ -3289,7 +3561,8 @@ export async function downloadSingleAdmitCard(
     })),
   });
 
-  // Track admit card download - update all exam candidates for this student and exam
+  // Track admit card download - increment count by 1 only (not by number of papers)
+  // Update all exam candidates' timestamps, but only increment count once on the first record
   const examCandidateIds = await db
     .select({ id: examCandidateModel.id })
     .from(examCandidateModel)
@@ -3303,22 +3576,31 @@ export async function downloadSingleAdmitCard(
         eq(examCandidateModel.examId, examId),
         eq(studentModel.id, studentId),
       ),
-    );
+    )
+    .orderBy(asc(examCandidateModel.id)); // Order to ensure consistent selection
 
   if (examCandidateIds.length > 0) {
     const now = new Date();
+    const allCandidateIds = examCandidateIds.map((ec) => ec.id);
+    const firstCandidateId = allCandidateIds[0];
+
+    // Update all candidates' downloadedAt timestamp
     await db
       .update(examCandidateModel)
       .set({
         admitCardDownloadedAt: now,
-        admitCardDownloadCount: sql`${examCandidateModel.admitCardDownloadCount} + 1`,
       })
-      .where(
-        inArray(
-          examCandidateModel.id,
-          examCandidateIds.map((ec) => ec.id),
-        ),
-      );
+      .where(inArray(examCandidateModel.id, allCandidateIds));
+
+    // Only increment the download count once on the first exam candidate record
+    // This ensures 1 download = count +1, regardless of number of papers
+    await db
+      .update(examCandidateModel)
+      .set({
+        // Use COALESCE to handle NULL values - default to 0 if NULL, then increment
+        admitCardDownloadCount: sql`COALESCE(${examCandidateModel.admitCardDownloadCount}, 0) + 1`,
+      })
+      .where(eq(examCandidateModel.id, firstCandidateId));
   }
 
   return pdfBuffer;

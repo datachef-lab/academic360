@@ -50,7 +50,8 @@ interface ActiveUserInfo {
   id: number;
   name: string;
   image: string | null;
-  type: "ADMIN" | "STAFF";
+  type: "ADMIN" | "STAFF" | "STUDENT";
+  tabActive: boolean;
 }
 
 // Socket service class
@@ -63,6 +64,8 @@ class SocketService {
   > | null = null;
   private activeConnections: Map<string, Set<string>> = new Map(); // userId -> set of socket IDs
   private userInfoCache: Map<string, ActiveUserInfo> = new Map(); // userId -> user info
+  private socketToUserId: Map<string, string> = new Map(); // socketId -> userId
+  private socketTabActive: Map<string, boolean> = new Map(); // socketId -> isTabActive (page visible)
 
   // Add this method
   public getIO() {
@@ -89,6 +92,8 @@ class SocketService {
 
     this.io.on("connection", (socket: Socket) => {
       console.log(`[SocketService] Client connected: ${socket.id}`);
+      // Default: assume tab is active until we hear otherwise
+      this.socketTabActive.set(socket.id, true);
 
       // Handle user authentication and mapping
       socket.on("authenticate", async (userId: string) => {
@@ -108,11 +113,31 @@ class SocketService {
         }
       });
 
+      // Track tab visibility (active tab vs background tab)
+      socket.on("tab_visibility", (payload: { isActive: boolean }) => {
+        try {
+          this.socketTabActive.set(socket.id, !!payload?.isActive);
+
+          const userId = this.socketToUserId.get(socket.id);
+          if (userId) {
+            this.recomputeUserTabActive(userId);
+          }
+
+          this.broadcastActiveUsers();
+        } catch (error) {
+          console.error(
+            `[SocketService] Error handling tab_visibility for ${socket.id}:`,
+            error,
+          );
+        }
+      });
+
       // Handle get active users request
       socket.on("get_active_users", () => {
         try {
           const activeUsers = this.getActiveAdminStaffUsers();
           socket.emit("active_users_list", activeUsers);
+          socket.emit("students_online_count", this.getOnlineStudentsCount());
         } catch (error) {
           console.error("[SocketService] Error getting active users:", error);
         }
@@ -175,6 +200,8 @@ class SocketService {
 
   // Register a user with their socket ID and fetch user info
   private async registerUser(userId: string, socketId: string) {
+    this.socketToUserId.set(socketId, userId);
+
     if (!this.activeConnections.has(userId)) {
       this.activeConnections.set(userId, new Set());
     }
@@ -188,14 +215,17 @@ class SocketService {
           const user = await userService.findById(userIdNum);
           if (
             user &&
-            (user.type === "ADMIN" || user.type === "STAFF") &&
+            (user.type === "ADMIN" ||
+              user.type === "STAFF" ||
+              user.type === "STUDENT") &&
             user.isActive !== false
           ) {
             this.userInfoCache.set(userId, {
               id: userIdNum,
               name: user.name || "Unknown",
               image: user.image || null,
-              type: user.type as "ADMIN" | "STAFF",
+              type: user.type as "ADMIN" | "STAFF" | "STUDENT",
+              tabActive: true,
             });
           }
         }
@@ -206,10 +236,36 @@ class SocketService {
         );
       }
     }
+
+    // After adding a socket, recompute user's tabActive based on all sockets
+    this.recomputeUserTabActive(userId);
+  }
+
+  private recomputeUserTabActive(userId: string) {
+    const sockets = this.activeConnections.get(userId);
+    if (!sockets || sockets.size === 0) return;
+
+    // If any socket for this user has an active tab, treat user as tabActive
+    let anyActive = false;
+    sockets.forEach((sid) => {
+      if (this.socketTabActive.get(sid)) {
+        anyActive = true;
+      }
+    });
+
+    const cached = this.userInfoCache.get(userId);
+    if (cached) {
+      cached.tabActive = anyActive;
+      this.userInfoCache.set(userId, cached);
+    }
   }
 
   // Remove a socket when the connection is closed
   private removeSocket(socketId: string) {
+    const userIdForSocket = this.socketToUserId.get(socketId);
+    this.socketToUserId.delete(socketId);
+    this.socketTabActive.delete(socketId);
+
     this.activeConnections.forEach((sockets, userId) => {
       if (sockets.has(socketId)) {
         sockets.delete(socketId);
@@ -217,9 +273,17 @@ class SocketService {
           this.activeConnections.delete(userId);
           // Remove from cache when user has no active connections
           this.userInfoCache.delete(userId);
+        } else {
+          // Update tabActive based on remaining sockets
+          this.recomputeUserTabActive(userId);
         }
       }
     });
+
+    // Also recompute for socket-mapped userId in case it wasn't found via loop
+    if (userIdForSocket) {
+      this.recomputeUserTabActive(userIdForSocket);
+    }
   }
 
   // Get active ADMIN/STAFF users
@@ -229,12 +293,27 @@ class SocketService {
       // Only include users with active connections
       if (sockets.size > 0) {
         const userInfo = this.userInfoCache.get(userId);
-        if (userInfo) {
+        if (
+          userInfo &&
+          (userInfo.type === "ADMIN" || userInfo.type === "STAFF")
+        ) {
           activeUsers.push(userInfo);
         }
       }
     });
     return activeUsers;
+  }
+
+  private getOnlineStudentsCount(): number {
+    let count = 0;
+    this.activeConnections.forEach((sockets, userId) => {
+      if (sockets.size === 0) return;
+      const userInfo = this.userInfoCache.get(userId);
+      if (userInfo?.type === "STUDENT") {
+        count += 1;
+      }
+    });
+    return count;
   }
 
   // Broadcast active users list to all connected clients
@@ -246,6 +325,7 @@ class SocketService {
     try {
       const activeUsers = this.getActiveAdminStaffUsers();
       this.io.emit("active_users_update", activeUsers);
+      this.io.emit("students_online_count", this.getOnlineStudentsCount());
       console.log(
         `[SocketService] Broadcasted active users update: ${activeUsers.length} users`,
       );

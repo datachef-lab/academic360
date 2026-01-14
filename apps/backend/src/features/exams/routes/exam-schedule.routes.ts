@@ -3,6 +3,7 @@ import {
   allotExamRoomsAndStudentsController,
   checkDuplicateExamController,
   countStudentsForExam,
+  countStudentsBreakdownForExam,
   createExamAssignmenthandler,
   downloadAdmitCardTrackingController,
   downloadAdmitCardsController,
@@ -31,6 +32,22 @@ router.post(
   verifyJWT,
   uploadExcelMiddleware,
   countStudentsForExam,
+);
+// Handle both JSON and FormData for breakdown endpoint
+router.post(
+  "/count-students-breakdown",
+  verifyJWT,
+  (req, res, next) => {
+    // Check if request has file upload
+    const contentType = req.headers["content-type"] || "";
+    if (contentType.includes("multipart/form-data")) {
+      // Use multer middleware for FormData
+      return uploadExcelMiddleware(req, res, next);
+    }
+    // For JSON, just pass through (body parser will handle it)
+    next();
+  },
+  countStudentsBreakdownForExam,
 );
 router.post(
   "/get-students",

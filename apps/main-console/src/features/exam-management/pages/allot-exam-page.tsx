@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,12 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllRooms } from "@/services/room.service";
 import { getAllFloors } from "@/services/floor.service";
-import { getEligibleRooms, getStudentsForExam, countStudentsForExam } from "@/services/exam-schedule.service";
+import {
+  getEligibleRooms,
+  getStudentsForExam,
+  countStudentsForExam,
+  countStudentsBreakdownForExam,
+} from "@/services/exam-schedule.service";
 import { fetchExams, fetchExamById } from "@/services/exam.service";
 import { allotExamRoomsAndStudents, type AllotExamParams } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,17 +67,19 @@ export default function AllotExamPage() {
   const [admitCardEndDate, setAdmitCardEndDate] = useState<string>("");
 
   // Fetch all exams for selection
-  const { data: examsData, isLoading: loadingExams } = useQuery({
-    queryKey: ["exams", "for-allotment"],
-    queryFn: async () => {
+  const { data: examsData, isLoading: loadingExams } = useQuery(
+    ["exams", "for-allotment"],
+    async () => {
       const data = await fetchExams(1, 1000); // Fetch many exams
       return data.content;
     },
-    onError: (error) => {
-      console.error("Error fetching exams:", error);
-      toast.error("Failed to load exams");
+    {
+      onError: (error) => {
+        console.error("Error fetching exams:", error);
+        toast.error("Failed to load exams");
+      },
     },
-  });
+  );
 
   // Helper function to convert Date to datetime-local format
   const toDatetimeLocal = (value: Date | string | null | undefined): string => {
@@ -83,27 +90,69 @@ export default function AllotExamPage() {
   };
 
   // Fetch selected exam details
-  useQuery({
-    queryKey: ["exam", selectedExamId],
-    queryFn: async () => {
+  const {
+    data: fetchedExam,
+    isLoading: loadingExam,
+    isError: examError,
+  } = useQuery(
+    ["exam", selectedExamId],
+    async () => {
       if (!selectedExamId) return null;
-      const exam = await fetchExamById(selectedExamId);
-      setSelectedExam(exam);
+      try {
+        console.log("[ALLOT-EXAM] Fetching exam with ID:", selectedExamId);
+        const exam = await fetchExamById(selectedExamId);
+        console.log("[ALLOT-EXAM] Exam fetched successfully:", exam?.id);
+        return exam;
+      } catch (error) {
+        console.error("[ALLOT-EXAM] Error fetching exam:", error);
+        throw error;
+      }
+    },
+    {
+      enabled: !!selectedExamId,
+      staleTime: 30000, // Cache for 30 seconds
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      retry: 1, // Only retry once
+      retryDelay: 1000, // Wait 1 second before retry
+      // Keep in cache for 5 minutes (v4 uses gcTime; keep staleTime/retry settings and avoid type mismatch)
+      // @ts-ignore - supports gcTime in v4+, but some typings may not include it depending on setup
+      gcTime: 300000,
+      onError: (error) => {
+        console.error("[ALLOT-EXAM] Error fetching exam details:", error);
+        toast.error("Failed to load exam details. Please try selecting the exam again.");
+        // Clear the selected exam ID on error so user can try again
+        setSelectedExamId(null);
+      },
+    },
+  );
+
+  // Sync fetched exam to selectedExam state and set admit card dates
+  useEffect(() => {
+    if (fetchedExam) {
+      console.log("[ALLOT-EXAM] Exam fetched successfully:", fetchedExam.id);
+      setSelectedExam(fetchedExam);
       // Set admit card dates if they exist
-      if (exam.admitCardStartDownloadDate) {
-        setAdmitCardStartDate(toDatetimeLocal(exam.admitCardStartDownloadDate));
+      if (fetchedExam.admitCardStartDownloadDate) {
+        setAdmitCardStartDate(toDatetimeLocal(fetchedExam.admitCardStartDownloadDate));
       }
-      if (exam.admitCardLastDownloadDate) {
-        setAdmitCardEndDate(toDatetimeLocal(exam.admitCardLastDownloadDate));
+      if (fetchedExam.admitCardLastDownloadDate) {
+        setAdmitCardEndDate(toDatetimeLocal(fetchedExam.admitCardLastDownloadDate));
       }
-      return exam;
-    },
-    enabled: !!selectedExamId,
-    onError: (error) => {
-      console.error("Error fetching exam details:", error);
-      toast.error("Failed to load exam details");
-    },
-  });
+    } else if (selectedExamId === null) {
+      // Clear exam state when no exam is selected
+      setSelectedExam(null);
+      setAdmitCardStartDate("");
+      setAdmitCardEndDate("");
+    }
+  }, [fetchedExam, selectedExamId]);
+
+  // Debug: Log loading states
+  useEffect(() => {
+    if (selectedExamId) {
+      console.log("[ALLOT-EXAM] Selected exam ID:", selectedExamId, "Loading:", loadingExam, "Error:", examError);
+    }
+  }, [selectedExamId, loadingExam, examError]);
 
   // Fetch papers for the selected exam
   const {
@@ -328,6 +377,85 @@ export default function AllotExamPage() {
       console.error("[ALLOT-EXAM] Error fetching total student count:", error);
     },
   });
+
+  // Student count breakdown interface
+  interface StudentCountBreakdown {
+    programCourseId: number;
+    programCourseName: string;
+    shiftId: number;
+    shiftName: string;
+    count: number;
+  }
+
+  // Fetch student count breakdown by program course and shift
+  const { data: studentCountBreakdownData, isLoading: loadingStudentCount } = useQuery(
+    ["studentCountBreakdown", selectedExam?.id, gender, excelFile?.name],
+    async () => {
+      if (!selectedExam) return { breakdown: [], total: 0 };
+
+      const papers = await getPapersForExam();
+      const paperIds = papers.map((p) => p.id).filter((id): id is number => id !== undefined);
+      if (paperIds.length === 0) return { breakdown: [], total: 0 };
+
+      const programCourseIds = selectedExam.examProgramCourses.map((epc) => epc.programCourse.id!);
+      const shiftIds = selectedExam.examShifts.map((es) => es.shift.id!);
+
+      // Build all combinations
+      const combinations: Array<{ programCourseId: number; shiftId: number }> = [];
+      for (const programCourseId of programCourseIds) {
+        for (const shiftId of shiftIds) {
+          combinations.push({ programCourseId, shiftId });
+        }
+      }
+
+      if (combinations.length === 0) return { breakdown: [], total: 0 };
+
+      try {
+        const response = await countStudentsBreakdownForExam(
+          {
+            classId: selectedExam.class.id!,
+            paperIds,
+            academicYearIds: [selectedExam.academicYear.id!],
+            combinations,
+            gender: gender === "ALL" ? null : gender,
+          },
+          excelFile,
+        );
+
+        if (response.httpStatus === "SUCCESS" && response.payload) {
+          // Transform results into breakdown format with names
+          const breakdown: StudentCountBreakdown[] = response.payload.breakdown.map((item) => {
+            const programCourse = selectedExam.examProgramCourses.find(
+              (epc) => epc.programCourse.id === item.programCourseId,
+            );
+            const shift = selectedExam.examShifts.find((es) => es.shift.id === item.shiftId);
+            return {
+              programCourseId: item.programCourseId,
+              programCourseName: programCourse?.programCourse.name || `Program Course ${item.programCourseId}`,
+              shiftId: item.shiftId,
+              shiftName: shift?.shift.name || `Shift ${item.shiftId}`,
+              count: item.count,
+            };
+          });
+
+          return {
+            breakdown,
+            total: response.payload.total,
+          };
+        }
+        return { breakdown: [], total: 0 };
+      } catch (error) {
+        console.error("[ALLOT-EXAM] Error fetching student count breakdown:", error);
+        return { breakdown: [], total: 0 };
+      }
+    },
+    {
+      enabled: !!selectedExam,
+    },
+  );
+
+  const studentCountBreakdown = studentCountBreakdownData?.breakdown ?? [];
+  const totalStudentCount = studentCountBreakdownData?.total ?? 0;
 
   // Fetch students with seat assignments
   const { data: studentsWithSeats = [], isLoading: loadingStudents } = useQuery({
@@ -563,10 +691,19 @@ export default function AllotExamPage() {
                       setAdmitCardStartDate("");
                       setAdmitCardEndDate("");
                     }}
-                    disabled={loadingExams}
+                    disabled={loadingExams || (loadingExam && !!selectedExamId)}
                   >
                     <SelectTrigger className="h-10 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder={loadingExams ? "Loading exams..." : "Select an exam"} />
+                      <SelectValue
+                        placeholder={
+                          loadingExams
+                            ? "Loading exams..."
+                            : loadingExam && selectedExamId
+                              ? "Loading exam details..."
+                              : "Select an exam"
+                        }
+                      />
+                      {loadingExam && selectedExamId && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
                     </SelectTrigger>
                     <SelectContent>
                       {examsWithoutRooms.length === 0 ? (
@@ -726,8 +863,32 @@ export default function AllotExamPage() {
             </Card>
           )}
 
-          {/* Summary Table - Only show if exam is selected */}
-          {selectedExam && (
+          {/* Loading indicator when exam is being fetched */}
+          {loadingExam && selectedExamId && !examError && (
+            <Card className="border-0 shadow-none mb-4">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-center gap-3 py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
+                  <span className="text-sm font-medium text-gray-700">Loading exam details...</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Error indicator */}
+          {examError && selectedExamId && (
+            <Card className="border-0 shadow-none mb-4">
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-center gap-3 text-red-600 py-8">
+                  <AlertTriangle className="w-5 h-5" />
+                  <span className="text-sm font-medium">Failed to load exam details. Please try again.</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Summary Table - Only show if exam is selected and loaded */}
+          {selectedExam && !loadingExam && (
             <Card className="border-0 shadow-none mb-4">
               <CardContent className="pt-4 pb-4">
                 <Label className="text-sm font-medium text-gray-700 mb-3 block">Exam Summary:</Label>
@@ -817,7 +978,7 @@ export default function AllotExamPage() {
                 </div>
 
                 {/* Subjects Table */}
-                {selectedExam.examSubjects.length > 0 && (
+                {!loadingExam && selectedExam.examSubjects.length > 0 && (
                   <div className="mt-4">
                     <Label className="text-sm font-medium text-gray-700 mb-3 block">Subjects Schedule:</Label>
                     <div className="border border-gray-400 rounded-lg overflow-hidden">
@@ -1041,6 +1202,192 @@ export default function AllotExamPage() {
             </Card>
           )}
 
+          {/* Student Count Breakdown - Show only when rooms are selected */}
+          {selectedExam && selectedRooms.length > 0 && (
+            <Card className="border-0 shadow-none mt-6">
+              <CardContent className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-blue-900">Eligible Students</h3>
+                  {loadingStudentCount ? (
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Counting...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-bold text-blue-900">{Number(totalStudentCount) || 0}</span>
+                      <span className="text-sm text-blue-700">students</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Breakdown by Program Course and Shift - Table Format */}
+                {(() => {
+                  if (!Array.isArray(studentCountBreakdown) || studentCountBreakdown.length === 0) {
+                    return null;
+                  }
+
+                  // Calculate allotted counts by programCourse and shift from studentsWithSeats
+                  const allottedCountMap = new Map<string, number>(); // key: "programCourseId|shiftId"
+                  studentsWithSeats.forEach((student) => {
+                    if (student.programCourseId && student.shiftId) {
+                      const key = `${student.programCourseId}|${student.shiftId}`;
+                      allottedCountMap.set(key, (allottedCountMap.get(key) || 0) + 1);
+                    }
+                  });
+
+                  // Transform data into table format: rows = program courses, columns = shifts
+                  const programCourseMap = new Map<
+                    number,
+                    { name: string; shifts: Map<number, { name: string; count: number; allotted: number }> }
+                  >();
+
+                  // Get all unique shifts
+                  const allShiftIds = new Set<number>();
+                  const shiftIdToName = new Map<number, string>();
+
+                  for (const item of studentCountBreakdown) {
+                    allShiftIds.add(item.shiftId);
+                    shiftIdToName.set(item.shiftId, item.shiftName);
+
+                    if (!programCourseMap.has(item.programCourseId)) {
+                      programCourseMap.set(item.programCourseId, {
+                        name: item.programCourseName,
+                        shifts: new Map(),
+                      });
+                    }
+
+                    const pcData = programCourseMap.get(item.programCourseId)!;
+                    const allottedKey = `${item.programCourseId}|${item.shiftId}`;
+                    const allottedCount = allottedCountMap.get(allottedKey) || 0;
+                    pcData.shifts.set(item.shiftId, {
+                      name: item.shiftName,
+                      count: item.count,
+                      allotted: allottedCount,
+                    });
+                  }
+
+                  // Sort shifts by name for consistent column order
+                  const sortedShiftIds = Array.from(allShiftIds).sort((a, b) => {
+                    const nameA = shiftIdToName.get(a) || "";
+                    const nameB = shiftIdToName.get(b) || "";
+                    return nameA.localeCompare(nameB);
+                  });
+
+                  // Sort program courses by name
+                  const sortedProgramCourses = Array.from(programCourseMap.entries()).sort((a, b) =>
+                    a[1].name.localeCompare(b[1].name),
+                  );
+
+                  return (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <p className="text-xs font-medium text-blue-800 mb-3">Breakdown by Program Course & Shift:</p>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
+                          <thead>
+                            <tr className="bg-blue-100">
+                              <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
+                                Sr. No.
+                              </th>
+                              <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
+                                Program Course
+                              </th>
+                              {sortedShiftIds.map((shiftId) => (
+                                <th
+                                  key={shiftId}
+                                  className="border border-blue-200 px-3 py-2 text-center text-xs font-semibold text-blue-900"
+                                >
+                                  {shiftIdToName.get(shiftId) || `Shift ${shiftId}`}
+                                </th>
+                              ))}
+                              <th className="border border-blue-200 px-3 py-2 text-center text-xs font-semibold text-blue-900">
+                                Total
+                              </th>
+                              <th className="border border-blue-200 px-3 py-2 text-center text-xs font-semibold text-blue-900">
+                                Allotted
+                              </th>
+                              <th className="border border-blue-200 px-3 py-2 text-center text-xs font-semibold text-blue-900">
+                                Insufficient
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortedProgramCourses.map(([programCourseId, pcData], index) => {
+                              const rowTotal = Array.from(pcData.shifts.values()).reduce(
+                                (sum, shift) => sum + shift.count,
+                                0,
+                              );
+                              const rowAllottedTotal = Array.from(pcData.shifts.values()).reduce(
+                                (sum, shift) => sum + shift.allotted,
+                                0,
+                              );
+                              const insufficientSeats = Math.max(0, rowTotal - rowAllottedTotal);
+                              const hasMismatch = rowTotal !== rowAllottedTotal;
+                              return (
+                                <tr
+                                  key={programCourseId}
+                                  className={`hover:bg-blue-50 ${hasMismatch ? "bg-yellow-50" : ""}`}
+                                >
+                                  <td className="border border-blue-200 px-3 py-2 text-xs text-gray-700 text-center">
+                                    {index + 1}
+                                  </td>
+                                  <td className="border border-blue-200 px-3 py-2 text-xs font-medium text-gray-700">
+                                    {pcData.name}
+                                  </td>
+                                  {sortedShiftIds.map((shiftId) => {
+                                    const shiftData = pcData.shifts.get(shiftId);
+                                    const shiftHasMismatch = shiftData && shiftData.count !== shiftData.allotted;
+                                    return (
+                                      <td
+                                        key={shiftId}
+                                        className={`border border-blue-200 px-3 py-2 text-sm text-center ${
+                                          shiftHasMismatch
+                                            ? "bg-yellow-100 text-orange-800 font-semibold"
+                                            : "text-gray-700 font-medium"
+                                        }`}
+                                      >
+                                        {shiftData ? shiftData.count : "-"}
+                                      </td>
+                                    );
+                                  })}
+                                  <td
+                                    className={`border border-blue-200 px-3 py-2 text-sm font-bold text-center ${
+                                      hasMismatch ? "bg-yellow-100 text-orange-800" : "text-blue-900"
+                                    }`}
+                                  >
+                                    {rowTotal}
+                                  </td>
+                                  <td className="border border-blue-200 px-3 py-2 text-sm font-bold text-center bg-green-100 text-green-800">
+                                    {rowAllottedTotal}
+                                  </td>
+                                  <td
+                                    className={`border border-blue-200 px-3 py-2 text-sm font-bold text-center ${
+                                      insufficientSeats > 0 ? "bg-red-100 text-red-800" : "text-gray-600"
+                                    }`}
+                                  >
+                                    {insufficientSeats > 0 ? insufficientSeats : "-"}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {totalStudentCount === 0 && !loadingStudentCount && (
+                  <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                    <p className="text-xs text-yellow-800">
+                      ⚠️ No eligible students found. Please check your filters (Gender, Excel File).
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Excel File Upload - Only show if foil number switch is enabled */}
           {selectedExam && enableFoilNumber && (
             <Card className="border-0 shadow-none mb-6">
@@ -1194,6 +1541,7 @@ export default function AllotExamPage() {
                 </div>
               </div>
             </div>
+
             {/* Insufficient Capacity Warning */}
             {!loadingTotalStudents &&
               (() => {

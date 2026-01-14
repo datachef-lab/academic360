@@ -7,6 +7,7 @@ import {
   allotExamRoomsAndStudents,
   checkDuplicateExam,
   countStudentsByPapers,
+  countStudentsByPapersBreakdown,
   createExamAssignment,
   downloadAdmitCardTrackingByExamId,
   downloadAdmitCardsAsZip,
@@ -147,6 +148,224 @@ export const countStudentsForExam = async (req: Request, res: Response) => {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[EXAM-SCHEDULE-CONTROLLER] Error counting students:", error);
+    return res.status(500).json(new ApiResponse(500, "ERROR", null, message));
+  }
+};
+
+export const countStudentsBreakdownForExam = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    // Log the raw body to debug FormData parsing
+    console.log(
+      "[EXAM-SCHEDULE-CONTROLLER] Raw req.body:",
+      JSON.stringify(req.body, null, 2),
+    );
+    console.log(
+      "[EXAM-SCHEDULE-CONTROLLER] req.body keys:",
+      Object.keys(req.body || {}),
+    );
+    console.log(
+      "[EXAM-SCHEDULE-CONTROLLER] Content-Type:",
+      req.headers["content-type"],
+    );
+
+    // Handle both JSON and FormData requests
+    // If Content-Type is application/json, body is already parsed
+    // If Content-Type is multipart/form-data, multer has parsed it
+    const classId = req.body.classId || req.body.classid;
+    const paperIds = req.body.paperIds || req.body.paperids || [];
+    const academicYearIds =
+      req.body.academicYearIds || req.body.academicyearids || [];
+    const combinations = req.body.combinations;
+    const gender = req.body.gender;
+
+    console.log("[EXAM-SCHEDULE-CONTROLLER] Received breakdown request:", {
+      classId,
+      paperIds,
+      academicYearIds,
+      combinations,
+      combinationsType: typeof combinations,
+      gender,
+    });
+
+    // Handle combinations - could be JSON string (from FormData) or array (from JSON body) or undefined
+    let parsedCombinations: Array<{
+      programCourseId: number;
+      shiftId: number;
+    }> = [];
+    if (combinations !== undefined && combinations !== null) {
+      if (typeof combinations === "string") {
+        // If it's a JSON string (from FormData), parse it
+        try {
+          const parsed = JSON.parse(combinations);
+          if (Array.isArray(parsed)) {
+            parsedCombinations = parsed
+              .map((combo: unknown) => {
+                if (typeof combo === "object" && combo !== null) {
+                  return {
+                    programCourseId: Number(
+                      (combo as { programCourseId: unknown }).programCourseId,
+                    ),
+                    shiftId: Number((combo as { shiftId: unknown }).shiftId),
+                  };
+                }
+                return null;
+              })
+              .filter(
+                (
+                  combo,
+                ): combo is { programCourseId: number; shiftId: number } =>
+                  combo !== null,
+              );
+          }
+        } catch (error) {
+          console.error(
+            "[EXAM-SCHEDULE-CONTROLLER] Error parsing combinations JSON:",
+            error,
+          );
+        }
+      } else if (Array.isArray(combinations)) {
+        // If it's already an array (from JSON body)
+        parsedCombinations = combinations
+          .map((combo: unknown) => {
+            if (typeof combo === "object" && combo !== null) {
+              return {
+                programCourseId: Number(
+                  (combo as { programCourseId: unknown }).programCourseId,
+                ),
+                shiftId: Number((combo as { shiftId: unknown }).shiftId),
+              };
+            }
+            return null;
+          })
+          .filter(
+            (combo): combo is { programCourseId: number; shiftId: number } =>
+              combo !== null,
+          );
+      }
+    }
+
+    // Validate required fields
+    if (
+      !classId ||
+      !Array.isArray(paperIds) ||
+      !Array.isArray(academicYearIds) ||
+      parsedCombinations.length === 0
+    ) {
+      console.warn("[EXAM-SCHEDULE-CONTROLLER] Missing required fields:", {
+        hasClassId: !!classId,
+        isPaperIdsArray: Array.isArray(paperIds),
+        isAcademicYearIdsArray: Array.isArray(academicYearIds),
+        combinationsLength: parsedCombinations.length,
+        rawCombinations: combinations,
+      });
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "ERROR",
+            null,
+            "Missing required fields: classId, paperIds, academicYearIds, combinations",
+          ),
+        );
+    }
+
+    if (
+      paperIds.length === 0 ||
+      academicYearIds.length === 0 ||
+      parsedCombinations.length === 0
+    ) {
+      console.log(
+        "[EXAM-SCHEDULE-CONTROLLER] Empty arrays, returning empty breakdown",
+      );
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            "SUCCESS",
+            { breakdown: [], total: 0 },
+            "No students found",
+          ),
+        );
+    }
+
+    // Parse Excel file if provided
+    let excelStudents: { foil_number: string; uid: string }[] = [];
+    if (req.file) {
+      if (!req.file.mimetype || !req.file.mimetype.includes("spreadsheetml")) {
+        console.warn("[EXAM-SCHEDULE-CONTROLLER] Invalid file type for Excel");
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "ERROR",
+              null,
+              "Invalid file type. Please upload a valid XLSX file.",
+            ),
+          );
+      }
+
+      const buffer = fs.readFileSync(req.file.path);
+      const workbook = XLSX.read(buffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        throw new Error("No sheets found in Excel file");
+      }
+      const sheet = workbook.Sheets[sheetName];
+      excelStudents = XLSX.utils.sheet_to_json(sheet) as {
+        foil_number: string;
+        uid: string;
+      }[];
+    }
+
+    const params = {
+      classId: Number(classId),
+      paperIds: paperIds.map((id: unknown) => Number(id)),
+      academicYearIds: academicYearIds.map((id: unknown) => Number(id)),
+      combinations: parsedCombinations,
+      gender: gender || null,
+      excelStudents,
+    };
+
+    console.log("[EXAM-SCHEDULE-CONTROLLER] Parsed params:", {
+      ...params,
+      combinationsCount: params.combinations.length,
+      excelStudentsCount: params.excelStudents.length,
+    });
+
+    console.log(
+      "[EXAM-SCHEDULE-CONTROLLER] Calling breakdown service with params:",
+      params,
+    );
+
+    const result = await countStudentsByPapersBreakdown(params);
+
+    console.log(
+      "[EXAM-SCHEDULE-CONTROLLER] Service returned breakdown:",
+      result,
+    );
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Student count breakdown calculated successfully",
+        ),
+      );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error(
+      "[EXAM-SCHEDULE-CONTROLLER] Error counting students breakdown:",
+      error,
+    );
     return res.status(500).json(new ApiResponse(500, "ERROR", null, message));
   }
 };

@@ -116,7 +116,7 @@ export default function DashboardLayout({
     <StudentProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="h-screen px-2 py-2 md:pr-2 ">
+        <SidebarInset className="flex flex-col h-screen px-2 py-2 md:pr-2 overflow-hidden">
           {/* Invalid user dialog */}
           <Dialog open={invalidUserOpen} onOpenChange={setInvalidUserOpen}>
             <DialogContent>
@@ -186,8 +186,8 @@ export default function DashboardLayout({
               })()} */}
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 h-[calc(100%-3rem)]">
-            <div className="flex-1 rounded-xl overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="rounded-xl">
               <SharedArea>{children}</SharedArea>
             </div>
           </div>
