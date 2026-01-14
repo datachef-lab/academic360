@@ -32,6 +32,8 @@ export const examCandidateModel = pgTable("exam_candidates", {
     foilNumber: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    admitCardDownloadedAt: timestamp("admit_card_downloaded_at", { withTimezone: true }),
+    admitCardDownloadCount: integer("admit_card_download_count").default(0),
 });
 
 export const createExamCandidateSchema = createInsertSchema(examCandidateModel);

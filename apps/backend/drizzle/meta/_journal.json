@@ -512,6 +512,13 @@
       "when": 1768218768102,
       "tag": "0072_worthless_silver_fox",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1768388765242,
+      "tag": "0073_slippery_sharon_carter",
+      "breakpoints": true
     }
   ]
 }

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Calendar, Clock, FileText, BarChart, GraduationCap, History, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 // Work around strict shadcn typings with proper type extensions
 const TabsFixed = Tabs as React.ComponentType<
@@ -33,6 +34,7 @@ export default function ExamsContent() {
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
   const [selectedExam, setSelectedExam] = useState<ExamDto | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const socketRef = useRef<any | null>(null);
 
   // Derived exam lists with improved categorization
   const today = new Date();
@@ -109,7 +111,17 @@ export default function ExamsContent() {
     fetchExamsByStudentId(student.id)
       .then((data) => {
         console.log("Fetched exams via service:", data, data.payload.content);
-        setExams(data.payload.content || []);
+        // Filter exams: only show if admitCardStartDownloadDate is less than current time
+        const now = new Date();
+        const filteredExams = (data.payload.content || []).filter((exam) => {
+          // If no admit card start date is set, don't show the exam
+          if (!exam.admitCardStartDownloadDate) {
+            return false;
+          }
+          const startDate = new Date(exam.admitCardStartDownloadDate);
+          return startDate <= now;
+        });
+        setExams(filteredExams);
       })
       .catch((err) => {
         console.error("Error fetching exams via service:", err);
@@ -118,6 +130,127 @@ export default function ExamsContent() {
       .finally(() => {
         setLoading(false);
       });
+  }, [student?.id]);
+
+  // Setup socket connection for real-time exam updates
+  useEffect(() => {
+    if (!student?.id || typeof window === "undefined") return;
+
+    // Prevent multiple socket connections
+    if (socketRef.current?.connected) {
+      console.log("[Student Console] Socket already connected, skipping...");
+      return;
+    }
+
+    // Dynamic import to avoid SSR issues - load socket.io-client only on client side
+    const loadSocket = async () => {
+      try {
+        // @ts-ignore - socket.io-client will be available after pnpm install
+        const socketModule = await import("socket.io-client");
+        // Use the same backend URL as API calls from NEXT_PUBLIC_API_URL
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+        const parsed = new URL(apiUrl);
+
+        // Use the exact same origin as the API URL (backend socket runs on the same server)
+        const origin = `${parsed.protocol}//${parsed.host}`;
+        const pathPrefix = parsed.pathname.replace(/\/$/, "");
+        const socketPath = pathPrefix ? `${pathPrefix}/socket.io` : "/socket.io";
+
+        console.log("[Student Console] Connecting socket to:", origin, "path:", socketPath);
+
+        // @ts-ignore - socket.io-client types will be available after pnpm install
+        const socket: any = socketModule.io(origin, {
+          path: socketPath,
+          withCredentials: true,
+          transports: ["polling", "websocket"], // Try polling first, then websocket
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionAttempts: 5,
+          timeout: 20000,
+        } as any);
+
+        socketRef.current = socket;
+
+        socket.on("connect", () => {
+          console.log("[Student Console] Socket connected:", socket.id);
+          // Authenticate with student ID
+          if (student?.id) {
+            socket.emit("authenticate", student.id.toString());
+          }
+        });
+
+        socket.on("disconnect", () => {
+          console.log("[Student Console] Socket disconnected");
+        });
+
+        socket.on("connect_error", (err: Error) => {
+          console.error("[Student Console] Socket connection error:", err);
+        });
+
+        // Listen for exam updates
+        socket.on("exam_updated", (data: { examId: number; type: string; message: string }) => {
+          console.log("[Student Console] Exam updated:", data);
+          toast.info("An exam has been updated. Refreshing...", {
+            duration: 3000,
+          });
+          // Refetch exams
+          if (student?.id) {
+            fetchExamsByStudentId(student.id)
+              .then((data) => {
+                const now = new Date();
+                const filteredExams = (data.payload.content || []).filter((exam) => {
+                  if (!exam.admitCardStartDownloadDate) {
+                    return false;
+                  }
+                  const startDate = new Date(exam.admitCardStartDownloadDate);
+                  return startDate <= now;
+                });
+                setExams(filteredExams);
+              })
+              .catch((err: Error) => {
+                console.error("Error refetching exams:", err);
+              });
+          }
+        });
+
+        socket.on("exam_created", (data: { examId: number; type: string; message: string }) => {
+          console.log("[Student Console] Exam created:", data);
+          toast.info("A new exam has been scheduled. Refreshing...", {
+            duration: 3000,
+          });
+          // Refetch exams
+          if (student?.id) {
+            fetchExamsByStudentId(student.id)
+              .then((data) => {
+                const now = new Date();
+                const filteredExams = (data.payload.content || []).filter((exam) => {
+                  if (!exam.admitCardStartDownloadDate) {
+                    return false;
+                  }
+                  const startDate = new Date(exam.admitCardStartDownloadDate);
+                  return startDate <= now;
+                });
+                setExams(filteredExams);
+              })
+              .catch((err: Error) => {
+                console.error("Error refetching exams:", err);
+              });
+          }
+        });
+      } catch (err) {
+        console.error("[Student Console] Failed to load socket.io-client:", err);
+      }
+    };
+
+    loadSocket();
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
   }, [student?.id]);
 
   //   useEffect(() => {
@@ -304,7 +437,7 @@ export default function ExamsContent() {
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
-                        {format(new Date(exam.examSubjects[0].startTime), "MMMM d, yyyy")}
+                        {format(new Date(exam.examSubjects[0].startTime), "dd/MM/yyyy")}
                       </div>
                       <div className="flex items-center">
                         <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
@@ -313,10 +446,22 @@ export default function ExamsContent() {
                       {exam.locations && exam.locations.length > 0 && (
                         <div className="flex items-center">
                           <BarChart className="w-4 h-4 mr-1.5 text-gray-400" />
-                          {exam.locations
-                            .map((loc) => loc.room?.name)
-                            .filter(Boolean)
-                            .join(", ") || "N/A"}
+                          <div className="flex flex-col space-y-0.5">
+                            {exam.locations
+                              .map((loc) => {
+                                const roomName = loc.room?.name || "";
+                                const floorName = loc.room?.floor?.name || "";
+                                if (!roomName) return null;
+                                return (
+                                  <div key={loc.id}>
+                                    <div className="text-sm font-semibold text-gray-800">{roomName}</div>
+                                    {floorName && <div className="text-xs text-gray-600 font-mono">{floorName}</div>}
+                                  </div>
+                                );
+                              })
+                              .filter(Boolean)}
+                            {exam.locations.length === 0 && <span className="text-xs">N/A</span>}
+                          </div>
                         </div>
                       )}
                     </div>

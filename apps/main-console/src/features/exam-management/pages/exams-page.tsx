@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, Edit } from "lucide-react";
+import { useSocket } from "@/hooks/useSocket";
+import { toast } from "sonner";
 // import * as XLSX from "xlsx";
 // import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -65,7 +67,7 @@ import { fetchExams } from "@/services/exam.service";
 import { Link } from "react-router-dom";
 
 const ExamsPage = () => {
-  const { accessToken, displayFlag } = useAuth();
+  const { accessToken, displayFlag, user } = useAuth();
   //   const { availableAcademicYears } = useAcademicYear();
 
   const [searchText, setSearchText] = React.useState("");
@@ -334,6 +336,54 @@ const ExamsPage = () => {
   //     },
   //     [fetchFilteredData, currentAcademicYear],
   //   );
+
+  // Setup socket connection for real-time exam updates
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({
+    userId,
+    onNotification: (data: any) => {
+      console.log("[Exams Page] Notification received:", data);
+    },
+  });
+
+  // Listen for exam creation/update events
+  React.useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    const handleExamCreated = (data: { examId: number; type: string; message: string }) => {
+      console.log("[Exams Page] Exam created:", data);
+      toast.info("A new exam has been created. Refreshing...", {
+        duration: 3000,
+      });
+      // Refetch exams
+      fetchExams(currentPage, itemsPerPage).then((data) => {
+        setExams(data.content);
+        setTotalPages(data.totalPages);
+        setTotalItems(data.totalElements);
+      });
+    };
+
+    const handleExamUpdated = (data: { examId: number; type: string; message: string }) => {
+      console.log("[Exams Page] Exam updated:", data);
+      toast.info("An exam has been updated. Refreshing...", {
+        duration: 3000,
+      });
+      // Refetch exams
+      fetchExams(currentPage, itemsPerPage).then((data) => {
+        setExams(data.content);
+        setTotalPages(data.totalPages);
+        setTotalItems(data.totalElements);
+      });
+    };
+
+    socket.on("exam_created", handleExamCreated);
+    socket.on("exam_updated", handleExamUpdated);
+
+    return () => {
+      socket.off("exam_created", handleExamCreated);
+      socket.off("exam_updated", handleExamUpdated);
+    };
+  }, [socket, isConnected, currentPage, itemsPerPage]);
 
   useEffect(() => {
     // Only fetch data when authentication is ready, and only on initial mount
@@ -1046,6 +1096,27 @@ const ExamsPage = () => {
     );
   }
 
+  // Helper function to normalize subject names (trim and lowercase)
+  const normalizeSubjectName = (name: string | null | undefined): string => {
+    return (name || "").trim().toLowerCase();
+  };
+
+  // Helper function to get unique subjects (grouped by normalized name)
+  const getUniqueSubjects = (examSubjects: ExamSubjectDto[]): ExamSubjectDto[] => {
+    if (!examSubjects || examSubjects.length === 0) return [];
+
+    const seen = new Map<string, ExamSubjectDto>();
+
+    examSubjects.forEach((es) => {
+      const normalizedName = normalizeSubjectName(es.subject?.name);
+      if (normalizedName && !seen.has(normalizedName)) {
+        seen.set(normalizedName, es);
+      }
+    });
+
+    return Array.from(seen.values());
+  };
+
   const formatExamDateRange = (examSubjects: ExamSubjectDto[]) => {
     if (!examSubjects || examSubjects.length === 0) return "-";
 
@@ -1752,8 +1823,8 @@ const ExamsPage = () => {
                           )} */}
                         </p>
                         <div className="mt-1 flex flex-col gap-1">
-                          {exm.examSubjects.map((es: ExamSubjectDto) => (
-                            <p>
+                          {getUniqueSubjects(exm.examSubjects).map((es: ExamSubjectDto, subjectIndex: number) => (
+                            <p key={`subject-${es.subject?.id}-${subjectIndex}`}>
                               <Badge
                                 variant="outline"
                                 className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"

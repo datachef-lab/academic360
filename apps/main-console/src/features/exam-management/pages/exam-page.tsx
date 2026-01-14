@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ExamDto, ExamPapersWithStats, ExamSubjectDto } from "@/dtos";
 import {
+  downloadAdmitCardTracking,
   fetchExamById,
   fetchExamCandidatesByExamId,
   fetchExamPapersStatsByExamId,
@@ -10,7 +11,7 @@ import {
   updateExamSubject,
 } from "@/services/exam.service";
 
-import { IdCard, Mail, Sheet, Trash2, UsersRound } from "lucide-react";
+import { IdCard, Mail, Sheet, Trash2, UsersRound, Download, Calendar } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ExamPaperRow from "../components/exam-paper-row";
@@ -20,6 +21,18 @@ import { ExportService } from "@/services/exportService";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import { useSocket } from "@/hooks/useSocket";
 import { EditExamSubjectDialog } from "../components/edit-exam-subject-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { updateExamAdmitCardDates } from "@/services/exam.service";
 
 export default function ExamPage() {
   const { user } = useAuth();
@@ -28,6 +41,10 @@ export default function ExamPage() {
   const [examPapersWithStats, setExamPapersWithStats] = useState<ExamPapersWithStats[]>([]);
   const [editSubjectOpen, setEditSubjectOpen] = useState(false);
   const [selectedExamSubject, setSelectedExamSubject] = useState<ExamSubjectDto | null>(null);
+  const [admitCardDatesDialogOpen, setAdmitCardDatesDialogOpen] = useState(false);
+  const [admitCardStartDate, setAdmitCardStartDate] = useState<string>("");
+  const [admitCardEndDate, setAdmitCardEndDate] = useState<string>("");
+  const [updatingDates, setUpdatingDates] = useState(false);
 
   const [exportProgressOpen, setExportProgressOpen] = useState(false);
   const setIsExporting = useState(false)[1];
@@ -57,15 +74,53 @@ export default function ExamPage() {
     onProgressUpdate: handleProgressUpdate,
   });
 
+  // Helper function to convert Date to datetime-local format
+  const toDatetimeLocal = (value: Date | string | null | undefined): string => {
+    if (!value) return "";
+    const date = value instanceof Date ? value : new Date(value);
+    if (isNaN(date.getTime())) return "";
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  };
+
   useEffect(() => {
     if (examId) {
-      fetchExamById(Number(examId)).then((data) => setExam(data));
+      fetchExamById(Number(examId)).then((data) => {
+        setExam(data);
+        // Set admit card dates if they exist
+        if (data.admitCardStartDownloadDate) {
+          setAdmitCardStartDate(toDatetimeLocal(data.admitCardStartDownloadDate));
+        }
+        if (data.admitCardLastDownloadDate) {
+          setAdmitCardEndDate(toDatetimeLocal(data.admitCardLastDownloadDate));
+        }
+      });
       fetchExamPapersStatsByExamId(Number(examId)).then((data) => {
         console.log("ExamPapersWithStats: ", data);
         setExamPapersWithStats(data);
       });
     }
   }, [examId]);
+
+  const handleUpdateAdmitCardDates = async () => {
+    if (!examId) return;
+
+    try {
+      setUpdatingDates(true);
+      const updatedExam = await updateExamAdmitCardDates(
+        Number(examId),
+        admitCardStartDate && admitCardStartDate.trim() !== "" ? new Date(admitCardStartDate).toISOString() : null,
+        admitCardEndDate && admitCardEndDate.trim() !== "" ? new Date(admitCardEndDate).toISOString() : null,
+      );
+      setExam(updatedExam);
+      setAdmitCardDatesDialogOpen(false);
+      toast.success("Admit card dates updated successfully");
+    } catch (error) {
+      console.error("Error updating admit card dates:", error);
+      toast.error("Failed to update admit card dates");
+    } finally {
+      setUpdatingDates(false);
+    }
+  };
 
   const formatExamDateRange = (examSubjects: ExamSubjectDto[]) => {
     if (!examSubjects || examSubjects.length === 0) return "-";
@@ -350,6 +405,25 @@ export default function ExamPage() {
     }
   };
 
+  const handleDownloadAdmitCardTracking = async () => {
+    if (!examId) return;
+
+    try {
+      const { downloadUrl, fileName } = await downloadAdmitCardTracking(Number(examId));
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+      toast.success("Admit card tracking Excel downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading admit card tracking:", error);
+      toast.error("Failed to download admit card tracking");
+    }
+  };
+
   return (
     <>
       <div className="p-4">
@@ -363,20 +437,20 @@ export default function ExamPage() {
             <div className="flex">
               <div
                 className="flex-shrink-0 text-gray-500 font-bold p-1 border-r flex items-center text-[14px] justify-center"
-                style={{ width: "20%" }}
+                style={{ width: "15%" }}
               >
                 Exam Type
               </div>
               <div
                 className="flex-shrink-0 text-gray-500 font-bold p-1 border-r flex items-center justify-center"
-                style={{ width: "20%" }}
+                style={{ width: "55%" }}
               >
                 Program Courses
               </div>
 
               <div
                 className="flex-shrink-0 text-gray-500 font-bold p-1 border-r flex items-center justify-center"
-                style={{ width: "20%" }}
+                style={{ width: "15%" }}
               >
                 Shift(s)
               </div>
@@ -394,23 +468,16 @@ export default function ExamPage() {
             </div> */}
               <div
                 className="flex-shrink-0 text-gray-500 font-bold p-1 border-r flex items-center justify-center"
-                style={{ width: "20%" }}
+                style={{ width: "15%" }}
               >
                 Semester
-              </div>
-
-              <div
-                className="flex-shrink-0 text-gray-500 font-bold p-1 flex items-center justify-center"
-                style={{ width: "20%" }}
-              >
-                Actions
               </div>
             </div>
           </div>
           {/* {JSON.stringify(exam)} */}
           {exam && (
             <div key={exam?.id} className="flex border-b hover:bg-gray-50 group" style={{ minWidth: "950px" }}>
-              <div className="flex-shrink-0 p-3 border-r  items-center gap-2 flex flex-col" style={{ width: "20%" }}>
+              <div className="flex-shrink-0 p-3 border-r  items-center gap-2 flex flex-col" style={{ width: "15%" }}>
                 {/* Display exam component names */}
                 <p>
                   <Badge variant="outline" className="text-xs border-red-300 text-red-700 bg-red-50">
@@ -419,7 +486,7 @@ export default function ExamPage() {
                 </p>
                 {exam && <p className="text-center">{formatExamDateRange(exam!.examSubjects!)}</p>}
               </div>
-              <div className="p-3 border-r flex gap-1 flex-col items-center" style={{ width: "20%" }}>
+              <div className="p-3 border-r flex gap-1 flex-col items-center" style={{ width: "55%" }}>
                 {exam?.examProgramCourses.map((pc, pcIndex) => (
                   <p>
                     <Badge
@@ -435,7 +502,7 @@ export default function ExamPage() {
 
               <div
                 className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
-                style={{ width: "20%" }}
+                style={{ width: "15%" }}
               >
                 {exam?.examShifts.map((esh, eshIndex) => (
                   <p>
@@ -474,94 +541,161 @@ export default function ExamPage() {
               ))}
             </div> */}
 
-              <div className="flex-shrink-0 p-3 border-r flex items-center justify-center" style={{ width: "20%" }}>
+              <div className="flex-shrink-0 p-3 border-r flex items-center justify-center" style={{ width: "15%" }}>
                 <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
                   {exam?.class.name.split(" ")[1]}
                 </Badge>
               </div>
-
-              <div className="flex gap-2 items-center justify-center" style={{ width: "20%" }}>
-                <div className="flex">
-                  <Button
-                    variant="outline"
-                    onClick={handleDownloadAdmitCard}
-                    //   className="h-5 w-5 p-0"
-                    title="Download Admit Cards"
-                  >
-                    {/* <Download className="h-4" /> */}
-                    <IdCard className="h-10 w-10 p-0" size={21} />
-                  </Button>
-                </div>
-                <div className="flex">
-                  <Button
-                    variant="outline"
-                    onClick={handleDownloadAttendanceSheets}
-                    //   className="h-5 w-5 p-0"
-                    title="Download Attendance Sheets"
-                  >
-                    {/* <Download className="h-4" /> */}
-                    <Sheet className="h-10 w-10 p-0" size={21} />
-                  </Button>
-                </div>
-
-                <div className="flex">
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      const response = await fetchExamCandidatesByExamId(Number(examId!));
-                      ExportService.downloadFile(response.downloadUrl, response.fileName);
-                      //   setIsPaperEditModalOpen(true);
-                      //   setSelectedPaperForEdit(sp);
-                    }}
-                    className="p-2"
-                    title="Download Students"
-                  >
-                    {/* <Download className="h-4" /> */}
-                    <UsersRound />
-                  </Button>
-                </div>
-
-                <div className="flex">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      const isConfirmed = confirm(
-                        "Are you sure that you want to send the admit-cards to the students (via email)?",
-                      );
-                      if (isConfirmed) {
-                        handleTriggerAdmitCard();
-                      }
-                    }}
-                    className="p-2"
-                    title="Send Admit Cards"
-                  >
-                    {/* <Download className="h-4" /> */}
-                    <Mail />
-                  </Button>
-                </div>
-
-                <div className="flex">
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      //   setIsPaperEditModalOpen(true);
-                      //   setSelectedPaperForEdit(sp);
-                    }}
-                    //   className="h-5 w-5 p-0"
-                    size={"sm"}
-                  >
-                    <Trash2 className="h-4 " />
-                  </Button>
-                </div>
-              </div>
             </div>
           )}
         </div>
+
+        {/* Actions Section */}
+        {exam && (
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-2 p-3 pl-0">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" onClick={handleDownloadAdmitCard} className="p-2">
+                      <IdCard className="h-4 w-4" size={21} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Download Admit Cards</p>
+                      <p className="text-xs text-gray-400">Download all admit cards as a ZIP file</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" onClick={handleDownloadAttendanceSheets} className="p-2">
+                      <Sheet className="h-4 w-4" size={21} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Download Attendance Sheets</p>
+                      <p className="text-xs text-gray-400">Download attendance sheets for all exam rooms</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        const response = await fetchExamCandidatesByExamId(Number(examId!));
+                        ExportService.downloadFile(response.downloadUrl, response.fileName);
+                      }}
+                      className="p-2"
+                    >
+                      <UsersRound className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Download Students</p>
+                      <p className="text-xs text-gray-400">Export student list for this exam as Excel</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const isConfirmed = confirm(
+                          "Are you sure that you want to send the admit-cards to the students (via email)?",
+                        );
+                        if (isConfirmed) {
+                          handleTriggerAdmitCard();
+                        }
+                      }}
+                      className="p-2"
+                    >
+                      <Mail className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Send Admit Cards</p>
+                      <p className="text-xs text-gray-400">Email admit cards to all students</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" onClick={handleDownloadAdmitCardTracking} className="p-2">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Download Admit Card Tracking</p>
+                      <p className="text-xs text-gray-400">
+                        Export download tracking report with counts and timestamps
+                      </p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setAdmitCardDatesDialogOpen(true);
+                      }}
+                      className="p-2"
+                    >
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Update Admit Card Dates</p>
+                      <p className="text-xs text-gray-400">Set the date range when students can download admit cards</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        //   setIsPaperEditModalOpen(true);
+                        //   setSelectedPaperForEdit(sp);
+                      }}
+                      size={"sm"}
+                      className="p-2"
+                    >
+                      <Trash2 className="h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Delete Exam</p>
+                      <p className="text-xs text-gray-400">Permanently delete this exam</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         <div className="w-full flex py-4">
-          <div className="w-full">
+          <div className="w-full border">
             {/* Fixed Header */}
-            <div className="sticky top-0 z-50 text-[14px]   border " style={{ minWidth: "950px" }}>
+            <div className="sticky top-0 z-50 text-[14px] border-b bg-gray-100" style={{ minWidth: "950px" }}>
               <div className="flex">
                 <div
                   className="flex-shrink-0 text-gray-500  font-bold p-1 border-r flex items-center justify-center"
@@ -664,6 +798,60 @@ export default function ExamPage() {
           toast.success("Exam schedule updated");
         }}
       />
+
+      {/* Admit Card Dates Dialog */}
+      <Dialog open={admitCardDatesDialogOpen} onOpenChange={setAdmitCardDatesDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Admit Card Download Dates</DialogTitle>
+            <DialogDescription>
+              Set the date range when students can download their admit cards. Leave empty if not applicable.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="dialog-admit-card-start-date">Start Date & Time</Label>
+              <Input
+                id="dialog-admit-card-start-date"
+                type="datetime-local"
+                value={admitCardStartDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setAdmitCardStartDate(value);
+                  if (value && admitCardEndDate && new Date(value) > new Date(admitCardEndDate)) {
+                    toast.error("Start date must be before end date");
+                  }
+                }}
+                className="h-10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dialog-admit-card-end-date">End Date & Time</Label>
+              <Input
+                id="dialog-admit-card-end-date"
+                type="datetime-local"
+                value={admitCardEndDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setAdmitCardEndDate(value);
+                  if (value && admitCardStartDate && new Date(value) < new Date(admitCardStartDate)) {
+                    toast.error("End date must be after start date");
+                  }
+                }}
+                className="h-10"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdmitCardDatesDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateAdmitCardDates} disabled={updatingDates}>
+              {updatingDates ? "Updating..." : "Update Dates"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

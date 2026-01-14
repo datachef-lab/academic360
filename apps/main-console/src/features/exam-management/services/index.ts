@@ -102,6 +102,8 @@ export interface AllotExamParams {
   }>;
   orderType: "CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER";
   gender: "MALE" | "FEMALE" | "OTHER" | null;
+  admitCardStartDownloadDate: string | null;
+  admitCardLastDownloadDate: string | null;
 }
 
 export async function allotExamRoomsAndStudents(
@@ -119,6 +121,13 @@ export async function allotExamRoomsAndStudents(
     formData.append("orderType", params.orderType);
     // Always send gender, even if null
     formData.append("gender", params.gender || "");
+    // Send admit card dates if provided
+    if (params.admitCardStartDownloadDate) {
+      formData.append("admitCardStartDownloadDate", params.admitCardStartDownloadDate);
+    }
+    if (params.admitCardLastDownloadDate) {
+      formData.append("admitCardLastDownloadDate", params.admitCardLastDownloadDate);
+    }
 
     // Send file
     if (file) {

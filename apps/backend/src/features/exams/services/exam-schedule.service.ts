@@ -1374,11 +1374,13 @@ export async function getEligibleRooms(
 export async function createExamAssignment(
   dto: ExamDto,
   excelStudents: { foil_number: string; uid: string }[],
+  userId?: number,
 ) {
   return await db.transaction(async (tx) => {
     console.log(
       "[EXAM-SCHEDULE:createExamAssignment] Creating exam assignment:",
       dto,
+      userId,
     );
 
     // Validate for duplicate exams before creating
@@ -1395,13 +1397,34 @@ export async function createExamAssignment(
         academicYearId: dto.academicYear.id!,
         examTypeId: dto.examType.id!,
         classId: dto.class.id!,
-
         gender: dto.gender,
         orderType: dto.orderType,
+        scheduledByUserId: userId || null,
+        lastUpdatedByUserId: userId || null,
       })
       .returning();
 
     if (!exam) throw new Error("Failed to create exam");
+
+    // Emit socket event for exam creation
+    const io = socketService.getIO();
+    if (io) {
+      io.emit("exam_created", {
+        examId: exam.id,
+        type: "creation",
+        message: "A new exam has been created",
+        timestamp: new Date().toISOString(),
+      });
+      // Also emit notification to all admins/staff
+      io.emit("notification", {
+        id: `exam_created_${exam.id}_${Date.now()}`,
+        type: "info",
+        message: `A new exam (ID: ${exam.id}) has been created`,
+        createdAt: new Date(),
+        read: false,
+        meta: { examId: exam.id, type: "creation" },
+      });
+    }
 
     // 2. Insert exam rooms (only if locations provided)
     const roomIdToExamRoom = new Map<number, any>();
@@ -1960,13 +1983,17 @@ export async function allotExamRoomsAndStudents(
     locations: ExamRoomDto[];
     orderType: "CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER";
     gender: "MALE" | "FEMALE" | "OTHER" | null;
+    admitCardStartDownloadDate?: string | null;
+    admitCardLastDownloadDate?: string | null;
   },
   excelStudents: { foil_number: string; uid: string }[],
+  userId?: number,
 ) {
   return await db.transaction(async (tx) => {
     console.log(
       "[EXAM-SCHEDULE:allotExamRoomsAndStudents] Allotting rooms and students to exam:",
       examId,
+      userId,
     );
 
     // Verify exam exists
@@ -1991,14 +2018,32 @@ export async function allotExamRoomsAndStudents(
       );
     }
 
-    // Update exam with gender and orderType if provided
+    // Update exam with gender, orderType, and admit card dates if provided
+    const updateData: Partial<typeof examModel.$inferInsert> = {};
     if (dto.gender !== null || dto.orderType) {
+      updateData.gender = dto.gender ?? exam.gender;
+      updateData.orderType = dto.orderType ?? exam.orderType;
+    }
+    // Always update admit card dates if they're provided (including null to clear them)
+    if (dto.admitCardStartDownloadDate !== undefined) {
+      updateData.admitCardStartDownloadDate = dto.admitCardStartDownloadDate
+        ? new Date(dto.admitCardStartDownloadDate)
+        : null;
+    }
+    if (dto.admitCardLastDownloadDate !== undefined) {
+      updateData.admitCardLastDownloadDate = dto.admitCardLastDownloadDate
+        ? new Date(dto.admitCardLastDownloadDate)
+        : null;
+    }
+    // Track user who updated
+    if (userId) {
+      updateData.lastUpdatedByUserId = userId;
+    }
+
+    if (Object.keys(updateData).length > 0) {
       await tx
         .update(examModel)
-        .set({
-          gender: dto.gender ?? exam.gender,
-          orderType: dto.orderType ?? exam.orderType,
-        })
+        .set(updateData)
         .where(eq(examModel.id, examId));
     }
 
@@ -2296,6 +2341,26 @@ export async function allotExamRoomsAndStudents(
     console.log("candidateInserts:", candidateInserts.length);
     if (candidateInserts.length > 0) {
       await tx.insert(examCandidateModel).values(candidateInserts);
+    }
+
+    // Emit socket event for exam update
+    const io = socketService.getIO();
+    if (io) {
+      io.emit("exam_updated", {
+        examId: examId,
+        type: "allotment",
+        message: "Exam rooms and students have been allotted",
+        timestamp: new Date().toISOString(),
+      });
+      // Also emit to all admins/staff
+      io.emit("notification", {
+        id: `exam_update_${examId}_${Date.now()}`,
+        type: "update",
+        message: `Exam ${examId} has been updated with room allotment`,
+        createdAt: new Date(),
+        read: false,
+        meta: { examId, type: "allotment" },
+      });
     }
 
     return {
@@ -3003,6 +3068,142 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
   return await workbook.xlsx.writeBuffer();
 }
 
+export async function downloadAdmitCardTrackingByExamId(examId: number) {
+  const result = await db
+    .select({
+      examType: examTypeModel.name,
+      academicYear: academicYearModel.year,
+      session: sessionModel.name,
+      semester: classModel.name,
+      name: userModel.name,
+      uid: studentModel.uid,
+      email: userModel.email,
+      phone: userModel.phone,
+      whatsapp_number: userModel.whatsappNumber,
+      program_course: programCourseModel.name,
+      shift: shiftModel.name,
+      subject: subjectModel.code,
+      paper: paperModel.name,
+      paper_code: paperModel.code,
+      seat: examCandidateModel.seatNumber,
+      foilNumber: examCandidateModel.foilNumber,
+      admitCardDownloadCount: examCandidateModel.admitCardDownloadCount,
+      admitCardDownloadedAt: examCandidateModel.admitCardDownloadedAt,
+    })
+    .from(examCandidateModel)
+    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .leftJoin(
+      academicYearModel,
+      eq(academicYearModel.id, examModel.academicYearId),
+    )
+    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+    .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
+    .leftJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      programCourseModel,
+      eq(programCourseModel.id, promotionModel.programCourseId),
+    )
+    .leftJoin(
+      examSubjectModel,
+      and(
+        eq(examSubjectModel.examId, examModel.id),
+        eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+      ),
+    )
+    .leftJoin(
+      subjectModel,
+      and(
+        eq(subjectModel.id, examSubjectModel.subjectId),
+        eq(examCandidateModel.examSubjectId, examSubjectModel.id),
+      ),
+    )
+    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+    .leftJoin(classModel, eq(examModel.classId, classModel.id))
+    .where(eq(examModel.id, examId));
+
+  if (!result.length) {
+    throw new Error("No exam candidates found");
+  }
+
+  // Create Excel workbook
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Admit Card Downloads");
+
+  // Define columns
+  sheet.columns = [
+    { header: "Exam Type", key: "examType", width: 20 },
+    { header: "Academic Year", key: "academicYear", width: 15 },
+    { header: "Session", key: "session", width: 20 },
+    { header: "Semester", key: "semester", width: 15 },
+    { header: "Name", key: "name", width: 30 },
+    { header: "UID", key: "uid", width: 20 },
+    { header: "Email", key: "email", width: 30 },
+    { header: "Phone", key: "phone", width: 15 },
+    { header: "WhatsApp", key: "whatsapp_number", width: 15 },
+    { header: "Program Course", key: "program_course", width: 25 },
+    { header: "Shift", key: "shift", width: 15 },
+    { header: "Subject", key: "subject", width: 20 },
+    { header: "Paper", key: "paper", width: 30 },
+    { header: "Paper Code", key: "paper_code", width: 15 },
+    { header: "Seat Number", key: "seat", width: 15 },
+    { header: "Foil Number", key: "foilNumber", width: 15 },
+    { header: "Download Count", key: "admitCardDownloadCount", width: 15 },
+    {
+      header: "Last Downloaded At",
+      key: "admitCardDownloadedAt",
+      width: 25,
+    },
+  ];
+
+  // Add rows
+  result.forEach((row) => {
+    sheet.addRow({
+      examType: row.examType || "",
+      academicYear: row.academicYear || "",
+      session: row.session || "",
+      semester: row.semester || "",
+      name: row.name || "",
+      uid: row.uid || "",
+      email: row.email || "",
+      phone: row.phone || "",
+      whatsapp_number: row.whatsapp_number || "",
+      program_course: row.program_course || "",
+      shift: row.shift || "",
+      subject: row.subject || "",
+      paper: row.paper || "",
+      paper_code: row.paper_code || "",
+      seat: row.seat || "",
+      foilNumber: row.foilNumber || "",
+      admitCardDownloadCount: row.admitCardDownloadCount || 0,
+      admitCardDownloadedAt: row.admitCardDownloadedAt
+        ? new Date(row.admitCardDownloadedAt).toLocaleString("en-IN", {
+            timeZone: "Asia/Kolkata",
+          })
+        : "Never",
+    });
+  });
+
+  // Style header row
+  sheet.getRow(1).font = { bold: true };
+  sheet.getRow(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFE0E0E0" },
+  };
+
+  // Freeze header row
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+  // Return Excel buffer
+  return await workbook.xlsx.writeBuffer();
+}
+
 export async function downloadSingleAdmitCard(
   examId: number,
   studentId: number,
@@ -3087,6 +3288,38 @@ export async function downloadSingleAdmitCard(
       room: r.roomName!,
     })),
   });
+
+  // Track admit card download - update all exam candidates for this student and exam
+  const examCandidateIds = await db
+    .select({ id: examCandidateModel.id })
+    .from(examCandidateModel)
+    .innerJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .where(
+      and(
+        eq(examCandidateModel.examId, examId),
+        eq(studentModel.id, studentId),
+      ),
+    );
+
+  if (examCandidateIds.length > 0) {
+    const now = new Date();
+    await db
+      .update(examCandidateModel)
+      .set({
+        admitCardDownloadedAt: now,
+        admitCardDownloadCount: sql`${examCandidateModel.admitCardDownloadCount} + 1`,
+      })
+      .where(
+        inArray(
+          examCandidateModel.id,
+          examCandidateIds.map((ec) => ec.id),
+        ),
+      );
+  }
 
   return pdfBuffer;
 }
@@ -3264,6 +3497,79 @@ export async function updateExamSubject(
     subject,
     ...updatedExamSubject,
   };
+}
+
+export async function updateExamAdmitCardDates(
+  examId: number,
+  admitCardStartDownloadDate: string | null,
+  admitCardLastDownloadDate: string | null,
+  userId?: number,
+): Promise<ExamDto | null> {
+  const [foundExam] = await db
+    .select()
+    .from(examModel)
+    .where(eq(examModel.id, examId));
+
+  if (!foundExam) return null;
+
+  const updateData: Partial<typeof examModel.$inferInsert> = {};
+  if (
+    admitCardStartDownloadDate !== null &&
+    admitCardStartDownloadDate !== undefined
+  ) {
+    updateData.admitCardStartDownloadDate = admitCardStartDownloadDate
+      ? new Date(admitCardStartDownloadDate)
+      : null;
+  }
+  if (
+    admitCardLastDownloadDate !== null &&
+    admitCardLastDownloadDate !== undefined
+  ) {
+    updateData.admitCardLastDownloadDate = admitCardLastDownloadDate
+      ? new Date(admitCardLastDownloadDate)
+      : null;
+  }
+
+  // Track user who updated
+  if (userId) {
+    updateData.lastUpdatedByUserId = userId;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return null;
+  }
+
+  await db.update(examModel).set(updateData).where(eq(examModel.id, examId));
+
+  // Return updated exam with full relations
+  const [updatedExam] = await db
+    .select()
+    .from(examModel)
+    .where(eq(examModel.id, examId));
+
+  if (!updatedExam) return null;
+
+  // Emit socket event for exam update
+  const io = socketService.getIO();
+  if (io) {
+    io.emit("exam_updated", {
+      examId: examId,
+      type: "admit_card_dates",
+      message: "Exam admit card dates have been updated",
+      timestamp: new Date().toISOString(),
+    });
+    // Also emit notification to all admins/staff
+    io.emit("notification", {
+      id: `exam_update_${examId}_${Date.now()}`,
+      type: "update",
+      message: `Exam ${examId} admit card dates have been updated`,
+      createdAt: new Date(),
+      read: false,
+      meta: { examId, type: "admit_card_dates" },
+    });
+  }
+
+  return await modelToDto(updatedExam);
 }
 
 export async function fetchExamCandidatesByExamId(examId: number) {

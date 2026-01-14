@@ -30,6 +30,8 @@ import Image from "next/image";
 
 import { useStudent } from "@/providers/student-provider";
 import { fetchStudentSubjectSelections } from "@/services/subject-selection";
+import { fetchExamsByStudentId } from "@/services/exam-api.service";
+import { ExamDto } from "@/dtos";
 // import { useAuth } from "@/hooks/use-auth";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -37,8 +39,112 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   //   const { user } = useAuth();
   const { accessControl, student } = useStudent();
+  const [upcomingExamCount, setUpcomingExamCount] = React.useState<number>(0);
   //   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState<boolean>(false);
   console.log("pathname:", pathname);
+
+  // Function to fetch and update exam count
+  const updateExamCount = React.useCallback(() => {
+    if (!student?.id) {
+      setUpcomingExamCount(0);
+      return;
+    }
+
+    fetchExamsByStudentId(student.id)
+      .then((data) => {
+        const now = new Date();
+        // Filter exams: only count upcoming exams (not completed and admit card available)
+        const upcomingExams = (data.payload.content || []).filter((exam) => {
+          // If no admit card start date, don't count
+          if (!exam.admitCardStartDownloadDate) {
+            return false;
+          }
+
+          // Check if admit card download date has passed (must be less than or equal to current time)
+          const startDate = new Date(exam.admitCardStartDownloadDate);
+          if (startDate > now) {
+            return false; // Admit card download hasn't started yet
+          }
+
+          // Check if exam has subjects
+          if (!exam.examSubjects || exam.examSubjects.length === 0) {
+            return false;
+          }
+
+          // Check if exam is completed (all subjects have ended)
+          const allCompleted = exam.examSubjects.every((subject) => {
+            const endTime = new Date(subject.endTime);
+            return endTime < now;
+          });
+
+          // Only count if exam is NOT completed
+          return !allCompleted;
+        });
+        setUpcomingExamCount(upcomingExams.length);
+      })
+      .catch((err) => {
+        console.error("Error fetching exam count for badge:", err);
+        setUpcomingExamCount(0);
+      });
+  }, [student?.id]);
+
+  // Fetch upcoming exam count for badge
+  React.useEffect(() => {
+    updateExamCount();
+  }, [updateExamCount]);
+
+  // Setup socket connection to update badge count on exam changes
+  React.useEffect(() => {
+    if (!student?.id || typeof window === "undefined") return;
+
+    // Dynamic import to avoid SSR issues
+    const loadSocket = async () => {
+      try {
+        // @ts-ignore - socket.io-client will be available after pnpm install
+        const socketModule = await import("socket.io-client");
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+        const parsed = new URL(apiUrl);
+        const origin = `${parsed.protocol}//${parsed.host}`;
+        const pathPrefix = parsed.pathname.replace(/\/$/, "");
+        const socketPath = pathPrefix ? `${pathPrefix}/socket.io` : "/socket.io";
+
+        // @ts-ignore - socket.io-client types will be available after pnpm install
+        const socket: any = socketModule.io(origin, {
+          path: socketPath,
+          withCredentials: true,
+          transports: ["polling", "websocket"],
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionAttempts: 5,
+          timeout: 20000,
+        } as any);
+
+        socket.on("connect", () => {
+          if (student?.id) {
+            socket.emit("authenticate", student.id.toString());
+          }
+        });
+
+        // Listen for exam updates and refresh count
+        socket.on("exam_created", () => {
+          updateExamCount();
+        });
+
+        socket.on("exam_updated", () => {
+          updateExamCount();
+        });
+
+        return () => {
+          socket.disconnect();
+        };
+      } catch (err) {
+        console.error("[Sidebar] Failed to load socket.io-client:", err);
+      }
+    };
+
+    loadSocket();
+  }, [student?.id, updateExamCount]);
 
   // Check if student's program course is MA or MCOM (hide admission registration for these)
   const isBlockedProgram = React.useMemo(() => {
@@ -106,6 +212,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/dashboard/exams",
       icon: NotebookPen,
       isActive: pathname === "/dashboard/exams",
+      badge: upcomingExamCount > 0 ? upcomingExamCount : undefined,
     },
     // {
     //   title: "Course Catalogue",

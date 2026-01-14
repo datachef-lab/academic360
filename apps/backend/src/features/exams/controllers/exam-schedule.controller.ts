@@ -8,6 +8,7 @@ import {
   checkDuplicateExam,
   countStudentsByPapers,
   createExamAssignment,
+  downloadAdmitCardTrackingByExamId,
   downloadAdmitCardsAsZip,
   downloadAttendanceSheetsByExamId,
   downloadExamCandidatesbyExamId,
@@ -21,6 +22,7 @@ import {
   getExamCandidatesByStudentIdAndExamId,
   getStudentsByPapers,
   sendExamAdmitCardEmails,
+  updateExamAdmitCardDates,
   updateExamSubject,
 } from "../services/exam-schedule.service.js";
 import { ApiError } from "@/utils/ApiError.js";
@@ -409,7 +411,9 @@ export const createExamAssignmenthandler = async (
         ? JSON.parse(req.body.dto)
         : req.body.dto;
 
-    const students = await createExamAssignment(dto, excelStudents);
+    const userId = (req as any)?.user?.id as number | undefined;
+
+    const students = await createExamAssignment(dto, excelStudents, userId);
 
     // console.log(
     //     "[EXAM-SCHEDULE-CONTROLLER] Service returned students:",
@@ -574,6 +578,103 @@ export const downloadExamCandidatesController = async (
     res.send(Buffer.from(excelBuffer));
   } catch (error) {
     console.error("[EXAM-CANDIDATE-DOWNLOAD] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const updateExamAdmitCardDatesController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { examId } = req.params;
+    const { admitCardStartDownloadDate, admitCardLastDownloadDate } = req.body;
+    const userId = (req as any)?.user?.id as number | undefined;
+
+    if (!examId) {
+      res.status(400).json(new ApiError(400, "examId is required"));
+      return;
+    }
+
+    const examIdNum = Number(examId);
+    if (isNaN(examIdNum)) {
+      res.status(400).json(new ApiError(400, "Invalid examId"));
+      return;
+    }
+
+    console.info("[UPDATE-EXAM-ADMIT-CARD-DATES] Updating dates", {
+      examId: examIdNum,
+      admitCardStartDownloadDate,
+      admitCardLastDownloadDate,
+      userId,
+    });
+
+    const updatedExam = await updateExamAdmitCardDates(
+      examIdNum,
+      admitCardStartDownloadDate || null,
+      admitCardLastDownloadDate || null,
+      userId,
+    );
+
+    if (!updatedExam) {
+      res.status(404).json(new ApiError(404, "Exam not found"));
+      return;
+    }
+
+    res.json(
+      new ApiResponse(
+        200,
+        "SUCCESS",
+        updatedExam,
+        "Admit card dates updated successfully",
+      ),
+    );
+  } catch (error) {
+    console.error("[UPDATE-EXAM-ADMIT-CARD-DATES] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const downloadAdmitCardTrackingController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { examId } = req.query;
+
+    if (!examId) {
+      res.status(400).json(new ApiError(400, "examId is required"));
+      return;
+    }
+
+    const examIdNum = Number(examId);
+    if (isNaN(examIdNum)) {
+      res.status(400).json(new ApiError(400, "Invalid examId"));
+      return;
+    }
+
+    console.info("[ADMIT-CARD-TRACKING-DOWNLOAD] Starting Excel download", {
+      examId: examIdNum,
+    });
+
+    const excelBuffer = await downloadAdmitCardTrackingByExamId(examIdNum);
+
+    // ✅ IMPORTANT HEADERS
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="exam-${examIdNum}-admit-card-tracking.xlsx"`,
+    );
+
+    // 🚀 Send buffer
+    res.send(Buffer.from(excelBuffer));
+  } catch (error) {
+    console.error("[ADMIT-CARD-TRACKING-DOWNLOAD] Error:", error);
     handleError(error, res, next);
   }
 };
@@ -975,6 +1076,17 @@ export const allotExamRoomsAndStudentsController = async (
       req.body.gender === "" || req.body.gender === undefined
         ? null
         : req.body.gender;
+    // Handle admit card dates - convert empty string to null
+    const admitCardStartDownloadDate =
+      req.body.admitCardStartDownloadDate === "" ||
+      req.body.admitCardStartDownloadDate === undefined
+        ? null
+        : req.body.admitCardStartDownloadDate;
+    const admitCardLastDownloadDate =
+      req.body.admitCardLastDownloadDate === "" ||
+      req.body.admitCardLastDownloadDate === undefined
+        ? null
+        : req.body.admitCardLastDownloadDate;
 
     if (!examId) {
       return res
@@ -1037,6 +1149,8 @@ export const allotExamRoomsAndStudentsController = async (
       }[];
     }
 
+    const userId = (req as any)?.user?.id as number | undefined;
+
     const result = await allotExamRoomsAndStudents(
       examIdNum,
       {
@@ -1046,8 +1160,11 @@ export const allotExamRoomsAndStudentsController = async (
           | "UID"
           | "CU_REGISTRATION_NUMBER",
         gender: gender || null,
+        admitCardStartDownloadDate: admitCardStartDownloadDate || null,
+        admitCardLastDownloadDate: admitCardLastDownloadDate || null,
       },
       excelStudents,
+      userId,
     );
 
     return res

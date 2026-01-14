@@ -24,6 +24,7 @@ import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto
 import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 // Room and student interfaces moved to allot-exam-page
 
@@ -58,6 +59,7 @@ interface Schedule {
 export default function ScheduleExamPage() {
   // Academic Year hook - get current academic year from Redux slice
   const { currentAcademicYear, availableAcademicYears, loadAcademicYears } = useAcademicYear();
+  const { user } = useAuth();
 
   const queryClient = useQueryClient();
 
@@ -925,6 +927,10 @@ export default function ScheduleExamPage() {
           updatedAt: new Date(),
           id: 0,
           legacyExamAssginmentId: null,
+          scheduledByUserId: user?.id ?? null,
+          lastUpdatedByUserId: user?.id ?? null,
+          admitCardStartDownloadDate: null,
+          admitCardLastDownloadDate: null,
         };
 
         const result = await checkDuplicateExam(tmpExamAssignment);
@@ -1049,6 +1055,10 @@ export default function ScheduleExamPage() {
         updatedAt: new Date(),
         id: 0,
         legacyExamAssginmentId: null,
+        scheduledByUserId: null,
+        lastUpdatedByUserId: null,
+        admitCardStartDownloadDate: null,
+        admitCardLastDownloadDate: null,
       };
 
       // Check for duplicate exam before creating

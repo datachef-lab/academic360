@@ -59,3 +59,39 @@ export async function updateExamSubject(examSubjectId: number, examSubject: Exam
   );
   return response.data.payload;
 }
+
+export async function updateExamAdmitCardDates(
+  examId: number,
+  admitCardStartDownloadDate: string | null,
+  admitCardLastDownloadDate: string | null,
+): Promise<ExamDto> {
+  const response = await axiosInstance.put<ApiResponse<ExamDto>>(`/api/exams/schedule/${examId}/admit-card-dates`, {
+    admitCardStartDownloadDate,
+    admitCardLastDownloadDate,
+  });
+  return response.data.payload;
+}
+
+export async function downloadAdmitCardTracking(examId: number): Promise<{ downloadUrl: string; fileName: string }> {
+  const response = await axiosInstance.get(`/api/exams/schedule/admit-card-tracking/download?examId=${examId}`, {
+    responseType: "blob",
+  });
+
+  const blob = new Blob([response.data], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
+  const downloadUrl = URL.createObjectURL(blob);
+
+  const contentDisposition = response.headers["content-disposition"];
+  let fileName = `exam_${examId}-admit-card-tracking-${new Date().toISOString().split("T")[0]}.xlsx`;
+
+  if (contentDisposition) {
+    const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+    if (fileNameMatch) {
+      fileName = fileNameMatch[1];
+    }
+  }
+
+  return { downloadUrl, fileName };
+}

@@ -4,6 +4,7 @@ import {
   checkDuplicateExamController,
   countStudentsForExam,
   createExamAssignmenthandler,
+  downloadAdmitCardTrackingController,
   downloadAdmitCardsController,
   downloadAttendanceSheetsByExamIdController,
   downloadExamCandidatesController,
@@ -16,6 +17,7 @@ import {
   getExamsByStudentController,
   getStudentsForExam,
   triggerExamCandidatesEmailController,
+  updateExamAdmitCardDatesController,
   updateExamSubjectHandler,
 } from "../controllers/exam-schedule.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
@@ -38,8 +40,18 @@ router.post(
 );
 
 router.put("/exam-subject", verifyJWT, updateExamSubjectHandler);
+router.put(
+  "/:examId/admit-card-dates",
+  verifyJWT,
+  updateExamAdmitCardDatesController,
+);
 
 router.get("/download-admit-cards", verifyJWT, downloadAdmitCardsController);
+router.get(
+  "/admit-card-tracking/download",
+  verifyJWT,
+  downloadAdmitCardTrackingController,
+);
 router.get(
   "/download-attendance-sheets",
   verifyJWT,

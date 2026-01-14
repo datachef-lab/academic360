@@ -258,7 +258,7 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
                       <TableCell className="py-4 pl-6 pr-4 ">
                         <div className="space-y-0.5">
                           <div className="font-semibold text-gray-800 text-sm">
-                            {format(detail.startTime, "MMM d, yyyy")}
+                            {format(detail.startTime, "dd/MM/yyyy")}
                           </div>
                           <div className="text-muted-gray-800 text-xs font-mono">
                             {format(detail.startTime, "hh:mm a")} – {format(detail.endTime, "hh:mm a")}

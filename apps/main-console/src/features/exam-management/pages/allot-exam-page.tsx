@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Trash2, Loader2, Upload, DoorOpen, Download, ArrowLeft } from "lucide-react";
+import { Users, Trash2, Loader2, Upload, DoorOpen, Download, ArrowLeft, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllRooms } from "@/services/room.service";
@@ -57,6 +57,10 @@ export default function AllotExamPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [foilNumberMap, setFoilNumberMap] = useState<Record<string, string>>({});
 
+  // Admit card download dates state
+  const [admitCardStartDate, setAdmitCardStartDate] = useState<string>("");
+  const [admitCardEndDate, setAdmitCardEndDate] = useState<string>("");
+
   // Fetch all exams for selection
   const { data: examsData, isLoading: loadingExams } = useQuery({
     queryKey: ["exams", "for-allotment"],
@@ -70,6 +74,14 @@ export default function AllotExamPage() {
     },
   });
 
+  // Helper function to convert Date to datetime-local format
+  const toDatetimeLocal = (value: Date | string | null | undefined): string => {
+    if (!value) return "";
+    const date = value instanceof Date ? value : new Date(value);
+    if (isNaN(date.getTime())) return "";
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  };
+
   // Fetch selected exam details
   useQuery({
     queryKey: ["exam", selectedExamId],
@@ -77,6 +89,13 @@ export default function AllotExamPage() {
       if (!selectedExamId) return null;
       const exam = await fetchExamById(selectedExamId);
       setSelectedExam(exam);
+      // Set admit card dates if they exist
+      if (exam.admitCardStartDownloadDate) {
+        setAdmitCardStartDate(toDatetimeLocal(exam.admitCardStartDownloadDate));
+      }
+      if (exam.admitCardLastDownloadDate) {
+        setAdmitCardEndDate(toDatetimeLocal(exam.admitCardLastDownloadDate));
+      }
       return exam;
     },
     enabled: !!selectedExamId,
@@ -392,6 +411,7 @@ export default function AllotExamPage() {
 
   const [roomsModalOpen, setRoomsModalOpen] = useState(false);
   const [studentsModalOpen, setStudentsModalOpen] = useState(false);
+  const [insufficientCapacityDialogOpen, setInsufficientCapacityDialogOpen] = useState(false);
 
   // Reset form function
   const resetForm = () => {
@@ -403,6 +423,8 @@ export default function AllotExamPage() {
     setEnableFoilNumber(false);
     setExcelFile(null);
     setFoilNumberMap({});
+    setAdmitCardStartDate("");
+    setAdmitCardEndDate("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -434,6 +456,10 @@ export default function AllotExamPage() {
         locations,
         orderType: assignBy,
         gender: gender === "ALL" ? null : gender,
+        admitCardStartDownloadDate:
+          admitCardStartDate && admitCardStartDate.trim() !== "" ? new Date(admitCardStartDate).toISOString() : null,
+        admitCardLastDownloadDate:
+          admitCardEndDate && admitCardEndDate.trim() !== "" ? new Date(admitCardEndDate).toISOString() : null,
       };
 
       const response = await allotExamRoomsAndStudents(selectedExamId, params, excelFile);
@@ -456,7 +482,42 @@ export default function AllotExamPage() {
     },
   });
 
+  // Calculate insufficient capacity
+  const calculateInsufficientCapacity = () => {
+    if (loadingTotalStudents || !selectedExam) {
+      return { hasInsufficientCapacity: false, shortage: 0 };
+    }
+
+    const totalCapacity = selectedRooms.reduce((total, room) => {
+      const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+      const numberOfBenches = room.numberOfBenches || 0;
+      return total + numberOfBenches * maxStudentsPerBench;
+    }, 0);
+
+    const shortage = totalEligibleStudents - totalCapacity;
+    return {
+      hasInsufficientCapacity: shortage > 0,
+      shortage,
+      totalCapacity,
+      totalStudents: totalEligibleStudents,
+    };
+  };
+
   const handleAllotExam = () => {
+    const capacityInfo = calculateInsufficientCapacity();
+
+    // If there's insufficient capacity, show confirmation dialog
+    if (capacityInfo.hasInsufficientCapacity) {
+      setInsufficientCapacityDialogOpen(true);
+      return;
+    }
+
+    // Otherwise, proceed directly with allotment
+    allotExamMutation.mutate();
+  };
+
+  const handleConfirmAllotment = () => {
+    setInsufficientCapacityDialogOpen(false);
     allotExamMutation.mutate();
   };
 
@@ -499,6 +560,8 @@ export default function AllotExamPage() {
                       setSelectedRooms([]);
                       setEnableFoilNumber(false);
                       setExcelFile(null);
+                      setAdmitCardStartDate("");
+                      setAdmitCardEndDate("");
                     }}
                     disabled={loadingExams}
                   >
@@ -607,6 +670,58 @@ export default function AllotExamPage() {
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Admit Card Download Dates - Only show if exam is selected */}
+          {selectedExam && (
+            <Card className="border-0 shadow-none mb-4">
+              <CardContent className="pt-4 pb-4">
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">Admit Card Download Dates:</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="admit-card-start-date" className="text-sm font-medium text-gray-700">
+                      Start Date & Time
+                    </Label>
+                    <Input
+                      id="admit-card-start-date"
+                      type="datetime-local"
+                      value={admitCardStartDate}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setAdmitCardStartDate(value);
+                        // Validate that start date is before end date if both are set
+                        if (value && admitCardEndDate && new Date(value) > new Date(admitCardEndDate)) {
+                          toast.error("Start date must be before end date");
+                        }
+                      }}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="admit-card-end-date" className="text-sm font-medium text-gray-700">
+                      End Date & Time
+                    </Label>
+                    <Input
+                      id="admit-card-end-date"
+                      type="datetime-local"
+                      value={admitCardEndDate}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setAdmitCardEndDate(value);
+                        // Validate that end date is after start date if both are set
+                        if (value && admitCardStartDate && new Date(value) < new Date(admitCardStartDate)) {
+                          toast.error("End date must be after start date");
+                        }
+                      }}
+                      className="h-10"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Set the date range when students can download their admit cards. Leave empty if not applicable.
+                </p>
               </CardContent>
             </Card>
           )}
@@ -1419,6 +1534,67 @@ export default function AllotExamPage() {
                 </Button>
               </div>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Insufficient Capacity Confirmation Dialog */}
+      <Dialog open={insufficientCapacityDialogOpen} onOpenChange={setInsufficientCapacityDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-semibold text-red-900">Insufficient Capacity</DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 mt-1">
+                  Warning: The selected rooms do not have enough capacity for all eligible students.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700">Total Eligible Students:</span>
+                <span className="text-sm font-bold text-gray-900">{calculateInsufficientCapacity().totalStudents}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700">Total Room Capacity:</span>
+                <span className="text-sm font-bold text-gray-900">{calculateInsufficientCapacity().totalCapacity}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-red-200">
+                <span className="text-sm font-semibold text-red-700">Shortage:</span>
+                <span className="text-sm font-bold text-red-900">
+                  {calculateInsufficientCapacity().shortage} seat(s)
+                </span>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mt-4">
+              Some students may not be assigned seats if you proceed. Are you sure you want to continue with the
+              allotment?
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setInsufficientCapacityDialogOpen(false)} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmAllotment}
+              className="flex-1"
+              disabled={allotExamMutation.status === "loading"}
+            >
+              {allotExamMutation.status === "loading" ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                  Allotting...
+                </>
+              ) : (
+                "Proceed Anyway"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
