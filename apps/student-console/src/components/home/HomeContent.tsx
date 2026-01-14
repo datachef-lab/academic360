@@ -101,7 +101,16 @@ export default function HomeContent() {
         const socketModule = await import("socket.io-client");
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
-        const parsed = new URL(apiUrl);
+
+        // Wrap URL parsing in try-catch for better error handling
+        let parsed: URL;
+        try {
+          parsed = new URL(apiUrl);
+        } catch (urlError) {
+          console.error("[HomeContent] Invalid API URL:", apiUrl, urlError);
+          return;
+        }
+
         const origin = `${parsed.protocol}//${parsed.host}`;
         const pathPrefix = parsed.pathname.replace(/\/$/, "");
         const socketPath = pathPrefix ? `${pathPrefix}/socket.io` : "/socket.io";

@@ -40,6 +40,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   //   const { user } = useAuth();
   const { accessControl, student } = useStudent();
   const [upcomingExamCount, setUpcomingExamCount] = React.useState<number>(0);
+  const socketRef = React.useRef<any | null>(null);
   //   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState<boolean>(false);
   console.log("pathname:", pathname);
 
@@ -97,6 +98,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   React.useEffect(() => {
     if (!student?.id || typeof window === "undefined") return;
 
+    // Prevent multiple socket connections
+    if (socketRef.current?.connected) {
+      return;
+    }
+
     // Dynamic import to avoid SSR issues
     const loadSocket = async () => {
       try {
@@ -104,7 +110,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         const socketModule = await import("socket.io-client");
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
-        const parsed = new URL(apiUrl);
+
+        // Wrap URL parsing in try-catch for better error handling
+        let parsed: URL;
+        try {
+          parsed = new URL(apiUrl);
+        } catch (urlError) {
+          console.error("[Sidebar] Invalid API URL:", apiUrl, urlError);
+          return;
+        }
+
         const origin = `${parsed.protocol}//${parsed.host}`;
         const pathPrefix = parsed.pathname.replace(/\/$/, "");
         const socketPath = pathPrefix ? `${pathPrefix}/socket.io` : "/socket.io";
@@ -120,6 +135,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           timeout: 20000,
         } as any);
 
+        socketRef.current = socket;
+
         socket.on("connect", () => {
           if (student?.id) {
             socket.emit("authenticate", student.id.toString());
@@ -134,16 +151,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         socket.on("exam_updated", () => {
           updateExamCount();
         });
-
-        return () => {
-          socket.disconnect();
-        };
       } catch (err) {
         console.error("[Sidebar] Failed to load socket.io-client:", err);
       }
     };
 
     loadSocket();
+
+    // Cleanup on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
   }, [student?.id, updateExamCount]);
 
   // Check if student's program course is MA or MCOM (hide admission registration for these)

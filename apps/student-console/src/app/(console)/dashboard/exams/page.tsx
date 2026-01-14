@@ -150,7 +150,15 @@ export default function ExamsContent() {
         // Use the same backend URL as API calls from NEXT_PUBLIC_API_URL
         const apiUrl =
           process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
-        const parsed = new URL(apiUrl);
+
+        // Wrap URL parsing in try-catch for better error handling
+        let parsed: URL;
+        try {
+          parsed = new URL(apiUrl);
+        } catch (urlError) {
+          console.error("[Student Console] Invalid API URL:", apiUrl, urlError);
+          return;
+        }
 
         // Use the exact same origin as the API URL (backend socket runs on the same server)
         const origin = `${parsed.protocol}//${parsed.host}`;
