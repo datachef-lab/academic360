@@ -5,6 +5,7 @@ import {
   countStudentsForExam,
   countStudentsBreakdownForExam,
   createExamAssignmenthandler,
+  deleteExamByIdController,
   downloadAdmitCardTrackingController,
   downloadAdmitCardsController,
   downloadAttendanceSheetsByExamIdController,
@@ -114,5 +115,6 @@ router.post(
 );
 
 router.get("/:id", getExamByIdController);
+router.delete("/:id", verifyJWT, deleteExamByIdController);
 
 export default router;

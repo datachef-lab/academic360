@@ -2560,6 +2560,8 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
     foundAcademicYear,
     foundExamTypeResult,
     foundClass,
+    scheduledByUserResult,
+    lastUpdatedByUserResult,
     foundExamProgramCourses,
     foundExamShifts,
     foundExamSubjects,
@@ -2572,6 +2574,30 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
       .from(examTypeModel)
       .where(eq(examTypeModel.id, model.examTypeId)),
     findClassById(model.classId),
+    model.scheduledByUserId
+      ? db
+          .select({
+            id: userModel.id,
+            name: userModel.name,
+            email: userModel.email,
+            image: userModel.image,
+            phone: userModel.phone,
+          })
+          .from(userModel)
+          .where(eq(userModel.id, model.scheduledByUserId))
+      : [],
+    model.lastUpdatedByUserId
+      ? db
+          .select({
+            id: userModel.id,
+            name: userModel.name,
+            email: userModel.email,
+            image: userModel.image,
+            phone: userModel.phone,
+          })
+          .from(userModel)
+          .where(eq(userModel.id, model.lastUpdatedByUserId))
+      : [],
     db
       .select()
       .from(examProgramCourseModel)
@@ -2804,6 +2830,13 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
     room: roomMap.get(l.roomId)!,
   }));
 
+  const [scheduledByUser] = Array.isArray(scheduledByUserResult)
+    ? scheduledByUserResult
+    : [];
+  const [lastUpdatedByUser] = Array.isArray(lastUpdatedByUserResult)
+    ? lastUpdatedByUserResult
+    : [];
+
   return {
     ...model,
     academicYear: foundAcademicYear!,
@@ -2814,6 +2847,8 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
     examSubjects,
     examSubjectTypes,
     locations,
+    scheduledByUser: scheduledByUser ?? null,
+    lastUpdatedByUser: lastUpdatedByUser ?? null,
   };
 }
 
@@ -3853,6 +3888,97 @@ export async function updateExamAdmitCardDates(
   }
 
   return await modelToDto(updatedExam);
+}
+
+/**
+ * Delete an exam and all related rows.
+ *
+ * Deletion is allowed only if the earliest exam subject startTime is in the future.
+ * (If the exam has no subjects, deletion is allowed.)
+ */
+export async function deleteExamByIdIfUpcoming(
+  examId: number,
+  userId?: number,
+): Promise<null | {
+  success: true;
+  deletedExamId: number;
+}> {
+  return await db.transaction(async (tx) => {
+    const [exam] = await tx
+      .select()
+      .from(examModel)
+      .where(eq(examModel.id, examId));
+    if (!exam) return null;
+
+    const admitCardStart = exam.admitCardStartDownloadDate;
+    if (!admitCardStart) {
+      throw new Error(
+        "Exam cannot be deleted because admit card start download date is not set.",
+      );
+    }
+
+    const admitCardStartMs = new Date(admitCardStart as any).getTime();
+    if (Number.isNaN(admitCardStartMs)) {
+      throw new Error(
+        "Exam cannot be deleted because admit card start download date is invalid.",
+      );
+    }
+
+    // Allowed only if (admitCardStartDownloadDate - 1 day) >= now
+    const now = Date.now();
+    const deletionCutoff = admitCardStartMs - 24 * 60 * 60 * 1000;
+    if (deletionCutoff < now) {
+      throw new Error(
+        "Exam cannot be deleted now. Deletion is allowed only up to 1 day before the admit card start download date.",
+      );
+    }
+
+    // Delete in FK-safe order
+    await tx
+      .delete(examCandidateModel)
+      .where(eq(examCandidateModel.examId, examId));
+    await tx.delete(examRoomModel).where(eq(examRoomModel.examId, examId));
+    await tx
+      .delete(examSubjectModel)
+      .where(eq(examSubjectModel.examId, examId));
+    await tx.delete(examShiftModel).where(eq(examShiftModel.examId, examId));
+    await tx
+      .delete(examSubjectTypeModel)
+      .where(eq(examSubjectTypeModel.examId, examId));
+    await tx
+      .delete(examProgramCourseModel)
+      .where(eq(examProgramCourseModel.examId, examId));
+
+    const [deleted] = await tx
+      .delete(examModel)
+      .where(eq(examModel.id, examId))
+      .returning({ id: examModel.id });
+
+    if (!deleted) {
+      throw new Error("Failed to delete exam.");
+    }
+
+    // Emit socket event for exam deletion
+    const io = socketService.getIO();
+    if (io) {
+      io.emit("exam_deleted", {
+        examId,
+        type: "deletion",
+        message: "An exam has been deleted",
+        timestamp: new Date().toISOString(),
+      });
+      io.emit("notification", {
+        id: `exam_deleted_${examId}_${Date.now()}`,
+        type: "info",
+        message: `An exam (ID: ${examId}) has been deleted`,
+        createdAt: new Date(),
+        read: false,
+        meta: { examId, type: "deletion", deletedByUserId: userId ?? null },
+      });
+    }
+
+    return { success: true as const, deletedExamId: examId };
+  });
 }
 
 export async function fetchExamCandidatesByExamId(examId: number) {
