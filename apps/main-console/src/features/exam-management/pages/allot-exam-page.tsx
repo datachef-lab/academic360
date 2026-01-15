@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Trash2, Loader2, Upload, DoorOpen, Download, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Users, Trash2, Loader2, Upload, DoorOpen, Download, ArrowLeft, AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllRooms } from "@/services/room.service";
@@ -32,6 +32,15 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { RoomDto, ExamDto } from "@repo/db/index";
 import { getPapersPaginated } from "@/services/course-design.api";
 import type { PaperDto } from "@repo/db/index";
@@ -61,6 +70,9 @@ export default function AllotExamPage() {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [foilNumberMap, setFoilNumberMap] = useState<Record<string, string>>({});
+  const [foilExcelValidationDialogOpen, setFoilExcelValidationDialogOpen] = useState(false);
+  const [foilExcelValidationMessage, setFoilExcelValidationMessage] = useState<string>("");
+  const [foilExcelMissingHeaders, setFoilExcelMissingHeaders] = useState<string[]>([]);
 
   // Admit card download dates state
   const [admitCardStartDate, setAdmitCardStartDate] = useState<string>("");
@@ -239,42 +251,80 @@ export default function AllotExamPage() {
         event.target.value = "";
         return;
       }
-      setExcelFile(file);
-
       try {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer);
-            const workbook = XLSX.read(data, { type: "array" });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName!];
-            const jsonData = XLSX.utils.sheet_to_json(sheet!) as Array<{
-              foil_number?: string | number;
-              uid?: string;
-            }>;
+        const normalizeHeaderKey = (key: unknown): string =>
+          String(key ?? "")
+            .trim()
+            .toLowerCase()
+            .replace(/[_\s]+/g, " ");
 
-            const foilMap: Record<string, string> = {};
-            jsonData.forEach((row) => {
-              if (row.uid && row.foil_number !== undefined) {
-                const uid = String(row.uid).trim();
-                const foilNumber = String(row.foil_number).trim();
-                if (uid && foilNumber) {
-                  foilMap[uid] = foilNumber;
-                }
-              }
-            });
-            setFoilNumberMap(foilMap);
-            console.log("[EXCEL] Parsed foil numbers:", Object.keys(foilMap).length);
-          } catch (error) {
-            console.error("Error parsing Excel file:", error);
-            setFoilNumberMap({});
-          }
-        };
-        reader.readAsArrayBuffer(file);
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
+        const matrix = sheet ? (XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][]) : [];
+
+        if (!matrix || matrix.length < 2) {
+          toast.error("Excel file has no data rows.");
+          event.target.value = "";
+          return;
+        }
+
+        const headerRow = matrix[0] || [];
+        const headers = headerRow.map(normalizeHeaderKey);
+
+        const uidCandidates = ["uid"];
+        const foilCandidates = ["foil number", "foil no", "foil no.", "foil_number", "foilnumber", "foil"];
+
+        const uidIdx = headers.findIndex((h: string) => uidCandidates.includes(h));
+        const foilIdx = headers.findIndex((h: string) => foilCandidates.includes(h));
+
+        const missing: string[] = [];
+        if (uidIdx === -1) missing.push("uid");
+        if (foilIdx === -1) missing.push("foil_number");
+
+        if (missing.length > 0) {
+          setFoilExcelMissingHeaders(missing);
+          setFoilExcelValidationMessage(
+            "Your Excel file is missing required columns in the header row (row 1). Please add the missing columns and try again.",
+          );
+          setFoilExcelValidationDialogOpen(true);
+          setExcelFile(null);
+          setFoilNumberMap({});
+          event.target.value = "";
+          return;
+        }
+
+        // Parse foil map based on detected columns (order-independent)
+        const foilMap: Record<string, string> = {};
+        for (let r = 1; r < matrix.length; r++) {
+          const row = matrix[r] || [];
+          const uid = String(row[uidIdx] ?? "").trim();
+          const foilNumber = String(row[foilIdx] ?? "").trim();
+          const isRowEmpty = row.every((cell: any) => String(cell ?? "").trim() === "");
+          if (isRowEmpty) continue;
+          if (!uid || !foilNumber) continue;
+          foilMap[uid] = foilNumber;
+        }
+
+        if (Object.keys(foilMap).length === 0) {
+          toast.error("No valid rows found. Please ensure UID and foil_number values are present.");
+          setExcelFile(null);
+          setFoilNumberMap({});
+          event.target.value = "";
+          return;
+        }
+
+        setExcelFile(file);
+        setFoilNumberMap(foilMap);
+        console.log("[EXCEL] Parsed foil numbers:", Object.keys(foilMap).length);
       } catch (error) {
         console.error("Error reading Excel file:", error);
+        setExcelFile(null);
         setFoilNumberMap({});
+        event.target.value = "";
+        toast.error("Failed to read Excel file");
+        return;
       }
 
       toast.success(`Uploaded: ${file.name}`);
@@ -540,6 +590,15 @@ export default function AllotExamPage() {
   const [roomsModalOpen, setRoomsModalOpen] = useState(false);
   const [studentsModalOpen, setStudentsModalOpen] = useState(false);
   const [insufficientCapacityDialogOpen, setInsufficientCapacityDialogOpen] = useState(false);
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied to clipboard");
+    } catch (e) {
+      console.error("Failed to copy:", e);
+      toast.error("Failed to copy");
+    }
+  };
 
   // Reset form function
   const resetForm = () => {
@@ -1946,6 +2005,78 @@ export default function AllotExamPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Foil Excel Missing Columns Dialog */}
+      <AlertDialog open={foilExcelValidationDialogOpen} onOpenChange={setFoilExcelValidationDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-700">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                <AlertTriangle className="h-4 w-4 text-red-700" />
+              </span>
+              Missing required columns
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-700">
+              {foilExcelValidationMessage || "Your Excel file is missing required columns."}
+              <span className="block mt-2 text-slate-600">
+                Header matching is case-insensitive and ignores extra spaces.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="rounded border border-slate-200 bg-slate-50 p-3">
+            <div className="mb-2 text-xs font-semibold text-slate-700">Expected headers</div>
+            <div className="flex flex-wrap gap-2">
+              {["uid", "foil_number"].map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => copyToClipboard(h)}
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                  title="Click to copy"
+                >
+                  <span className="font-mono">{h}</span>
+                  <Copy className="h-3.5 w-3.5 text-slate-500" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {foilExcelMissingHeaders.length > 0 ? (
+            <div className="rounded border border-red-200 bg-red-50/40 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-xs font-semibold text-red-800">Missing headers</div>
+                <Badge className="bg-red-100 text-red-800 hover:bg-red-100" variant="secondary">
+                  {foilExcelMissingHeaders.length}
+                </Badge>
+              </div>
+              <div className="max-h-44 overflow-y-auto rounded border border-red-100 bg-white p-2">
+                <ul className="space-y-1 text-xs text-slate-700">
+                  {foilExcelMissingHeaders.map((h) => (
+                    <li key={h} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-slate-50">
+                      <span className="font-mono">{h}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900"
+                        onClick={() => copyToClipboard(h)}
+                        title="Copy header"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : null}
+
+          <AlertDialogFooter>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700">OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

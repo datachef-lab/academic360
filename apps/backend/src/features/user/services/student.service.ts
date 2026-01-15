@@ -1,4 +1,14 @@
-import { count, desc, eq, ilike, or, and, sql, isNotNull } from "drizzle-orm";
+import {
+  count,
+  desc,
+  eq,
+  ilike,
+  or,
+  and,
+  sql,
+  isNotNull,
+  inArray,
+} from "drizzle-orm";
 import pLimit from "p-limit";
 import JSZip from "jszip";
 import { db, mysqlConnection } from "@/db/index.js";
@@ -2211,6 +2221,13 @@ interface StudentApaarIdRow {
   "APAAR ID": string;
 }
 
+interface StudentCuRollRegRow {
+  rowNumber: number;
+  uid: string;
+  cuRollNumber: string | null;
+  cuRegistrationNumber: string | null;
+}
+
 // Update APAAR IDs for students based on College UID
 export async function updateStudentApaarIds(
   apaarIdRows: StudentApaarIdRow[],
@@ -2290,6 +2307,313 @@ export async function updateStudentApaarIds(
     errors,
     notFound,
   };
+}
+
+function normalizeUidForMatch(uid: string): string {
+  return uid.trim().toLowerCase();
+}
+
+function normalizeUidForImportMatch(uid: string): string {
+  // Match legacy importer cleaning: keep only alphanumeric chars and lower-case
+  return normalizeUidForMatch(uid).replace(/[^a-z0-9]/gi, "");
+}
+
+export async function checkExistingStudentUids(
+  uids: string[],
+): Promise<{ existingUids: string[] }> {
+  const normalizedToOriginals = new Map<string, Set<string>>();
+
+  for (const raw of uids || []) {
+    const norm = normalizeUidForImportMatch(String(raw ?? ""));
+    if (!norm) continue;
+    if (!normalizedToOriginals.has(norm))
+      normalizedToOriginals.set(norm, new Set());
+    normalizedToOriginals.get(norm)!.add(String(raw ?? "").trim());
+  }
+
+  const normalizedUids = Array.from(normalizedToOriginals.keys());
+  if (normalizedUids.length === 0) return { existingUids: [] };
+
+  // Postgres: regexp_replace supports global replace when passing 'g'
+  const rows = await db
+    .select({ uid: studentModel.uid })
+    .from(studentModel)
+    .where(
+      inArray(
+        sql`lower(regexp_replace(trim(${studentModel.uid}), '[^a-zA-Z0-9]', '', 'g'))`,
+        normalizedUids,
+      ),
+    );
+
+  const existingSet = new Set<string>();
+  for (const r of rows) {
+    const norm = normalizeUidForImportMatch(r.uid);
+    const originals = normalizedToOriginals.get(norm);
+    if (!originals) continue;
+    originals.forEach((o) => existingSet.add(o));
+  }
+
+  return { existingUids: Array.from(existingSet) };
+}
+
+export async function updateStudentCuRollAndRegistration(
+  rows: StudentCuRollRegRow[],
+  progressUserId?: string,
+): Promise<{
+  totalRows: number;
+  uniqueUids: number;
+  updated: number;
+  skipped: Array<{ uid: string; reason: string }>;
+  notFound: string[];
+  duplicates: Array<{ uid: string; rowNumbers: number[] }>;
+  errors: Array<{ rowNumber: number; uid: string; error: string }>;
+}> {
+  const errors: Array<{ rowNumber: number; uid: string; error: string }> = [];
+  const skipped: Array<{ uid: string; reason: string }> = [];
+  const notFound: string[] = [];
+  const duplicates: Array<{ uid: string; rowNumbers: number[] }> = [];
+  let updated = 0;
+
+  const emitProgress = (
+    message: string,
+    progress: number,
+    status: "started" | "in_progress" | "completed" | "error",
+    meta?: Record<string, unknown>,
+    errorMsg?: string,
+  ) => {
+    if (!progressUserId) return;
+    const update = socketService.createExportProgressUpdate(
+      progressUserId,
+      message,
+      progress,
+      status,
+      undefined,
+      undefined,
+      errorMsg,
+      {
+        operation: "student_cu_roll_reg_update",
+        ...meta,
+      },
+    );
+    socketService.sendProgressUpdate(progressUserId, update);
+  };
+
+  try {
+    emitProgress("Preparing CU Roll/Registration update…", 0, "started", {
+      totalRows: rows.length,
+    });
+
+    const byUid = new Map<
+      string,
+      {
+        uidOriginal: string;
+        rowNumbers: number[];
+        cuRollNumber: string | null;
+        cuRegistrationNumber: string | null;
+      }
+    >();
+
+    for (const row of rows) {
+      const norm = normalizeUidForMatch(row.uid || "");
+      if (!norm) {
+        errors.push({
+          rowNumber: row.rowNumber,
+          uid: row.uid || "unknown",
+          error: "Missing UID",
+        });
+        continue;
+      }
+
+      const existing = byUid.get(norm);
+      if (!existing) {
+        byUid.set(norm, {
+          uidOriginal: row.uid,
+          rowNumbers: [row.rowNumber],
+          cuRollNumber: row.cuRollNumber,
+          cuRegistrationNumber: row.cuRegistrationNumber,
+        });
+      } else {
+        existing.rowNumbers.push(row.rowNumber);
+        // last non-empty wins
+        if (row.cuRollNumber && row.cuRollNumber.trim()) {
+          existing.cuRollNumber = row.cuRollNumber;
+        }
+        if (row.cuRegistrationNumber && row.cuRegistrationNumber.trim()) {
+          existing.cuRegistrationNumber = row.cuRegistrationNumber;
+        }
+      }
+    }
+
+    for (const [, data] of byUid.entries()) {
+      if (data.rowNumbers.length > 1) {
+        duplicates.push({ uid: data.uidOriginal, rowNumbers: data.rowNumbers });
+      }
+    }
+
+    const normalizedUids = Array.from(byUid.keys());
+    if (normalizedUids.length === 0) {
+      emitProgress("No valid UID rows found.", 100, "completed", {
+        totalRows: rows.length,
+        uniqueUids: 0,
+        updated,
+      });
+      return {
+        totalRows: rows.length,
+        uniqueUids: 0,
+        updated,
+        skipped,
+        notFound,
+        duplicates,
+        errors,
+      };
+    }
+
+    emitProgress("Matching UIDs with students…", 5, "in_progress", {
+      totalRows: rows.length,
+      uniqueUids: byUid.size,
+    });
+
+    // Fetch all matching students in one query (trim + case-insensitive)
+    const students = await db
+      .select({ id: studentModel.id, uid: studentModel.uid })
+      .from(studentModel)
+      .where(inArray(sql`lower(trim(${studentModel.uid}))`, normalizedUids));
+
+    const studentByNormUid = new Map<string, { id: number; uid: string }>();
+    for (const s of students) {
+      studentByNormUid.set(normalizeUidForMatch(s.uid), {
+        id: s.id,
+        uid: s.uid,
+      });
+    }
+
+    let processed = 0;
+    const totalToProcess = byUid.size;
+
+    for (const [norm, data] of byUid.entries()) {
+      const student = studentByNormUid.get(norm);
+      if (!student) {
+        notFound.push(data.uidOriginal);
+        processed++;
+        if (processed % 25 === 0 || processed === totalToProcess) {
+          emitProgress(
+            `Processing… (${processed}/${totalToProcess})`,
+            Math.min(99, Math.floor((processed / totalToProcess) * 100)),
+            "in_progress",
+            {
+              processed,
+              totalToProcess,
+              updated,
+              notFound: notFound.length,
+              skipped: skipped.length,
+              duplicates: duplicates.length,
+              errors: errors.length,
+            },
+          );
+        }
+        continue;
+      }
+
+      const setObj: Partial<
+        Pick<Student, "rollNumber" | "registrationNumber">
+      > = {};
+
+      if (data.cuRollNumber && data.cuRollNumber.trim()) {
+        setObj.rollNumber = data.cuRollNumber.trim();
+      }
+      if (data.cuRegistrationNumber && data.cuRegistrationNumber.trim()) {
+        setObj.registrationNumber = data.cuRegistrationNumber.trim();
+      }
+
+      if (Object.keys(setObj).length === 0) {
+        skipped.push({
+          uid: data.uidOriginal,
+          reason: "No CU values provided",
+        });
+        processed++;
+        if (processed % 25 === 0 || processed === totalToProcess) {
+          emitProgress(
+            `Processing… (${processed}/${totalToProcess})`,
+            Math.min(99, Math.floor((processed / totalToProcess) * 100)),
+            "in_progress",
+            {
+              processed,
+              totalToProcess,
+              updated,
+              notFound: notFound.length,
+              skipped: skipped.length,
+              duplicates: duplicates.length,
+              errors: errors.length,
+            },
+          );
+        }
+        continue;
+      }
+
+      try {
+        await db
+          .update(studentModel)
+          .set(setObj)
+          .where(eq(studentModel.id, student.id));
+        updated++;
+      } catch (e: any) {
+        errors.push({
+          rowNumber: data.rowNumbers[0] ?? 0,
+          uid: data.uidOriginal,
+          error: e?.message || "Unknown error",
+        });
+      }
+
+      processed++;
+      if (processed % 25 === 0 || processed === totalToProcess) {
+        emitProgress(
+          `Processing… (${processed}/${totalToProcess})`,
+          Math.min(99, Math.floor((processed / totalToProcess) * 100)),
+          "in_progress",
+          {
+            processed,
+            totalToProcess,
+            updated,
+            notFound: notFound.length,
+            skipped: skipped.length,
+            duplicates: duplicates.length,
+            errors: errors.length,
+          },
+        );
+      }
+    }
+
+    emitProgress("CU Roll/Registration update completed.", 100, "completed", {
+      totalRows: rows.length,
+      uniqueUids: byUid.size,
+      updated,
+      notFound: notFound.length,
+      skipped: skipped.length,
+      duplicates: duplicates.length,
+      errors: errors.length,
+    });
+
+    return {
+      totalRows: rows.length,
+      uniqueUids: byUid.size,
+      updated,
+      skipped,
+      notFound,
+      duplicates,
+      errors,
+    };
+  } catch (e: any) {
+    emitProgress(
+      "CU Roll/Registration update failed.",
+      100,
+      "error",
+      {
+        totalRows: rows.length,
+      },
+      e?.message || "Unknown error",
+    );
+    throw e;
+  }
 }
 
 // A function which accepts a excel file with the following columns, and updates the parent titles for the students
