@@ -852,6 +852,7 @@ export async function getStudentsByPapers(
       cuRegistrationApplicationNumber:
         cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
       cuRollNumber: studentModel.rollNumber,
+      cuRegistrationNumber: studentModel.registrationNumber,
     })
     .from(studentModel)
     .innerJoin(
@@ -926,7 +927,7 @@ export async function getStudentsByPapers(
     params.assignBy === "UID"
       ? (a.uid || "").localeCompare(b.uid || "")
       : params.assignBy === "CU_REGISTRATION_NUMBER"
-        ? (a.cuRegistrationApplicationNumber || "").localeCompare(
+        ? (a.cuRegistrationNumber || "").localeCompare(
             b.cuRegistrationApplicationNumber || "",
           )
         : (a.cuRollNumber || "").localeCompare(b.cuRollNumber || ""),
