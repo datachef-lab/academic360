@@ -23,6 +23,7 @@ import {
   getExamCandidatesByStudentIdAndExamId,
   getStudentsByPapers,
   sendExamAdmitCardEmails,
+  deleteExamByIdIfUpcoming,
   updateExamAdmitCardDates,
   updateExamSubject,
 } from "../services/exam-schedule.service.js";
@@ -1124,6 +1125,57 @@ export const getExamByIdController = async (
       );
   } catch (error) {
     console.error("[GET-STUDENT-EXAMS] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
+/**
+ * Delete an exam (and related rows) if the exam has not started yet.
+ *
+ * Rule: deletion allowed only if earliest exam_subjects.startTime > now.
+ */
+export const deleteExamByIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (!id || isNaN(id)) {
+      res.status(400).json(new ApiError(400, "Invalid exam id"));
+      return;
+    }
+
+    const userId = (req as any)?.user?.id as number | undefined;
+    const result = await deleteExamByIdIfUpcoming(id, userId);
+
+    if (result === null) {
+      res
+        .status(404)
+        .json(new ApiResponse(404, "NOT_FOUND", null, "Exam not found."));
+      return;
+    }
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "DELETED",
+          { examId: result.deletedExamId },
+          "Exam deleted successfully",
+        ),
+      );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (
+      message.toLowerCase().includes("cannot be deleted") ||
+      message.toLowerCase().includes("deletion is allowed")
+    ) {
+      res.status(400).json(new ApiResponse(400, "ERROR", null, message));
+      return;
+    }
+    console.error("[DELETE-EXAM] Error:", error);
     handleError(error, res, next);
   }
 };

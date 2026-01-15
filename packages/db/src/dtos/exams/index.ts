@@ -4,6 +4,14 @@ import { ExamT } from "@/schemas/models/exams/exam.model";
 import { PaperDto, ProgramCourseDto } from "../course-design";
 import { AcademicYearT, ClassT, PaperT, ShiftT,  SubjectT, SubjectTypeT } from "@/schemas";
 
+export interface ExamAuditUserInfo {
+    id: number;
+    name: string;
+    email: string;
+    image?: string | null;
+    phone?: string | null;
+}
+
 export interface RoomDto extends Omit<RoomT, "floorId"> {
     floor: FloorT;
 }
@@ -41,6 +49,8 @@ export interface ExamDto extends Omit<ExamT, "academicYearId" | "examTypeId" | "
     examShifts: ExamShiftDto[];
     examSubjectTypes: ExamSubjectTypeDto[];
     examSubjects: ExamSubjectDto[];
+    scheduledByUser?: ExamAuditUserInfo | null;
+    lastUpdatedByUser?: ExamAuditUserInfo | null;
 }
 
 export interface ExamPapersWithStats {

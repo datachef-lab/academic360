@@ -841,30 +841,32 @@ export default function ReportsPage() {
       </div>
 
       {/* Reports Table */}
-      <div className="overflow-x-hidden">
+      <div className="overflow-x-hidden ">
         <Table className="w-full table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16 border border-slate-200 text-xs sm:text-sm">Sr. No.</TableHead>
-              <TableHead className="w-56 border border-slate-200 text-xs sm:text-sm">Domain</TableHead>
-              <TableHead className="w-72 border border-slate-200 text-xs sm:text-sm">Report</TableHead>
-              <TableHead className="w-[420px] border border-slate-200 text-xs sm:text-sm">Description</TableHead>
-              <TableHead className="w-44 border border-slate-200 text-xs sm:text-sm">Filters</TableHead>
-              <TableHead className="w-36 border border-slate-200 text-xs sm:text-sm">Actions</TableHead>
+              <TableHead className="w-[6%] border border-slate-200 text-xs sm:text-sm">Sr. No.</TableHead>
+              <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm">Domain</TableHead>
+              <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm">Report</TableHead>
+              <TableHead className="w-[23%] sm:w-80 lg:w-[360px] border border-slate-200 text-xs sm:text-sm">
+                Description
+              </TableHead>
+              <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm">Filters</TableHead>
+              <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {reports.map((report, index) => {
               return (
                 <TableRow key={report.id} className="hover:bg-slate-50">
-                  <TableCell className="font-medium border border-slate-200 text-xs sm:text-sm py-3 sm:py-4 px-2 sm:px-4">
+                  <TableCell className="w-[6%] font-medium border border-slate-200 text-xs sm:text-sm py-3 sm:py-4 px-2 sm:px-4">
                     {index + 1}
                   </TableCell>
-                  <TableCell className="border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 min-w-0">
+                  <TableCell className="w-[23%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 min-w-0">
                     <Badge
                       variant="outline"
                       title={report.domain || "POST_ADMISSION"}
-                      className={`text-xs max-w-full truncate ${
+                      className={`text-xs max-w-full  ${
                         (report.domain || "POST_ADMISSION") === "POST_CU_REGISTRATION"
                           ? "bg-purple-50 text-purple-700 border-purple-200"
                           : (report.domain || "POST_ADMISSION") === "ADMISSION_PHASE"
@@ -883,18 +885,18 @@ export default function ReportsPage() {
                       {report.domain || "POST_ADMISSION"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                  <TableCell className="w-[23%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
                     <div className="flex items-center gap-2 sm:gap-3">
                       <div className="flex-shrink-0">{report.icon}</div>
                       <div className="min-w-0">
-                        <div className="font-semibold text-slate-800 text-xs sm:text-sm truncate">{report.name}</div>
+                        <div className="font-semibold text-slate-800 text-xs sm:text-sm ">{report.name}</div>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-slate-600 border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm whitespace-normal break-words">
+                  <TableCell className="w-[23%] text-slate-600 border border-slate-200 py-3 sm:py-4 px-2 sm:px-4 text-xs sm:text-sm whitespace-normal break-words">
                     {report.description}
                   </TableCell>
-                  <TableCell className="border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                  <TableCell className="w-[14%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
                     {report.requiresRegulation ? (
                       <div className="space-y-2">
                         <div className="space-y-1">
@@ -916,7 +918,7 @@ export default function ReportsPage() {
                       <span className="text-xs text-slate-400">-</span>
                     )}
                   </TableCell>
-                  <TableCell className="border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
+                  <TableCell className="w-[14%] border border-slate-200 py-3 sm:py-4 px-2 sm:px-4">
                     <Button
                       onClick={report.downloadFunction}
                       disabled={

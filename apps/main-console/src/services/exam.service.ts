@@ -72,6 +72,11 @@ export async function updateExamAdmitCardDates(
   return response.data.payload;
 }
 
+export async function deleteExamById(examId: number): Promise<{ examId: number }> {
+  const response = await axiosInstance.delete<ApiResponse<{ examId: number }>>(`/api/exams/schedule/${examId}`);
+  return response.data.payload;
+}
+
 export async function downloadAdmitCardTracking(examId: number): Promise<{ downloadUrl: string; fileName: string }> {
   const response = await axiosInstance.get(`/api/exams/schedule/admit-card-tracking/download?examId=${examId}`, {
     responseType: "blob",
