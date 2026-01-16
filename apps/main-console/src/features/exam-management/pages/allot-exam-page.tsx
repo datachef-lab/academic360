@@ -522,11 +522,11 @@ export default function AllotExamPage() {
       const shiftIds = selectedExam.examShifts.map((es) => es.shift.id!);
 
       const roomAssignments = selectedRooms.map((room) => {
-        const floor = floors.find((f) => f.id === room.floor.id);
+        const floor = floors.find((f) => f.id === room.floor?.id);
         const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
         return {
           roomId: room.id!,
-          floorId: room.floor.id,
+          floorId: room.floor?.id,
           floorName: floor?.name || null,
           roomName: room.name || `Room ${room.id}`,
           maxStudentsPerBench,
@@ -1697,7 +1697,7 @@ export default function AllotExamPage() {
                           const currentMaxStudentsPerBench =
                             selectedRoom?.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
                           const calculatedCapacity = (room.numberOfBenches || 0) * currentMaxStudentsPerBench;
-                          const floorName = room.floor.id! ? floors.find((f) => f.id === room.floor.id)?.name : "N/A";
+                          const floorName = room.floor?.id ? floors.find((f) => f.id === room.floor?.id)?.name : "N/A";
 
                           return (
                             <tr
@@ -1950,7 +1950,7 @@ export default function AllotExamPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 aspect-square">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
               <div>

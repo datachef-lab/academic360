@@ -40,7 +40,7 @@ function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floor
   const [shortName, setShortName] = useState(initialData?.shortName ?? "");
   const [numberOfBenches, setNumberOfBenches] = useState<number>(initialData?.numberOfBenches ?? 0);
   const [maxStudentsPerBench, setMaxStudentsPerBench] = useState<number>(initialData?.maxStudentsPerBench ?? 0);
-  const [floorId, setFloorId] = useState<number | undefined>(initialData?.floor.id ?? undefined);
+  const [floorId, setFloorId] = useState<number | undefined>(initialData?.floor?.id ?? undefined);
   const [isActive, setIsActive] = useState<boolean>(initialData?.isActive ?? true);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floor
       setShortName(initialData.shortName ?? "");
       setNumberOfBenches(initialData.numberOfBenches ?? 0);
       setMaxStudentsPerBench(initialData.maxStudentsPerBench ?? 0);
-      setFloorId(initialData.floor.id ?? undefined);
+      setFloorId(initialData.floor?.id ?? undefined);
       setIsActive(initialData.isActive ?? true);
     } else {
       setName("");
@@ -219,7 +219,7 @@ export default function ExamRoomsPage() {
         room.id?.toString() ?? "",
         room.name ?? "",
         room.shortName ?? "",
-        floorLookup.get(room.floor.id ?? -1) ?? "",
+        floorLookup.get(room.floor?.id ?? -1) ?? "",
       ];
       return candidates.some((value) => value.toLowerCase().includes(query));
     });
@@ -409,7 +409,7 @@ export default function ExamRoomsPage() {
                   </div>
                 ) : (
                   filteredRooms.map((room, index) => {
-                    const floorName = room.floor.id ? (floorLookup.get(room.floor.id) ?? "-") : "-";
+                    const floorName = room.floor?.id ? (floorLookup.get(room.floor.id) ?? "-") : "-";
                     return (
                       <div
                         key={room.id ?? `${room.name}-${index}`}

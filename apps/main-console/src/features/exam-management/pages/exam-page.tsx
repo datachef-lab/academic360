@@ -61,6 +61,7 @@ export default function ExamPage() {
   const [updatingDates, setUpdatingDates] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingExam, setDeletingExam] = useState(false);
+  const [sendAdmitCardsDialogOpen, setSendAdmitCardsDialogOpen] = useState(false);
 
   const [exportProgressOpen, setExportProgressOpen] = useState(false);
   const setIsExporting = useState(false)[1];
@@ -695,12 +696,7 @@ export default function ExamPage() {
                     <Button
                       variant="outline"
                       onClick={() => {
-                        const isConfirmed = confirm(
-                          "Are you sure that you want to send the admit-cards to the students (via email)?",
-                        );
-                        if (isConfirmed) {
-                          handleTriggerAdmitCard();
-                        }
+                        setSendAdmitCardsDialogOpen(true);
                       }}
                       className="p-2"
                     >
@@ -940,6 +936,39 @@ export default function ExamPage() {
             </Button>
             <Button onClick={handleUpdateAdmitCardDates} disabled={updatingDates}>
               {updatingDates ? "Updating..." : "Update Dates"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Admit Cards Confirmation Dialog */}
+      <Dialog open={sendAdmitCardsDialogOpen} onOpenChange={setSendAdmitCardsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Admit Cards</DialogTitle>
+            <DialogDescription>
+              <span className="font-semibold text-gray-900">
+                Are you sure that you want to send the admit cards to all students via email?
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm font-semibold text-gray-700">
+              <strong>Warning:</strong> This will send admit card PDFs to all registered students for this exam. The
+              process may take a few minutes depending on the number of students.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendAdmitCardsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setSendAdmitCardsDialogOpen(false);
+                handleTriggerAdmitCard();
+              }}
+            >
+              Send Admit Cards
             </Button>
           </DialogFooter>
         </DialogContent>
