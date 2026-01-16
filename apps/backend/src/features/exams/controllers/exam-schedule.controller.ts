@@ -1077,19 +1077,43 @@ export const getAllExamsController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { page = "1", pageSize = "10" } = req.query;
+    const {
+      page = "1",
+      pageSize = "10",
+      examTypeId,
+      classId,
+      academicYearId,
+      affiliationId,
+      regulationTypeId,
+      dateFrom,
+      dateTo,
+      status,
+    } = req.query;
 
     const pageNum = Number(page);
     const pageSizeNum = Number(pageSize);
 
     if (isNaN(pageNum) || isNaN(pageSizeNum)) {
-      res
-        .status(400)
-        .json(new ApiError(400, "Invalid studentId, page or pageSize"));
+      res.status(400).json(new ApiError(400, "Invalid page or pageSize"));
       return;
     }
 
-    const result = await findAll(pageNum, pageSizeNum);
+    // Parse filters
+    const filters = {
+      examTypeId: examTypeId ? Number(examTypeId) : null,
+      classId: classId ? Number(classId) : null,
+      academicYearId: academicYearId ? Number(academicYearId) : null,
+      affiliationId: affiliationId ? Number(affiliationId) : null,
+      regulationTypeId: regulationTypeId ? Number(regulationTypeId) : null,
+      dateFrom: dateFrom ? String(dateFrom) : null,
+      dateTo: dateTo ? String(dateTo) : null,
+      status:
+        status && ["upcoming", "recent", "previous"].includes(String(status))
+          ? (String(status) as "upcoming" | "recent" | "previous")
+          : null,
+    };
+
+    const result = await findAll(pageNum, pageSizeNum, filters);
 
     res
       .status(200)
@@ -1097,7 +1121,7 @@ export const getAllExamsController = async (
         new ApiResponse(200, "SUCCESS", result, "Exams fetched successfully"),
       );
   } catch (error) {
-    console.error("[GET-STUDENT-EXAMS] Error:", error);
+    console.error("[GET-ALL-EXAMS] Error:", error);
     handleError(error, res, next);
   }
 };

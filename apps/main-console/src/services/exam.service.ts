@@ -3,9 +3,54 @@ import axiosInstance from "@/utils/api";
 import { PaginatedResponse } from "./course-design.api";
 import { ExamDto, ExamPapersWithStats, ExamSubjectDto } from "@/dtos";
 
-export async function fetchExams(page: number = 1, pageSize: number = 10): Promise<PaginatedResponse<ExamDto>> {
+export interface ExamFilters {
+  examTypeId?: number | null;
+  classId?: number | null;
+  academicYearId?: number | null;
+  affiliationId?: number | null;
+  regulationTypeId?: number | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  status?: "upcoming" | "recent" | "previous" | null;
+}
+
+export async function fetchExams(
+  page: number = 1,
+  pageSize: number = 10,
+  filters?: ExamFilters,
+): Promise<PaginatedResponse<ExamDto>> {
+  const params = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+  });
+
+  if (filters?.examTypeId) {
+    params.append("examTypeId", String(filters.examTypeId));
+  }
+  if (filters?.classId) {
+    params.append("classId", String(filters.classId));
+  }
+  if (filters?.academicYearId) {
+    params.append("academicYearId", String(filters.academicYearId));
+  }
+  if (filters?.affiliationId) {
+    params.append("affiliationId", String(filters.affiliationId));
+  }
+  if (filters?.regulationTypeId) {
+    params.append("regulationTypeId", String(filters.regulationTypeId));
+  }
+  if (filters?.dateFrom) {
+    params.append("dateFrom", filters.dateFrom);
+  }
+  if (filters?.dateTo) {
+    params.append("dateTo", filters.dateTo);
+  }
+  if (filters?.status) {
+    params.append("status", filters.status);
+  }
+
   const response = await axiosInstance.get<ApiResponse<PaginatedResponse<ExamDto>>>(
-    `/api/exams/schedule?page=${page}&pageSize=${pageSize}`,
+    `/api/exams/schedule?${params.toString()}`,
   );
   return response.data.payload;
 }

@@ -78,6 +78,21 @@ export default function AllotExamPage() {
   const [admitCardStartDate, setAdmitCardStartDate] = useState<string>("");
   const [admitCardEndDate, setAdmitCardEndDate] = useState<string>("");
 
+  // Validate admit card dates
+  const areAdmitCardDatesValid = useCallback(() => {
+    if (!admitCardStartDate || admitCardStartDate.trim() === "") return false;
+    if (!admitCardEndDate || admitCardEndDate.trim() === "") return false;
+
+    // Check if end date is after start date
+    const startDate = new Date(admitCardStartDate);
+    const endDate = new Date(admitCardEndDate);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return false;
+    if (endDate <= startDate) return false;
+
+    return true;
+  }, [admitCardStartDate, admitCardEndDate]);
+
   // Fetch all exams for selection
   const { data: examsData, isLoading: loadingExams } = useQuery(
     ["exams", "for-allotment"],
@@ -691,6 +706,33 @@ export default function AllotExamPage() {
   };
 
   const handleAllotExam = () => {
+    // Validate admit card dates are provided
+    if (!admitCardStartDate || admitCardStartDate.trim() === "") {
+      toast.error("Please provide Admit Card Start Date & Time");
+      return;
+    }
+    if (!admitCardEndDate || admitCardEndDate.trim() === "") {
+      toast.error("Please provide Admit Card End Date & Time");
+      return;
+    }
+
+    // Validate dates are valid
+    const startDate = new Date(admitCardStartDate);
+    const endDate = new Date(admitCardEndDate);
+
+    if (isNaN(startDate.getTime())) {
+      toast.error("Invalid Admit Card Start Date");
+      return;
+    }
+    if (isNaN(endDate.getTime())) {
+      toast.error("Invalid Admit Card End Date");
+      return;
+    }
+    if (endDate <= startDate) {
+      toast.error("Admit Card End Date must be after Start Date");
+      return;
+    }
+
     const capacityInfo = calculateInsufficientCapacity();
 
     // If there's insufficient capacity, show confirmation dialog
@@ -874,11 +916,13 @@ export default function AllotExamPage() {
           {selectedExam && (
             <Card className="border-0 shadow-none mb-4">
               <CardContent className="pt-4 pb-4">
-                <Label className="text-sm font-medium text-gray-700 mb-3 block">Admit Card Download Dates:</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                  Admit Card Download Dates: <span className="text-red-500">*</span>
+                </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="admit-card-start-date" className="text-sm font-medium text-gray-700">
-                      Start Date & Time
+                      Start Date & Time <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="admit-card-start-date"
@@ -893,11 +937,12 @@ export default function AllotExamPage() {
                         }
                       }}
                       className="h-10"
+                      required
                     />
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="admit-card-end-date" className="text-sm font-medium text-gray-700">
-                      End Date & Time
+                      End Date & Time <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="admit-card-end-date"
@@ -912,11 +957,13 @@ export default function AllotExamPage() {
                         }
                       }}
                       className="h-10"
+                      required
                     />
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Set the date range when students can download their admit cards. Leave empty if not applicable.
+                  <span className="text-red-500">*</span> Required: Set the date range when students can download their
+                  admit cards.
                 </p>
               </CardContent>
             </Card>
@@ -1507,10 +1554,15 @@ export default function AllotExamPage() {
 
           {/* Allot Exam button - Only show if exam is selected */}
           {selectedExam && (
-            <div className="mt-8 flex justify-end">
+            <div className="mt-8 flex flex-col items-end gap-2">
               <Button
                 onClick={handleAllotExam}
-                disabled={allotExamMutation.status === "loading" || selectedRooms.length === 0 || !selectedExam}
+                disabled={
+                  allotExamMutation.status === "loading" ||
+                  selectedRooms.length === 0 ||
+                  !selectedExam ||
+                  !areAdmitCardDatesValid()
+                }
                 className="w-full sm:w-auto sm:min-w-[180px] h-12 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all"
               >
                 {allotExamMutation.status === "loading" ? (
@@ -1522,6 +1574,24 @@ export default function AllotExamPage() {
                   "Allot Exam"
                 )}
               </Button>
+              {!areAdmitCardDatesValid() && (
+                <p className="text-xs text-red-500">
+                  <AlertTriangle className="w-3 h-3 inline mr-1" />
+                  {!admitCardStartDate || admitCardStartDate.trim() === ""
+                    ? "Please provide admit card start date"
+                    : !admitCardEndDate || admitCardEndDate.trim() === ""
+                      ? "Please provide admit card end date"
+                      : new Date(admitCardEndDate) <= new Date(admitCardStartDate)
+                        ? "End date must be after start date"
+                        : "Invalid admit card dates"}
+                </p>
+              )}
+              {selectedRooms.length === 0 && (
+                <p className="text-xs text-red-500">
+                  <AlertTriangle className="w-3 h-3 inline mr-1" />
+                  Please select at least one room
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -1859,8 +1929,8 @@ export default function AllotExamPage() {
                             {assignBy === "UID"
                               ? student.uid
                               : assignBy === "CU_ROLL_NUMBER"
-                                ? "N/A" // Add CU roll number if available
-                                : student.cuRegistrationApplicationNumber || "N/A"}
+                                ? student.rollNumber || "N/A"
+                                : student.registrationNumber || "N/A"}
                           </td>
                           <td className="p-4 align-middle border-r border-border text-sm text-center font-mono">
                             {foilNumberMap[student.uid] || "0"}
@@ -1899,10 +1969,8 @@ export default function AllotExamPage() {
                         Name: student.name || "N/A",
                         UID: assignBy === "UID" ? student.uid || "N/A" : "N/A",
                         "CU Reg. No.":
-                          assignBy === "CU_REGISTRATION_NUMBER"
-                            ? student.cuRegistrationApplicationNumber || "N/A"
-                            : "N/A",
-                        "CU Roll No.": assignBy === "CU_ROLL_NUMBER" ? "N/A" : "N/A",
+                          assignBy === "CU_REGISTRATION_NUMBER" ? student.registrationNumber || "N/A" : "N/A",
+                        "CU Roll No.": assignBy === "CU_ROLL_NUMBER" ? student.rollNumber || "N/A" : "N/A",
                         "Foil Number": foilNumberMap[student.uid] || "0",
                         Email: student.email || "N/A",
                         WhatsApp: student.whatsappPhone || "N/A",

@@ -130,6 +130,8 @@ export interface StudentWithSeat {
   seatNumber: string;
   programCourseId: number | null;
   shiftId: number | null;
+  registrationNumber: string | null;
+  rollNumber: string | null;
 }
 
 export interface GetStudentsResponse {
