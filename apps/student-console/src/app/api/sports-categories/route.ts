@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+// Mark as dynamic
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import {
   createSportCategory,
   getAllSportCategories,
   getSportCategoryById,
   updateSportCategory,
-  deleteSportCategory
+  deleteSportCategory,
 } from "@/lib/services/adm-sports-category.service";
 
 export async function POST(req: NextRequest) {

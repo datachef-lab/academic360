@@ -3811,6 +3811,26 @@ export async function updateExamSubject(
     .from(subjectModel)
     .where(eq(subjectModel.id, updatedExamSubject.subjectId));
 
+  // Emit socket event for exam subject update
+  const io = socketService.getIO();
+  if (io) {
+    io.emit("exam_updated", {
+      examId: foundExamSubject.examId,
+      type: "subject_datetime",
+      message: "Exam subject date/time has been updated",
+      timestamp: new Date().toISOString(),
+    });
+    // Also emit notification to all admins/staff
+    io.emit("notification", {
+      id: `exam_update_${foundExamSubject.examId}_${Date.now()}`,
+      type: "update",
+      message: `Exam ${foundExamSubject.examId} subject date/time has been updated`,
+      createdAt: new Date(),
+      read: false,
+      meta: { examId: foundExamSubject.examId, type: "subject_datetime" },
+    });
+  }
+
   return {
     subject,
     ...updatedExamSubject,

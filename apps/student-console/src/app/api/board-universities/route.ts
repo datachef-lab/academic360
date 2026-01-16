@@ -1,11 +1,21 @@
-import { NextResponse } from 'next/server';
-import { dbPostgres } from '@/db';
-import { boardUniversities } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { createBoardUniversity, updateBoardUniversity, toggleBoardUniversityStatus, getAllBoardUniversities, getBoardUniversityById } from "@/lib/services/board-university.service";
-import { BoardUniversityDto } from '@/types/admissions';
-import { createSubject } from '@/lib/services/academic-subject.service';
+import { NextResponse } from "next/server";
+// Mark as dynamic
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+import { dbPostgres } from "@/db";
+import { boardUniversities } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import {
+  createBoardUniversity,
+  updateBoardUniversity,
+  toggleBoardUniversityStatus,
+  getAllBoardUniversities,
+  getBoardUniversityById,
+} from "@/lib/services/board-university.service";
+import { BoardUniversityDto } from "@/types/admissions";
+import { createSubject } from "@/lib/services/academic-subject.service";
 
 export async function GET(request: Request) {
   try {
@@ -14,7 +24,7 @@ export async function GET(request: Request) {
     const disabled = searchParams.get("disabled");
 
     if (id) {
-      const university = await getBoardUniversityById(+id) 
+      const university = await getBoardUniversityById(+id);
 
       if (!university) {
         return NextResponse.json({ error: "Board/University not found" }, { status: 404 });
@@ -90,4 +100,4 @@ export async function PATCH(request: Request) {
     console.error("Error toggling board university status:", error);
     return NextResponse.json({ error: "Failed to toggle board university status" }, { status: 500 });
   }
-} 
+}

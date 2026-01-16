@@ -76,20 +76,20 @@ export default function HomeContent() {
             return false;
           }
 
-          // Check if exam is completed: exam start date and last end time have passed
-          const firstSubjectStart = new Date(exam.examSubjects[0].startTime);
-          const lastSubjectEnd = new Date(exam.examSubjects[exam.examSubjects.length - 1].endTime);
+          // Check if all papers are completed by finding the latest end time
+          const lastPaper = exam.examSubjects.reduce((latest, current) => {
+            const currentEnd = new Date(current.endTime);
+            const latestEnd = new Date(latest.endTime);
+            return currentEnd > latestEnd ? current : latest;
+          });
+          const lastEndTime = new Date(lastPaper.endTime).getTime();
 
-          const firstStartTime = firstSubjectStart.getTime();
-          const lastEndTime = lastSubjectEnd.getTime();
-
-          // Don't show in widget if exam start date and last end time have both passed
-          // This means the exam is fully completed
-          if (firstStartTime <= nowTime && lastEndTime <= nowTime) {
-            return false; // Exam is completed
+          // Don't show in widget if all papers have been completed
+          if (lastEndTime <= nowTime) {
+            return false; // All papers completed
           }
 
-          // Show if all conditions are met
+          // Show if there are still upcoming or ongoing papers
           return true;
         });
         setExams(filteredExams);

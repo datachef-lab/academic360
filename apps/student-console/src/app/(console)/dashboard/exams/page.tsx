@@ -43,62 +43,112 @@ export default function ExamsContent() {
   today.setHours(0, 0, 0, 0); // Set to beginning of today
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
+  const now = new Date(); // Current time for time-based checks
 
-  // Upcoming exams: future dates (starting from tomorrow)
-  const upcomingExams = exams
-    .filter((exam) => {
-      if (!exam.examSubjects || exam.examSubjects.length === 0) return false;
-      const examDate = new Date(exam.examSubjects[0].startTime);
+  // Helper function to check if exam has any upcoming papers
+  const hasUpcomingPapers = (exam: ExamDto): boolean => {
+    if (!exam.examSubjects || exam.examSubjects.length === 0) return false;
+    return exam.examSubjects.some((subject) => {
+      const examDate = new Date(subject.startTime);
       examDate.setHours(0, 0, 0, 0);
       return examDate > today;
-    })
-    .sort(
-      (a, b) =>
-        parseISO(new Date(a.examSubjects[0].startTime).toISOString()).getTime() -
-        parseISO(new Date(b.examSubjects[0].startTime).toISOString()).getTime(),
-    );
+    });
+  };
 
-  // Today's exams: exams happening today
-  const recentExams = exams
-    .filter((exam) => {
-      if (!exam.examSubjects || exam.examSubjects.length === 0) return false;
-      const examDate = new Date(exam.examSubjects[0].startTime);
+  // Helper function to check if exam has any papers today
+  const hasPapersToday = (exam: ExamDto): boolean => {
+    if (!exam.examSubjects || exam.examSubjects.length === 0) return false;
+    return exam.examSubjects.some((subject) => {
+      const examDate = new Date(subject.startTime);
       examDate.setHours(0, 0, 0, 0);
-
       return examDate.getTime() === today.getTime();
-    })
+    });
+  };
+
+  // Helper function to check if all papers are completed
+  const allPapersCompleted = (exam: ExamDto): boolean => {
+    if (!exam.examSubjects || exam.examSubjects.length === 0) return false;
+    // Find the last paper (latest end time)
+    const lastPaper = exam.examSubjects.reduce((latest, current) => {
+      const currentEnd = new Date(current.endTime);
+      const latestEnd = new Date(latest.endTime);
+      return currentEnd > latestEnd ? current : latest;
+    });
+    const lastPaperEnd = new Date(lastPaper.endTime);
+    return now > lastPaperEnd;
+  };
+
+  // Upcoming exams: Has at least one paper in the future
+  const upcomingExams = exams
+    .filter((exam) => hasUpcomingPapers(exam))
     .sort((a, b) => {
-      const timeA = new Date(a.examSubjects[0].startTime).getTime();
-      const timeB = new Date(b.examSubjects[0].startTime).getTime();
-      return timeA - timeB;
+      // Sort by earliest upcoming paper
+      const nextPaperA = a.examSubjects
+        .filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d > today;
+        })
+        .sort((s1, s2) => new Date(s1.startTime).getTime() - new Date(s2.startTime).getTime())[0];
+      const nextPaperB = b.examSubjects
+        .filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d > today;
+        })
+        .sort((s1, s2) => new Date(s1.startTime).getTime() - new Date(s2.startTime).getTime())[0];
+
+      if (!nextPaperA || !nextPaperB) return 0;
+      return new Date(nextPaperA.startTime).getTime() - new Date(nextPaperB.startTime).getTime();
     });
 
-  // Completed exams: exams from before today or completed today based on time
-  const previousExams = exams
+  // Today's exams: Has at least one paper today (not yet completed)
+  const recentExams = exams
     .filter((exam) => {
-      if (!exam.examSubjects || exam.examSubjects.length === 0) return false;
-      const subject = exam.examSubjects[0];
-
-      const examStart = new Date(subject.startTime);
-      const examEnd = new Date(subject.endTime);
-
-      const examDate = new Date(examStart);
-      examDate.setHours(0, 0, 0, 0);
-
-      // 1️⃣ Exams before today
-      if (examDate.getTime() < today.getTime()) return true;
-
-      // 2️⃣ Exams today but already completed
-      if (examDate.getTime() === today.getTime()) {
-        return new Date() > examEnd;
-      }
-
-      return false;
+      if (!hasPapersToday(exam)) return false;
+      // Only show if not all papers are completed
+      return !allPapersCompleted(exam);
     })
     .sort((a, b) => {
-      const endA = new Date(a.examSubjects[0].endTime).getTime();
-      const endB = new Date(b.examSubjects[0].endTime).getTime();
-      return endB - endA; // latest completed first
+      // Sort by earliest paper today
+      const todayPaperA = a.examSubjects
+        .filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d.getTime() === today.getTime();
+        })
+        .sort((s1, s2) => new Date(s1.startTime).getTime() - new Date(s2.startTime).getTime())[0];
+      const todayPaperB = b.examSubjects
+        .filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d.getTime() === today.getTime();
+        })
+        .sort((s1, s2) => new Date(s1.startTime).getTime() - new Date(s2.startTime).getTime())[0];
+
+      if (!todayPaperA || !todayPaperB) return 0;
+      return new Date(todayPaperA.startTime).getTime() - new Date(todayPaperB.startTime).getTime();
+    });
+
+  // Completed exams: All papers have been completed
+  const previousExams = exams
+    .filter((exam) => {
+      // Only completed if ALL papers are done AND no upcoming/today papers
+      return allPapersCompleted(exam) && !hasUpcomingPapers(exam) && !hasPapersToday(exam);
+    })
+    .sort((a, b) => {
+      // Sort by latest end time (most recent first)
+      const lastPaperA = a.examSubjects.reduce((latest, current) => {
+        const currentEnd = new Date(current.endTime);
+        const latestEnd = new Date(latest.endTime);
+        return currentEnd > latestEnd ? current : latest;
+      });
+      const lastPaperB = b.examSubjects.reduce((latest, current) => {
+        const currentEnd = new Date(current.endTime);
+        const latestEnd = new Date(latest.endTime);
+        return currentEnd > latestEnd ? current : latest;
+      });
+      return new Date(lastPaperB.endTime).getTime() - new Date(lastPaperA.endTime).getTime();
     });
 
   useEffect(() => {
@@ -336,18 +386,37 @@ export default function ExamsContent() {
   //   }, [student, accessToken]);
 
   const getNextExamDaysAway = () => {
-    if (upcomingExams.length === 0 || !upcomingExams[0].examSubjects || upcomingExams[0].examSubjects.length === 0)
-      return "N/A";
+    if (upcomingExams.length === 0) return "N/A";
 
-    const nextExamDate = new Date(upcomingExams[0].examSubjects[0].startTime);
+    // Find the next upcoming paper across all upcoming exams
+    let nextPaper = null;
+    for (const exam of upcomingExams) {
+      if (!exam.examSubjects || exam.examSubjects.length === 0) continue;
+      const upcomingPapers = exam.examSubjects
+        .filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d > today;
+        })
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-    const today = new Date();
+      if (upcomingPapers.length > 0) {
+        if (!nextPaper || new Date(upcomingPapers[0].startTime) < new Date(nextPaper.startTime)) {
+          nextPaper = upcomingPapers[0];
+        }
+      }
+    }
+
+    if (!nextPaper) return "N/A";
+
+    const nextExamDate = new Date(nextPaper.startTime);
+    const todayCopy = new Date();
 
     // Normalize both to midnight for day-based diff
     nextExamDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
+    todayCopy.setHours(0, 0, 0, 0);
 
-    const diffTime = nextExamDate.getTime() - today.getTime();
+    const diffTime = nextExamDate.getTime() - todayCopy.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) return "Today";
@@ -361,19 +430,27 @@ export default function ExamsContent() {
     if (recentExams.length === 0) return 0;
 
     return recentExams.reduce((total, exam) => {
-      const subject = exam.examSubjects[0];
+      // Sum duration for all papers today in this exam
+      const todayPapers = exam.examSubjects.filter((s) => {
+        const d = new Date(s.startTime);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+      });
 
-      const start = new Date(subject.startTime);
-      const end = new Date(subject.endTime);
+      const examDuration = todayPapers.reduce((examTotal, subject) => {
+        const start = new Date(subject.startTime);
+        const end = new Date(subject.endTime);
+        const durationMinutes = (end.getTime() - start.getTime()) / 60000;
 
-      const durationMinutes = (end.getTime() - start.getTime()) / 60000;
+        // Safety guard
+        if (durationMinutes <= 0 || durationMinutes > 480 || isNaN(durationMinutes)) {
+          return examTotal + 120; // fallback 2 hours
+        }
 
-      // Safety guard
-      if (durationMinutes <= 0 || durationMinutes > 480 || isNaN(durationMinutes)) {
-        return total + 120; // fallback 2 hours
-      }
+        return examTotal + durationMinutes;
+      }, 0);
 
-      return total + durationMinutes;
+      return total + examDuration;
     }, 0);
   };
 
@@ -430,6 +507,42 @@ export default function ExamsContent() {
     // Icon based on variant
     const Icon = variant === "completed" ? FileText : variant === "today" ? GraduationCap : Calendar;
 
+    // Determine which paper to display based on variant
+    const getRelevantPaper = () => {
+      if (!exam.examSubjects || exam.examSubjects.length === 0) return null;
+
+      if (variant === "default") {
+        // Show next upcoming paper
+        const upcomingPapers = exam.examSubjects
+          .filter((s) => {
+            const d = new Date(s.startTime);
+            d.setHours(0, 0, 0, 0);
+            return d > today;
+          })
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        return upcomingPapers[0] || exam.examSubjects[0];
+      } else if (variant === "today") {
+        // Show today's paper (earliest if multiple)
+        const todayPapers = exam.examSubjects
+          .filter((s) => {
+            const d = new Date(s.startTime);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime() === today.getTime();
+          })
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        return todayPapers[0] || exam.examSubjects[0];
+      } else {
+        // Completed: Show last paper
+        return exam.examSubjects.reduce((latest, current) => {
+          const currentEnd = new Date(current.endTime);
+          const latestEnd = new Date(latest.endTime);
+          return currentEnd > latestEnd ? current : latest;
+        });
+      }
+    };
+
+    const displayPaper = getRelevantPaper();
+
     return (
       <motion.div
         key={exam.id}
@@ -446,40 +559,19 @@ export default function ExamsContent() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">{exam.examType?.name || "Exam"}</h3>
-                  {exam.examSubjects && exam.examSubjects.length > 0 && exam.examSubjects[0]?.subject?.name && (
-                    <p className={`${styles.titleColor} font-medium mb-2`}>{exam.examSubjects[0].subject.name}</p>
+                  {displayPaper?.subject?.name && (
+                    <p className={`${styles.titleColor} font-medium mb-2`}>{displayPaper.subject.name}</p>
                   )}
-                  {exam.examSubjects && exam.examSubjects.length > 0 && (
+                  {displayPaper && (
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
-                        {format(new Date(exam.examSubjects[0].startTime), "dd/MM/yyyy")}
+                        {format(new Date(displayPaper.startTime), "dd/MM/yyyy")}
                       </div>
                       <div className="flex items-center">
                         <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
-                        {format(new Date(exam.examSubjects[0].startTime), "hh:mm a")}
+                        {format(new Date(displayPaper.startTime), "hh:mm a")}
                       </div>
-                      {exam.locations && exam.locations.length > 0 && (
-                        <div className="flex items-center">
-                          <BarChart className="w-4 h-4 mr-1.5 text-gray-400" />
-                          <div className="flex flex-col space-y-0.5">
-                            {exam.locations
-                              .map((loc) => {
-                                const roomName = loc.room?.name || "";
-                                const floorName = loc.room?.floor?.name || "";
-                                if (!roomName) return null;
-                                return (
-                                  <div key={loc.id}>
-                                    <div className="text-sm font-semibold text-gray-800">{roomName}</div>
-                                    {floorName && <div className="text-xs text-gray-600 font-mono">{floorName}</div>}
-                                  </div>
-                                );
-                              })
-                              .filter(Boolean)}
-                            {exam.locations.length === 0 && <span className="text-xs">N/A</span>}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>

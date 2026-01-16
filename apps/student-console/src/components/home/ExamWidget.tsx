@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExamDto } from "@/dtos";
 import { format } from "date-fns";
-import { Calendar, Clock, GraduationCap, MapPin, ArrowRight } from "lucide-react";
+import { Calendar, Clock, GraduationCap, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 interface ExamWidgetProps {
@@ -12,80 +12,106 @@ interface ExamWidgetProps {
 }
 
 export default function ExamWidget({ exams }: ExamWidgetProps) {
-  // Filter exams: only show if admit card dates are valid
-  // Widget should NOT display if:
-  // 1. Admit card start date is not there
-  // 2. Admit card start date > current time
-  // 3. Admit card end date < current time (if exists)
-  const upcomingExams = exams.filter((exam) => {
-    const now = new Date();
-    const nowTime = now.getTime();
+  const now = new Date();
+  const nowTime = now.getTime();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    // 1. If no admit card start date, don't show
-    if (!exam.admitCardStartDownloadDate) {
-      return false;
-    }
+  // Helper: Check if all papers in an exam are completed
+  const allPapersCompleted = (exam: ExamDto): boolean => {
+    if (!exam.examSubjects || exam.examSubjects.length === 0) return true;
+    // Find the last paper by end time
+    const lastPaper = exam.examSubjects.reduce((latest, current) => {
+      const currentEnd = new Date(current.endTime);
+      const latestEnd = new Date(latest.endTime);
+      return currentEnd > latestEnd ? current : latest;
+    });
+    return nowTime > new Date(lastPaper.endTime).getTime();
+  };
 
-    // 2. Check if admit card start date is greater than current time
-    const startDate = new Date(exam.admitCardStartDownloadDate);
-    const startTime = startDate.getTime();
+  // Helper: Get next upcoming or today's paper for an exam
+  const getNextPaper = (exam: ExamDto) => {
+    if (!exam.examSubjects || exam.examSubjects.length === 0) return null;
 
-    if (startTime > nowTime) {
-      return false; // Admit card download hasn't started yet
-    }
+    // First, check for papers today
+    const todayPapers = exam.examSubjects
+      .filter((s) => {
+        const d = new Date(s.startTime);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime() && new Date(s.endTime).getTime() > nowTime;
+      })
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-    // 3. Check if admit card end date exists and is less than current time
-    if (exam.admitCardLastDownloadDate) {
-      const endDate = new Date(exam.admitCardLastDownloadDate);
-      const endTime = endDate.getTime();
+    if (todayPapers.length > 0) return todayPapers[0];
 
-      if (endTime < nowTime) {
-        return false; // Admit card download period has ended
+    // If no papers today, get next upcoming paper
+    const upcomingPapers = exam.examSubjects
+      .filter((s) => {
+        const d = new Date(s.startTime);
+        d.setHours(0, 0, 0, 0);
+        return d > today;
+      })
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    return upcomingPapers.length > 0 ? upcomingPapers[0] : null;
+  };
+
+  // Filter exams: only show if admit card dates are valid AND has upcoming/today papers
+  const upcomingExams = exams
+    .filter((exam) => {
+      // 1. If no admit card start date, don't show
+      if (!exam.admitCardStartDownloadDate) {
+        return false;
       }
-    }
 
-    // Check if exam has subjects
-    if (!exam.examSubjects || exam.examSubjects.length === 0) {
-      return false;
-    }
+      // 2. Check if admit card start date is greater than current time
+      const startDate = new Date(exam.admitCardStartDownloadDate);
+      const startTime = startDate.getTime();
 
-    // Get the first subject start time and last subject end time
-    const firstSubjectStart = new Date(exam.examSubjects[0].startTime);
-    const lastSubjectEnd = new Date(exam.examSubjects[exam.examSubjects.length - 1].endTime);
+      if (startTime > nowTime) {
+        return false; // Admit card download hasn't started yet
+      }
 
-    const firstStartTime = firstSubjectStart.getTime();
-    const lastEndTime = lastSubjectEnd.getTime();
+      // 3. Check if admit card end date exists and is less than current time
+      if (exam.admitCardLastDownloadDate) {
+        const endDate = new Date(exam.admitCardLastDownloadDate);
+        const endTime = endDate.getTime();
 
-    // Don't show in widget if exam start date and last end time have both passed
-    // This means the exam is fully completed
-    if (firstStartTime <= nowTime && lastEndTime <= nowTime) {
-      return false; // Exam is completed
-    }
+        if (endTime < nowTime) {
+          return false; // Admit card download period has ended
+        }
+      }
 
-    // Show if all conditions are met
-    return true;
-  });
+      // 4. Check if exam has subjects
+      if (!exam.examSubjects || exam.examSubjects.length === 0) {
+        return false;
+      }
 
-  // Sort by start time (earliest first) and take the first one
-  const latestExam = upcomingExams.sort((a, b) => {
-    const aStart = new Date(a.examSubjects[0]?.startTime || 0).getTime();
-    const bStart = new Date(b.examSubjects[0]?.startTime || 0).getTime();
-    return aStart - bStart;
-  })[0];
+      // 5. Don't show if all papers are completed
+      if (allPapersCompleted(exam)) {
+        return false;
+      }
 
-  if (!latestExam) {
+      // 6. Only show if there's at least one paper today or upcoming
+      return getNextPaper(exam) !== null;
+    })
+    .map((exam) => ({
+      exam,
+      nextPaper: getNextPaper(exam)!,
+    }))
+    .sort((a, b) => {
+      // Sort by next paper's start time
+      return new Date(a.nextPaper.startTime).getTime() - new Date(b.nextPaper.startTime).getTime();
+    });
+
+  if (upcomingExams.length === 0) {
     return null;
   }
 
-  const firstSubject = latestExam.examSubjects?.[0];
-  if (!firstSubject) return null;
+  const { exam: latestExam, nextPaper } = upcomingExams[0];
 
-  const examDate = new Date(firstSubject.startTime);
-  const now = new Date();
+  const examDate = new Date(nextPaper.startTime);
   const isToday = examDate.toDateString() === now.toDateString();
-
-  const roomName = latestExam.locations?.[0]?.room?.name || "";
-  const floorName = latestExam.locations?.[0]?.room?.floor?.name || "";
 
   return (
     <Link href="/dashboard/exams" className="block">
@@ -119,9 +145,7 @@ export default function ExamWidget({ exams }: ExamWidgetProps) {
                 )}
               </div>
 
-              {firstSubject.subject?.name && (
-                <p className="text-sm text-gray-600 font-medium">{firstSubject.subject.name}</p>
-              )}
+              {nextPaper.subject?.name && <p className="text-sm text-gray-600 font-medium">{nextPaper.subject.name}</p>}
 
               <div className="space-y-1 text-xs text-gray-600">
                 <div className="flex items-center gap-1.5">
@@ -132,15 +156,6 @@ export default function ExamWidget({ exams }: ExamWidgetProps) {
                   <Clock className="w-3 h-3" />
                   <span>{format(examDate, "hh:mm a")}</span>
                 </div>
-                {roomName && (
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3 h-3" />
-                    <span>
-                      {roomName}
-                      {floorName && ` (${floorName})`}
-                    </span>
-                  </div>
-                )}
               </div>
 
               <div className="pt-2 flex items-center text-purple-600 text-sm font-medium">
