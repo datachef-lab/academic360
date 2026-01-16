@@ -16,8 +16,10 @@ import {
   count,
   desc,
   eq,
+  gte,
   ilike,
   inArray,
+  lte,
   or,
   sql,
 } from "drizzle-orm";
@@ -679,6 +681,8 @@ export interface StudentWithSeat {
   seatNumber: string;
   programCourseId: number | null;
   shiftId: number | null;
+  registrationNumber: string | null;
+  rollNumber: string | null;
 }
 
 /**
@@ -923,15 +927,35 @@ export async function getStudentsByPapers(
 
   //   console.log("[EXAM-SCHEDULE] Students:", students);
 
-  students.sort((a, b) =>
-    params.assignBy === "UID"
-      ? (a.uid || "").localeCompare(b.uid || "")
-      : params.assignBy === "CU_REGISTRATION_NUMBER"
-        ? (a.cuRegistrationNumber || "").localeCompare(
-            b.cuRegistrationApplicationNumber || "",
-          )
-        : (a.cuRollNumber || "").localeCompare(b.cuRollNumber || ""),
-  );
+  // Custom sort that pushes null/empty values to the end
+  students.sort((a, b) => {
+    let aValue: string | null | undefined;
+    let bValue: string | null | undefined;
+
+    if (params.assignBy === "UID") {
+      aValue = a.uid;
+      bValue = b.uid;
+    } else if (params.assignBy === "CU_REGISTRATION_NUMBER") {
+      aValue = a.cuRegistrationNumber;
+      bValue = b.cuRegistrationNumber;
+    } else {
+      // CU_ROLL_NUMBER
+      aValue = a.cuRollNumber;
+      bValue = b.cuRollNumber;
+    }
+
+    // Normalize to empty string if null/undefined
+    const aStr = aValue?.trim() || "";
+    const bStr = bValue?.trim() || "";
+
+    // Push empty values to the end
+    if (!aStr && !bStr) return 0; // Both empty, equal
+    if (!aStr) return 1; // a is empty, comes after b
+    if (!bStr) return -1; // b is empty, comes after a
+
+    // Both have values, compare normally
+    return aStr.localeCompare(bStr);
+  });
 
   const result: StudentWithSeat[] = [];
   let studentIdx = 0;
@@ -965,6 +989,8 @@ export async function getStudentsByPapers(
         seatNumber,
         programCourseId: promotion?.programCourseId ?? null,
         shiftId: promotion?.shiftId ?? null,
+        registrationNumber: s.cuRegistrationNumber,
+        rollNumber: s.cuRollNumber,
       });
       seatIdx++;
     }
@@ -2520,35 +2546,151 @@ export async function findByStudentId(studentId: number): Promise<ExamDto[]> {
   ).filter((ele) => ele !== null);
 }
 
+export interface ExamFilters {
+  examTypeId?: number | null;
+  classId?: number | null;
+  academicYearId?: number | null;
+  affiliationId?: number | null;
+  regulationTypeId?: number | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  status?: "upcoming" | "recent" | "previous" | null;
+}
+
 export async function findAll(
   page: number = 1,
   pageSize: number = 10,
+  filters?: ExamFilters,
 ): Promise<PaginatedResponse<ExamDto>> {
   const offset = (page - 1) * pageSize;
 
+  // Build where conditions
+  const whereConditions = [];
+
+  if (filters?.examTypeId) {
+    whereConditions.push(eq(examModel.examTypeId, filters.examTypeId));
+  }
+
+  if (filters?.classId) {
+    whereConditions.push(eq(examModel.classId, filters.classId));
+  }
+
+  if (filters?.academicYearId) {
+    whereConditions.push(eq(examModel.academicYearId, filters.academicYearId));
+  }
+
+  if (filters?.dateFrom && filters?.dateTo) {
+    // Filter by admit card download dates
+    whereConditions.push(
+      and(
+        gte(examModel.admitCardStartDownloadDate, new Date(filters.dateFrom)),
+        lte(examModel.admitCardLastDownloadDate, new Date(filters.dateTo)),
+      )!,
+    );
+  } else if (filters?.dateFrom) {
+    whereConditions.push(
+      gte(examModel.admitCardStartDownloadDate, new Date(filters.dateFrom)),
+    );
+  } else if (filters?.dateTo) {
+    whereConditions.push(
+      lte(examModel.admitCardLastDownloadDate, new Date(filters.dateTo)),
+    );
+  }
+
+  const whereClause =
+    whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+  // Fetch exams with filters
   const exams = await db
     .select()
     .from(examModel)
+    .where(whereClause)
     .limit(pageSize)
     .offset(offset)
-    .orderBy(desc(examModel.id));
+    .orderBy(desc(examModel.createdAt));
 
+  // Get total count with same filters
   const [{ totalCount }] = await db
     .select({
       totalCount: count(examModel.id),
     })
-    .from(examModel);
+    .from(examModel)
+    .where(whereClause);
 
-  const content = (
+  // Map to DTOs
+  let content = (
     await Promise.all(exams.map(async (exm) => await modelToDto(exm)))
   ).filter((ele) => ele !== null);
+
+  // Apply filters that require DTO-level data
+  if (filters?.affiliationId || filters?.regulationTypeId || filters?.status) {
+    const now = new Date();
+    content = content.filter((exam) => {
+      if (!exam) return false;
+
+      // Filter by affiliation (check program courses)
+      if (filters.affiliationId) {
+        const hasAffiliation = exam.examProgramCourses?.some(
+          (pc) => pc.programCourse?.affiliation?.id === filters.affiliationId,
+        );
+        if (!hasAffiliation) return false;
+      }
+
+      // Filter by regulation type (check program courses)
+      if (filters.regulationTypeId) {
+        const hasRegulation = exam.examProgramCourses?.some(
+          (pc) =>
+            pc.programCourse?.regulationType?.id === filters.regulationTypeId,
+        );
+        if (!hasRegulation) return false;
+      }
+
+      // Filter by status (based on exam subjects dates)
+      if (filters.status) {
+        if (!exam.examSubjects || exam.examSubjects.length === 0) {
+          return false;
+        }
+
+        // Get first and last exam subject dates
+        const dates = exam.examSubjects
+          .map((sub) => ({
+            start: new Date(sub.startTime),
+            end: new Date(sub.endTime),
+          }))
+          .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+        const firstStart = dates[0]?.start;
+        const lastEnd = dates[dates.length - 1]?.end;
+
+        if (!firstStart || !lastEnd) return false;
+
+        if (filters.status === "upcoming") {
+          // Exam hasn't started yet
+          return firstStart > now;
+        } else if (filters.status === "recent") {
+          // Exam is ongoing or ends within last 7 days
+          return (
+            firstStart <= now &&
+            lastEnd >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          );
+        } else if (filters.status === "previous") {
+          // Exam ended more than 7 days ago
+          return lastEnd < new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        }
+      }
+
+      return true;
+    });
+  }
 
   return {
     content,
     page,
     pageSize,
-    totalElements: totalCount,
-    totalPages: Math.ceil(totalCount / pageSize),
+    totalElements: filters?.status ? content.length : totalCount,
+    totalPages: Math.ceil(
+      (filters?.status ? content.length : totalCount) / pageSize,
+    ),
   };
 }
 
