@@ -23,8 +23,6 @@ import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import { useSocket } from "@/hooks/useSocket";
 import { EditExamSubjectDialog } from "../components/edit-exam-subject-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// import { UserAvatar } from "@/hooks/UserAvatar";
-// import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,10 +91,64 @@ export default function ExamPage() {
   }, []);
 
   // Initialize WebSocket connection
-  useSocket({
+  const { socket, isConnected } = useSocket({
     userId,
     onProgressUpdate: handleProgressUpdate,
   });
+
+  // Refetch exam data when it gets updated via socket
+  const refetchExamData = useCallback(() => {
+    if (examId) {
+      fetchExamById(Number(examId)).then((data) => {
+        setExam(data);
+        // Update admit card dates
+        if (data.admitCardStartDownloadDate) {
+          setAdmitCardStartDate(toDatetimeLocal(data.admitCardStartDownloadDate));
+        }
+        if (data.admitCardLastDownloadDate) {
+          setAdmitCardEndDate(toDatetimeLocal(data.admitCardLastDownloadDate));
+        }
+      });
+      fetchExamPapersStatsByExamId(Number(examId)).then((data) => {
+        setExamPapersWithStats(data);
+      });
+    }
+  }, [examId]);
+
+  // Listen for exam update events
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    const handleExamUpdated = (data: { examId: number; type: string; message: string }) => {
+      console.log("[Exam Page] Exam updated event received:", data);
+      // Only refetch if it's this exam
+      if (examId && data.examId === Number(examId)) {
+        toast.info("Exam has been updated. Refreshing...", {
+          duration: 2000,
+        });
+        refetchExamData();
+      }
+    };
+
+    const handleExamDeleted = (data: { examId: number; type: string; message: string }) => {
+      console.log("[Exam Page] Exam deleted event received:", data);
+      // If this exam was deleted, navigate back to exams list
+      if (examId && data.examId === Number(examId)) {
+        toast.error("This exam has been deleted", {
+          duration: 3000,
+        });
+        navigate("/exam-management/exams");
+      }
+    };
+
+    socket.on("exam_updated", handleExamUpdated);
+    socket.on("exam_deleted", handleExamDeleted);
+
+    return () => {
+      socket.off("exam_updated", handleExamUpdated);
+      socket.off("exam_deleted", handleExamDeleted);
+    };
+  }, [socket, isConnected, examId, refetchExamData, navigate]);
 
   // Helper function to convert Date to datetime-local format
   const toDatetimeLocal = (value: Date | string | null | undefined): string => {
@@ -105,13 +157,6 @@ export default function ExamPage() {
     if (isNaN(date.getTime())) return "";
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   };
-
-  // const formatDateTime = (value: Date | string | null | undefined) => {
-  //   if (!value) return "-";
-  //   const d = value instanceof Date ? value : new Date(value);
-  //   if (Number.isNaN(d.getTime())) return "-";
-  //   return d.toLocaleString();
-  // };
 
   const formatDate = (value: Date | string | null | undefined) => {
     if (!value) return "-";

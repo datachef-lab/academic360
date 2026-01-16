@@ -210,16 +210,27 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
               (() => {
                 const now = new Date();
                 const nowTime = now.getTime();
-                // Disable download if admit card last download date has passed
-                const isDownloadDisabled = exam?.admitCardLastDownloadDate
-                  ? new Date(exam.admitCardLastDownloadDate).getTime() < nowTime
-                  : false;
+
+                // Check if current time is within the admit card download window
+                const startDate = exam?.admitCardStartDownloadDate
+                  ? new Date(exam.admitCardStartDownloadDate).getTime()
+                  : null;
+                const endDate = exam?.admitCardLastDownloadDate
+                  ? new Date(exam.admitCardLastDownloadDate).getTime()
+                  : null;
+
+                // Show button only if within download window
+                const isWithinWindow = startDate && nowTime >= startDate && (!endDate || nowTime <= endDate);
+
+                if (!isWithinWindow) {
+                  return null; // Hide button if outside download window
+                }
 
                 return (
                   <Button
                     onClick={handleDownloadAdmitCard}
-                    disabled={downloading || loading || isDownloadDisabled}
-                    title={isDownloadDisabled ? "Admit card download period has ended" : "Download admit card (PDF)"}
+                    disabled={downloading || loading}
+                    title="Download admit card (PDF)"
                     className="h-10 w-10 mr-3 rounded-full flex items-center justify-center bg-indigo-00/40 drop-shadow-sm text-white hover:bg-indigo-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Download admit card"
                   >
@@ -277,7 +288,7 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
                       </TableCell>
                       <TableCell className="py-4 px-4 ">
                         <div className="space-y-0.5">
-                          <div className="font-semibold text-gray-800 text-sm">{detail.room}</div>
+                          <div className="font-semibold text-gray-800 text-sm">Room: {detail.room}</div>
                           <div className="text-muted-gray-800 text-xs flex items-center font-mono gap-1.5">
                             {detail.floor} •
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-600/10 font-mono text-accent-gray-800 text-xs font-medium">
