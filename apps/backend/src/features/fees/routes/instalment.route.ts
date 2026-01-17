@@ -4,8 +4,9 @@ import * as instalmentController from "../controllers/instalment.controller.js";
 const router = Router();
 
 router.post("/", instalmentController.createInstalment);
+router.get("/", instalmentController.getAllInstalments);
 router.get(
-  "/fees-structure/:feesStructureId",
+  "/fee-structure/:feesStructureId",
   instalmentController.getInstalmentsByFeesStructureId,
 );
 router.get("/:id", instalmentController.getInstalmentById);

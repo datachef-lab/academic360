@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+// Mark as dynamic
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import {
   getAllInstitutions,
   getInstitutionById,
@@ -16,10 +20,7 @@ export async function GET(request: NextRequest) {
     if (id) {
       const result = await getInstitutionById(parseInt(id));
       if (!result) {
-        return NextResponse.json(
-          { success: false, error: "Institution not found" },
-          { status: 404 }
-        );
+        return NextResponse.json({ success: false, error: "Institution not found" }, { status: 404 });
       }
       return NextResponse.json({ success: true, data: result });
     }
@@ -28,10 +29,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: institutions });
   } catch (error) {
     console.error("Error in GET /api/institutions:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -41,10 +39,7 @@ export async function POST(request: NextRequest) {
     const { name, degreeId, addressId, sequence } = body;
 
     if (!name || degreeId === undefined || degreeId === null) {
-      return NextResponse.json(
-        { success: false, error: "Name and degreeId are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "Name and degreeId are required" }, { status: 400 });
     }
 
     const result: InstitutionResult = await createInstitution(name, degreeId, addressId, sequence);
@@ -56,10 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/institutions:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -69,29 +61,17 @@ export async function PUT(request: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: "ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "ID is required" }, { status: 400 });
     }
 
     const body = await request.json();
     const { name, degreeId, addressId, sequence } = body;
 
     if (!name || degreeId === undefined || degreeId === null) {
-      return NextResponse.json(
-        { success: false, error: "Name and degreeId are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "Name and degreeId are required" }, { status: 400 });
     }
 
-    const result: InstitutionResult = await updateInstitution(
-      parseInt(id),
-      name,
-      degreeId,
-      addressId,
-      sequence
-    );
+    const result: InstitutionResult = await updateInstitution(parseInt(id), name, degreeId, addressId, sequence);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -100,10 +80,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error in PUT /api/institutions:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -113,15 +90,10 @@ export async function PATCH(request: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: "ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "ID is required" }, { status: 400 });
     }
 
-    const result: InstitutionResult = await toggleInstitutionStatus(
-      parseInt(id)
-    );
+    const result: InstitutionResult = await toggleInstitutionStatus(parseInt(id));
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -130,9 +102,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error in PATCH /api/institutions:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
-} 
+}

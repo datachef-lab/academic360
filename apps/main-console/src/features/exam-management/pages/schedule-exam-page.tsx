@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,41 +7,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Users, AlertCircle, CheckCircle2, Trash2, Loader2, Upload } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertCircle, Trash2, Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { getAllExamTypes, ExamTypeT } from "@/services/exam-type.service";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getAllExamTypes } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
 import { getAffiliations, getRegulationTypes, getProgramCourseDtos } from "@/services/course-design.api";
 import { getAllShifts } from "@/services/academic";
 import { getSubjectTypes, getExamComponents } from "@/services/course-design.api";
 import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
-import { getAllRooms } from "@/services/room.service";
-import { getAllFloors, FloorT } from "@/services/floor.service";
-import { countStudentsForExam, getStudentsForExam, StudentWithSeat } from "@/services/exam-schedule.service";
+import { checkDuplicateExam, countStudentsBreakdownForExam } from "@/services/exam-schedule.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import { Class } from "@/types/academics/class";
-import type {
-  SubjectType,
-  PaperDto,
-  Affiliation,
-  RegulationType,
-  ExamDto,
-  ExamSubjectT,
-  ExamRoomDto,
-  RoomDto,
-  ProgramCourseDto,
-  ExamProgramCourseDto,
-} from "@repo/db/index";
-import { Shift } from "@/types/academics/shift";
-import type { Subject } from "@repo/db/index";
+import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto } from "@repo/db/index";
 import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
-interface SelectedRoom extends RoomDto {
-  capacity: number;
-  maxStudentsPerBenchOverride?: number;
-}
+// Room and student interfaces moved to allot-exam-page
 
 // interface Student {
 //   uid: string;
@@ -60,6 +45,14 @@ interface Schedule {
   endTime: string;
 }
 
+interface StudentCountBreakdown {
+  programCourseId: number;
+  programCourseName: string;
+  shiftId: number;
+  shiftName: string;
+  count: number;
+}
+
 // interface Assignment {
 //   uid: string;
 //   name: string;
@@ -74,33 +67,143 @@ interface Schedule {
 export default function ScheduleExamPage() {
   // Academic Year hook - get current academic year from Redux slice
   const { currentAcademicYear, availableAcademicYears, loadAcademicYears } = useAcademicYear();
+  const { user } = useAuth();
 
-  // API Data States
-  const [examTypes, setExamTypes] = useState<ExamTypeT[]>([]);
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [programCourses, setProgramCourses] = useState<ProgramCourseDto[]>([]);
-  const [shifts, setShifts] = useState<Shift[]>([]);
-  const [subjectTypes, setSubjectTypes] = useState<SubjectType[]>([]);
-  const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
-  const [regulationTypes, setRegulationTypes] = useState<RegulationType[]>([]);
-  const [papers, setPapers] = useState<PaperDto[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [rooms, setRooms] = useState<RoomDto[]>([]);
-  const [floors, setFloors] = useState<FloorT[]>([]);
-  const [examComponents, setExamComponents] = useState<ExamComponent[]>([]);
-  const [loading, setLoading] = useState({
-    examTypes: true,
-    classes: true,
-    programCourses: true,
-    shifts: true,
-    subjectTypes: true,
-    papers: false,
-    subjects: false,
-    rooms: false,
-    floors: false,
-    examComponents: false,
-    affiliations: false,
-    regulationTypes: false,
+  const queryClient = useQueryClient();
+
+  // React Query hooks for initial data fetching
+  const { data: examTypes = [], isLoading: loadingExamTypes } = useQuery({
+    queryKey: ["examTypes"],
+    queryFn: async () => {
+      const res = await getAllExamTypes();
+      if (res.httpStatus === "SUCCESS" && res.payload) {
+        return res.payload.filter((et) => et.isActive !== false);
+      }
+      return [];
+    },
+    onError: (error) => {
+      console.error("Error fetching exam types:", error);
+      toast.error("Failed to load exam types");
+    },
+  });
+
+  const { data: classesData, isLoading: loadingClasses } = useQuery({
+    queryKey: ["classes"],
+    queryFn: async () => {
+      const data = await getAllClasses();
+      return Array.isArray(data) ? data.filter((c) => !c.disabled) : [];
+    },
+    onError: (error) => {
+      console.error("Error fetching classes:", error);
+      toast.error("Failed to load classes");
+    },
+  });
+
+  // Ensure classes is always an array to prevent .map() errors
+  const classes = Array.isArray(classesData) ? classesData : [];
+
+  const { data: programCourses = [], isLoading: loadingProgramCourses } = useQuery({
+    queryKey: ["programCourses"],
+    queryFn: async () => {
+      const data = await getProgramCourseDtos();
+      return Array.isArray(data) ? data.filter((pc) => pc.isActive !== false) : [];
+    },
+    onError: (error) => {
+      console.error("Error fetching program courses:", error);
+      toast.error("Failed to load program courses");
+    },
+  });
+
+  const { data: shifts = [], isLoading: loadingShifts } = useQuery({
+    queryKey: ["shifts"],
+    queryFn: async () => {
+      const data = await getAllShifts();
+      return Array.isArray(data) ? data.filter((s) => !s.disabled) : [];
+    },
+    onError: (error) => {
+      console.error("Error fetching shifts:", error);
+      toast.error("Failed to load shifts");
+    },
+  });
+
+  const { data: subjectTypes = [], isLoading: loadingSubjectTypes } = useQuery({
+    queryKey: ["subjectTypes"],
+    queryFn: async () => {
+      const data = await getSubjectTypes();
+      return Array.isArray(data) ? data.filter((st) => st.isActive !== false) : [];
+    },
+    onError: (error) => {
+      console.error("Error fetching subject types:", error);
+      toast.error("Failed to load subject types");
+    },
+  });
+
+  const { data: subjects = [], isLoading: loadingSubjects } = useQuery({
+    queryKey: ["subjects"],
+    queryFn: async () => {
+      const data = await getAllSubjects();
+      return Array.isArray(data) ? data.filter((s) => !s.disabled) : [];
+    },
+    onError: (error) => {
+      console.error("Error fetching subjects:", error);
+      toast.error("Failed to load subjects");
+    },
+  });
+
+  const { data: affiliations = [], isLoading: loadingAffiliations } = useQuery({
+    queryKey: ["affiliations"],
+    queryFn: async () => {
+      const data = await getAffiliations();
+      return Array.isArray(data) ? data.filter((a) => a.isActive !== false) : [];
+    },
+    onError: (error) => {
+      console.error("Error fetching affiliations:", error);
+      toast.error("Failed to load affiliations");
+    },
+  });
+
+  const { data: regulationTypes = [], isLoading: loadingRegulationTypes } = useQuery({
+    queryKey: ["regulationTypes"],
+    queryFn: async () => {
+      const data = await getRegulationTypes();
+      return Array.isArray(data) ? data.filter((r) => r.isActive !== false) : [];
+    },
+    onError: (error) => {
+      console.error("Error fetching regulation types:", error);
+      toast.error("Failed to load regulation types");
+    },
+  });
+
+  // Fetch eligible rooms based on exam schedule
+
+  // Floors query moved to allot-exam-page
+
+  const { data: examComponents = [], isLoading: loadingExamComponents } = useQuery({
+    queryKey: ["examComponents"],
+    queryFn: async () => {
+      const data = await getExamComponents();
+      // Map API response to match ExamComponent type (API returns isActive, type expects disabled)
+      // Filter to only include active components
+      const mappedComponents: ExamComponent[] = Array.isArray(data)
+        ? data
+            .filter((comp) => (comp as { isActive?: boolean | null }).isActive !== false)
+            .map((comp) => ({
+              id: comp.id,
+              name: comp.name,
+              shortName: comp.shortName ?? null,
+              code: comp.code ?? null,
+              sequence: comp.sequence ?? null,
+              disabled: false, // All filtered items are active, so disabled is false
+              createdAt: comp.createdAt,
+              updatedAt: comp.updatedAt,
+            }))
+        : [];
+      return mappedComponents;
+    },
+    onError: (error) => {
+      console.error("Error fetching exam components:", error);
+      toast.error("Failed to load exam components");
+    },
   });
 
   // Step 1: Exam Information
@@ -114,218 +217,65 @@ export default function ScheduleExamPage() {
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(null);
   const [selectedAffiliationId, setSelectedAffiliationId] = useState<number | null>(null);
   const [selectedRegulationTypeId, setSelectedRegulationTypeId] = useState<number | null>(null);
-  const [totalStudents, setTotalStudents] = useState(0);
-  const [studentsWithSeats, setStudentsWithSeats] = useState<StudentWithSeat[]>([]);
-  const [loadingStudents, setLoadingStudents] = useState(false);
   //   const [examAssignment, setExamAssignment] = useState<ExamDto | null>(null);
 
-  // Step 2: Room Selection
-  const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
-  const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
-  const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
-  const [totalCapacity, setTotalCapacity] = useState(0);
+  // Step 2: Room Selection - REMOVED (moved to allot-exam-page)
+  // const [gender, setGender] = useState<"MALE" | "FEMALE" | "OTHER" | "ALL" | null>("ALL");
+  // const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
+  // const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
+  // const [totalCapacity, setTotalCapacity] = useState(0);
 
-  // Step 3: Exam Schedule (keyed by subjectId)
-  const [subjectSchedules, setSubjectSchedules] = useState<Record<string, Schedule>>({});
+  // Step 3: Exam Schedule - now tracks subject+paper combinations
+  interface SubjectPaperSchedule {
+    subjectId: number;
+    paperId: number;
+    schedule: Schedule;
+  }
+  const [selectedSubjectPapers, setSelectedSubjectPapers] = useState<SubjectPaperSchedule[]>([]);
+  // Keep selectedSubjectIds for backward compatibility with subject selection UI
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
+  // Keep subjectSchedules as derived state for backward compatibility (will be removed later)
+  const subjectSchedules: Record<string, Schedule> = {};
+  selectedSubjectPapers.forEach((sp) => {
+    const key = `${sp.subjectId}`;
+    if (!subjectSchedules[key] || sp.schedule.date) {
+      subjectSchedules[key] = sp.schedule;
+    }
+  });
 
-  // Excel file upload state
-  const [excelFile, setExcelFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Room and student selection moved to allot-exam-page
+  // Excel file upload moved to allot-exam-page
 
   // Assignments (kept for potential future use)
 
-  // Fetch initial data
+  // Load academic years on mount
   useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setLoading((prev) => ({ ...prev, examTypes: true }));
-        const examTypesRes = await getAllExamTypes();
-        if (examTypesRes.httpStatus === "SUCCESS" && examTypesRes.payload) {
-          setExamTypes(examTypesRes.payload);
-        }
-      } catch (error) {
-        console.error("Error fetching exam types:", error);
-        toast.error("Failed to load exam types");
-      } finally {
-        setLoading((prev) => ({ ...prev, examTypes: false }));
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, classes: true }));
-        const classesData = await getAllClasses();
-        setClasses(Array.isArray(classesData) ? classesData : []);
-      } catch (error) {
-        console.error("Error fetching classes:", error);
-        toast.error("Failed to load classes");
-      } finally {
-        setLoading((prev) => ({ ...prev, classes: false }));
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, programCourses: true }));
-        const programCoursesData = await getProgramCourseDtos();
-        setProgramCourses(Array.isArray(programCoursesData) ? programCoursesData : []);
-      } catch (error) {
-        console.error("Error fetching program courses:", error);
-        toast.error("Failed to load program courses");
-      } finally {
-        setLoading((prev) => ({ ...prev, programCourses: false }));
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, shifts: true }));
-        const shiftsData = await getAllShifts();
-        setShifts(Array.isArray(shiftsData) ? shiftsData : []);
-      } catch (error) {
-        console.error("Error fetching shifts:", error);
-        toast.error("Failed to load shifts");
-      } finally {
-        setLoading((prev) => ({ ...prev, shifts: false }));
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, subjectTypes: true }));
-        const subjectTypesData = await getSubjectTypes();
-        setSubjectTypes(Array.isArray(subjectTypesData) ? subjectTypesData : []);
-      } catch (error) {
-        console.error("Error fetching subject types:", error);
-        toast.error("Failed to load subject types");
-      } finally {
-        setLoading((prev) => ({ ...prev, subjectTypes: false }));
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, subjects: true }));
-        const subjectsData = await getAllSubjects();
-        setSubjects(Array.isArray(subjectsData) ? subjectsData : []);
-      } catch (error) {
-        console.error("Error fetching subjects:", error);
-        toast.error("Failed to load subjects");
-      } finally {
-        setLoading((prev) => ({ ...prev, subjects: false }));
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, affiliations: true }));
-        const affiliationsData = await getAffiliations();
-        setAffiliations(Array.isArray(affiliationsData) ? affiliationsData : []);
-      } catch (error) {
-        console.error("Error fetching affiliations:", error);
-        toast.error("Failed to load affiliations");
-      } finally {
-        setLoading((prev) => ({ ...prev, affiliations: false }));
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, regulationTypes: true }));
-        const regulationTypesData = await getRegulationTypes();
-        setRegulationTypes(Array.isArray(regulationTypesData) ? regulationTypesData : []);
-      } catch (error) {
-        console.error("Error fetching regulation types:", error);
-        toast.error("Failed to load regulation types");
-      } finally {
-        setLoading((prev) => ({ ...prev, regulationTypes: false }));
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, rooms: true }));
-        const roomsRes = await getAllRooms();
-        if (roomsRes.httpStatus === "SUCCESS" && roomsRes.payload) {
-          setRooms(roomsRes.payload);
-        }
-      } catch (error) {
-        console.error("Error fetching rooms:", error);
-        toast.error("Failed to load rooms");
-      } finally {
-        setLoading((prev) => ({ ...prev, rooms: false }));
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, floors: true }));
-        const floorsRes = await getAllFloors();
-        if (floorsRes.httpStatus === "SUCCESS" && floorsRes.payload) {
-          setFloors(floorsRes.payload);
-        }
-      } catch (error) {
-        console.error("Error fetching floors:", error);
-        toast.error("Failed to load floors");
-      } finally {
-        setLoading((prev) => ({ ...prev, floors: false }));
-      }
-
-      try {
-        setLoading((prev) => ({ ...prev, examComponents: true }));
-        const examComponentsData = await getExamComponents();
-        // Map API response to match ExamComponent type (API returns isActive, type expects disabled)
-        const mappedComponents: ExamComponent[] = Array.isArray(examComponentsData)
-          ? examComponentsData.map((comp) => ({
-              id: comp.id,
-              name: comp.name,
-              shortName: comp.shortName ?? null,
-              code: comp.code ?? null,
-              sequence: comp.sequence ?? null,
-              disabled: (comp as { isActive?: boolean | null }).isActive === false,
-              createdAt: comp.createdAt,
-              updatedAt: comp.updatedAt,
-            }))
-          : [];
-        setExamComponents(mappedComponents);
-      } catch (error) {
-        console.error("Error fetching exam components:", error);
-        toast.error("Failed to load exam components");
-      } finally {
-        setLoading((prev) => ({ ...prev, examComponents: false }));
-      }
-
-      // Load academic years using the hook (to get current academic year)
-      try {
-        await loadAcademicYears();
-      } catch (error) {
-        console.error("Error fetching academic years:", error);
-        toast.error("Failed to load academic years");
-      }
-    };
-
-    void fetchInitialData();
+    void loadAcademicYears();
   }, [loadAcademicYears]);
 
-  // Handle Excel file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.name.toLowerCase().match(/\.(xlsx|xls)$/)) {
-        toast.error("Please upload a valid Excel file (.xlsx or .xls)");
-        event.target.value = "";
-        return;
-      }
-      if (file.size > 100 * 1024 * 1024) {
-        // 100MB limit
-        toast.error("File size must be less than 100MB");
-        event.target.value = "";
-        return;
-      }
-      setExcelFile(file);
-      toast.success(`Uploaded: ${file.name}`);
-    }
-  };
+  // Excel file upload moved to allot-exam-page
 
-  const removeExcelFile = () => {
-    setExcelFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    toast.info("Excel file removed");
-  };
-  // change Fetch papers when filters change
-  const fetchPapers = useCallback(async () => {
-    if (selectedProgramCourses.length === 0 || !semester) {
-      setPapers([]);
-      return;
-    }
-    try {
-      setLoading((prev) => ({ ...prev, papers: true }));
+  // Fetch papers when filters change
+  const isPapersQueryEnabled = selectedProgramCourses.length > 0 && !!semester;
+  const {
+    data: papers = [],
+    isLoading: loadingPapers,
+    isFetching: fetchingPapers,
+  } = useQuery({
+    queryKey: [
+      "papers",
+      selectedProgramCourses,
+      semester,
+      selectedSubjectCategories,
+      selectedAcademicYearId,
+      selectedAffiliationId,
+      selectedRegulationTypeId,
+      currentAcademicYear?.id,
+    ],
+    queryFn: async () => {
+      if (selectedProgramCourses.length === 0 || !semester) {
+        return [];
+      }
       const classObj = classes.find((c) => c.id?.toString() === semester);
       const classId = classObj?.id;
       // Since API only accepts single values, we need to make multiple calls
@@ -334,78 +284,94 @@ export default function ScheduleExamPage() {
       const seenPaperIds = new Set<number>();
       // If no subject categories selected, fetch for all program courses
       const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
+
+      // Build all API call promises
+      const apiCalls: Promise<{ content?: PaperDto[] }>[] = [];
+
       // If no subject types selected, fetch papers for all program courses with class filter
       if (subjectTypesToUse.length === 0) {
+        // Create API calls for each program course
         for (const programCourseId of selectedProgramCourses) {
-          try {
-            const papersData = await getPapersPaginated(1, 1000, {
+          apiCalls.push(
+            getPapersPaginated(1, 1000, {
               academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
               affiliationId: selectedAffiliationId ?? null,
               regulationTypeId: selectedRegulationTypeId ?? null,
               programCourseId: programCourseId,
               classId: classId ?? null,
               subjectTypeId: null,
-            });
-            if (papersData?.content) {
-              for (const paper of papersData.content) {
-                if (paper.id && !seenPaperIds.has(paper.id)) {
-                  seenPaperIds.add(paper.id);
-                  allPapers.push(paper);
-                }
-              }
-            }
-          } catch (error) {
-            console.error(`Error fetching papers for program course ${programCourseId}:`, error);
-          }
+            }).catch((error) => {
+              console.error(`Error fetching papers for program course ${programCourseId}:`, error);
+              return { content: [] };
+            }),
+          );
         }
       } else {
         // Fetch papers for each combination of program course and subject type
         for (const programCourseId of selectedProgramCourses) {
           for (const subjectTypeId of subjectTypesToUse) {
-            try {
-              const papersData = await getPapersPaginated(1, 1000, {
+            apiCalls.push(
+              getPapersPaginated(1, 1000, {
                 academicYearId: selectedAcademicYearId ?? currentAcademicYear?.id ?? null,
                 affiliationId: selectedAffiliationId ?? null,
                 regulationTypeId: selectedRegulationTypeId ?? null,
                 programCourseId: programCourseId,
                 classId: classId ?? null,
                 subjectTypeId: subjectTypeId,
-              });
-              if (papersData?.content) {
-                for (const paper of papersData.content) {
-                  if (paper.id && !seenPaperIds.has(paper.id)) {
-                    seenPaperIds.add(paper.id);
-                    allPapers.push(paper);
-                  }
-                }
-              }
-            } catch (error) {
-              console.error(
-                `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
-                error,
-              );
+              }).catch((error) => {
+                console.error(
+                  `Error fetching papers for program course ${programCourseId} and subject type ${subjectTypeId}:`,
+                  error,
+                );
+                return { content: [] };
+              }),
+            );
+          }
+        }
+      }
+
+      // Execute all API calls in parallel for maximum speed
+      // Increased from batched to fully parallel since server can handle it
+      const results = await Promise.all(apiCalls);
+
+      // Combine results and deduplicate
+      for (const result of results) {
+        if (result?.content) {
+          for (const paper of result.content) {
+            if (paper.id && !seenPaperIds.has(paper.id) && paper.isActive !== false) {
+              seenPaperIds.add(paper.id);
+              allPapers.push(paper);
             }
           }
         }
       }
-      setPapers(allPapers);
-    } catch (error) {
+
+      return allPapers;
+    },
+    enabled: isPapersQueryEnabled,
+    staleTime: 60000, // Cache results for 60 seconds to prevent unnecessary refetches
+    cacheTime: 300000, // Keep in cache for 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnMount: false, // Don't refetch on mount if data is fresh
+    onError: (error) => {
       console.error("Error fetching papers:", error);
       toast.error("Failed to load papers");
-      setPapers([]);
-    } finally {
-      setLoading((prev) => ({ ...prev, papers: false }));
-    }
-  }, [
-    selectedProgramCourses,
-    semester,
-    selectedSubjectCategories,
-    classes,
-    selectedAcademicYearId,
-    selectedAffiliationId,
-    selectedRegulationTypeId,
-    currentAcademicYear?.id,
-  ]);
+    },
+  });
+
+  // Loading state object for backward compatibility
+  const loading = {
+    examTypes: loadingExamTypes,
+    classes: loadingClasses,
+    programCourses: loadingProgramCourses,
+    shifts: loadingShifts,
+    subjectTypes: loadingSubjectTypes,
+    papers: isPapersQueryEnabled && (loadingPapers || fetchingPapers),
+    subjects: loadingSubjects,
+    examComponents: loadingExamComponents,
+    affiliations: loadingAffiliations,
+    regulationTypes: loadingRegulationTypes,
+  };
 
   // Fetch papers when filters change
   //   const fetchPapers = useCallback(async () => {
@@ -503,10 +469,6 @@ export default function ScheduleExamPage() {
   //     currentAcademicYear?.id,
   //   ]);
 
-  useEffect(() => {
-    void fetchPapers();
-  }, [fetchPapers]);
-
   //   const generateMockStudents = useCallback((): Student[] => {
   //     const students: Student[] = [];
   //     let counter = 1;
@@ -601,10 +563,7 @@ export default function ScheduleExamPage() {
     }));
   };
 
-  const getPapersForSelectedSubject = useCallback((): PaperDto[] => {
-    if (!selectedSubjectId) return [];
-    return getAvailablePapers().filter((paper) => paper.subjectId === selectedSubjectId);
-  }, [selectedSubjectId, getAvailablePapers]);
+  // getPapersForSelectedSubject moved to allot-exam-page
 
   //   const createFormData = useCallback((params: any) => {
   //     const formData = new FormData();
@@ -623,180 +582,7 @@ export default function ScheduleExamPage() {
   //     return formData;
   //   }, [excelFile]);
 
-  // Fetch student count from API based on selected subject
-  useEffect(() => {
-    const fetchStudentCount = async () => {
-      // Check if currentAcademicYear is available
-      if (!currentAcademicYear?.id) {
-        console.log("[SCHEDULE-EXAM] Waiting for academic year to be loaded...");
-        setTotalStudents(0);
-        return;
-      }
-
-      if (selectedProgramCourses.length === 0 || !semester || !selectedSubjectId) {
-        setTotalStudents(0);
-        return;
-      }
-
-      const papersForSubject = getPapersForSelectedSubject();
-      const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
-
-      if (paperIds.length === 0) {
-        setTotalStudents(0);
-        return;
-      }
-
-      try {
-        const classObj = classes.find((c) => c.id?.toString() === semester);
-        if (!classObj?.id) {
-          setTotalStudents(0);
-          return;
-        }
-
-        console.log("[SCHEDULE-EXAM] Fetching student count with params:", {
-          classId: classObj.id,
-          programCourseIds: selectedProgramCourses,
-          paperIds,
-          academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-          shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-        });
-
-        const response = await countStudentsForExam(
-          {
-            classId: classObj.id,
-            programCourseIds: selectedProgramCourses,
-            paperIds,
-            academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-            shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-            gender: gender === "ALL" ? null : gender,
-            // Pass file if present; services should use FormData if file exists
-          },
-          excelFile,
-        );
-
-        console.log("[SCHEDULE-EXAM] Student count response:", response);
-
-        if (response.httpStatus === "SUCCESS" && response.payload) {
-          setTotalStudents(response.payload.count);
-        } else {
-          console.warn("[SCHEDULE-EXAM] Unexpected response:", response);
-          setTotalStudents(0);
-        }
-      } catch (error) {
-        console.error("[SCHEDULE-EXAM] Error fetching student count:", error);
-        setTotalStudents(0);
-      }
-    };
-
-    void fetchStudentCount();
-  }, [
-    selectedProgramCourses,
-    selectedShifts,
-    semester,
-    selectedSubjectId,
-    classes,
-    currentAcademicYear,
-    getPapersForSelectedSubject,
-    selectedAcademicYearId,
-    gender,
-  ]);
-
-  useEffect(() => {
-    const capacity = selectedRooms.reduce((total, room) => {
-      const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-      const numberOfBenches = room.numberOfBenches || 0;
-      return total + numberOfBenches * maxStudentsPerBench;
-    }, 0);
-    setTotalCapacity(capacity);
-  }, [selectedRooms]);
-
-  // Fetch students with seat assignments when rooms are selected
-  useEffect(() => {
-    const fetchStudentsWithSeats = async () => {
-      if (
-        selectedRooms.length === 0 ||
-        selectedProgramCourses.length === 0 ||
-        !semester ||
-        !selectedSubjectId ||
-        !currentAcademicYear?.id
-      ) {
-        setStudentsWithSeats([]);
-        return;
-      }
-
-      const papersForSubject = getPapersForSelectedSubject();
-      const paperIds = papersForSubject.map((p) => p.id).filter((id): id is number => id !== undefined);
-
-      if (paperIds.length === 0) {
-        setStudentsWithSeats([]);
-        return;
-      }
-
-      try {
-        setLoadingStudents(true);
-        const classObj = classes.find((c) => c.id?.toString() === semester);
-        if (!classObj?.id) {
-          setStudentsWithSeats([]);
-          return;
-        }
-
-        // Prepare room assignments
-        const roomAssignments = selectedRooms.map((room) => {
-          const floor = floors.find((f) => f.id === room.floor.id);
-          const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-          return {
-            roomId: room.id!,
-            floorId: room.floor.id,
-            floorName: floor?.name || null,
-            roomName: room.name || `Room ${room.id}`,
-            maxStudentsPerBench,
-            numberOfBenches: room.numberOfBenches || 0,
-          };
-        });
-
-        const response = await getStudentsForExam(
-          {
-            classId: classObj.id,
-            programCourseIds: selectedProgramCourses,
-            paperIds,
-            academicYearIds: [selectedAcademicYearId ?? currentAcademicYear.id],
-            shiftIds: selectedShifts.length > 0 ? selectedShifts : undefined,
-            assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
-            roomAssignments,
-            gender: gender == "ALL" ? null : gender,
-          },
-          excelFile,
-        );
-
-        if (response.httpStatus === "SUCCESS" && response.payload) {
-          setStudentsWithSeats(response.payload.students);
-        } else {
-          setStudentsWithSeats([]);
-        }
-      } catch (error) {
-        console.error("[SCHEDULE-EXAM] Error fetching students with seats:", error);
-        setStudentsWithSeats([]);
-      } finally {
-        setLoadingStudents(false);
-      }
-    };
-
-    void fetchStudentsWithSeats();
-  }, [
-    selectedRooms,
-    selectedProgramCourses,
-    selectedShifts,
-    semester,
-    selectedSubjectId,
-    classes,
-    currentAcademicYear,
-    assignBy,
-    floors,
-    gender,
-    getPapersForSelectedSubject,
-    selectedAcademicYearId,
-    excelFile,
-  ]);
+  // Student count and seat assignment queries moved to allot-exam-page
 
   const handleProgramCourseToggle = (courseId: number) => {
     setSelectedProgramCourses((prev) =>
@@ -814,44 +600,144 @@ export default function ScheduleExamPage() {
     );
   };
 
-  const handleRoomSelection = (room: RoomDto, selected: boolean) => {
-    if (selected) {
-      const maxStudentsPerBench = room.maxStudentsPerBench || 2;
-      const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
-      setSelectedRooms((prev) => [...prev, { ...room, capacity }]);
-    } else {
-      setSelectedRooms((prev) => prev.filter((r) => r.id !== room.id));
-    }
+  // Helper to get papers for a subject
+  const getPapersForSubject = useCallback(
+    (subjectId: number): PaperDto[] => {
+      return papers.filter((paper) => paper.subjectId === subjectId && paper.isActive !== false);
+    },
+    [papers],
+  );
+
+  // Normalize paper code for comparison (trim and lowercase)
+  const normalizePaperCode = (code: string | null | undefined): string => {
+    return (code || "").trim().toLowerCase();
   };
 
-  const handleMaxStudentsPerBenchOverride = (roomId: number, override: number | null) => {
-    setSelectedRooms((prev) =>
-      prev.map((r) => {
-        if (r.id === roomId) {
-          const maxStudentsPerBench = override || r.maxStudentsPerBench || 2;
-          const numberOfBenches = r.numberOfBenches || 0;
-          const capacity = numberOfBenches * maxStudentsPerBench;
+  // Handle subject selection - when subject is selected, auto-select ALL its papers
+  const handleSubjectToggle = (subjectId: number) => {
+    setSelectedSubjectIds((prev) => {
+      if (prev.includes(subjectId)) {
+        // Remove subject and all its papers
+        setSelectedSubjectPapers((prevPapers) => prevPapers.filter((sp) => sp.subjectId !== subjectId));
+        return prev.filter((id) => id !== subjectId);
+      } else {
+        // Add subject - auto-select ALL papers for this subject
+        const subjectPapers = getPapersForSubject(subjectId);
+        const newPapers: SubjectPaperSchedule[] = subjectPapers
+          .filter((paper) => paper.id)
+          .map((paper) => ({
+            subjectId,
+            paperId: paper.id!,
+            schedule: { date: "", startTime: "", endTime: "" },
+          }));
+
+        setSelectedSubjectPapers((prev) => [...prev, ...newPapers]);
+        return [...prev, subjectId];
+      }
+    });
+  };
+
+  // Room selection handlers moved to allot-exam-page
+
+  // Group papers by subjectId and normalized paper code
+  const getGroupedSubjectPapers = useCallback(() => {
+    const grouped = new Map<
+      string,
+      {
+        subjectId: number;
+        normalizedCode: string;
+        papers: Array<{ paperId: number; paper: PaperDto; schedule: Schedule }>;
+        representativeSchedule: Schedule; // Use the first paper's schedule as representative
+      }
+    >();
+
+    selectedSubjectPapers.forEach((sp) => {
+      const paper = papers.find((p) => p.id === sp.paperId);
+      if (!paper) return;
+
+      const normalizedCode = normalizePaperCode(paper.code);
+      const groupKey = `${sp.subjectId}|${normalizedCode}`;
+
+      if (!grouped.has(groupKey)) {
+        grouped.set(groupKey, {
+          subjectId: sp.subjectId,
+          normalizedCode,
+          papers: [],
+          representativeSchedule: sp.schedule,
+        });
+      }
+
+      const group = grouped.get(groupKey)!;
+      group.papers.push({
+        paperId: sp.paperId,
+        paper,
+        schedule: sp.schedule,
+      });
+      // Update representative schedule if this one has more complete data
+      if (sp.schedule.date && !group.representativeSchedule.date) {
+        group.representativeSchedule = sp.schedule;
+      }
+    });
+
+    return Array.from(grouped.values());
+  }, [selectedSubjectPapers, papers]);
+
+  // Handle schedule change for a group of papers (same subject + normalized code)
+  const handleScheduleChange = (subjectId: number, normalizedCode: string, field: keyof Schedule, value: string) => {
+    // Find all papers in this group
+    const groupPapers = selectedSubjectPapers.filter((sp) => {
+      const paper = papers.find((p) => p.id === sp.paperId);
+      if (!paper) return false;
+      return sp.subjectId === subjectId && normalizePaperCode(paper.code) === normalizedCode;
+    });
+
+    if (groupPapers.length === 0) return;
+
+    // Get current schedule from first paper in group
+    const currentSchedule = groupPapers[0]?.schedule || { date: "", startTime: "", endTime: "" };
+
+    // Validate end time is not less than start time
+    if (field === "endTime" && currentSchedule.startTime && value) {
+      const startTime = currentSchedule.startTime;
+      const endTime = value;
+
+      // Compare time strings (HH:MM format)
+      if (endTime < startTime) {
+        toast.error("End time cannot be less than start time");
+        return;
+      }
+    }
+
+    // If start time is changed and end time exists, validate end time is not less than new start time
+    if (field === "startTime" && currentSchedule.endTime && value) {
+      const startTime = value;
+      const endTime = currentSchedule.endTime;
+
+      if (endTime < startTime) {
+        toast.error("End time cannot be less than start time. Please update end time.");
+        // Optionally clear end time or keep it and let user fix
+      }
+    }
+
+    // Update all papers in the group
+    setSelectedSubjectPapers((prev) =>
+      prev.map((sp) => {
+        const paper = papers.find((p) => p.id === sp.paperId);
+        if (!paper) return sp;
+
+        const spNormalizedCode = normalizePaperCode(paper.code);
+        if (sp.subjectId === subjectId && spNormalizedCode === normalizedCode) {
           return {
-            ...r,
-            maxStudentsPerBenchOverride: override || undefined,
-            capacity,
+            ...sp,
+            schedule: {
+              ...sp.schedule,
+              [field]: value,
+            },
           };
         }
-        return r;
+        return sp;
       }),
     );
-  };
-
-  const handleScheduleChange = (subjectId: number | string | null, field: keyof Schedule, value: string) => {
-    if (subjectId === null) return;
-    const id = typeof subjectId === "number" ? subjectId.toString() : subjectId;
-    setSubjectSchedules((prev) => ({
-      ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: value,
-      } as Schedule,
-    }));
   };
 
   //   const formatTime = (time24?: string) => {
@@ -930,8 +816,7 @@ export default function ScheduleExamPage() {
   //     toast.success(`Successfully assigned ${newAssignments.length} students`);
   //   };
 
-  const capacityStatus = totalCapacity >= totalStudents;
-  const [centerTab, setCenterTab] = useState<"rooms" | "students">("rooms");
+  // Room and student modals moved to allot-exam-page
 
   // Keep selected academic year in sync with current academic year by default
   useEffect(() => {
@@ -940,297 +825,596 @@ export default function ScheduleExamPage() {
     }
   }, [currentAcademicYear, selectedAcademicYearId]);
 
-  const handleAssignExam = async () => {
-    const examSubjects: ExamSubjectT[] = [];
-    console.log("[SCHEDULE-EXAM] Selected subject IDs:", selectedSubjectIds);
-    console.log("[SCHEDULE-EXAM] Subject schedules:", subjectSchedules);
-    // for (const subjectId in selectedSubjectIds) {
-    //     console.log("[SCHEDULE-EXAM] Subject ID:", selectedSubjectIds[subjectId]);
+  // Reset selected subjects when program courses, subject categories, or semester change
+  useEffect(() => {
+    setSelectedSubjectIds([]);
+    setSelectedSubjectPapers([]);
+    setSelectedSubjectId(null);
+  }, [selectedProgramCourses, selectedSubjectCategories, semester]);
 
-    //   examSubjects.push({
-    //     subjectId: Number(selectedSubjectIds[subjectId]),
-    //     startTime: new Date(subjectSchedules[selectedSubjectIds[subjectId]!]?.startTime || ""),
-    //     endTime: new Date(subjectSchedules[selectedSubjectIds[subjectId]!]?.endTime || ""),
-    //     examId: 0,
-    //     id: 0,
-    //     createdAt: null,
-    //     updatedAt: null,
-    //   });
-    //   console.log("[SCHEDULE-EXAM] Exam subject:", examSubjects);
-    //   console.log("[SCHEDULE-EXAM] Subject ID:", subjectId);
-    //   console.log("[SCHEDULE-EXAM] Subject start time:", subjectSchedules[subjectId]?.startTime);
-    //   console.log("[SCHEDULE-EXAM] Subject end time:", subjectSchedules[subjectId]?.endTime);
-    // }
+  // Auto-select first subject/paper when subjects become available
+  useEffect(() => {
+    if (papers.length === 0 || loadingPapers || fetchingPapers) return;
 
-    for (const subjectId of selectedSubjectIds) {
-      const schedule = subjectSchedules[subjectId];
+    const distinctSubjects = getDistinctSubjects();
+    if (distinctSubjects.length > 0 && selectedSubjectId === null) {
+      const firstSubject = distinctSubjects[0];
+      if (firstSubject && firstSubject.subjectId !== null) {
+        setSelectedSubjectId(firstSubject.subjectId);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [papers, selectedExamComponent, selectedSubjectId, loadingPapers, fetchingPapers]);
 
-      if (!schedule?.date || !schedule?.startTime || !schedule?.endTime) {
-        console.warn(`[SCHEDULE-EXAM] Incomplete schedule for subject ${subjectId}`, schedule);
-        continue;
+  // Real-time duplicate exam check state
+  const [duplicateCheckResult, setDuplicateCheckResult] = useState<{
+    isDuplicate: boolean;
+    duplicateExamId?: number;
+    message?: string;
+  } | null>(null);
+
+  // Real-time duplicate exam check - check as soon as we have enough info (don't require rooms)
+  const canCheckDuplicate =
+    selectedAcademicYearId &&
+    examType &&
+    semester &&
+    selectedProgramCourses.length > 0 &&
+    selectedShifts.length > 0 &&
+    selectedSubjectCategories.length > 0 &&
+    selectedSubjectIds.length > 0 &&
+    Object.keys(subjectSchedules).length > 0 &&
+    // Check that all selected subjects have complete schedules
+    selectedSubjectIds.every((id) => {
+      const schedule = subjectSchedules[id.toString()];
+      return schedule?.date && schedule?.startTime && schedule?.endTime;
+    });
+
+  // Check for duplicate exam in real-time
+  useEffect(() => {
+    let isCancelled = false;
+
+    const checkDuplicate = async () => {
+      console.log("[DUPLICATE-CHECK] canCheckDuplicate:", canCheckDuplicate);
+      if (!canCheckDuplicate) {
+        setDuplicateCheckResult(null);
+        return;
       }
 
-      const startDateTime = `${schedule.date}T${schedule.startTime}:00+05:30`;
-      const endDateTime = `${schedule.date}T${schedule.endTime}:00+05:30`;
+      console.log("[DUPLICATE-CHECK] Starting duplicate check...");
+      try {
+        const examSubjects: ExamSubjectT[] = [];
+        for (const subjectPaper of selectedSubjectPapers) {
+          const schedule = subjectPaper.schedule;
+          if (!schedule?.date || !schedule?.startTime || !schedule?.endTime) {
+            continue;
+          }
 
-      examSubjects.push({
-        subjectId: subjectId,
-        startTime: new Date(startDateTime),
-        endTime: new Date(endDateTime),
-        examId: 0,
-        id: 0,
-        createdAt: null,
-        updatedAt: null,
-      });
+          const startDateTime = `${schedule.date}T${schedule.startTime}:00+05:30`;
+          const endDateTime = `${schedule.date}T${schedule.endTime}:00+05:30`;
 
-      console.log("[SCHEDULE-EXAM] Exam subject pushed:", {
-        subjectId,
-        startDateTime,
-        endDateTime,
-      });
-    }
-
-    const locations: ExamRoomDto[] = selectedRooms.map((room) => ({
-      roomId: room.id!,
-      studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
-      capacity: room.capacity,
-      room: rooms.find((r) => r.id === room.id)!,
-      examId: 0, // will be set backend
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      id: 0,
-    }));
-
-    const tmpExamAssignment: ExamDto = {
-      orderType: assignBy,
-      academicYear: availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)!,
-      class: classes.find((c) => c.id?.toString() === semester)!,
-      examType: examTypes.find((et) => et.id?.toString() === examType)!,
-      examProgramCourses: programCourses
-        .filter((pc) => selectedProgramCourses.includes(pc.id!))
-        .map(
-          (pc): ExamProgramCourseDto => ({
+          examSubjects.push({
+            subjectId: subjectPaper.subjectId,
+            paperId: subjectPaper.paperId, // Include paperId
+            startTime: new Date(startDateTime),
+            endTime: new Date(endDateTime),
             examId: 0,
-            programCourse: pc,
-            createdAt: new Date(),
-            updatedAt: new Date(),
             id: 0,
-          }),
-        ),
-      examShifts: shifts
-        .filter((s) => selectedShifts.includes(s.id!))
-        .map((sh) => ({
-          examId: 0,
-          shift: sh,
-        })),
-      // subject: subjects.find(s => s.id === selectedSubjectId)!,
-      // examComponent: examComponents.find(ec => ec.id === selectedExamComponent!) || null,
-      examSubjectTypes: subjectTypes
-        .filter((st) => selectedSubjectCategories.includes(st.id!))
-        .map((st) => ({
-          examId: 0,
-          subjectType: st,
-        })),
-      gender: gender === "ALL" ? null : gender,
-      examSubjects: examSubjects.map((es) => ({
-        ...es,
-        subject: subjects.find((ele) => ele.id === es.subjectId)!,
-      })),
-      locations,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      id: 0,
-      legacyExamAssginmentId: null,
+            createdAt: null,
+            updatedAt: null,
+          });
+        }
+
+        if (examSubjects.length === 0) {
+          if (!isCancelled) setDuplicateCheckResult({ isDuplicate: false });
+          return;
+        }
+
+        // For duplicate check, use empty locations array (rooms not selected in schedule step)
+        const locations: ExamRoomDto[] = [];
+
+        const tmpExamAssignment: ExamDto = {
+          orderType: "UID", // Default, will be set during allotment
+          academicYear: availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)!,
+          class: classes.find((c) => c.id?.toString() === semester)!,
+          examType: examTypes.find((et) => et.id?.toString() === examType)!,
+          examProgramCourses: programCourses
+            .filter((pc) => selectedProgramCourses.includes(pc.id!))
+            .map(
+              (pc): ExamProgramCourseDto => ({
+                examId: 0,
+                programCourse: pc,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                id: 0,
+              }),
+            ),
+          examShifts: shifts
+            .filter((s) => selectedShifts.includes(s.id!))
+            .map((sh) => ({
+              examId: 0,
+              shift: sh,
+            })),
+          examSubjectTypes: subjectTypes
+            .filter((st) => selectedSubjectCategories.includes(st.id!))
+            .map((st) => ({
+              examId: 0,
+              subjectType: st,
+            })),
+          gender: null, // Will be set during allotment
+          examSubjects: examSubjects.map((es) => ({
+            ...es,
+            subject: subjects.find((ele) => ele.id === es.subjectId)!,
+          })),
+          locations, // Empty array - no rooms assigned yet
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          id: 0,
+          legacyExamAssginmentId: null,
+          scheduledByUserId: user?.id ?? null,
+          lastUpdatedByUserId: user?.id ?? null,
+          admitCardStartDownloadDate: null,
+          admitCardLastDownloadDate: null,
+        };
+
+        const result = await checkDuplicateExam(tmpExamAssignment);
+        console.log("[DUPLICATE-CHECK] API Response:", result);
+        if (!isCancelled) {
+          const payload = result.payload || { isDuplicate: false };
+          console.log("[DUPLICATE-CHECK] Setting result:", payload);
+          setDuplicateCheckResult(payload);
+        }
+      } catch (error) {
+        console.error("Error checking duplicate exam:", error);
+        if (!isCancelled) {
+          setDuplicateCheckResult({ isDuplicate: false });
+        }
+      }
     };
 
-    try {
-      console.log("Before calling doAssignExam with:", tmpExamAssignment);
-      const response = await doAssignExam(
-        {
-          ...tmpExamAssignment,
-          gender: (tmpExamAssignment.gender as string) === "ALL" ? null : tmpExamAssignment.gender,
-        },
-        excelFile,
-      );
-      console.log("In exam assignment post api, response:", response);
+    // Debounce the check to avoid too many API calls (reduced to 200ms for faster feedback)
+    const timeoutId = setTimeout(() => {
+      void checkDuplicate();
+    }, 200);
 
-      toast.success(`Successfully assigned exam to the students`);
-    } catch (error) {
-      console.log("In exam assignment post api, error:", error);
-      toast.error(`Something went wrong while assigning exam!`);
-    }
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [
+    canCheckDuplicate,
+    selectedAcademicYearId,
+    examType,
+    semester,
+    selectedProgramCourses,
+    selectedShifts,
+    selectedSubjectCategories,
+    selectedSubjectIds,
+    subjectSchedules,
+    availableAcademicYears,
+    classes,
+    examTypes,
+    programCourses,
+    shifts,
+    subjectTypes,
+    subjects,
+    user?.id,
+  ]);
+
+  // Student count query - fetch count based on selected filters
+  // Show breakdown as soon as class, program courses, and shifts are selected
+  // Papers are still needed for the count, but schedules don't need to be complete
+  const canFetchStudentCount =
+    selectedAcademicYearId &&
+    semester &&
+    selectedProgramCourses.length > 0 &&
+    selectedShifts.length > 0 &&
+    selectedSubjectPapers.length > 0; // Just need papers selected, schedules can be incomplete
+
+  // Fetch student count breakdown by program course and shift (single API call)
+  const { data: studentCountData, isLoading: loadingStudentCount } = useQuery(
+    [
+      "studentCountBreakdown",
+      selectedAcademicYearId,
+      semester,
+      selectedProgramCourses,
+      selectedShifts,
+      selectedSubjectPapers.map((sp) => sp.paperId).sort(),
+    ],
+    async () => {
+      // Enable query as soon as class, program courses, and shifts are selected
+      if (!selectedAcademicYearId || !semester || selectedProgramCourses.length === 0 || selectedShifts.length === 0) {
+        return { breakdown: [], total: 0 };
+      }
+
+      const classObj = classes.find((c) => c.id?.toString() === semester);
+      const classId = classObj?.id;
+      if (!classId) return { breakdown: [], total: 0 };
+
+      // Get paper IDs - use all selected papers even if schedules aren't complete
+      const paperIds = selectedSubjectPapers.map((sp) => sp.paperId).filter((id): id is number => id !== undefined);
+
+      // If no papers selected yet, return empty (but query is still enabled for when papers are added)
+      if (paperIds.length === 0) return { breakdown: [], total: 0 };
+
+      // Build all combinations
+      const combinations: Array<{ programCourseId: number; shiftId: number }> = [];
+      for (const programCourseId of selectedProgramCourses) {
+        for (const shiftId of selectedShifts) {
+          combinations.push({ programCourseId, shiftId });
+        }
+      }
+
+      if (combinations.length === 0) return { breakdown: [], total: 0 };
+
+      try {
+        const response = await countStudentsBreakdownForExam(
+          {
+            classId,
+            paperIds,
+            academicYearIds: [selectedAcademicYearId],
+            combinations,
+            gender: null,
+          },
+          null, // No Excel file
+        );
+
+        if (response.httpStatus === "SUCCESS" && response.payload) {
+          // Transform results into breakdown format with names
+          const breakdown: StudentCountBreakdown[] = response.payload.breakdown.map((item) => {
+            const programCourse = programCourses.find((pc) => pc.id === item.programCourseId);
+            const shift = shifts.find((s) => s.id === item.shiftId);
+            return {
+              programCourseId: item.programCourseId,
+              programCourseName: programCourse?.name || `Program Course ${item.programCourseId}`,
+              shiftId: item.shiftId,
+              shiftName: shift?.name || `Shift ${item.shiftId}`,
+              count: item.count,
+            };
+          });
+
+          return {
+            breakdown,
+            total: response.payload.total,
+          };
+        }
+        return { breakdown: [], total: 0 };
+      } catch (error) {
+        console.error("[SCHEDULE-EXAM] Error fetching student count breakdown:", error);
+        return { breakdown: [], total: 0 };
+      }
+    },
+    {
+      // Enable as soon as class, program courses, and shifts are selected
+      enabled: !!selectedAcademicYearId && !!semester && selectedProgramCourses.length > 0 && selectedShifts.length > 0,
+      staleTime: 30000, // Cache for 30 seconds
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+    },
+  );
+
+  const totalStudentCount = studentCountData?.total ?? 0;
+  const studentCountBreakdown = studentCountData?.breakdown ?? [];
+
+  const assignExamMutation = useMutation({
+    mutationFn: async () => {
+      const examSubjects: ExamSubjectT[] = [];
+      console.log("[SCHEDULE-EXAM] Selected subject papers:", selectedSubjectPapers);
+
+      for (const subjectPaper of selectedSubjectPapers) {
+        const schedule = subjectPaper.schedule;
+
+        if (!schedule?.date || !schedule?.startTime || !schedule?.endTime) {
+          console.warn(
+            `[SCHEDULE-EXAM] Incomplete schedule for subject ${subjectPaper.subjectId} paper ${subjectPaper.paperId}`,
+            schedule,
+          );
+          continue;
+        }
+
+        const startDateTime = `${schedule.date}T${schedule.startTime}:00+05:30`;
+        const endDateTime = `${schedule.date}T${schedule.endTime}:00+05:30`;
+
+        examSubjects.push({
+          subjectId: subjectPaper.subjectId,
+          paperId: subjectPaper.paperId, // Now includes paperId
+          startTime: new Date(startDateTime),
+          endTime: new Date(endDateTime),
+          examId: 0,
+          id: 0,
+          createdAt: null,
+          updatedAt: null,
+        });
+
+        console.log("[SCHEDULE-EXAM] Exam subject pushed:", {
+          subjectId: subjectPaper.subjectId,
+          paperId: subjectPaper.paperId,
+          startDateTime,
+          endDateTime,
+        });
+      }
+
+      // No rooms/students in schedule step - empty locations array
+      const locations: ExamRoomDto[] = [];
+
+      const tmpExamAssignment: ExamDto = {
+        orderType: "UID", // Default, will be set during allotment
+        academicYear: availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)!,
+        class: classes.find((c) => c.id?.toString() === semester)!,
+        examType: examTypes.find((et) => et.id?.toString() === examType)!,
+        examProgramCourses: programCourses
+          .filter((pc) => selectedProgramCourses.includes(pc.id!))
+          .map(
+            (pc): ExamProgramCourseDto => ({
+              examId: 0,
+              programCourse: pc,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              id: 0,
+            }),
+          ),
+        examShifts: shifts
+          .filter((s) => selectedShifts.includes(s.id!))
+          .map((sh) => ({
+            examId: 0,
+            shift: sh,
+          })),
+        examSubjectTypes: subjectTypes
+          .filter((st) => selectedSubjectCategories.includes(st.id!))
+          .map((st) => ({
+            examId: 0,
+            subjectType: st,
+          })),
+        gender: null, // Will be set during allotment
+        examSubjects: examSubjects.map((es) => ({
+          ...es,
+          subject: subjects.find((ele) => ele.id === es.subjectId)!,
+        })),
+        locations,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        id: 0,
+        legacyExamAssginmentId: null,
+        scheduledByUserId: null,
+        lastUpdatedByUserId: null,
+        admitCardStartDownloadDate: null,
+        admitCardLastDownloadDate: null,
+      };
+
+      // Check for duplicate exam before creating
+      console.log("Checking for duplicate exam...");
+      const duplicateCheck = await checkDuplicateExam(tmpExamAssignment);
+      if (duplicateCheck.payload?.isDuplicate) {
+        throw new Error(
+          duplicateCheck.payload.message ||
+            `An exam with the same configuration already exists (Exam ID: ${duplicateCheck.payload.duplicateExamId}).`,
+        );
+      }
+
+      console.log("Before calling doAssignExam with:", tmpExamAssignment);
+      // No Excel file needed for scheduling - only for allotment
+      const response = await doAssignExam(tmpExamAssignment, null);
+      console.log("In exam assignment post api, response:", response);
+      return response;
+    },
+    onSuccess: (response) => {
+      toast.success(`Exam scheduled successfully! You can now allot rooms and students.`);
+      // Invalidate relevant queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["exams"] });
+      // Reset form after successful creation
+      resetForm();
+      // Optionally redirect to allot exam page with exam ID
+      if (response.payload?.id) {
+        // Could navigate to allot page here if needed
+        console.log("Exam scheduled with ID:", response.payload.id);
+      }
+    },
+    onError: (error) => {
+      console.log("In exam scheduling post api, error:", error);
+      toast.error(`Something went wrong while scheduling exam!`);
+    },
+  });
+
+  // Reset form function
+  const resetForm = () => {
+    setExamType("");
+    setSemester("");
+    setSelectedProgramCourses([]);
+    setSelectedShifts([]);
+    setSelectedSubjectCategories([]);
+    setSelectedSubjectId(null);
+    setSelectedExamComponent(null);
+    setSelectedAcademicYearId(null);
+    setSelectedAffiliationId(null);
+    setSelectedRegulationTypeId(null);
+    setSelectedSubjectPapers([]);
+    setSelectedSubjectIds([]);
+    setDuplicateCheckResult(null);
+  };
+
+  const handleScheduleExam = () => {
+    assignExamMutation.mutate();
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-50">
-      <div className="w-full flex">
-        {/* Header */}
-        {/* <div className="mb-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-purple-500 flex items-center justify-center shadow-lg">
-              <GraduationCap className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Exam Scheduler</h1>
-              <p className=" text-gray-500 mt-1">Configure exams, rooms, and student seating in one view</p>
-            </div>
+    <div className="min-h-screen w-full p-7 py-4">
+      <div className=" w-full flex flex-col gap-4">
+        <div className="w-full  px-4 mx-auto">
+          {/* Page Heading */}
+          <div className="mb-6 border-b pb-3">
+            <h1 className="text-3xl font-bold text-gray-800">Schedule Exam</h1>
+            <p className="text-gray-600 mt-1">Create and schedule exams for your academic year</p>
           </div>
-          <Button
-            onClick={handleGenerate}
-            size="lg"
-            className="shadow-lg hover:shadow-xl transition-all bg-purple-500 hover:bg-purple-600 text-white"
-          >
-            <Calendar className="w-5 h-5 mr-2" /> Generate Assignments
-          </Button>
-        </div> */}
-
-        <div className="flex-1">
           {/* Top filter strip (A.Y, Aff, Reg, Exam type, Semester, Shifts, Program Course, Subject Category) */}
-          <Card className="mb-4 shadow-sm border">
-            <CardContent className="py-3 px-4">
-              <div className="flex flex-wrap gap-3 items-center">
-                {/* Academic Year */}
-                <div className="flex items-center">
-                  <Select
-                    value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
-                    onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
-                  >
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder="A.Y" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableAcademicYears.map((ay) => (
-                        <SelectItem key={ay.id} value={ay.id?.toString() || ""}>
-                          {ay.year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Affiliation */}
-                <div className="flex items-center">
-                  <Select
-                    value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
-                    onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
-                    disabled={loading.affiliations}
-                  >
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder={loading.affiliations ? "Loading..." : "Aff."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {affiliations.map((aff) => (
-                        <SelectItem key={aff.id} value={aff.id?.toString() || ""}>
-                          {aff.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Regulation Type */}
-                <div className="flex items-center">
-                  <Select
-                    value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
-                    onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
-                    disabled={loading.regulationTypes}
-                  >
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Reg."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {regulationTypes.map((reg) => (
-                        <SelectItem key={reg.id} value={reg.id?.toString() || ""}>
-                          {reg.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Exam Type */}
-                <div className="flex items-center">
-                  <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
-                    <SelectTrigger className="h-9 w-44  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder={loading.examTypes ? "Loading..." : "Exam Type"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {examTypes.map((type) => (
-                        <SelectItem key={type.id} value={type.id?.toString() || ""}>
-                          {type.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Semester */}
-                <div className="flex items-center">
-                  <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
-                    <SelectTrigger className="h-9 w-40  focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                      <SelectValue placeholder={loading.classes ? "Loading..." : "Semester"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {classes.map((cls) => (
-                        <SelectItem key={cls.id} value={cls.id?.toString() || ""}>
-                          {cls.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Shifts */}
-                <div className="flex items-center">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="h-9 min-w-[170px] justify-between  border-purple-300">
-                        Shift(s)
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-56 p-2" align="start">
-                      <div className="max-h-56 overflow-y-auto space-y-1">
-                        {shifts.map((shift) => (
-                          <button
-                            key={shift.id}
-                            type="button"
-                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
-                            onClick={() => shift.id && handleShiftToggle(shift.id)}
-                          >
-                            <Checkbox
-                              checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
-                              onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
-                              className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                            />
-                            <span className="text-center">{shift.name}</span>
-                          </button>
+          <div className="mb-4 mt-3 space-y-3">
+            <Card className="border-0 shadow-none">
+              <CardContent className="space-y-5 pb-4 pt-4">
+                {/* First Row: Academic Year, Affiliation, Regulation, Exam Type */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {/* Academic Year */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Academic Year</Label>
+                    <Select
+                      value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
+                      onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
+                    >
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <SelectValue placeholder="A.Y" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableAcademicYears.map((ay) => (
+                          <SelectItem key={ay.id} value={ay.id?.toString() || ""}>
+                            {ay.year}
+                          </SelectItem>
                         ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                {/* Program Courses */}
-                <div className="flex items-center">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-9 min-w-[210px] justify-between  border-purple-300"
-                        disabled={loading.programCourses}
-                      >
-                        {loading.programCourses ? "Loading..." : "Program Course(s)"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-2" align="start">
-                      <div className="max-h-60 overflow-y-auto space-y-1">
-                        {programCourses
-                          .filter((course) => course.isActive !== false)
-                          .map((course) => (
+                  {/* Affiliation */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Affiliation</Label>
+                    <Select
+                      value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
+                      onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
+                      disabled={loading.affiliations}
+                    >
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <SelectValue placeholder={loading.affiliations ? "Loading..." : "Aff."} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {affiliations.map((aff) => (
+                          <SelectItem key={aff.id} value={aff.id?.toString() || ""}>
+                            {aff.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Regulation Type */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Regulation</Label>
+                    <Select
+                      value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
+                      onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
+                      disabled={loading.regulationTypes}
+                    >
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Reg."} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {regulationTypes.map((reg) => (
+                          <SelectItem key={reg.id} value={reg.id?.toString() || ""}>
+                            {reg.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Exam Type */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Exam Type</Label>
+                    <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <SelectValue placeholder={loading.examTypes ? "Loading..." : "Exam Type"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {examTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id?.toString() || ""}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {/* Second Row: Semester, Shift(s), Program Course(s), Subject Category */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {/* Semester */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Semester</Label>
+                    <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <SelectValue placeholder={loading.classes ? "Loading..." : "Semester"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {classes.map((cls) => (
+                          <SelectItem key={cls.id} value={cls.id?.toString() || ""}>
+                            {cls.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Shift(s) */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Shift(s)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          disabled={loading.shifts}
+                        >
+                          <span className="text-gray-600">
+                            {loading.shifts
+                              ? "Loading..."
+                              : selectedShifts.length > 0
+                                ? `Select Shifts (${selectedShifts.length})`
+                                : "Select Shifts"}
+                          </span>
+                          <ChevronDown className="w-4 h-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="max-h-56 overflow-y-auto space-y-1">
+                          {shifts.map((shift) => (
+                            <button
+                              key={shift.id}
+                              type="button"
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                              onClick={() => shift.id && handleShiftToggle(shift.id)}
+                            >
+                              <Checkbox
+                                checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
+                                onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
+                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                              />
+                              <span className="text-center">{shift.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Program Course(s) */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Program Course(s)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          disabled={loading.programCourses}
+                        >
+                          <span className="text-gray-600">
+                            {loading.programCourses
+                              ? "Loading..."
+                              : selectedProgramCourses.length > 0
+                                ? `Select Program Courses (${selectedProgramCourses.length})`
+                                : "Select Program Courses"}
+                          </span>
+                          <ChevronDown className="w-4 h-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="max-h-60 overflow-y-auto space-y-1">
+                          {programCourses.map((course) => (
                             <button
                               key={course.id}
                               type="button"
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
                               onClick={() => course.id && handleProgramCourseToggle(course.id)}
                             >
                               <Checkbox
@@ -1241,32 +1425,38 @@ export default function ScheduleExamPage() {
                               <span className="text-left">{course.name}</span>
                             </button>
                           ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-                {/* Subject Category */}
-                <div className="flex items-center">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-9 min-w-[190px] justify-between  border-purple-300"
-                        disabled={loading.subjectTypes}
-                      >
-                        {loading.subjectTypes ? "Loading..." : "Subject Category"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="text-left p-2" align="start">
-                      <div className="max-h-56 overflow-y-auto space-y-1">
-                        {subjectTypes
-                          .filter((category) => category.isActive !== false)
-                          .map((category) => (
+                  {/* Subject Category */}
+                  <div className="flex flex-col gap-1">
+                    <Label className="font-medium text-gray-700">Subject Category</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          disabled={loading.subjectTypes}
+                        >
+                          <span className="text-gray-600">
+                            {loading.subjectTypes
+                              ? "Loading..."
+                              : selectedSubjectCategories.length > 0
+                                ? `Select Subject Categories (${selectedSubjectCategories.length})`
+                                : "Select Subject Categories"}
+                          </span>
+                          <ChevronDown className="w-4 h-4 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2" align="start">
+                        <div className="max-h-56 overflow-y-auto space-y-1">
+                          {subjectTypes.map((category) => (
                             <button
                               key={category.id}
                               type="button"
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 "
+                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
                               onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
                             >
                               <Checkbox
@@ -1279,738 +1469,625 @@ export default function ScheduleExamPage() {
                               </span>
                             </button>
                           ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                {/* Excel File Upload */}
-
-                {examType && examTypes.find((e) => e.id.toString() === examType && e.name === "Test Exam") && (
-                  <div className="flex items-center">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="h-9 w-44 justify-between border-purple-300">
-                          <Upload className="w-4 h-4 mr-1" />
-                          {excelFile
-                            ? `File: ${excelFile.name.slice(0, 20)}${excelFile.name.length > 20 ? "..." : ""}`
-                            : "Upload Excel"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80 p-4" align="start">
-                        <div className="space-y-3">
-                          <Input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".xlsx,.xls"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full"
-                          >
-                            <Upload className="w-4 h-4 mr-2" />
-                            Choose Excel File (foil_number, uid)
-                          </Button>
-                          {excelFile && (
-                            <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
-                              <span className="text-sm text-green-700">{excelFile.name}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={removeExcelFile}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          )}
-                          <p className="text-xs text-gray-500">Upload XLSX with columns: foil_number, uid</p>
                         </div>
                       </PopoverContent>
                     </Popover>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Main layout: left sidebar, center content (rooms/students), right sidebar */}
-          <div className="flex gap-4 w-full">
-            {/* Left sidebar: Subjects + schedule + total + assign */}
-            <div className="w-[26%] flex-shrink-0">
-              <Card className="h-[calc(100vh-200px)] overflow-y-scroll flex flex-col shadow-lg border-2">
-                <CardContent className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
-                  {/* Subject list */}
-                  <div className="flex-1 min-h-0 flex flex-col">
-                    <div className="flex items-center justify-between mb-2 gap-2">
-                      <div className="flex items-center gap-2">
-                        {/* Multi-select subjects dropdown */}
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="h-8 min-w-[140px] justify-between border-purple-300"
-                              disabled={getDistinctSubjects().length === 0}
-                            >
-                              Subjects
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-56 p-2" align="start">
-                            <div className="max-h-60 overflow-y-auto space-y-1">
-                              {getDistinctSubjects().map((subject) => {
-                                if (subject.subjectId == null) return null;
-                                const isChecked = selectedSubjectIds.includes(subject.subjectId);
-                                return (
-                                  <button
-                                    key={subject.subjectId}
-                                    type="button"
-                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                                    onClick={() =>
-                                      setSelectedSubjectIds((prev) =>
-                                        isChecked
-                                          ? prev.filter((id) => id !== subject.subjectId)
-                                          : [...prev, subject.subjectId as number],
-                                      )
+            <Card className="border-0 shadow-none">
+              <CardContent className="space-y-5 pb-4 pt-2">
+                {/* Third Row: Other Filters - Full Width */}
+                <div className="flex flex-wrap gap-3 sm:gap-4 items-start w-full ">
+                  {/* Subjects */}
+                  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+                    <Label className=" font-medium text-gray-700">Subjects</Label>
+                    {getDistinctSubjects().length === 0 && !loading.papers ? (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
+                        <span className=" text-gray-500 whitespace-nowrap">Select filters to load subjects</span>
+                      </div>
+                    ) : (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="h-8 w-full justify-between border-purple-300 "
+                            disabled={getDistinctSubjects().length === 0}
+                          >
+                            <span className="">Subjects</span>
+                            {selectedSubjectIds.length > 0 && (
+                              <span className=" text-gray-500 ml-1">({selectedSubjectIds.length})</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-2" align="start">
+                          <div className="max-h-60 overflow-y-auto space-y-1">
+                            {getDistinctSubjects().map((subject) => {
+                              if (subject.subjectId == null) return null;
+                              const isChecked = selectedSubjectIds.includes(subject.subjectId);
+
+                              return (
+                                <button
+                                  key={subject.subjectId}
+                                  type="button"
+                                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
+                                  onClick={() => {
+                                    if (subject.subjectId) {
+                                      handleSubjectToggle(subject.subjectId);
                                     }
-                                  >
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={() =>
-                                        setSelectedSubjectIds((prev) =>
-                                          isChecked
-                                            ? prev.filter((id) => id !== subject.subjectId)
-                                            : [...prev, subject.subjectId as number],
-                                        )
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={isChecked}
+                                    onCheckedChange={() => {
+                                      if (subject.subjectId) {
+                                        handleSubjectToggle(subject.subjectId);
                                       }
-                                      className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                    />
-                                    <span className="text-sm text-center">
-                                      {subject.subjectCode && (
-                                        <span className="text-gray-500"> {subject.subjectCode}</span>
-                                      )}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-
-                        {/* Exam component filter */}
-                        <Select
-                          value={selectedExamComponent?.toString() || "all"}
-                          onValueChange={(value) => {
-                            setSelectedExamComponent(value === "all" ? null : Number(value));
-                          }}
-                          disabled={loading.examComponents}
-                        >
-                          <SelectTrigger className="h-8 w-32 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue placeholder={loading.examComponents ? "Loading..." : "Component"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            {examComponents
-                              .filter((comp) => !comp.disabled)
-                              .map((comp) => (
-                                <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
-                                  {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-auto border rounded-lg bg-gray-50 p-2 space-y-2 scrollbar-hide">
-                      {loading.papers ? (
-                        <div className="flex items-center justify-center py-8 text-gray-500">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Loading papers...
-                        </div>
-                      ) : getDistinctSubjects().length === 0 ? (
-                        <p className="text-gray-500 text-center py-6">Select filters to load subjects</p>
-                      ) : selectedSubjectIds.length === 0 ? (
-                        <p className="text-gray-500 text-sm text-center py-4">
-                          Select subjects from the dropdown above
-                        </p>
-                      ) : (
-                        <div className="space-y-3">
-                          {selectedSubjectIds.map((id) => {
-                            const subjectMeta = getDistinctSubjects().find((s) => s.subjectId === id);
-                            const subject = subjects.find((s) => s.id === id);
-                            const name = subjectMeta?.subjectName || subject?.name || `Subject ID: ${id}`;
-                            const code = subjectMeta?.subjectCode || subject?.code;
-                            const schedule = subjectSchedules[id.toString()] ?? {
-                              date: "",
-                              startTime: "",
-                              endTime: "",
-                            };
-
-                            return (
-                              <div
-                                key={id}
-                                className={`border rounded-lg bg-white p-3 cursor-pointer ${
-                                  selectedSubjectId === id
-                                    ? "border-purple-500 bg-purple-50"
-                                    : "hover:border-purple-400/60"
-                                }`}
-                                onClick={() => setSelectedSubjectId(id)}
-                              >
-                                <div className="flex items-center justify-between gap-2 mb-2">
-                                  <div>
-                                    <div className="font-semibold">
-                                      <span className="text-gray-500 font-normal"> {code ? code : name}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="col-span-2">
-                                    <Label className=" font-semibold mb-1 block">Exam Date</Label>
-                                    <Input
-                                      type="date"
-                                      value={schedule.date || ""}
-                                      onChange={(e) => handleScheduleChange(id, "date", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label className=" font-semibold mb-1 block">Start Time</Label>
-                                    <Input
-                                      type="time"
-                                      value={schedule.startTime || ""}
-                                      onChange={(e) => handleScheduleChange(id, "startTime", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label className=" font-semibold mb-1 block">End Time</Label>
-                                    <Input
-                                      type="time"
-                                      value={schedule.endTime || ""}
-                                      onChange={(e) => handleScheduleChange(id, "endTime", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Total students + Assign button */}
-                  <div className="mt-auto space-y-3">
-                    <div className="p-3 bg-gray-100/60 rounded-lg border flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-purple-600" />
-                        <span className=" font-semibold">Students</span>
-                      </div>
-                      <span className="text-xl font-bold text-purple-600">{totalStudents}</span>
-                    </div>
-                    <Button
-                      //   onClick={handleGenerate}
-                      onClick={handleAssignExam}
-                      className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold"
-                    >
-                      Assign
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Center: Tabs (Rooms / Students) with table */}
-            <div className="flex-1 min-w-0">
-              <Card className="h-[calc(100vh-200px)] flex flex-col shadow-lg border-2">
-                <CardHeader className="border-b bg-gray-100/60 py-2 px-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setCenterTab("rooms")}
-                        className={`px-4 py-1.5 rounded-md border ${
-                          centerTab === "rooms"
-                            ? "bg-white border-purple-500 text-purple-700 font-semibold"
-                            : "bg-gray-100 border-transparent text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        Rooms
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCenterTab("students")}
-                        className={`px-4 py-1.5 rounded-md border ${
-                          centerTab === "students"
-                            ? "bg-white border-purple-500 text-purple-700 font-semibold"
-                            : "bg-gray-100 border-transparent text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        Students
-                      </button>
-                    </div>
-
-                    <div className="flex flex-wrap gap-4">
-                      <div className="space-y-1">
-                        <Select value={gender || ""} onValueChange={(value) => setGender(value as typeof gender)}>
-                          <SelectTrigger className="h-8 w-40 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ALL">All Students</SelectItem>
-                            <SelectItem value="MALE">Male Only</SelectItem>
-                            <SelectItem value="FEMALE">Female Only</SelectItem>
-                            <SelectItem value="OTHER">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
-                          <SelectTrigger className="h-8 w-44 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="UID">UID</SelectItem>
-                            <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
-                            <SelectItem value="CU_ROLL_NUMBER">CU Roll Number</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
-                  {centerTab === "rooms" ? (
-                    <div className="p-4 flex flex-col gap-4 h-full">
-                      {/* Rooms selection table */}
-                      <div className="flex-1 min-h-0 border rounded-lg bg-white overflow-hidden">
-                        {loading.rooms ? (
-                          <div className="flex items-center justify-center py-12">
-                            <Loader2 className="h-6 w-6 animate-spin" />
-                            <span className="ml-2 text-gray-500">Loading rooms...</span>
+                                    }}
+                                    className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                  />
+                                  <span className="text-sm text-left flex-1">
+                                    {subject.subjectCode ? (
+                                      <span className="text-gray-700 font-medium">{subject.subjectCode}</span>
+                                    ) : (
+                                      <span className="text-gray-500">{subject.subjectName}</span>
+                                    )}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
-                        ) : (
-                          <div className="h-full overflow-y-auto">
-                            <table className="w-full border-collapse table-fixed">
-                              <thead className="sticky top-0 z-10 bg-gray-100">
-                                <tr>
-                                  <th className="w-20 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Select
-                                  </th>
-                                  <th className="w-20 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+
+                  {/* Component */}
+                  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+                    <Label className=" font-medium text-gray-700">Component</Label>
+                    <Select
+                      value={selectedExamComponent?.toString() || "all"}
+                      onValueChange={(value) => {
+                        setSelectedExamComponent(value === "all" ? null : Number(value));
+                      }}
+                      disabled={loading.examComponents}
+                    >
+                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ">
+                        <SelectValue placeholder={loading.examComponents ? "Loading..." : "Component"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {examComponents
+                          .filter((comp) => !comp.disabled)
+                          .map((comp) => (
+                            <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
+                              {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="w-full flex-shrink-0">
+                  <div className="rounded-lg overflow-hidden">
+                    <div className="flex flex-col gap-4">
+                      {/* Subject schedule list */}
+                      <div className="flex-1 min-h-0 flex flex-col">
+                        <div className="flex-1 overflow-auto scrollbar-hide">
+                          {isPapersQueryEnabled && (loadingPapers || fetchingPapers) ? (
+                            <div className="flex items-center justify-center py-8 text-gray-500">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Loading papers...
+                            </div>
+                          ) : (
+                            <div className="border border-gray-400 rounded-lg overflow-hidden">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="border-b border-gray-400">
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[5%]">
+                                      <div className="font-medium">Sr. No.</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[15%]">
+                                      <div className="font-medium">Program Course</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[25%]">
+                                      <div className="font-medium">Subject & Paper</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
+                                      <div className="font-medium">Code</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
+                                      <div className="font-medium">Subject Category</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[12%]">
+                                      <div className="font-medium">Date</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center bg-gray-100 w-[13%]">
+                                      <div className="font-medium">Time</div>
+                                    </TableHead>
+                                    <TableHead className="p-2 text-center bg-gray-100 w-[10%]">
+                                      <div className="font-medium">Action</div>
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {selectedSubjectPapers.length === 0 ? (
+                                    <TableRow>
+                                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                        {getDistinctSubjects().length === 0
+                                          ? "No subjects available"
+                                          : "Select subjects from the dropdown above and choose papers"}
+                                      </TableCell>
+                                    </TableRow>
+                                  ) : (
+                                    getGroupedSubjectPapers().map((group, index) => {
+                                      // Use first paper as representative for display
+                                      const representativePaper = group.papers[0]?.paper;
+                                      const subject = subjects.find((s) => s.id === group.subjectId);
+                                      if (!representativePaper || !subject) return null;
+
+                                      // Collect all unique program courses for this group
+                                      const uniqueProgramCourseIds = new Set<number>();
+                                      group.papers.forEach(({ paper }) => {
+                                        if (paper.programCourseId) {
+                                          uniqueProgramCourseIds.add(paper.programCourseId);
+                                        }
+                                      });
+
+                                      const programCoursesForGroup = Array.from(uniqueProgramCourseIds)
+                                        .map((pcId) => programCourses.find((pc) => pc.id === pcId))
+                                        .filter((pc): pc is NonNullable<typeof pc> => pc !== undefined);
+
+                                      const subjectType = subjectTypes.find(
+                                        (st) => st.id === representativePaper.subjectTypeId,
+                                      );
+
+                                      // Use representative schedule (from first paper or most complete one)
+                                      const schedule = group.representativeSchedule;
+                                      const dateValue = schedule.date || "";
+                                      const startTimeValue = schedule.startTime || "";
+                                      const endTimeValue = schedule.endTime || "";
+
+                                      // Show count if multiple papers in group
+                                      const paperCount = group.papers.length;
+                                      const showCount = paperCount > 1;
+
+                                      return (
+                                        <TableRow
+                                          key={`${group.subjectId}-${group.normalizedCode}-${index}`}
+                                          className="border-b border-gray-400"
+                                        >
+                                          <TableCell className="p-2 text-center border-r border-gray-400">
+                                            {index + 1}
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400">
+                                            <div className="flex flex-wrap gap-1 justify-center">
+                                              {programCoursesForGroup.length > 0 ? (
+                                                programCoursesForGroup.map((pc) => (
+                                                  <Badge
+                                                    key={pc.id}
+                                                    variant="outline"
+                                                    className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                                                  >
+                                                    {pc.name}
+                                                  </Badge>
+                                                ))
+                                              ) : (
+                                                <span className="text-muted-foreground">-</span>
+                                              )}
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400">
+                                            <div className="flex flex-col gap-1.5 items-center">
+                                              <span className="text-sm font-medium">
+                                                {representativePaper.name || "-"}
+                                                {representativePaper.isOptional === false && (
+                                                  <span className="text-red-500 ml-1">*</span>
+                                                )}
+                                                {showCount && (
+                                                  <span className="text-gray-500 text-xs ml-1">({paperCount})</span>
+                                                )}
+                                              </span>
+                                              <Badge
+                                                variant="outline"
+                                                className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50 w-fit"
+                                              >
+                                                {subject.code || subject.name}
+                                              </Badge>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400 text-sm font-mono">
+                                            {representativePaper.code || "-"}
+                                            {showCount && (
+                                              <span className="text-gray-500 text-xs ml-1">({paperCount})</span>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400">
+                                            {subjectType ? (
+                                              <Badge
+                                                variant="outline"
+                                                className="text-xs border-green-300 text-green-700 bg-green-50"
+                                              >
+                                                {subjectType.code || subjectType.name}
+                                              </Badge>
+                                            ) : (
+                                              <span className="text-muted-foreground">-</span>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center border-r border-gray-400">
+                                            <Input
+                                              type="date"
+                                              value={dateValue}
+                                              onChange={(e) =>
+                                                handleScheduleChange(
+                                                  group.subjectId,
+                                                  group.normalizedCode,
+                                                  "date",
+                                                  e.target.value,
+                                                )
+                                              }
+                                              className="h-8 w-full text-sm"
+                                            />
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center">
+                                            <div className="flex flex-col gap-1">
+                                              <Input
+                                                type="time"
+                                                value={startTimeValue}
+                                                onChange={(e) =>
+                                                  handleScheduleChange(
+                                                    group.subjectId,
+                                                    group.normalizedCode,
+                                                    "startTime",
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                className="h-8 w-full text-sm"
+                                                placeholder="Start"
+                                              />
+                                              <Input
+                                                type="time"
+                                                value={endTimeValue}
+                                                onChange={(e) =>
+                                                  handleScheduleChange(
+                                                    group.subjectId,
+                                                    group.normalizedCode,
+                                                    "endTime",
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                className="h-8 w-full text-sm"
+                                                placeholder="End"
+                                              />
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="p-2 text-center">
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => {
+                                                // Remove all papers in this group
+                                                setSelectedSubjectPapers((prev) =>
+                                                  prev.filter((sp) => {
+                                                    const paper = papers.find((p) => p.id === sp.paperId);
+                                                    if (!paper) return true;
+                                                    const spNormalizedCode = normalizePaperCode(paper.code);
+                                                    return !(
+                                                      sp.subjectId === group.subjectId &&
+                                                      spNormalizedCode === group.normalizedCode
+                                                    );
+                                                  }),
+                                                );
+                                                // Check if this was the last group for this subject
+                                                const remainingPapersForSubject = selectedSubjectPapers.filter((sp) => {
+                                                  const paper = papers.find((p) => p.id === sp.paperId);
+                                                  if (!paper) return false;
+                                                  const spNormalizedCode = normalizePaperCode(paper.code);
+                                                  return (
+                                                    sp.subjectId === group.subjectId &&
+                                                    spNormalizedCode !== group.normalizedCode
+                                                  );
+                                                });
+                                                if (remainingPapersForSubject.length === 0) {
+                                                  setSelectedSubjectIds((prev) =>
+                                                    prev.filter((id) => id !== group.subjectId),
+                                                  );
+                                                }
+                                              }}
+                                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Student Count Display - Show only when subjects are selected */}
+            {selectedSubjectPapers.length > 0 && (
+              <Card className="border-0 shadow-none mt-6">
+                <CardContent className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-blue-900">Eligible Students</h3>
+                    {loadingStudentCount ? (
+                      <div className="flex items-center gap-2 text-blue-700">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">Counting...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-bold text-blue-900">{Number(totalStudentCount) || 0}</span>
+                        <span className="text-sm text-blue-700">students</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Breakdown by Program Course and Shift - Table Format */}
+                  {(() => {
+                    // Show actual data when available
+                    // Transform data into table format: rows = program courses, columns = shifts
+                    if (!Array.isArray(studentCountBreakdown) || studentCountBreakdown.length === 0) {
+                      // Build empty table structure based on selected program courses and shifts
+                      const sortedProgramCourses = selectedProgramCourses
+                        .map((pcId) => {
+                          const pc = programCourses.find((p) => p.id === pcId);
+                          return { id: pcId, name: pc?.name || `Program Course ${pcId}` };
+                        })
+                        .sort((a, b) => a.name.localeCompare(b.name));
+
+                      const sortedShifts = selectedShifts
+                        .map((shiftId) => {
+                          const shift = shifts.find((s) => s.id === shiftId);
+                          return { id: shiftId, name: shift?.name || `Shift ${shiftId}` };
+                        })
+                        .sort((a, b) => a.name.localeCompare(b.name));
+
+                      if (sortedProgramCourses.length === 0 || sortedShifts.length === 0) {
+                        return null;
+                      }
+
+                      return (
+                        <div className="mt-3 pt-3 border-t border-blue-200">
+                          <p className="text-xs font-medium text-blue-800 mb-3">Breakdown by Program Course & Shift:</p>
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
+                              <thead>
+                                <tr className="bg-blue-100">
+                                  <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
                                     Sr. No.
                                   </th>
-                                  <th className="w-32 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Floor
+                                  <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
+                                    Program Course
                                   </th>
-                                  <th className="w-32 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Room
-                                  </th>
-                                  <th className="w-24 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Benches
-                                  </th>
-                                  <th className="w-24 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Capacity
-                                  </th>
-                                  <th className="w-40 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Max Students per Bench
-                                  </th>
-                                  <th className="w-40 px-4 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider border border-gray-300 bg-gray-100">
-                                    Override
-                                  </th>
+                                  {sortedShifts.map((shift) => (
+                                    <th
+                                      key={shift.id}
+                                      className="border border-blue-200 px-3 py-2 text-center text-xs font-semibold text-blue-900"
+                                    >
+                                      {shift.name}
+                                    </th>
+                                  ))}
                                 </tr>
                               </thead>
                               <tbody>
-                                {rooms
-                                  .filter((room) => room.isActive !== false)
-                                  .map((room, index) => {
-                                    const isSelected = selectedRooms.some((r) => r.id === room.id);
-                                    const selectedRoom = selectedRooms.find((r) => r.id === room.id);
-                                    const currentMaxStudentsPerBench =
-                                      selectedRoom?.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-                                    const calculatedCapacity = (room.numberOfBenches || 0) * currentMaxStudentsPerBench;
-                                    const floorName = room.floor.id!
-                                      ? floors.find((f) => f.id === room.floor.id)?.name
-                                      : "N/A";
-
-                                    return (
-                                      <tr
-                                        key={room.id}
-                                        className={`border-b hover:bg-gray-50 transition-colors ${
-                                          isSelected ? "bg-purple-50" : ""
-                                        }`}
+                                {sortedProgramCourses.map((pc, index) => (
+                                  <tr key={pc.id} className="hover:bg-blue-50">
+                                    <td className="border border-blue-200 px-3 py-2 text-xs text-gray-700 text-center">
+                                      {index + 1}
+                                    </td>
+                                    <td className="border border-blue-200 px-3 py-2 text-xs font-medium text-gray-700">
+                                      {pc.name}
+                                    </td>
+                                    {sortedShifts.map((shift) => (
+                                      <td
+                                        key={shift.id}
+                                        className="border border-blue-200 px-3 py-2 text-xs text-gray-700 text-center"
                                       >
-                                        <td className="px-4 py-3 border border-gray-300">
-                                          <div className="flex justify-center">
-                                            <Checkbox
-                                              checked={isSelected}
-                                              onCheckedChange={(checked) => handleRoomSelection(room, !!checked)}
-                                              className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 text-white focus:ring-2 focus:ring-purple-500"
-                                            />
-                                          </div>
-                                        </td>
-                                        <td className="px-4 py-3 font-medium text-gray-900 border border-gray-300">
-                                          {index + 1}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">{floorName}</td>
-                                        <td className="px-4 py-3 font-medium text-gray-900 border border-gray-300">
-                                          {room.name}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">
-                                          {room.numberOfBenches || 0}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">
-                                          {calculatedCapacity}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-700 border border-gray-300">
-                                          {currentMaxStudentsPerBench}
-                                        </td>
-                                        <td className="px-4 py-3 border border-gray-300 min-h-[80px]">
-                                          <div className="space-y-1 min-h-[60px]">
-                                            {isSelected ? (
-                                              <>
-                                                <Input
-                                                  type="number"
-                                                  min="1"
-                                                  max={room.maxStudentsPerBench || 2}
-                                                  placeholder={room.maxStudentsPerBench?.toString() || "2"}
-                                                  value={selectedRoom?.maxStudentsPerBenchOverride || ""}
-                                                  onChange={(e) => {
-                                                    const inputValue = e.target.value.trim();
-                                                    if (!inputValue) {
-                                                      handleMaxStudentsPerBenchOverride(room.id!, null);
-                                                      return;
-                                                    }
-
-                                                    const isPositiveInteger = /^\d+$/.test(inputValue);
-                                                    if (!isPositiveInteger) {
-                                                      return;
-                                                    }
-
-                                                    const val = parseInt(inputValue, 10);
-                                                    const maxAllowed = room.maxStudentsPerBench || 2;
-
-                                                    if (val > 0 && val <= maxAllowed) {
-                                                      handleMaxStudentsPerBenchOverride(room.id!, val);
-                                                    }
-                                                  }}
-                                                  className="h-8 w-full max-w-[80px]"
-                                                />
-                                                <div className="text-gray-400">
-                                                  Max: {room.maxStudentsPerBench || 2}
-                                                </div>
-                                              </>
-                                            ) : (
-                                              <div className="h-8 flex items-center">
-                                                <span className="text-gray-400">-</span>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
+                                        {loadingStudentCount ? (
+                                          <Loader2 className="w-3 h-3 animate-spin inline" />
+                                        ) : (
+                                          "-"
+                                        )}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
                               </tbody>
                             </table>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      );
+                    }
 
-                      {/* Selected rooms list + capacity summary */}
-                      <div className="flex-1 min-h-0 flex flex-col gap-3">
-                        <div className="flex-1 min-h-0 border rounded-lg bg-gray-50 p-3 overflow-y-auto scrollbar-hide">
-                          {selectedRooms.length === 0 ? (
-                            <p className="text-gray-500 text-center py-10">No rooms selected</p>
-                          ) : (
-                            selectedRooms.map((room) => {
-                              const maxStudentsPerBench =
-                                room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-                              const capacity = (room.numberOfBenches || 0) * maxStudentsPerBench;
-                              return (
-                                <div
-                                  key={room.id}
-                                  className="p-3 mb-2 bg-white rounded-lg border flex items-center justify-between hover:border-purple-400/60 transition-colors"
-                                >
-                                  <div>
-                                    <div className="font-semibold">Room {room.name}</div>
-                                    <div className="text-gray-500">
-                                      {room.numberOfBenches || 0} benches • Capacity: {capacity}
-                                    </div>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleRoomSelection(room, false)}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    // Show actual data when available
+                    // Transform data into table format: rows = program courses, columns = shifts
+                    const programCourseMap = new Map<
+                      number,
+                      { name: string; shifts: Map<number, { name: string; count: number }> }
+                    >();
+
+                    // Get all unique shifts
+                    const allShiftIds = new Set<number>();
+                    const shiftIdToName = new Map<number, string>();
+
+                    for (const item of studentCountBreakdown) {
+                      allShiftIds.add(item.shiftId);
+                      shiftIdToName.set(item.shiftId, item.shiftName);
+
+                      if (!programCourseMap.has(item.programCourseId)) {
+                        programCourseMap.set(item.programCourseId, {
+                          name: item.programCourseName,
+                          shifts: new Map(),
+                        });
+                      }
+
+                      const pcData = programCourseMap.get(item.programCourseId)!;
+                      pcData.shifts.set(item.shiftId, { name: item.shiftName, count: item.count });
+                    }
+
+                    // Sort shifts by name for consistent column order
+                    const sortedShiftIds = Array.from(allShiftIds).sort((a, b) => {
+                      const nameA = shiftIdToName.get(a) || "";
+                      const nameB = shiftIdToName.get(b) || "";
+                      return nameA.localeCompare(nameB);
+                    });
+
+                    // Sort program courses by name
+                    const sortedProgramCourses = Array.from(programCourseMap.entries()).sort((a, b) =>
+                      a[1].name.localeCompare(b[1].name),
+                    );
+
+                    return (
+                      <div className="mt-3 pt-3 border-t border-blue-200">
+                        <p className="text-xs font-medium text-blue-800 mb-3">Breakdown by Program Course & Shift:</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
+                            <thead>
+                              <tr className="bg-blue-100">
+                                <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
+                                  Sr. No.
+                                </th>
+                                <th className="border border-blue-200 px-3 py-2 text-left text-xs font-semibold text-blue-900">
+                                  Program Course
+                                </th>
+                                {sortedShiftIds.map((shiftId) => (
+                                  <th
+                                    key={shiftId}
+                                    className="border border-blue-200 px-3 py-2 text-center text-xs font-semibold text-blue-900"
                                   >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              );
-                            })
-                          )}
+                                    {shiftIdToName.get(shiftId) || `Shift ${shiftId}`}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sortedProgramCourses.map(([programCourseId, pcData], index) => (
+                                <tr key={programCourseId} className="hover:bg-blue-50">
+                                  <td className="border border-blue-200 px-3 py-2 text-xs text-gray-700 text-center">
+                                    {index + 1}
+                                  </td>
+                                  <td className="border border-blue-200 px-3 py-2 text-xs font-medium text-gray-700">
+                                    {pcData.name}
+                                  </td>
+                                  {sortedShiftIds.map((shiftId) => {
+                                    const shiftData = pcData.shifts.get(shiftId);
+                                    return (
+                                      <td
+                                        key={shiftId}
+                                        className="border border-blue-200 px-3 py-2 text-xs text-gray-700 text-center"
+                                      >
+                                        {shiftData ? shiftData.count : "-"}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
+                      </div>
+                    );
+                  })()}
 
-                        <div
-                          className={`p-3 rounded-lg border ${
-                            capacityStatus ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            {capacityStatus ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <AlertCircle className="w-4 h-4 text-red-600" />
-                            )}
-                            <span className="font-bold">
-                              {capacityStatus ? "Capacity Sufficient" : "Insufficient Capacity"}
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex justify-between p-1.5 bg-white/60 rounded">
-                              <span>Total Capacity</span>
-                              <span className="font-bold">{totalCapacity} seats</span>
-                            </div>
-                            <div className="flex justify-between p-1.5 bg-white/60 rounded">
-                              <span>Total Students</span>
-                              <span className="font-bold">{totalStudents}</span>
-                            </div>
-                            <div className="flex justify-between p-1.5 bg-white/60 rounded">
-                              <span>Available</span>
-                              <span className={`font-bold ${capacityStatus ? "text-green-700" : "text-red-600"}`}>
-                                {totalCapacity - totalStudents} seats
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex flex-col overflow-scroll h-full">
-                      {/* Students table */}
-                      <div className="flex-1 min-h-0 overflow-scroll p-4">
-                        {loadingStudents ? (
-                          <div className="flex items-center justify-center py-12">
-                            <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-                            <span className="ml-2  text-gray-500">Loading students...</span>
-                          </div>
-                        ) : studentsWithSeats.length === 0 ? (
-                          <div className="text-center py-12">
-                            <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                            <p className="font-semibold text-gray-600">No Students Assigned</p>
-                            <p className=" text-gray-400 mt-1">
-                              Select rooms and generate assignments to see students here
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <div className="relative max-h-[calc(100vh-260px)] overflow-y-auto border border-gray-300 rounded-lg">
-                              <table className="w-full border-collapse">
-                                <thead className="sticky top-0 z-10 bg-gray-100">
-                                  <tr className="border-b-2 border-gray-300">
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Sr. No.
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Name
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      {assignBy === "UID" ? "UID" : "CU Reg. No."}
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Contact
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Subject
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Paper
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 bg-gray-100">
-                                      Location
-                                    </th>
-                                    <th className="px-4 py-3 text-left  font-semibold text-gray-700 uppercase tracking-wider bg-gray-100">
-                                      Seat Number
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {studentsWithSeats.map((student, idx) => (
-                                    <tr
-                                      key={student.studentId}
-                                      className={`border-b hover:bg-gray-100/60 transition-colors ${
-                                        idx % 2 === 0 ? "bg-gray-50" : ""
-                                      }`}
-                                    >
-                                      <td className="px-4 py-3  font-medium text-gray-900 border-r border-gray-300">
-                                        {idx + 1}
-                                      </td>
-                                      <td className="px-4 py-3  font-medium text-gray-900 border-r border-gray-300">
-                                        {student.name}
-                                      </td>
-                                      <td className="px-4 py-3  font-mono text-gray-700 border-r border-gray-300">
-                                        {assignBy === "UID"
-                                          ? student.uid
-                                          : student.cuRegistrationApplicationNumber || "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3  text-gray-700 border-r border-gray-300">
-                                        <div className="space-y-1">
-                                          <div>{student.email || "N/A"}</div>
-                                          <div className=" text-gray-500">WA: {student.whatsappPhone || "N/A"}</div>
-                                        </div>
-                                      </td>
-                                      <td className="px-4 py-3  text-gray-700 border-r border-gray-300">
-                                        {selectedSubjectId
-                                          ? (() => {
-                                              const subject = subjects.find((s) => s.id === selectedSubjectId);
-                                              const shortName =
-                                                (subject as { shortName?: string | null })?.shortName ?? null;
-                                              if (shortName && shortName.trim()) return shortName;
-                                              if (subject?.code && subject.code.trim()) return subject.code;
-                                              return subject?.name || "N/A";
-                                            })()
-                                          : "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3  text-gray-700 border-r border-gray-300">
-                                        {selectedSubjectId
-                                          ? (() => {
-                                              const subject = subjects.find((s) => s.id === selectedSubjectId);
-                                              const shortName =
-                                                (subject as { shortName?: string | null })?.shortName ?? null;
-                                              if (shortName && shortName.trim()) return shortName;
-                                              if (subject?.code && subject.code.trim()) return subject.code;
-                                              return subject?.name || "N/A";
-                                            })()
-                                          : "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3  text-gray-700 border-r border-gray-300">
-                                        {student.floorName && student.roomName
-                                          ? `${student.floorName}, ${student.roomName}`
-                                          : student.floorName || student.roomName || "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3  font-mono text-gray-700">{student.seatNumber}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                  {totalStudentCount === 0 && !loadingStudentCount && (
+                    <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                      <p className="text-xs text-yellow-800">
+                        ⚠️ No eligible students found. Please check your filters (Program Courses, Shifts, Subjects).
+                      </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
-            </div>
+            )}
           </div>
-        </div>
 
-        {/* Right sidebar: Selected filters summary (Program Courses, Subject Categories, Shift) */}
-        <div className="w-[16%] flex-shrink-0 space-y-4">
-          <Card className="h-[calc(100vh-200px)] flex flex-col shadow-lg border-2">
-            <CardContent className="p-4 flex-1 flex flex-col gap-4">
-              {/* Program Courses */}
-              <div className="border rounded-lg p-3 flex-1 flex flex-col">
-                <div className="font-semibold mb-2 border-b pb-1">Program Courses</div>
-                <div className="flex-1 overflow-y-auto">
-                  {selectedProgramCourses.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No program course selected</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProgramCourses.map((id) => {
-                        const course = programCourses.find((c) => c.id === id);
-                        const label = course?.name || `Course ${id}`;
-                        return (
-                          <Badge
-                            key={id}
-                            className="text-xs bg-purple-100 text-purple-800 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 pr-1"
-                          >
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedProgramCourses((prev) => prev.filter((pcId) => pcId !== id))}
-                              className="ml-1 text-purple-500 hover:text-purple-700"
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+          {/* Duplicate Exam Warning */}
+          {duplicateCheckResult?.isDuplicate && (
+            <div className="mt-6 p-5 bg-red-50 border-2 border-red-400 rounded-lg flex items-start gap-4 shadow-lg">
+              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5 animate-pulse" />
+              <div className="flex-1">
+                <p className="font-bold text-red-900 text-base mb-2">⚠️ Duplicate Exam Detected</p>
+                <p className="text-sm text-red-800 font-medium mb-3">
+                  {duplicateCheckResult.message ||
+                    `An exam with the same configuration already exists${duplicateCheckResult.duplicateExamId ? ` (Exam ID: ${duplicateCheckResult.duplicateExamId})` : ""}. Please modify your selections to create a unique exam.`}
+                </p>
+                {duplicateCheckResult.duplicateExamId && (
+                  <Link
+                    to={`/dashboard/exam-management/exams/${duplicateCheckResult.duplicateExamId}`}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-red-700 hover:text-red-900 underline transition-colors"
+                  >
+                    <span>View Duplicate Exam</span>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </Link>
+                )}
               </div>
+            </div>
+          )}
 
-              {/* Subject Categories */}
-              <div className="border rounded-lg p-3 flex-1 flex flex-col">
-                <div className="font-semibold mb-2 border-b pb-1">Subject Categories</div>
-                <div className="flex-1 overflow-y-auto">
-                  {selectedSubjectCategories.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No subject category selected</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedSubjectCategories.map((id) => {
-                        const category = subjectTypes.find((c) => c.id === id);
-                        const label = category?.code && category.code.trim() ? category.code : category?.name;
-                        return (
-                          <Badge
-                            key={id}
-                            className="text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-300 flex items-center gap-1 pr-1"
-                          >
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setSelectedSubjectCategories((prev) => prev.filter((catId) => catId !== id))
-                              }
-                              className="ml-1 text-blue-500 hover:text-blue-700"
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
+          {/* Debug info - remove in production */}
+          {process.env.NODE_ENV === "development" && canCheckDuplicate && (
+            <div className="mt-2 p-2 bg-gray-100 border border-gray-300 rounded text-xs">
+              <p>Duplicate Check Status: ✅ Ready</p>
+              {duplicateCheckResult && (
+                <p>Result: {duplicateCheckResult.isDuplicate ? "🔴 Duplicate Found" : "✅ No Duplicate"}</p>
+              )}
+            </div>
+          )}
 
-              {/* Shifts */}
-              <div className="border rounded-lg p-3 flex-1 flex flex-col">
-                <div className="font-semibold mb-2 border-b pb-1">Shift(s)</div>
-                <div className="flex-1 overflow-y-auto">
-                  {selectedShifts.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No shift selected</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedShifts.map((id) => {
-                        const shift = shifts.find((s) => s.id === id);
-                        const label = shift?.name || `Shift ${id}`;
-                        return (
-                          <Badge
-                            key={id}
-                            className="text-xs bg-green-100 text-green-800 hover:bg-green-200 border border-green-300 flex items-center gap-1 pr-1"
-                          >
-                            <span>{label}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedShifts((prev) => prev.filter((shiftId) => shiftId !== id))}
-                              className="ml-1 text-green-600 hover:text-green-800"
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Schedule Exam button */}
+          <div className="mt-8 flex justify-end">
+            <Button
+              onClick={handleScheduleExam}
+              disabled={
+                assignExamMutation.status === "loading" ||
+                duplicateCheckResult?.isDuplicate ||
+                selectedSubjectPapers.length === 0 ||
+                !selectedSubjectPapers.every((sp) => {
+                  const schedule = sp.schedule;
+                  return schedule?.date && schedule?.startTime && schedule?.endTime;
+                }) ||
+                (canFetchStudentCount && totalStudentCount === 0) ||
+                loadingStudentCount
+              }
+              className="w-full sm:w-auto sm:min-w-[180px] h-12 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all"
+            >
+              {assignExamMutation.status === "loading" ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                  Scheduling...
+                </>
+              ) : (
+                "Schedule Exam"
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

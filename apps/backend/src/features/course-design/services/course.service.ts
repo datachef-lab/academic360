@@ -11,7 +11,7 @@ import { OldCourse } from "@/types/old-data/old-course.js";
 // import { studentModel } from "@/features/user/models/student.model.js";
 
 import { OldStudent } from "@/types/old-student.js";
-import { feesStructureModel } from "@/features/fees/models/fees-structure.model.js";
+// import { feesStructureModel } from "@/features/fees/models/fees-structure.model.js";
 import { admissionCourseModel } from "@/features/admissions/models/admission-course.model.js";
 import { admissionAcademicInfoModel } from "@/features/admissions/models/admission-academic-info.model.js";
 import { admissionCourseApplication } from "@/features/admissions/models/admission-course-application.model.js";
@@ -279,7 +279,7 @@ export async function deleteCourseSafe(id: number) {
     [{ admCourseAppCount }],
     [{ admCourseCount }],
     [{ programCourseCount }],
-    [{ feesStructureCount }],
+    // [{ feesStructureCount }],
   ] = await Promise.all([
     db
       .select({ batchCount: countDistinct(batchModel.id) })
@@ -316,10 +316,10 @@ export async function deleteCourseSafe(id: number) {
       .select({ programCourseCount: countDistinct(programCourseModel.id) })
       .from(programCourseModel)
       .where(eq(programCourseModel.courseId, id)),
-    db
-      .select({ feesStructureCount: countDistinct(feesStructureModel.id) })
-      .from(feesStructureModel)
-      .where(eq(feesStructureModel.courseId, id)),
+    // db
+    //   .select({ feesStructureCount: countDistinct(feesStructureModel.id) })
+    //   .from(feesStructureModel)
+    //   .where(eq(feesStructureModel.courseId, id)),
   ]);
 
   if (
@@ -328,8 +328,8 @@ export async function deleteCourseSafe(id: number) {
     admAcademicInfoCount > 0 ||
     admCourseAppCount > 0 ||
     admCourseCount > 0 ||
-    programCourseCount > 0 ||
-    feesStructureCount > 0
+    programCourseCount > 0
+    // feesStructureCount > 0
   ) {
     return {
       success: false,
@@ -341,7 +341,7 @@ export async function deleteCourseSafe(id: number) {
         { count: admCourseAppCount, type: "Adm-course-app" },
         { count: admCourseCount, type: "Adm-course" },
         { count: programCourseCount, type: "Program-course" },
-        { count: feesStructureCount, type: "Fees-structure" },
+        // { count: feesStructureCount, type: "Fees-structure" },
       ],
     };
   }

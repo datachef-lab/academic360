@@ -1,7 +1,6 @@
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 import {
-  FeesStructureDto,
   FeesHead,
   FeesSlab,
   FeesReceiptType,
@@ -11,6 +10,10 @@ import {
   FeesSlabMapping,
   CreateFeesStructureDto,
 } from "@/types/fees";
+import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
+import { PaginatedResponse } from "@/types/pagination";
+import { AcademicYear } from "@/types/academics/academic-year";
+import type { FeeConcessionSlabT } from "@/schemas";
 
 const BASE_PATH = "/api/v1/fees";
 
@@ -35,23 +38,114 @@ export interface NewFeesStructure {
   components?: Omit<FeesComponent, "id" | "feesStructureId" | "createdAt" | "updatedAt">[];
 }
 
-// Get all fees structures
-export async function getAllFeesStructures(): Promise<ApiResponse<FeesStructureDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/structure`);
+// Get all fees structures (paginated)
+export async function getAllFeesStructures(
+  page: number = 1,
+  pageSize: number = 10,
+  filters?: {
+    academicYearId?: number;
+    classId?: number;
+    receiptTypeId?: number;
+    programCourseId?: number;
+    shiftId?: number;
+  },
+): Promise<ApiResponse<PaginatedResponse<FeeStructureDto>>> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    pageSize: pageSize.toString(),
+  });
+
+  if (filters) {
+    if (filters.academicYearId) {
+      params.append("academicYearId", filters.academicYearId.toString());
+    }
+    if (filters.classId) {
+      params.append("classId", filters.classId.toString());
+    }
+    if (filters.receiptTypeId) {
+      params.append("receiptTypeId", filters.receiptTypeId.toString());
+    }
+    if (filters.programCourseId) {
+      params.append("programCourseId", filters.programCourseId.toString());
+    }
+    if (filters.shiftId) {
+      params.append("shiftId", filters.shiftId.toString());
+    }
+  }
+
+  const response = await axiosInstance.get(`${BASE_PATH}/structure?${params.toString()}`);
   return response.data;
 }
 
 // Get a single fees structure
-export async function getFeesStructure(feesStructureId: number): Promise<ApiResponse<FeesStructureDto>> {
+export async function getFeesStructure(feesStructureId: number): Promise<ApiResponse<FeeStructureDto>> {
   const response = await axiosInstance.get(`${BASE_PATH}/structure/${feesStructureId}`);
   return response.data;
 }
 
 // Create a new fees structure
 export async function createFeesStructure(
-  newFeesStructure: CreateFeesStructureDto,
-): Promise<ApiResponse<FeesStructureDto>> {
+  newFeesStructure: CreateFeeStructureDto | CreateFeesStructureDto,
+): Promise<ApiResponse<FeeStructureDto>> {
   const response = await axiosInstance.post(`${BASE_PATH}/structure`, newFeesStructure);
+  return response.data;
+}
+
+// Create fee structures by DTO (bulk creation for multiple program courses and shifts)
+export async function createFeeStructureByDto(
+  createFeeStructureDto: CreateFeeStructureDto,
+): Promise<ApiResponse<FeeStructureDto[]>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/structure/by-dto`, createFeeStructureDto);
+  return response.data;
+}
+
+// Update fee structure by DTO (with upsert for components, concession slabs, and installments)
+export async function updateFeeStructureByDto(
+  feeStructureId: number,
+  updateFeeStructureDto: CreateFeeStructureDto,
+): Promise<ApiResponse<FeeStructureDto>> {
+  const response = await axiosInstance.put(`${BASE_PATH}/structure/by-dto/${feeStructureId}`, updateFeeStructureDto);
+  return response.data;
+}
+
+// Check unique fee structure amounts
+export interface CheckUniqueAmountsRequest {
+  academicYearId: number;
+  classId: number;
+  programCourseIds: number[];
+  shiftIds: number[];
+  baseAmount: number;
+  feeStructureConcessionSlabs: Array<{
+    feeConcessionSlabId: number;
+    concessionRate: number;
+  }>;
+  excludeFeeStructureId?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CheckUniqueAmountsResponse {
+  isUnique: boolean;
+  conflicts: PaginatedResponse<{
+    programCourseId: number;
+    shiftId: number;
+    concessionSlabId: number;
+    concessionSlabName: string;
+    conflictingAmount: number;
+    conflictingFeeStructureId: number;
+    academicYearId: number;
+    academicYearName: string | null;
+    classId: number;
+    className: string | null;
+    receiptTypeId: number;
+    receiptTypeName: string | null;
+  }>;
+}
+
+export async function checkUniqueFeeStructureAmounts(
+  request: CheckUniqueAmountsRequest,
+): Promise<ApiResponse<CheckUniqueAmountsResponse>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/structure/check-unique-amounts`, request);
   return response.data;
 }
 
@@ -70,8 +164,8 @@ export async function checkFeesStructureExists(payload: {
 // Update a fees structure
 export async function updateFeesStructure(
   feesStructureId: number,
-  feesStructure: Partial<FeesStructureDto>,
-): Promise<ApiResponse<FeesStructureDto>> {
+  feesStructure: Partial<FeeStructureDto>,
+): Promise<ApiResponse<FeeStructureDto>> {
   const response = await axiosInstance.put(`${BASE_PATH}/structure/${feesStructureId}`, feesStructure);
   return response.data;
 }
@@ -93,19 +187,42 @@ export interface NewFeesHead {
 // Get all fees heads
 export async function getAllFeesHeads(): Promise<FeesHead[]> {
   const response = await axiosInstance.get(`${BASE_PATH}/heads`);
-  return response.data;
+  // Backend returns ApiResponse with { httpStatusCode, httpStatus, payload, message }
+  if (response.data && response.data.payload !== undefined) {
+    return response.data.payload || [];
+  }
+  // Fallback for direct array response
+  return Array.isArray(response.data) ? response.data : [];
 }
 
 // Get a single fees head
 export async function getFeesHead(feesHeadId: number): Promise<ApiResponse<FeesHead>> {
   const response = await axiosInstance.get(`${BASE_PATH}/heads/${feesHeadId}`);
+  // Backend returns ApiResponse format
+  if (response.data && response.data.httpStatus) {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload,
+    };
+  }
   return response.data;
 }
 
 // Create a new fees head
 export async function createFeesHead(newFeesHead: NewFeesHead): Promise<ApiResponse<FeesHead>> {
   const response = await axiosInstance.post(`${BASE_PATH}/heads`, newFeesHead);
-  return response.data;
+  // Backend returns ApiResponse format
+  if (response.data && response.data.httpStatus) {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 201,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to create fees head");
 }
 
 // Update a fees head
@@ -114,13 +231,31 @@ export async function updateFeesHead(
   feesHead: Partial<NewFeesHead>,
 ): Promise<ApiResponse<FeesHead>> {
   const response = await axiosInstance.put(`${BASE_PATH}/heads/${feesHeadId}`, feesHead);
-  return response.data;
+  // Backend returns ApiResponse format
+  if (response.data && response.data.httpStatus) {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to update fees head");
 }
 
 // Delete a fees head
 export async function deleteFeesHead(feesHeadId: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/heads/${feesHeadId}`);
-  return response.data;
+  // Backend returns ApiResponse format
+  if (response.data && response.data.httpStatus) {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: undefined as void,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to delete fees head");
 }
 
 // ==================== FEES SLABS APIs ====================
@@ -182,7 +317,8 @@ export interface NewFeesReceiptType {
 // Get all fees receipt types
 export async function getAllFeesReceiptTypes(): Promise<FeesReceiptType[]> {
   const response = await axiosInstance.get(`${BASE_PATH}/receipt-types`);
-  return response.data;
+  // Backend returns ApiResponse with { httpStatusCode, status, payload, message }
+  return response.data?.payload || response.data || [];
 }
 
 // Get a single fees receipt type
@@ -223,31 +359,189 @@ export interface NewAddOn {
 // Get all addons
 export async function getAllAddons(): Promise<ApiResponse<AddOn[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/addons`);
-  return response.data;
+
+  if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload || [],
+    };
+  }
+  // Return error response
+  return {
+    httpStatusCode: response.status || 500,
+    httpStatus: "ERROR",
+    message: response.data?.message || "Failed to fetch fee concession slabs",
+    payload: [],
+  };
 }
 
 // Get a single addon
 export async function getAddon(addonId: number): Promise<ApiResponse<AddOn>> {
   const response = await axiosInstance.get(`${BASE_PATH}/addons/${addonId}`);
-  return response.data;
+
+  if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to fetch addon");
 }
 
 // Create a new addon
 export async function createAddon(newAddon: NewAddOn): Promise<ApiResponse<AddOn>> {
   const response = await axiosInstance.post(`${BASE_PATH}/addons`, newAddon);
-  return response.data;
+
+  if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 201,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to create addon");
 }
 
 // Update an addon
 export async function updateAddon(addonId: number, addon: Partial<NewAddOn>): Promise<ApiResponse<AddOn>> {
   const response = await axiosInstance.put(`${BASE_PATH}/addons/${addonId}`, addon);
-  return response.data;
+
+  if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to update addon");
 }
 
 // Delete an addon
 export async function deleteAddon(addonId: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/addons/${addonId}`);
-  return response.data;
+  // Backend returns { success, message, data }
+  if (
+    response.data &&
+    response.data.httpStatus &&
+    (response.data.httpStatus === "SUCCESS" || response.data.httpStatus === "DELETED")
+  ) {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: undefined as void,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to delete Addon");
+}
+
+// ==================== FEE CONCESSION SLABS APIs ====================
+
+export interface NewFeeConcessionSlab {
+  name: string;
+  description: string;
+  defaultConcessionRate: number;
+  sequence: number;
+  legacyFeeSlabId?: number | null;
+}
+
+// Get all fee concession slabs
+export async function getAllFeeConcessionSlabs(): Promise<ApiResponse<FeeConcessionSlabT[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/concession-slabs`);
+
+  // Backend returns ApiResponse with { httpStatusCode, httpStatus, payload, message }
+  if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload || [],
+    };
+  }
+  // Return error response
+  return {
+    httpStatusCode: response.status || 500,
+    httpStatus: "ERROR",
+    message: response.data?.message || "Failed to fetch fee concession slabs",
+    payload: [],
+  };
+}
+
+// Get a single fee concession slab
+export async function getFeeConcessionSlab(slabId: number): Promise<ApiResponse<FeeConcessionSlabT>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/concession-slabs/${slabId}`);
+
+  // Backend returns ApiResponse format
+  if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to fetch fee concession slab");
+}
+
+// Create a new fee concession slab
+export async function createFeeConcessionSlab(newSlab: NewFeeConcessionSlab): Promise<ApiResponse<FeeConcessionSlabT>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/concession-slabs`, newSlab);
+
+  // Backend returns ApiResponse format
+  if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 201,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to create fee concession slab");
+}
+
+// Update a fee concession slab
+export async function updateFeeConcessionSlab(
+  slabId: number,
+  slab: Partial<NewFeeConcessionSlab>,
+): Promise<ApiResponse<FeeConcessionSlabT>> {
+  const response = await axiosInstance.put(`${BASE_PATH}/concession-slabs/${slabId}`, slab);
+
+  // Backend returns ApiResponse format
+  if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to update fee concession slab");
+}
+
+// Delete a fee concession slab
+export async function deleteFeeConcessionSlab(slabId: number): Promise<ApiResponse<void>> {
+  const response = await axiosInstance.delete(`${BASE_PATH}/concession-slabs/${slabId}`);
+
+  // Backend returns ApiResponse format
+  if (
+    response.data &&
+    response.data.httpStatus &&
+    (response.data.httpStatus === "SUCCESS" || response.data.httpStatus === "DELETED")
+  ) {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: undefined as void,
+    };
+  }
+  throw new Error(response.data?.message || "Failed to delete fee concession slab");
 }
 
 // ==================== FEES COMPONENTS APIs ====================
@@ -390,14 +684,37 @@ export const checkSlabsExistForAcademicYear = async (academicYearId: number): Pr
   return response.data;
 };
 
-export const getFeesStructures = async () => {
-  const response = await axiosInstance.get(`${BASE_PATH}/structure`);
-  return response.data;
+export const getFeesStructures = async (
+  page: number = 1,
+  pageSize: number = 10,
+  filters?: {
+    academicYearId?: number;
+    classId?: number;
+    receiptTypeId?: number;
+    programCourseId?: number;
+    shiftId?: number;
+  },
+): Promise<FeeStructureDto[]> => {
+  const response = await axiosInstance.get<ApiResponse<PaginatedResponse<FeeStructureDto>>>(`${BASE_PATH}/structure`, {
+    params: {
+      page,
+      pageSize,
+      ...filters,
+    },
+  });
+  // Handle ApiResponse format with PaginatedResponse
+  if (response.data.payload && response.data.payload.content) {
+    return response.data.payload.content;
+  }
+  return [];
 };
 
-export const getAcademicYearsFromFeesStructures = async () => {
+export const getAcademicYearsFromFeesStructures = async (): Promise<AcademicYear[]> => {
   const response = await axiosInstance.get(`${BASE_PATH}/structure/academic-years/all`);
-  return response.data;
+  if (response.data && response.data.payload) {
+    return response.data.payload;
+  }
+  return [];
 };
 
 export const getCoursesFromFeesStructures = async (academicYearId: number) => {

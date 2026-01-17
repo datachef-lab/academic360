@@ -1,6 +1,6 @@
 import "dotenv/config";
 import pg, { PoolClient } from "pg";
-import { createConnection } from "mysql2/promise"; // For MySQL
+import { createPool, type Pool as MySqlPool } from "mysql2/promise"; // For MySQL (old DB)
 import { drizzle } from "drizzle-orm/node-postgres";
 import { createDefaultExamComponents } from "@/features/course-design/services/exam-component.service.js";
 import { initializeClasses } from "@/features/academics/services/class.service.js";
@@ -36,6 +36,7 @@ import { CuRegistrationExcelService } from "@/services/cu-registration-excel.ser
 import { sendAdmRegFormToNotSendStudents } from "@/features/admissions/services/cu-registration-correction-request.service";
 import { exportStaffDataToExcel } from "@/features/user/services/tmp-service";
 import { loadAllStaff } from "@/features/user/services/staff.service";
+import { getIrpNotFoundCourseDesigns } from "@/features/exams/services/exam-schedule.service";
 
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -55,7 +56,7 @@ pool.on("connect", async (client) => {
 export const connectToDatabase = async () => {
   try {
     const client: PoolClient = await pool.connect(); // Test the connection ✔
-    console.log(process.env.DATABASE_URL);
+    // console.log(process.env.DATABASE_URL);
     console.log("[backend] - Connected to the database successfully. 🎉");
     client.release(); // Release the connection back to the pool
 
@@ -89,10 +90,10 @@ export const connectToDatabase = async () => {
     // loadOldSubjects();
     // loadOldCourses();
     // loadOldSubjectTypes();
-    console.log(
-      "[backend] - CU Registration App Path:",
-      process.env.CU_REGISTRATION_APP_PATH,
-    );
+    // console.log(
+    //   "[backend] - CU Registration App Path:",
+    //   process.env.CU_REGISTRATION_APP_PATH,
+    // );
 
     // Load CU physical registration schedule from Excel into DB (safe to re-run)
     try {
@@ -143,13 +144,26 @@ export const connectToDatabase = async () => {
 //     process.env.OLD_DB_PASSWORD!,
 //     process.env.OLD_DB_NAME!
 // )
-export const mysqlConnection = await createConnection({
+export const mysqlConnection: MySqlPool = createPool({
   host: process.env.OLD_DB_HOST!,
   port: parseInt(process.env.OLD_DB_PORT!, 10),
   user: process.env.OLD_DB_USER!,
   password: process.env.OLD_DB_PASSWORD!,
   database: process.env.OLD_DB_NAME!,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
 });
+
+// Keep the MySQL pool warm to avoid idle disconnects (MySQL server wait_timeout)
+const MYSQL_KEEPALIVE_MS = Number(process.env.OLD_DB_KEEPALIVE_MS || 10000);
+setInterval(() => {
+  mysqlConnection.query("SELECT 1").catch((err) => {
+    console.warn("[MySQL] Keepalive ping failed:", err?.message || err);
+  });
+}, MYSQL_KEEPALIVE_MS).unref?.();
 
 // Test MySQL Connection
 export const connectToMySQL = async () => {
@@ -160,6 +174,7 @@ export const connectToMySQL = async () => {
     console.log(rows);
     // exportStaffDataToExcel();
     console.log("[MySQL] - Connected successfully. 🎉");
+    // getIrpNotFoundCourseDesigns();
   } catch (error) {
     console.error("[MySQL] - Connection failed: ⚠", error);
     // process.exit(1); // Exit the application if the database connection fails

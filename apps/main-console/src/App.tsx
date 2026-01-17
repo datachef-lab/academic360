@@ -174,6 +174,8 @@ const router = createBrowserRouter(
           element: <examManagementModule.ExamManagementMasterLayout />,
           children: [
             { path: "", element: <examManagementModule.HomePage /> },
+            { path: "schedule", element: <examManagementModule.ScheduleExamPage /> },
+            { path: "allot", element: <examManagementModule.AllotExamPage /> },
             { path: "exams", element: <examManagementModule.ExamsPage /> },
 
             // { path: "components", element: <examManagementModule.ExamComponentsPage /> },
@@ -183,7 +185,7 @@ const router = createBrowserRouter(
             // { path: "evaluation-types", element: <examManagementModule.EvaluationTypePage /> },
           ],
         },
-        { path: "exam-management/schedule", element: <examManagementModule.ScheduleExamPage /> },
+
         {
           path: "exam-management/exams/:examId",
           element: <examManagementModule.ExamLayoutMaster />,
@@ -207,7 +209,7 @@ const router = createBrowserRouter(
             { path: "invigilators", element: <examManagementModule.InvigilatorsPage /> },
             { path: "support-staff", element: <examManagementModule.SupportStaffPage /> },
             { path: "examiners", element: <examManagementModule.ExaminersPage /> },
-            { path: "allot", element: <examManagementModule.AllotAnswerscriptsPage /> },
+
             { path: "collect", element: <examManagementModule.CollectAnswerscriptsPage /> },
           ],
         },
@@ -298,6 +300,9 @@ const router = createBrowserRouter(
             { path: "structure", element: <admissionFeesModule.feesModule.FeesStructurePage /> },
             { path: "slabs", element: <admissionFeesModule.feesModule.FeesSlabPage /> },
             { path: "heads", element: <admissionFeesModule.feesModule.FeeHeadsPage /> },
+            { path: "fee-concession-slab", element: <admissionFeesModule.feesModule.FeeConcessionSlabPage /> },
+            { path: "fee-receipts", element: <admissionFeesModule.feesModule.FeesReceiptTypePage /> },
+            { path: "addon", element: <admissionFeesModule.feesModule.AddonPage /> },
           ],
         },
         {

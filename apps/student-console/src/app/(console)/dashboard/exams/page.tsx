@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Calendar, Clock, FileText, BarChart, GraduationCap, History } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import React, { useState, useEffect, useRef } from "react";
+import { Calendar, Clock, FileText, BarChart, GraduationCap, History, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 // Work around strict shadcn typings with proper type extensions
 const TabsFixed = Tabs as React.ComponentType<
@@ -20,233 +20,409 @@ const TabsTriggerFixed = TabsTrigger as React.ComponentType<
 const TabsContentFixed = TabsContent as React.ComponentType<
   React.ComponentProps<typeof TabsContent> & { children?: React.ReactNode; value?: string; className?: string }
 >;
-const SelectTriggerFixed = SelectTrigger as React.ComponentType<
-  React.ComponentProps<typeof SelectTrigger> & { children?: React.ReactNode; className?: string }
->;
-const SelectContentFixed = SelectContent as React.ComponentType<
-  React.ComponentProps<typeof SelectContent> & { children?: React.ReactNode }
->;
-const SelectItemFixed = SelectItem as React.ComponentType<
-  React.ComponentProps<typeof SelectItem> & { children?: React.ReactNode; value?: string; key?: string }
->;
-import { useAuth } from "@/hooks/use-auth";
 import { useStudent } from "@/providers/student-provider";
 import { format, parseISO } from "date-fns";
-import { useRouter } from "next/navigation";
 import { ExamDto } from "@/dtos";
-interface Exam {
-  id: number;
-  testid: number;
-  testName: string;
-  classid: number;
-  className: string;
-  sessid: number;
-  sessionName: string;
-  examdate: string;
-  frmhr: number;
-  frmmnt: number;
-  tohr: number;
-  tomnt: number;
-  room: string;
-  entrydate: string;
-  subjectTypeName: string;
-  paperid: number;
-  paperName: string;
-}
+import { fetchExamsByStudentId } from "@/services/exam-api.service";
+import { ExamPapersModal } from "./exam-papers-modal";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function ExamsContent() {
-  const { accessToken } = useAuth();
-  const { student, accessControl } = useStudent();
-  const router = useRouter();
-  const [allExams, setAllExams] = useState<Exam[]>([]);
+  const { student } = useStudent();
+  const { user } = useAuth();
+  const [exams, setExams] = useState<ExamDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
-  const hasInitialFetchRef = React.useRef(false);
-  const abortControllerRef = React.useRef<AbortController | null>(null);
-
-  //   useEffect(() => {
-  //     if (!accessControl?.access_course) {
-  //       router.back();
-  //     }
-  //   }, [accessControl, router]);
+  const [selectedExam, setSelectedExam] = useState<ExamDto | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const socketRef = useRef<any | null>(null);
 
   // Derived exam lists with improved categorization
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Set to beginning of today
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
+  const now = new Date(); // Current time for time-based checks
 
-  // Upcoming exams: future dates (starting from tomorrow)
-  const upcomingExams = allExams
-    .filter((exam) => {
-      const examDate = parseISO(exam.examdate);
+  // Helper function to check if exam has any upcoming papers
+  const hasUpcomingPapers = (exam: ExamDto): boolean => {
+    if (!exam.examSubjects || exam.examSubjects.length === 0) return false;
+    return exam.examSubjects.some((subject) => {
+      const examDate = new Date(subject.startTime);
       examDate.setHours(0, 0, 0, 0);
       return examDate > today;
-    })
-    .sort((a, b) => parseISO(a.examdate).getTime() - parseISO(b.examdate).getTime());
+    });
+  };
 
-  // Today's exams: exams happening today
-  const recentExams = allExams
-    .filter((exam) => {
-      const examDate = parseISO(exam.examdate);
+  // Helper function to check if exam has any papers today
+  const hasPapersToday = (exam: ExamDto): boolean => {
+    if (!exam.examSubjects || exam.examSubjects.length === 0) return false;
+    return exam.examSubjects.some((subject) => {
+      const examDate = new Date(subject.startTime);
       examDate.setHours(0, 0, 0, 0);
       return examDate.getTime() === today.getTime();
-    })
-    .sort((a, b) => a.frmhr * 60 + a.frmmnt - (b.frmhr * 60 + b.frmmnt));
+    });
+  };
 
-  // Completed exams: exams from before today or completed today based on time
-  const previousExams = allExams
+  // Helper function to check if all papers are completed
+  const allPapersCompleted = (exam: ExamDto): boolean => {
+    if (!exam.examSubjects || exam.examSubjects.length === 0) return false;
+    // Find the last paper (latest end time)
+    const lastPaper = exam.examSubjects.reduce((latest, current) => {
+      const currentEnd = new Date(current.endTime);
+      const latestEnd = new Date(latest.endTime);
+      return currentEnd > latestEnd ? current : latest;
+    });
+    const lastPaperEnd = new Date(lastPaper.endTime);
+    return now > lastPaperEnd;
+  };
+
+  // Upcoming exams: Has at least one paper in the future
+  const upcomingExams = exams
+    .filter((exam) => hasUpcomingPapers(exam))
+    .sort((a, b) => {
+      // Sort by earliest upcoming paper
+      const nextPaperA = a.examSubjects
+        .filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d > today;
+        })
+        .sort((s1, s2) => new Date(s1.startTime).getTime() - new Date(s2.startTime).getTime())[0];
+      const nextPaperB = b.examSubjects
+        .filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d > today;
+        })
+        .sort((s1, s2) => new Date(s1.startTime).getTime() - new Date(s2.startTime).getTime())[0];
+
+      if (!nextPaperA || !nextPaperB) return 0;
+      return new Date(nextPaperA.startTime).getTime() - new Date(nextPaperB.startTime).getTime();
+    });
+
+  // Today's exams: Has at least one paper today (not yet completed)
+  const recentExams = exams
     .filter((exam) => {
-      const examDate = parseISO(exam.examdate);
-      examDate.setHours(0, 0, 0, 0);
-
-      // If exam date is before today, it's definitely in the past
-      if (examDate < today) return true;
-
-      // If exam is today, check if it's completed based on end time
-      if (examDate.getTime() === today.getTime()) {
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        const examEndTimeInMinutes = exam.tohr * 60 + exam.tomnt;
-        const currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-        // If current time is past the exam end time, it's completed
-        return currentTimeInMinutes > examEndTimeInMinutes;
-      }
-
-      return false;
+      if (!hasPapersToday(exam)) return false;
+      // Only show if not all papers are completed
+      return !allPapersCompleted(exam);
     })
-    .sort((a, b) => parseISO(b.examdate).getTime() - parseISO(a.examdate).getTime());
+    .sort((a, b) => {
+      // Sort by earliest paper today
+      const todayPaperA = a.examSubjects
+        .filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d.getTime() === today.getTime();
+        })
+        .sort((s1, s2) => new Date(s1.startTime).getTime() - new Date(s2.startTime).getTime())[0];
+      const todayPaperB = b.examSubjects
+        .filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d.getTime() === today.getTime();
+        })
+        .sort((s1, s2) => new Date(s1.startTime).getTime() - new Date(s2.startTime).getTime())[0];
+
+      if (!todayPaperA || !todayPaperB) return 0;
+      return new Date(todayPaperA.startTime).getTime() - new Date(todayPaperB.startTime).getTime();
+    });
+
+  // Completed exams: All papers have been completed
+  const previousExams = exams
+    .filter((exam) => {
+      // Only completed if ALL papers are done AND no upcoming/today papers
+      return allPapersCompleted(exam) && !hasUpcomingPapers(exam) && !hasPapersToday(exam);
+    })
+    .sort((a, b) => {
+      // Sort by latest end time (most recent first)
+      const lastPaperA = a.examSubjects.reduce((latest, current) => {
+        const currentEnd = new Date(current.endTime);
+        const latestEnd = new Date(latest.endTime);
+        return currentEnd > latestEnd ? current : latest;
+      });
+      const lastPaperB = b.examSubjects.reduce((latest, current) => {
+        const currentEnd = new Date(current.endTime);
+        const latestEnd = new Date(latest.endTime);
+        return currentEnd > latestEnd ? current : latest;
+      });
+      return new Date(lastPaperB.endTime).getTime() - new Date(lastPaperA.endTime).getTime();
+    });
 
   useEffect(() => {
-    // If we don't have a student ID yet, do nothing
-    if (!student?.id || !accessToken) return;
-
-    // Prevent multiple simultaneous fetches
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    if (!student?.id) {
+      setLoading(false);
+      return;
     }
 
-    // Only show loading on initial fetch, not during refetches
-    if (!hasInitialFetchRef.current) {
-      setLoading(true);
+    setLoading(true);
+    setError(null);
+
+    fetchExamsByStudentId(student.id)
+      .then((data) => {
+        console.log("Fetched exams via service:", data, data.payload.content);
+        // Filter exams: show if admitCardStartDownloadDate exists and is less than or equal to current time
+        // Show all exams (including completed) as long as admit card start date has passed
+        const now = new Date();
+        const nowTime = now.getTime();
+        const filteredExams = (data.payload.content || []).filter((exam) => {
+          // If no admit card start date is set, don't show the exam
+          if (!exam.admitCardStartDownloadDate) {
+            return false;
+          }
+          const startDate = new Date(exam.admitCardStartDownloadDate);
+          const startTime = startDate.getTime();
+
+          // Show if start date time is less than or equal to current time
+          // This includes both active and completed exams
+          return startTime <= nowTime;
+        });
+        setExams(filteredExams);
+      })
+      .catch((err) => {
+        console.error("Error fetching exams via service:", err);
+        setError(err instanceof Error ? err.message : "Failed to load exams");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [student?.id]);
+
+  // Setup socket connection for real-time exam updates
+  useEffect(() => {
+    if (!student?.id || typeof window === "undefined") return;
+
+    // Prevent multiple socket connections
+    if (socketRef.current?.connected) {
+      console.log("[Student Console] Socket already connected, skipping...");
+      return;
     }
 
-    // Create a new abort controller for this request
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    const fetchExams = async () => {
+    // Dynamic import to avoid SSR issues - load socket.io-client only on client side
+    const loadSocket = async () => {
       try {
-        setError(null);
+        // @ts-ignore - socket.io-client will be available after pnpm install
+        const socketModule = await import("socket.io-client");
+        // Use the same backend URL as API calls from NEXT_PUBLIC_API_URL
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
 
-        // Check if this request has been aborted
-        if (controller.signal.aborted) return;
+        // Wrap URL parsing in try-catch for better error handling
+        let parsed: URL;
+        try {
+          parsed = new URL(apiUrl);
+        } catch (urlError) {
+          console.error("[Student Console] Invalid API URL:", apiUrl, urlError);
+          return;
+        }
 
-        const response = await fetch(`/api/exams?studentId=${student.id}`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          signal: controller.signal,
+        // Use the exact same origin as the API URL (backend socket runs on the same server)
+        const origin = `${parsed.protocol}//${parsed.host}`;
+        const pathPrefix = parsed.pathname.replace(/\/$/, "");
+        const socketPath = pathPrefix ? `${pathPrefix}/socket.io` : "/socket.io";
+
+        console.log("[Student Console] Connecting socket to:", origin, "path:", socketPath);
+
+        // @ts-ignore - socket.io-client types will be available after pnpm install
+        const socket: any = socketModule.io(origin, {
+          path: socketPath,
+          withCredentials: true,
+          transports: ["polling", "websocket"], // Try polling first, then websocket
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionAttempts: 5,
+          timeout: 20000,
+        } as any);
+
+        socketRef.current = socket;
+
+        socket.on("connect", () => {
+          console.log("[Student Console] Socket connected:", socket.id);
+          // Authenticate with USER id (so backend can classify STUDENT correctly)
+          if (user?.id) {
+            socket.emit("authenticate", user.id.toString());
+          }
         });
 
-        // Check if this request has been aborted after fetch
-        if (controller.signal.aborted) return;
+        socket.on("disconnect", () => {
+          console.log("[Student Console] Socket disconnected");
+        });
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch exams: ${response.statusText}`);
-        }
+        socket.on("connect_error", (err: Error) => {
+          console.error("[Student Console] Socket connection error:", err);
+        });
 
-        const data = await response.json();
-        setAllExams(data || []);
-        hasInitialFetchRef.current = true;
+        // Listen for exam updates
+        socket.on("exam_updated", (data: { examId: number; type: string; message: string }) => {
+          console.log("[Student Console] Exam updated:", data);
+          toast.info("An exam has been updated. Refreshing...", {
+            duration: 3000,
+          });
+          // Refetch exams
+          if (student?.id) {
+            fetchExamsByStudentId(student.id)
+              .then((data) => {
+                const now = new Date();
+                const filteredExams = (data.payload.content || []).filter((exam) => {
+                  if (!exam.admitCardStartDownloadDate) {
+                    return false;
+                  }
+                  const startDate = new Date(exam.admitCardStartDownloadDate);
+                  return startDate <= now;
+                });
+                setExams(filteredExams);
+              })
+              .catch((err: Error) => {
+                console.error("Error refetching exams:", err);
+              });
+          }
+        });
+
+        socket.on("exam_created", (data: { examId: number; type: string; message: string }) => {
+          console.log("[Student Console] Exam created:", data);
+          toast.info("A new exam has been scheduled. Refreshing...", {
+            duration: 3000,
+          });
+          // Refetch exams
+          if (student?.id) {
+            fetchExamsByStudentId(student.id)
+              .then((data) => {
+                const now = new Date();
+                const filteredExams = (data.payload.content || []).filter((exam) => {
+                  if (!exam.admitCardStartDownloadDate) {
+                    return false;
+                  }
+                  const startDate = new Date(exam.admitCardStartDownloadDate);
+                  return startDate <= now;
+                });
+                setExams(filteredExams);
+              })
+              .catch((err: Error) => {
+                console.error("Error refetching exams:", err);
+              });
+          }
+        });
       } catch (err) {
-        // Don't set error state if this was an abort error
-        if (err instanceof DOMException && err.name === "AbortError") return;
-
-        console.error("Error fetching exams:", err);
-        setError(err instanceof Error ? err.message : "Failed to load exams");
-      } finally {
-        // Only update loading state if this request wasn't aborted
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        console.error("[Student Console] Failed to load socket.io-client:", err);
       }
     };
 
-    fetchExams();
+    loadSocket();
 
-    // Cleanup: abort any in-flight requests when the component unmounts
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
-  }, [student, accessToken]);
+  }, [student?.id]);
 
-  // Get all available semesters from the exams (placeholder logic - adjust as needed)
-  const semesters = [...new Set(allExams.map((exam) => exam.sessionName))];
+  //   useEffect(() => {
+  //     // If we don't have a student ID yet, do nothing
+  //     if (!student?.id || !accessToken) return;
 
-  // Get next exam date in days
+  //     // Prevent multiple simultaneous fetches
+  //     if (abortControllerRef.current) {
+  //       abortControllerRef.current.abort();
+  //     }
+
+  //     // Only show loading on initial fetch, not during refetches
+  //     if (!hasInitialFetchRef.current) {
+  //       setLoading(true);
+  //     }
+
+  //     // Create a new abort controller for this request
+  //     const controller = new AbortController();
+  //     abortControllerRef.current = controller;
+
+  //     const fetchExams = async () => {
+  //       try {
+  //         setError(null);
+
+  //         // Check if this request has been aborted
+  //         if (controller.signal.aborted) return;
+
+  //         const response = await fetch(`/api/exams?studentId=${student.id}`, {
+  //           headers: {
+  //             Authorization: `Bearer ${accessToken}`,
+  //           },
+  //           signal: controller.signal,
+  //         });
+
+  //         // Check if this request has been aborted after fetch
+  //         if (controller.signal.aborted) return;
+
+  //         if (!response.ok) {
+  //           throw new Error(`Failed to fetch exams: ${response.statusText}`);
+  //         }
+
+  //         const data = await response.json();
+  //         setAllExams(data || []);
+  //         hasInitialFetchRef.current = true;
+  //       } catch (err) {
+  //         // Don't set error state if this was an abort error
+  //         if (err instanceof DOMException && err.name === "AbortError") return;
+
+  //         console.error("Error fetching exams:", err);
+  //         setError(err instanceof Error ? err.message : "Failed to load exams");
+  //       } finally {
+  //         // Only update loading state if this request wasn't aborted
+  //         if (!controller.signal.aborted) {
+  //           setLoading(false);
+  //         }
+  //       }
+  //     };
+
+  //     fetchExams();
+
+  //     // Cleanup: abort any in-flight requests when the component unmounts
+  //     return () => {
+  //       if (abortControllerRef.current) {
+  //         abortControllerRef.current.abort();
+  //       }
+  //     };
+  //   }, [student, accessToken]);
+
   const getNextExamDaysAway = () => {
     if (upcomingExams.length === 0) return "N/A";
 
-    const nextExamDate = parseISO(upcomingExams[0].examdate);
-    const today = new Date();
-    const diffTime = Math.abs(nextExamDate.getTime() - today.getTime());
+    // Find the next upcoming paper across all upcoming exams
+    let nextPaper = null;
+    for (const exam of upcomingExams) {
+      if (!exam.examSubjects || exam.examSubjects.length === 0) continue;
+      const upcomingPapers = exam.examSubjects
+        .filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d > today;
+        })
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+      if (upcomingPapers.length > 0) {
+        if (!nextPaper || new Date(upcomingPapers[0].startTime) < new Date(nextPaper.startTime)) {
+          nextPaper = upcomingPapers[0];
+        }
+      }
+    }
+
+    if (!nextPaper) return "N/A";
+
+    const nextExamDate = new Date(nextPaper.startTime);
+    const todayCopy = new Date();
+
+    // Normalize both to midnight for day-based diff
+    nextExamDate.setHours(0, 0, 0, 0);
+    todayCopy.setHours(0, 0, 0, 0);
+
+    const diffTime = nextExamDate.getTime() - todayCopy.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    return diffDays === 0 ? "Today" : `${diffDays} days`;
-  };
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
 
-  // Format time from hours and minutes
-  const formatTime = (hours: number, minutes: number) => {
-    const formattedHours = hours % 12 || 12;
-    const ampm = hours >= 12 ? "PM" : "AM";
-    return `${formattedHours}:${minutes.toString().padStart(2, "0")} ${ampm}`;
-  };
-
-  // Format duration from start and end times with a max limit to prevent unreasonable durations
-  const formatDuration = (startHr: number, startMin: number, endHr: number | Date, endMin: number | Date) => {
-    const startMinutes = startHr * 60 + startMin;
-
-    // Handle the case where endHr/endMin might be Date objects or numbers
-    let endHourVal: number;
-    let endMinVal: number;
-
-    if (typeof endHr === "object" && endHr !== null) {
-      // If it's a Date object
-      endHourVal = (endHr as Date).getHours();
-    } else {
-      // If it's a number or string
-      endHourVal = Number(endHr);
-    }
-
-    if (typeof endMin === "object" && endMin !== null) {
-      // If it's a Date object
-      endMinVal = (endMin as Date).getMinutes();
-    } else {
-      // If it's a number or string
-      endMinVal = Number(endMin);
-    }
-
-    const endMinutes = endHourVal * 60 + endMinVal;
-    const durationMinutes = endMinutes - startMinutes;
-
-    // If duration is negative or unreasonably large (>8 hours), show a reasonable default
-    if (durationMinutes <= 0 || durationMinutes > 480 || isNaN(durationMinutes)) {
-      // Try to provide a sensible default based on the exam type (2 hours for most exams)
-      return "2 hours";
-    }
-
-    const hours = Math.floor(durationMinutes / 60);
-    const minutes = durationMinutes % 60;
-
-    if (hours === 0) return `${minutes} minutes`;
-    if (minutes === 0) return `${hours} hour${hours > 1 ? "s" : ""}`;
-    return `${hours} hour${hours > 1 ? "s" : ""} ${minutes} min`;
+    return `${diffDays} days`;
   };
 
   // Calculate total exam duration for today in minutes
@@ -254,37 +430,27 @@ export default function ExamsContent() {
     if (recentExams.length === 0) return 0;
 
     return recentExams.reduce((total, exam) => {
-      const startMinutes = exam.frmhr * 60 + exam.frmmnt;
+      // Sum duration for all papers today in this exam
+      const todayPapers = exam.examSubjects.filter((s) => {
+        const d = new Date(s.startTime);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+      });
 
-      // Handle the case where tohr/tomnt might be Date objects or numbers
-      let endHourVal: number;
-      let endMinVal: number;
+      const examDuration = todayPapers.reduce((examTotal, subject) => {
+        const start = new Date(subject.startTime);
+        const end = new Date(subject.endTime);
+        const durationMinutes = (end.getTime() - start.getTime()) / 60000;
 
-      if (typeof exam.tohr === "object" && exam.tohr !== null) {
-        // If it's a Date object
-        endHourVal = (exam.tohr as Date).getHours();
-      } else {
-        // If it's a number or string
-        endHourVal = Number(exam.tohr);
-      }
+        // Safety guard
+        if (durationMinutes <= 0 || durationMinutes > 480 || isNaN(durationMinutes)) {
+          return examTotal + 120; // fallback 2 hours
+        }
 
-      if (typeof exam.tomnt === "object" && exam.tomnt !== null) {
-        // If it's a Date object
-        endMinVal = (exam.tomnt as Date).getMinutes();
-      } else {
-        // If it's a number or string
-        endMinVal = Number(exam.tomnt);
-      }
+        return examTotal + durationMinutes;
+      }, 0);
 
-      const endMinutes = endHourVal * 60 + endMinVal;
-      const duration = endMinutes - startMinutes;
-
-      // If duration is invalid, use a default of 2 hours (120 minutes)
-      if (duration <= 0 || duration > 480 || isNaN(duration)) {
-        return total + 120; // Default 2 hours per exam
-      }
-
-      return total + duration;
+      return total + examDuration;
     }, 0);
   };
 
@@ -305,10 +471,12 @@ export default function ExamsContent() {
     exam,
     index,
     variant = "default",
+    onViewDetails,
   }: {
-    exam: Exam;
+    exam: ExamDto;
     index: number;
     variant?: "default" | "today" | "completed";
+    onViewDetails: (exam: ExamDto) => void;
   }) => {
     const variantStyles = {
       default: {
@@ -339,6 +507,42 @@ export default function ExamsContent() {
     // Icon based on variant
     const Icon = variant === "completed" ? FileText : variant === "today" ? GraduationCap : Calendar;
 
+    // Determine which paper to display based on variant
+    const getRelevantPaper = () => {
+      if (!exam.examSubjects || exam.examSubjects.length === 0) return null;
+
+      if (variant === "default") {
+        // Show next upcoming paper
+        const upcomingPapers = exam.examSubjects
+          .filter((s) => {
+            const d = new Date(s.startTime);
+            d.setHours(0, 0, 0, 0);
+            return d > today;
+          })
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        return upcomingPapers[0] || exam.examSubjects[0];
+      } else if (variant === "today") {
+        // Show today's paper (earliest if multiple)
+        const todayPapers = exam.examSubjects
+          .filter((s) => {
+            const d = new Date(s.startTime);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime() === today.getTime();
+          })
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        return todayPapers[0] || exam.examSubjects[0];
+      } else {
+        // Completed: Show last paper
+        return exam.examSubjects.reduce((latest, current) => {
+          const currentEnd = new Date(current.endTime);
+          const latestEnd = new Date(latest.endTime);
+          return currentEnd > latestEnd ? current : latest;
+        });
+      }
+    };
+
+    const displayPaper = getRelevantPaper();
+
     return (
       <motion.div
         key={exam.id}
@@ -354,30 +558,35 @@ export default function ExamsContent() {
                   <Icon className={`w-6 h-6 ${styles.iconColor}`} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">{exam.testName}</h3>
-                  <p className={`${styles.titleColor} font-medium mb-2`}>{exam.paperName}</p>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {format(parseISO(exam.examdate), "MMMM d, yyyy")}
+                  <h3 className="text-lg font-semibold text-gray-800">{exam.examType?.name || "Exam"}</h3>
+                  {displayPaper?.subject?.name && (
+                    <p className={`${styles.titleColor} font-medium mb-2`}>{displayPaper.subject.name}</p>
+                  )}
+                  {displayPaper && (
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
+                        {format(new Date(displayPaper.startTime), "dd/MM/yyyy")}
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
+                        {format(new Date(displayPaper.startTime), "hh:mm a")}
+                      </div>
                     </div>
-                    <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {formatTime(exam.frmhr, exam.frmmnt)}
-                    </div>
-                    <div className="flex items-center">
-                      <FileText className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {formatDuration(exam.frmhr, exam.frmmnt, exam.tohr, exam.tomnt)}
-                    </div>
-                    <div className="flex items-center">
-                      <BarChart className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {exam.room}
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
-              <div className="mt-3 md:mt-0">
-                <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${styles.badge}`}>{exam.className}</span>
+              <div className="mt-3 md:mt-0 flex items-center gap-3">
+                <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${styles.badge}`}>
+                  {exam.class.name}
+                </span>
+                <button
+                  onClick={() => onViewDetails(exam)}
+                  className={`p-2 rounded-lg transition-all ${styles.iconBg} hover:opacity-80 ${styles.iconColor} cursor-pointer`}
+                  title="View exam papers"
+                >
+                  <Eye className="w-5 h-5" />
+                </button>
               </div>
             </div>
           </CardContent>
@@ -409,46 +618,11 @@ export default function ExamsContent() {
                 </p>
               </div>
             </div>
-            {semesters.length > 0 && (
-              <div className="hidden md:block">
-                <Select value={selectedSemester} onValueChange={setSelectedSemester}>
-                  <SelectTriggerFixed className="w-[180px] border-white/20 bg-white/10 text-white backdrop-blur-sm">
-                    <SelectValue placeholder="Select semester" />
-                  </SelectTriggerFixed>
-                  <SelectContentFixed>
-                    <SelectItemFixed value="all">All Semesters</SelectItemFixed>
-                    {semesters.map((sem) => (
-                      <SelectItemFixed key={sem} value={sem}>
-                        {sem}
-                      </SelectItemFixed>
-                    ))}
-                  </SelectContentFixed>
-                </Select>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 pb-12">
-        {semesters.length > 0 && (
-          <div className="block md:hidden mb-6">
-            <Select value={selectedSemester} onValueChange={setSelectedSemester}>
-              <SelectTriggerFixed className="w-full border-indigo-100">
-                <SelectValue placeholder="Select semester" />
-              </SelectTriggerFixed>
-              <SelectContentFixed>
-                <SelectItemFixed value="all">All Semesters</SelectItemFixed>
-                {semesters.map((sem) => (
-                  <SelectItemFixed key={sem} value={sem}>
-                    {sem}
-                  </SelectItemFixed>
-                ))}
-              </SelectContentFixed>
-            </Select>
-          </div>
-        )}
-
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <motion.div
@@ -502,7 +676,13 @@ export default function ExamsContent() {
                   <div>
                     <p className="text-sm text-purple-600 font-medium">Total Subjects</p>
                     <p className="text-3xl font-bold text-purple-700">
-                      {[...new Set(allExams.map((exam) => exam.paperName))].length}
+                      {
+                        [
+                          ...new Set(
+                            exams.flatMap((exam) => exam.examSubjects.map((es) => es.subject?.name).filter(Boolean)),
+                          ),
+                        ].length
+                      }
                     </p>
                   </div>
                   <div className="bg-purple-50 p-3 rounded-xl border border-purple-200">
@@ -555,7 +735,7 @@ export default function ExamsContent() {
               <h3 className="text-lg font-medium text-gray-700 mb-2">Error Loading Exams</h3>
               <p className="text-gray-500 max-w-md mx-auto">{error}</p>
             </div>
-          ) : allExams.length === 0 ? (
+          ) : exams.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-700 mb-2">No Exams Found</h3>
@@ -612,9 +792,18 @@ export default function ExamsContent() {
                       </div>
                     </div>
                     {upcomingExams
-                      .filter((exam) => selectedSemester === "all" || exam.sessionName === selectedSemester)
+                      .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
                       .map((exam, index) => (
-                        <ExamCard key={exam.id} exam={exam} index={index} variant="default" />
+                        <ExamCard
+                          key={exam.id}
+                          exam={exam}
+                          index={index}
+                          variant="default"
+                          onViewDetails={(exam) => {
+                            setSelectedExam(exam);
+                            setIsModalOpen(true);
+                          }}
+                        />
                       ))}
                   </>
                 )}
@@ -663,9 +852,18 @@ export default function ExamsContent() {
                       </div>
                     </div>
                     {recentExams
-                      .filter((exam) => selectedSemester === "all" || exam.sessionName === selectedSemester)
+                      .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
                       .map((exam, index) => (
-                        <ExamCard key={exam.id} exam={exam} index={index} variant="today" />
+                        <ExamCard
+                          key={exam.id}
+                          exam={exam}
+                          index={index}
+                          variant="today"
+                          onViewDetails={(exam) => {
+                            setSelectedExam(exam);
+                            setIsModalOpen(true);
+                          }}
+                        />
                       ))}
                   </>
                 )}
@@ -680,14 +878,30 @@ export default function ExamsContent() {
                   </div>
                 ) : (
                   previousExams
-                    .filter((exam) => selectedSemester === "all" || exam.sessionName === selectedSemester)
-                    .map((exam, index) => <ExamCard key={exam.id} exam={exam} index={index} variant="completed" />)
+                    .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
+                    .map((exam, index) => (
+                      <ExamCard
+                        key={exam.id}
+                        exam={exam}
+                        index={index}
+                        variant="completed"
+                        onViewDetails={(exam) => {
+                          setSelectedExam(exam);
+                          setIsModalOpen(true);
+                        }}
+                      />
+                    ))
                 )}
               </TabsContentFixed>
             </TabsFixed>
           )}
         </motion.div>
       </div>
+
+      {/* Exam Papers Modal */}
+      {student?.id && (
+        <ExamPapersModal open={isModalOpen} onOpenChange={setIsModalOpen} exam={selectedExam} studentId={student.id} />
+      )}
     </div>
   );
 }

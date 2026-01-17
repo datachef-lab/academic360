@@ -37,14 +37,16 @@ import {
   transportDetailsRouter,
   userRouter,
 } from "./user/routes/index.js";
-import feesComponentRouter from "./fees/routes/feesComponent.route.js";
+// import feesComponentRouter from "./fees/routes/feesComponent.route.js";
 import addonRouter from "./fees/routes/addon.route.js";
-import feesHeadRouter from "./fees/routes/fees-head.route.js";
-import feesReceiptTypeRouter from "./fees/routes/fees-receipt-type.route.js";
-import feesSlabRouter from "./fees/routes/fees-slab.route.js";
-import feesStructureRouter from "./fees/routes/fees-structure.route.js";
-import studentFeesMappingRouter from "./fees/routes/student-fees-mapping.route.js";
-import feesSlabYearMappingRouter from "./fees/routes/fees-slab-mapping.route.js";
+import feeConcessionSlabRouter from "./fees/routes/fee-concession-slab.routes.js";
+import feeHeadRouter from "./fees/routes/fee-head.route.js";
+import feeStructureComponentRouter from "./fees/routes/fee-structure-component.routes.js";
+// import feesReceiptTypeRouter from "./fees/routes/fees-receipt-type.route.js";
+// import feesSlabRouter from "./fees/routes/fees-slab.route.js";
+// import feesStructureRouter from "./fees/routes/fees-structure.route.js";
+// import studentFeesMappingRouter from "./fees/routes/student-fees-mapping.route.js";
+// import feesSlabYearMappingRouter from "./fees/routes/fees-slab-mapping.route.js";
 import {
   courseRouter,
   paperRouter,
@@ -114,14 +116,16 @@ export {
   studentApaarUpdateRouter,
   userRouter,
   batchRouter,
-  feesComponentRouter,
+  //   feesComponentRouter,
   addonRouter,
-  feesHeadRouter,
-  feesReceiptTypeRouter,
-  feesSlabRouter,
-  feesStructureRouter,
-  studentFeesMappingRouter,
-  feesSlabYearMappingRouter,
+  feeConcessionSlabRouter,
+  feeHeadRouter,
+  feeStructureComponentRouter,
+  //   feesReceiptTypeRouter,
+  //   feesSlabRouter,
+  //   feesStructureRouter,
+  //   studentFeesMappingRouter,
+  //   feesSlabYearMappingRouter,
   courseRouter,
   paperRouter,
   subjectRouter,

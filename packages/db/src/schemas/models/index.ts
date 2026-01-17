@@ -13,3 +13,4 @@ export * from "./subject-selection/index.js";
 export * from "./user/index.js";
 export * from "./exams/index.js"
 export * from "./administration/index.js"
+export * from "./fees/index.js";

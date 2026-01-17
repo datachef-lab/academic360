@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import type { ProfileInfo } from "@repo/db/dtos/user";
 import { useAuth } from "./use-auth";
 
-import { ingaxiosInstance as axiosInstance } from "@/lib/utils";
+import { axiosInstance } from "@/lib/utils";
 
 export function useProfile() {
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null);

@@ -9,7 +9,7 @@ import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
 import { noticeModel } from "@repo/db/schemas/models/academics";
 
 import { paperModel } from "@repo/db/schemas/models/course-design";
-import { feesStructureModel } from "@repo/db/schemas/models/fees";
+// import { feesStructureModel } from "@repo/db/schemas/models/fees";
 import { admissionModel } from "@repo/db/schemas";
 
 export async function createAcademicYear(
@@ -109,12 +109,12 @@ export async function deleteAcademicYear(id: number) {
     .from(paperModel)
     .where(eq(paperModel.academicYearId, id));
 
-  const [{ feesStructureCount }] = await db
-    .select({
-      feesStructureCount: countDistinct(feesStructureModel.id),
-    })
-    .from(feesStructureModel)
-    .where(eq(feesStructureModel.academicYearId, id));
+  //   const [{ feesStructureCount }] = await db
+  //     .select({
+  //       feesStructureCount: countDistinct(feesStructureModel.id),
+  //     })
+  //     .from(feesStructureModel)
+  //     .where(eq(feesStructureModel.academicYearId, id));
 
   // Check if the academic year is associated with any records
   if (
@@ -122,8 +122,8 @@ export async function deleteAcademicYear(id: number) {
     noticeCount > 0 ||
     sessionCount > 0 ||
     admissionCount > 0 ||
-    paperCount > 0 ||
-    feesStructureCount > 0
+    paperCount > 0
+    // feesStructureCount > 0
   ) {
     return {
       success: false,
@@ -135,7 +135,7 @@ export async function deleteAcademicYear(id: number) {
         { count: sessionCount, type: "Sessions" },
         { count: admissionCount, type: "Admissions" },
         { count: paperCount, type: "Papers" },
-        { count: feesStructureCount, type: "Fees Structures" },
+        // { count: feesStructureCount, type: "Fees Structures" },
       ],
     };
   }

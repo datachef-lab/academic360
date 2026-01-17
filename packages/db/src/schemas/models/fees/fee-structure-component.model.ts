@@ -1,0 +1,28 @@
+import { z } from "zod";
+import { createInsertSchema } from "drizzle-zod";
+import { boolean, doublePrecision, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+
+import { feeHeadModel, feeStructureModel } from "@/schemas/models/fees";
+
+export const feeStructureComponentModel = pgTable("fee_structure_components", {
+    id: serial().primaryKey(),
+    feeStructureId:
+        integer("fee_structure_id_fk")
+            .references(() => feeStructureModel.id)
+            .notNull(),
+    feeHeadId: integer("fee_head_id_fk")
+        .references(() => feeHeadModel.id)
+        .notNull(),
+    isConcessionApplicable: boolean().notNull().default(false),
+    feeHeadPercentage: doublePrecision().notNull().default(0),
+    sequence: integer(),
+    remarks: varchar({ length: 500 }),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const createFeeStructureComponentSchema = createInsertSchema(feeStructureComponentModel);
+
+export type FeeStructureComponent = z.infer<typeof createFeeStructureComponentSchema>;
+
+export type FeeStructureComponentT = typeof createFeeStructureComponentSchema._type;

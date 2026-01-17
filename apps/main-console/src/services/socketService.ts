@@ -50,19 +50,20 @@ class SocketService {
   connect() {
     if (this.socket && this.connected) return;
 
-    const backendUrl = import.meta.env.VITE_APP_BACKEND_URL!; // e.g. https://academic360.app/besc/api
-    const urlObj = new URL(backendUrl);
-
-    // Host without path
-    const serverOrigin = `${urlObj.protocol}//${urlObj.host}`;
-    // Path for Socket.IO
-    const socketPath = `${urlObj.pathname.replace(/\/$/, "")}/socket.io/`;
+    // Use environment variable with fallback, consistent with useSocket hook
+    const backendEnv = import.meta.env.VITE_APP_BACKEND_URL || "http://localhost:3000";
 
     try {
-      this.socket = io(serverOrigin, {
+      // Support backends mounted under a path prefix like `/backend`
+      const parsed = new URL(backendEnv);
+      const origin = `${parsed.protocol}//${parsed.host}`;
+      const pathPrefix = parsed.pathname.replace(/\/$/, "");
+      const socketPath = pathPrefix ? `${pathPrefix}/socket.io` : "/socket.io";
+
+      this.socket = io(origin, {
+        path: socketPath,
         withCredentials: true,
         transports: ["websocket", "polling"],
-        path: socketPath,
       });
 
       this.socket.on("connect", this.handleConnect);
@@ -70,9 +71,10 @@ class SocketService {
       this.socket.on("notification", this.handleNotification);
       this.socket.on("connect_error", this.handleError);
 
-      console.log(`[SocketService] Connecting to ${serverOrigin} with path ${socketPath}`);
+      console.log(`[SocketService] Connecting to ${origin} with path ${socketPath}`);
     } catch (error) {
       console.error("[SocketService] Error initializing socket:", error);
+      this.handleError(error);
     }
   }
 

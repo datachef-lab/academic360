@@ -97,7 +97,7 @@ async function metaStreamExists(
 }
 
 export async function loadDefaultSubjectSelectionMetas() {
-  console.log("loading default subject-selection-meta");
+  // console.log("loading default subject-selection-meta");
 
   const academicYear = await db
     .select()
@@ -109,7 +109,7 @@ export async function loadDefaultSubjectSelectionMetas() {
     return;
   }
 
-  console.log("Creating default metas with proper duplicate checking...");
+  // console.log("Creating default metas with proper duplicate checking...");
 
   const streams = await db.select().from(streamModel);
   const subjectTypes = await db.select().from(subjectTypeModel);
@@ -138,9 +138,9 @@ export async function loadDefaultSubjectSelectionMetas() {
           academicYear[0].id,
         );
         if (!exists) {
-          console.log(
-            `Creating Minor 3 (Semester III) for Commerce stream and subject type ${subjectType.code}`,
-          );
+          // console.log(
+          //   `Creating Minor 3 (Semester III) for Commerce stream and subject type ${subjectType.code}`,
+          // );
           await createOrUpdateMetaWithRelations({
             label: "Minor 3 (Semester III)",
             sequence: 3,
@@ -150,9 +150,9 @@ export async function loadDefaultSubjectSelectionMetas() {
             forClasses: [{ id: semester3Class!.id }],
           });
         } else {
-          console.log(
-            `Minor 3 (Semester III) already exists for subject type ${subjectType.code}, skipping`,
-          );
+          // console.log(
+          //   `Minor 3 (Semester III) already exists for subject type ${subjectType.code}, skipping`,
+          // );
         }
       }
 
@@ -173,9 +173,9 @@ export async function loadDefaultSubjectSelectionMetas() {
           academicYear[0].id,
         );
         if (!exists1) {
-          console.log(
-            `Creating Minor 1 (Semester I & II) for non-commerce streams and subject type ${subjectType.code}`,
-          );
+          // console.log(
+          //   `Creating Minor 1 (Semester I & II) for non-commerce streams and subject type ${subjectType.code}`,
+          // );
           await createOrUpdateMetaWithRelations({
             label: "Minor 1 (Semester I & II)",
             sequence: 1,
@@ -185,9 +185,9 @@ export async function loadDefaultSubjectSelectionMetas() {
             forClasses: semester1And2Classes.map((c) => ({ id: c.id })),
           });
         } else {
-          console.log(
-            `Minor 1 (Semester I & II) already exists for subject type ${subjectType.code}, skipping`,
-          );
+          // console.log(
+          //   `Minor 1 (Semester I & II) already exists for subject type ${subjectType.code}, skipping`,
+          // );
         }
 
         // Minor 2 (Semester III & IV) - For all streams except Commerce
@@ -203,9 +203,9 @@ export async function loadDefaultSubjectSelectionMetas() {
           academicYear[0].id,
         );
         if (!exists2) {
-          console.log(
-            `Creating Minor 2 (Semester III & IV) for non-commerce streams and subject type ${subjectType.code}`,
-          );
+          // console.log(
+          //   `Creating Minor 2 (Semester III & IV) for non-commerce streams and subject type ${subjectType.code}`,
+          // );
           await createOrUpdateMetaWithRelations({
             label: "Minor 2 (Semester III & IV)",
             sequence: 2,
@@ -215,9 +215,9 @@ export async function loadDefaultSubjectSelectionMetas() {
             forClasses: semester3And4Classes.map((c) => ({ id: c.id })),
           });
         } else {
-          console.log(
-            `Minor 2 (Semester III & IV) already exists for subject type ${subjectType.code}, skipping`,
-          );
+          // console.log(
+          //   `Minor 2 (Semester III & IV) already exists for subject type ${subjectType.code}, skipping`,
+          // );
         }
       }
     }
@@ -244,9 +244,9 @@ export async function loadDefaultSubjectSelectionMetas() {
           academicYear[0].id,
         );
         if (!exists1) {
-          console.log(
-            `Creating IDC 1 (Semester I) for non-commerce streams and subject type ${subjectType.code}`,
-          );
+          // console.log(
+          //   `Creating IDC 1 (Semester I) for non-commerce streams and subject type ${subjectType.code}`,
+          // );
           await createOrUpdateMetaWithRelations({
             label: "IDC 1 (Semester I)",
             sequence: 4,
@@ -256,9 +256,9 @@ export async function loadDefaultSubjectSelectionMetas() {
             forClasses: [{ id: semester1Class!.id }],
           });
         } else {
-          console.log(
-            `IDC 1 (Semester I) already exists for subject type ${subjectType.code}, skipping`,
-          );
+          // console.log(
+          //   `IDC 1 (Semester I) already exists for subject type ${subjectType.code}, skipping`,
+          // );
         }
 
         const exists2 = await metaExists(
@@ -267,9 +267,9 @@ export async function loadDefaultSubjectSelectionMetas() {
           academicYear[0].id,
         );
         if (!exists2) {
-          console.log(
-            `Creating IDC 2 (Semester II) for non-commerce streams and subject type ${subjectType.code}`,
-          );
+          // console.log(
+          //   `Creating IDC 2 (Semester II) for non-commerce streams and subject type ${subjectType.code}`,
+          // );
           await createOrUpdateMetaWithRelations({
             label: "IDC 2 (Semester II)",
             sequence: 5,
@@ -279,9 +279,9 @@ export async function loadDefaultSubjectSelectionMetas() {
             forClasses: [{ id: semester2Class!.id }],
           });
         } else {
-          console.log(
-            `IDC 2 (Semester II) already exists for subject type ${subjectType.code}, skipping`,
-          );
+          // console.log(
+          //   `IDC 2 (Semester II) already exists for subject type ${subjectType.code}, skipping`,
+          // );
         }
 
         const exists3 = await metaExists(
@@ -290,9 +290,9 @@ export async function loadDefaultSubjectSelectionMetas() {
           academicYear[0].id,
         );
         if (!exists3) {
-          console.log(
-            `Creating IDC 3 (Semester III) for non-commerce streams and subject type ${subjectType.code}`,
-          );
+          // console.log(
+          //   `Creating IDC 3 (Semester III) for non-commerce streams and subject type ${subjectType.code}`,
+          // );
           await createOrUpdateMetaWithRelations({
             label: "IDC 3 (Semester III)",
             sequence: 6,
@@ -302,9 +302,9 @@ export async function loadDefaultSubjectSelectionMetas() {
             forClasses: [{ id: semester3Class!.id }],
           });
         } else {
-          console.log(
-            `IDC 3 (Semester III) already exists for subject type ${subjectType.code}, skipping`,
-          );
+          // console.log(
+          //   `IDC 3 (Semester III) already exists for subject type ${subjectType.code}, skipping`,
+          // );
         }
       }
     }
@@ -328,9 +328,9 @@ export async function loadDefaultSubjectSelectionMetas() {
           academicYear[0].id,
         );
         if (!exists) {
-          console.log(
-            `Creating AEC (Semester III & IV) for non-commerce streams and subject type ${subjectType.code}`,
-          );
+          // console.log(
+          //   `Creating AEC (Semester III & IV) for non-commerce streams and subject type ${subjectType.code}`,
+          // );
           await createOrUpdateMetaWithRelations({
             label: "AEC (Semester III & IV)",
             sequence: 7,
@@ -343,9 +343,9 @@ export async function loadDefaultSubjectSelectionMetas() {
             ],
           });
         } else {
-          console.log(
-            `AEC (Semester III & IV) already exists for subject type ${subjectType.code}, skipping`,
-          );
+          // console.log(
+          //   `AEC (Semester III & IV) already exists for subject type ${subjectType.code}, skipping`,
+          // );
         }
       }
     }
@@ -366,9 +366,9 @@ export async function loadDefaultSubjectSelectionMetas() {
           academicYear[0].id,
         );
         if (!exists) {
-          console.log(
-            `Creating CVAC 4 (Semester II) for non-commerce streams and subject type ${subjectType.code}`,
-          );
+          // console.log(
+          //   `Creating CVAC 4 (Semester II) for non-commerce streams and subject type ${subjectType.code}`,
+          // );
           await createOrUpdateMetaWithRelations({
             label: "CVAC 4 (Semester II)",
             sequence: 8,
@@ -378,9 +378,9 @@ export async function loadDefaultSubjectSelectionMetas() {
             forClasses: [{ id: semester2Class!.id }],
           });
         } else {
-          console.log(
-            `CVAC 4 (Semester II) already exists for subject type ${subjectType.code}, skipping`,
-          );
+          // console.log(
+          //   `CVAC 4 (Semester II) already exists for subject type ${subjectType.code}, skipping`,
+          // );
         }
       }
     }

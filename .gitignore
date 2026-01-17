@@ -15,6 +15,7 @@ node_modules/
 .pnp
 .pnp.js
 
+tsconfig.tsbuildinfo
 # Package manager files
 package-lock.json
 yarn.lock

@@ -6,6 +6,7 @@ export interface ActiveUser {
   name: string;
   image: string | null;
   type: "ADMIN" | "STAFF";
+  tabActive?: boolean;
 }
 
 interface UseActiveUsersOptions {
@@ -14,6 +15,7 @@ interface UseActiveUsersOptions {
 
 interface UseActiveUsersResult {
   activeUsers: ActiveUser[];
+  studentsOnlineCount: number;
   isConnected: boolean;
   error: string | null;
 }
@@ -21,6 +23,7 @@ interface UseActiveUsersResult {
 export function useActiveUsers(options: UseActiveUsersOptions = {}): UseActiveUsersResult {
   const { userId } = options;
   const [activeUsers, setActiveUsers] = useState<ActiveUser[]>([]);
+  const [studentsOnlineCount, setStudentsOnlineCount] = useState<number>(0);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -54,6 +57,9 @@ export function useActiveUsers(options: UseActiveUsersOptions = {}): UseActiveUs
 
       // Request active users list
       socket.emit("get_active_users");
+
+      // Send initial tab visibility state
+      socket.emit("tab_visibility", { isActive: !document.hidden });
     });
 
     socket.on("disconnect", () => {
@@ -79,8 +85,23 @@ export function useActiveUsers(options: UseActiveUsersOptions = {}): UseActiveUs
       setActiveUsers(users);
     });
 
+    socket.on("students_online_count", (count: number) => {
+      setStudentsOnlineCount(Number(count) || 0);
+    });
+
+    // Tab visibility tracking (blur inactive tabs)
+    const handleVisibilityChange = () => {
+      try {
+        socket.emit("tab_visibility", { isActive: !document.hidden });
+      } catch {
+        // ignore
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     // Cleanup on unmount
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       socket.disconnect();
       socketRef.current = null;
     };
@@ -96,6 +117,7 @@ export function useActiveUsers(options: UseActiveUsersOptions = {}): UseActiveUs
 
   return {
     activeUsers,
+    studentsOnlineCount,
     isConnected,
     error,
   };

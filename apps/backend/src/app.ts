@@ -65,11 +65,12 @@ import {
   familyRouter,
   healthRouter,
   personalDetailsRouter,
-  feesComponentRouter,
+  //   feesComponentRouter,
   addonRouter,
-  feesHeadRouter,
-  feesReceiptTypeRouter,
-  feesSlabYearMappingRouter,
+  feeConcessionSlabRouter,
+  //   feesHeadRouter,
+  //   feesReceiptTypeRouter,
+  //   feesSlabYearMappingRouter,
   personRouter,
   floorRouter,
   roomRouter,
@@ -78,14 +79,22 @@ import {
   departmentRouter,
   designationRouter,
   subDepartmentRouter,
+  feeHeadRouter,
+  feeStructureComponentRouter,
 } from "@/features/index.js";
+import instalmentRouter from "@/features/fees/routes/instalment.route.js";
+import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
+import studentFeesRouter from "@/features/fees/routes/student-fees.route.js";
+import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js";
+import feeStructureConcessionSlabRouter from "@/features/fees/routes/fee-structure-concession-slab.route.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
 import { shiftRouter } from "@/features/academics/routes/index.js";
 import feesSlabRouter from "@/features/fees/routes/index.js";
-import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
-import studentFeesMappingRouter from "./features/fees/routes/student-fees-mapping.route.js";
+
+// import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
+// import studentFeesMappingRouter from "./features/fees/routes/student-fees-mapping.route.js";
 import feesRouter from "./features/fees/routes/index.js";
 import {
   admissionRouter,
@@ -175,10 +184,34 @@ app.use(express.urlencoded({ extended: true, limit: "1gb" }));
 
 app.use(cookieParser());
 
-// Setup Socket.IO with CORS
+// Setup Socket.IO with CORS - allow both main console and student console
+const allowedSocketOrigins = [
+  process.env.CORS_ORIGIN || "http://localhost:5173", // Main console
+  "http://localhost:5173",
+  "http://localhost:3000", // Student console
+  "http://localhost:3008", // Student console (production port)
+  "https://stage.academic360.app", // Staging main console
+  "https://academic360.app", // Production main console
+  "https://besc.academic360.app", // Production main console (alternative)
+  // Also allow any origin that starts with the CORS_ORIGIN (for subdomains)
+  ...(process.env.CORS_ORIGIN
+    ? [process.env.CORS_ORIGIN.replace(/\/$/, "")]
+    : []),
+];
+
 export const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN! || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      // Check if origin is in allowed list
+      if (allowedSocketOrigins.some((allowed) => origin.startsWith(allowed))) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -412,17 +445,26 @@ app.use("/api/health", healthRouter);
 app.use("/api/reports", reportRouter);
 app.use("/api/classes", classRouter);
 
-app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
+// app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
 app.use("/api/v1/shifts", shiftRouter);
 app.use("/api/v1/academics", academicYearRouter);
+// Register specific routes BEFORE generic routes to avoid route conflicts
 app.use("/api/v1/fees/structure", feesStructureRouter);
-app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
+app.use(
+  "/api/v1/fees/structure-concession-slabs",
+  feeStructureConcessionSlabRouter,
+);
+app.use("/api/v1/fees/structure-instalments", instalmentRouter);
+app.use("/api/v1/fees/student-fees", studentFeesRouter);
+app.use("/api/v1/fees/receipt-types", receiptTypeRouter);
+app.use("/api/v1/fees/addons", addonRouter);
+app.use("/api/v1/fees/concession-slabs", feeConcessionSlabRouter);
+app.use("/api/v1/fees/heads", feeHeadRouter);
+app.use("/api/v1/fees/components", feeStructureComponentRouter);
+// app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
 app.use("/api/v1/fees", feesRouter);
 app.use("/api/v1/courses", courseRouter);
-app.use("/api/v1/fees/components", feesComponentRouter);
-app.use("/api/v1/fees/addons", addonRouter);
-app.use("/api/v1/fees/heads", feesHeadRouter);
-app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
+// app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 app.use("/api/exams/floors", floorRouter);
 app.use("/api/exams/rooms", roomRouter);
 app.use("/api/exams/exam-types", examTypeRouter);
@@ -758,27 +800,31 @@ app.use("/api/reports", reportRouter);
 
 app.use("/api/classes", classRouter);
 
-app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
+// app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
 
 app.use("/api/v1/shifts", shiftRouter);
 
 app.use("/api/v1/academics", academicYearRouter);
 
-app.use("/api/v1/fees/structure", feesStructureRouter);
+// app.use("/api/v1/fees/structure", feesStructureRouter);
 
-app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
+// app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
 
+// Register specific routes BEFORE generic routes to avoid route conflicts
+app.use("/api/v1/fees/structure-instalments", instalmentRouter);
+app.use("/api/v1/fees/student-fees", studentFeesRouter);
+app.use("/api/v1/fees/heads", feeHeadRouter);
 app.use("/api/v1/fees", feesRouter);
 
 app.use("/api/v1/courses", courseRouter);
 
-app.use("/api/v1/fees/components", feesComponentRouter);
+// app.use("/api/v1/fees/components", feesComponentRouter);
 
-app.use("/api/v1/fees/addons", addonRouter);
+// app.use("/api/v1/fees/addons", addonRouter);
 
-app.use("/api/v1/fees/heads", feesHeadRouter);
+// app.use("/api/v1/fees/heads", feesHeadRouter);
 
-app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
+// app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 

@@ -11,6 +11,7 @@ export const notificationQueueModel = pgTable("notification_queue", {
         .notNull(),
     type: notificationQueueTypeEnum().notNull(),
     retryAttempts: integer("retry_attempts").notNull().default(0),
+    isProcessing: boolean().notNull().default(false),
     isDeadLetter: boolean().notNull().default(false),
     failedReason: text("failed_reason"),
     deadLetterAt: timestamp("dead_letter_at"),
