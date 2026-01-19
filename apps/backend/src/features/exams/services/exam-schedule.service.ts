@@ -3393,6 +3393,8 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
 
       name: userModel.name,
       uid: studentModel.uid,
+      roll_number: studentModel.rollNumber,
+      registration_number: studentModel.registrationNumber,
       email: userModel.email,
       phone: userModel.phone,
       whatsapp_number: userModel.whatsappNumber,
@@ -3474,11 +3476,6 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
 
     .where(eq(examModel.id, examId));
 
-  // 🛑 Safety
-  if (!result.length) {
-    throw new Error("No exam candidates found");
-  }
-
   // ✅ Group by subject / paper
   const groupedBySubject = new Map<string, typeof result>();
 
@@ -3493,29 +3490,40 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
   // ✅ Create Excel
   const workbook = new ExcelJS.Workbook();
 
+  // 🛑 Handle empty result case
+  if (groupedBySubject.size === 0) {
+    const sheet = workbook.addWorksheet("No Candidates");
+    sheet.addRow(["No exam candidates found for this exam"]);
+    sheet.getRow(1).font = { bold: true };
+    return await workbook.xlsx.writeBuffer();
+  }
+
   for (const [subjectKey, rows] of groupedBySubject) {
     const sheet = workbook.addWorksheet(sanitizeWorksheetName(subjectKey));
 
     // 🔥 AUTO-GENERATE COLUMNS FROM RESULT KEYS
-    const columns = Object.keys(rows[0]).map((key) => ({
-      header: key, // keep same name as result key
-      key: key,
-      width: 20,
-    }));
+    if (rows.length > 0) {
+      const columns = Object.keys(rows[0]).map((key) => ({
+        header: key, // keep same name as result key
+        key: key,
+        width: 20,
+      }));
 
-    sheet.columns = columns;
+      sheet.columns = columns;
 
-    // 🔥 ADD FULL OBJECT DIRECTLY
-    rows.forEach((row) => {
-      sheet.addRow(row);
-    });
+      // 🔥 ADD FULL OBJECT DIRECTLY
+      rows.forEach((row) => {
+        sheet.addRow(row);
+      });
 
-    sheet.getRow(1).font = { bold: true };
-    sheet.views = [{ state: "frozen", ySplit: 1 }];
+      sheet.getRow(1).font = { bold: true };
+      sheet.views = [{ state: "frozen", ySplit: 1 }];
+    }
   }
 
   // ✅ Return Excel buffer
-  return await workbook.xlsx.writeBuffer();
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 }
 
 export async function downloadAdmitCardTrackingByExamId(examId: number) {
