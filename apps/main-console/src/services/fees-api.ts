@@ -180,6 +180,7 @@ export async function deleteFeesStructure(feesStructureId: number): Promise<ApiR
 
 export interface NewFeesHead {
   name: string;
+  defaultPercentage: number;
   sequence: number;
   remarks?: string | null;
 }

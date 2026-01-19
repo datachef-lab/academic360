@@ -13,6 +13,7 @@ export interface AddOn {
 export interface FeesHead {
   readonly id?: number;
   name: string;
+  defaultPercentage: number;
   sequence: number;
   remarks: string | null;
   createdAt?: Date;

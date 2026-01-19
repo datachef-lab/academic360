@@ -32,13 +32,11 @@ const FeeConcessionSlabPage: React.FC = () => {
     description: string;
     defaultConcessionRate: number;
     sequence: number | undefined;
-    legacyFeeSlabId?: number | null;
   }>({
     name: "",
     description: "",
     defaultConcessionRate: 0,
     sequence: undefined,
-    legacyFeeSlabId: null,
   });
 
   const { concessionSlabs, loading, addFeeConcessionSlab, updateFeeConcessionSlabById, deleteFeeConcessionSlabById } =
@@ -58,8 +56,8 @@ const FeeConcessionSlabPage: React.FC = () => {
 
   const handleDownloadTemplate = () => {
     const templateData = [
-      ["Slab Name", "Description", "Default Concession Rate (%)", "Sequence", "Legacy Fee Slab ID"],
-      ["Example Slab", "Example description", "10", "1", ""],
+      ["Slab Name", "Description", "Default Concession Rate (%)", "Sequence"],
+      ["Example Slab", "Example description", "10", "1"],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(templateData);
@@ -108,7 +106,6 @@ const FeeConcessionSlabPage: React.FC = () => {
                 description: String(row["Description"] || ""),
                 defaultConcessionRate: parseFloat(String(row["Default Concession Rate (%)"] || "0")),
                 sequence: row["Sequence"] ? parseInt(String(row["Sequence"])) : undefined,
-                legacyFeeSlabId: row["Legacy Fee Slab ID"] ? Number(row["Legacy Fee Slab ID"]) : null,
               } as FeeConcessionSlabT);
               successCount++;
             } catch (error) {
@@ -139,14 +136,13 @@ const FeeConcessionSlabPage: React.FC = () => {
     }
 
     const data = [
-      ["ID", "Slab Name", "Description", "Default Concession Rate (%)", "Sequence", "Legacy Fee Slab ID"],
+      ["ID", "Slab Name", "Description", "Default Concession Rate (%)", "Sequence"],
       ...concessionSlabs.map((s) => [
         s.id || "",
         s.name || "",
         s.description || "",
         s.defaultConcessionRate || 0,
         s.sequence || "",
-        s.legacyFeeSlabId || "",
       ]),
     ];
 
@@ -195,7 +191,6 @@ const FeeConcessionSlabPage: React.FC = () => {
           description: trimmedDescription || "",
           defaultConcessionRate: form.defaultConcessionRate,
           sequence: form.sequence ?? 0,
-          legacyFeeSlabId: form.legacyFeeSlabId || null,
         });
         if (!result) {
           toast.error("Failed to update fee concession slab. Please try again.");
@@ -208,7 +203,6 @@ const FeeConcessionSlabPage: React.FC = () => {
           description: trimmedDescription || "",
           defaultConcessionRate: form.defaultConcessionRate,
           sequence: form.sequence ?? 0,
-          legacyFeeSlabId: form.legacyFeeSlabId || null,
         } as FeeConcessionSlabT);
         if (!result) {
           toast.error("Failed to create fee concession slab. Please try again.");
@@ -231,7 +225,6 @@ const FeeConcessionSlabPage: React.FC = () => {
       description: "",
       defaultConcessionRate: 0,
       sequence: undefined,
-      legacyFeeSlabId: null,
     });
   };
 
@@ -242,7 +235,6 @@ const FeeConcessionSlabPage: React.FC = () => {
       description: slab.description || "",
       defaultConcessionRate: slab.defaultConcessionRate ?? 0,
       sequence: slab.sequence ?? undefined,
-      legacyFeeSlabId: slab.legacyFeeSlabId ?? null,
     });
     setShowModal(true);
   };
@@ -254,7 +246,6 @@ const FeeConcessionSlabPage: React.FC = () => {
       description: "",
       defaultConcessionRate: 0,
       sequence: undefined,
-      legacyFeeSlabId: null,
     });
     setShowModal(true);
   };
@@ -431,22 +422,6 @@ const FeeConcessionSlabPage: React.FC = () => {
                           })
                         }
                         placeholder="Enter sequence number"
-                      />
-                    </div>
-
-                    {/* Legacy Slab ID */}
-                    <div className="flex flex-col gap-2">
-                      <Label>Legacy Slab ID</Label>
-                      <Input
-                        type="number"
-                        value={form.legacyFeeSlabId || ""}
-                        onChange={(e) =>
-                          setForm({
-                            ...form,
-                            legacyFeeSlabId: e.target.value ? parseInt(e.target.value) : null,
-                          })
-                        }
-                        placeholder="Optional"
                       />
                     </div>
                   </div>

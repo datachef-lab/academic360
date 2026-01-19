@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Edit, ReceiptIndianRupee, Trash2, Download, Upload, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,8 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useFeesReceiptTypes, useAddons } from "@/hooks/useFees";
+import { useFeesReceiptTypes } from "@/hooks/useFees";
 import { FeesReceiptType } from "@/types/fees";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
 import { toast } from "sonner";
@@ -22,26 +21,10 @@ import * as XLSX from "xlsx";
 
 type ReceiptTypeForm = {
   name: string;
-  chk: string;
-  chkMisc: string;
-  printChln: string;
-  splType: string;
-  addOnId: number | null;
-  printReceipt: string;
-  chkOnline: string;
-  chkOnSequence: string;
 };
 
 const EMPTY_FORM: ReceiptTypeForm = {
   name: "",
-  chk: "",
-  chkMisc: "",
-  printChln: "",
-  splType: "",
-  addOnId: null,
-  printReceipt: "",
-  chkOnline: "",
-  chkOnSequence: "",
 };
 
 const FeesReceiptTypePage: React.FC = () => {
@@ -57,26 +40,14 @@ const FeesReceiptTypePage: React.FC = () => {
   const { feesReceiptTypes, loading, addFeesReceiptType, updateFeesReceiptTypeById, deleteFeesReceiptTypeById } =
     useFeesReceiptTypes();
 
-  const { addons } = useAddons();
-
-  const addonMap = useMemo(() => new Map(addons.map((a) => [a.id, a.name])), [addons]);
-
   // Filter receipt types based on search text
   const filteredReceiptTypes = feesReceiptTypes.filter((receipt) => {
     const searchLower = searchText.toLowerCase();
-    return (
-      receipt.name?.toLowerCase().includes(searchLower) ||
-      receipt.chk?.toLowerCase().includes(searchLower) ||
-      receipt.splType?.toLowerCase().includes(searchLower) ||
-      (receipt.addOnId && addonMap.get(receipt.addOnId)?.toLowerCase().includes(searchLower))
-    );
+    return receipt.name?.toLowerCase().includes(searchLower);
   });
 
   const handleDownloadTemplate = () => {
-    const templateData = [
-      ["Name", "Chk", "ChkMisc", "PrintChln", "SplType", "AddOn", "PrintReceipt", "ChkOnline", "ChkOnSequence"],
-      ["Example Receipt", "", "", "", "", "", "", "", ""],
-    ];
+    const templateData = [["Name"], ["Example Receipt"]];
 
     const ws = XLSX.utils.aoa_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
@@ -121,14 +92,6 @@ const FeesReceiptTypePage: React.FC = () => {
             try {
               await addFeesReceiptType({
                 name: row["Name"] || "",
-                chk: row["Chk"] || null,
-                chkMisc: row["ChkMisc"] || null,
-                printChln: row["PrintChln"] || null,
-                splType: row["SplType"] || null,
-                addOnId: row["AddOn"] ? parseInt(row["AddOn"]) : null,
-                printReceipt: row["PrintReceipt"] || null,
-                chkOnline: row["ChkOnline"] || null,
-                chkOnSequence: row["ChkOnSequence"] || null,
               });
               successCount++;
             } catch (error) {
@@ -158,21 +121,7 @@ const FeesReceiptTypePage: React.FC = () => {
       return;
     }
 
-    const data = [
-      ["ID", "Name", "Chk", "ChkMisc", "PrintChln", "SplType", "AddOn", "PrintReceipt", "ChkOnline", "ChkOnSequence"],
-      ...feesReceiptTypes.map((r) => [
-        r.id ?? "",
-        r.name,
-        r.chk ?? "",
-        r.chkMisc ?? "",
-        r.printChln ?? "",
-        r.splType ?? "",
-        r.addOnId ?? "",
-        r.printReceipt ?? "",
-        r.chkOnline ?? "",
-        r.chkOnSequence ?? "",
-      ]),
-    ];
+    const data = [["ID", "Name"], ...feesReceiptTypes.map((r) => [r.id ?? "", r.name])];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -199,17 +148,8 @@ const FeesReceiptTypePage: React.FC = () => {
     }
 
     try {
-      // Convert form data to match NewFeesReceiptType interface (empty strings to null)
       const receiptTypeData = {
         name,
-        chk: form.chk.trim() || null,
-        chkMisc: form.chkMisc.trim() || null,
-        printChln: form.printChln.trim() || null,
-        splType: form.splType.trim() || null,
-        addOnId: form.addOnId,
-        printReceipt: form.printReceipt.trim() || null,
-        chkOnline: form.chkOnline.trim() || null,
-        chkOnSequence: form.chkOnSequence.trim() || null,
       };
 
       if (editingItem) {
@@ -230,14 +170,6 @@ const FeesReceiptTypePage: React.FC = () => {
     setEditingItem(item);
     setForm({
       name: item.name,
-      chk: item.chk ?? "",
-      chkMisc: item.chkMisc ?? "",
-      printChln: item.printChln ?? "",
-      splType: item.splType ?? "",
-      addOnId: item.addOnId ?? null,
-      printReceipt: item.printReceipt ?? "",
-      chkOnline: item.chkOnline ?? "",
-      chkOnSequence: item.chkOnSequence ?? "",
     });
     setShowModal(true);
   };
@@ -349,58 +281,16 @@ const FeesReceiptTypePage: React.FC = () => {
                   <AlertDialogTitle>{editingItem ? "Edit Receipt Type" : "Add Receipt Type"}</AlertDialogTitle>
                 </AlertDialogHeader>
                 <div className="py-4">
-                  {/* 2 Column Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {(
-                      [
-                        ["name", "Name", true],
-                        ["chk", "Chk"],
-                        ["chkMisc", "ChkMisc"],
-                        ["printChln", "PrintChln"],
-                        ["splType", "SplType"],
-                        ["printReceipt", "PrintReceipt"],
-                        ["chkOnline", "ChkOnline"],
-                        ["chkOnSequence", "ChkOnSequence"],
-                      ] as const
-                    ).map(([key, label, required]) => (
-                      <div key={key} className="flex flex-col gap-2">
-                        <Label>
-                          {label}
-                          {required && <span className="text-red-500 ml-1">*</span>}
-                        </Label>
-                        <Input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
-                      </div>
-                    ))}
-
-                    {/* AddOn Field */}
-                    <div className="flex flex-col gap-2">
-                      <Label>AddOn</Label>
-                      <Select
-                        value={form.addOnId?.toString() || undefined}
-                        onValueChange={(value) =>
-                          setForm({
-                            ...form,
-                            addOnId: value ? Number(value) : null,
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select AddOn (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {addons
-                            .filter((a) => a.id !== undefined && a.id !== null)
-                            .map((a) => {
-                              if (!a.id) return null;
-                              return (
-                                <SelectItem key={a.id} value={a.id.toString()}>
-                                  {a.name}
-                                </SelectItem>
-                              );
-                            })}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="flex flex-col gap-2">
+                    <Label>
+                      Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="Enter receipt type name"
+                      autoFocus
+                    />
                   </div>
 
                   <div className="flex justify-end gap-2 mt-6">
@@ -436,17 +326,14 @@ const FeesReceiptTypePage: React.FC = () => {
                 <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
                   <TableRow>
                     <TableHead style={{ width: 60 }}>ID</TableHead>
-                    <TableHead style={{ width: 200 }}>Name</TableHead>
-                    <TableHead style={{ width: 100 }}>Chk</TableHead>
-                    <TableHead style={{ width: 120 }}>Spl Type</TableHead>
-                    <TableHead style={{ width: 150 }}>AddOn</TableHead>
+                    <TableHead style={{ width: 400 }}>Name</TableHead>
                     <TableHead style={{ width: 140 }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredReceiptTypes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">
+                      <TableCell colSpan={3} className="text-center">
                         No receipt types found.
                       </TableCell>
                     </TableRow>
@@ -454,13 +341,8 @@ const FeesReceiptTypePage: React.FC = () => {
                     filteredReceiptTypes.map((row) => (
                       <TableRow key={row.id} className="group">
                         <TableCell style={{ width: 60 }}>{row.id}</TableCell>
-                        <TableCell style={{ width: 200 }}>{row.name}</TableCell>
-                        <TableCell style={{ width: 100 }}>{row.chk || "-"}</TableCell>
-                        <TableCell style={{ width: 120 }}>{row.splType || "-"}</TableCell>
-                        <TableCell style={{ width: 150 }}>
-                          {row.addOnId ? (addonMap.get(row.addOnId) ?? row.addOnId) : "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 120 }}>
+                        <TableCell style={{ width: 400 }}>{row.name}</TableCell>
+                        <TableCell style={{ width: 140 }}>
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">
                               <Edit className="h-4 w-4" />
