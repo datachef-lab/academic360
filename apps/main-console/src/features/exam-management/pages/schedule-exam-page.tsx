@@ -212,7 +212,6 @@ export default function ScheduleExamPage() {
   const [selectedProgramCourses, setSelectedProgramCourses] = useState<number[]>([]);
   const [selectedShifts, setSelectedShifts] = useState<number[]>([]);
   const [selectedSubjectCategories, setSelectedSubjectCategories] = useState<number[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [selectedExamComponent, setSelectedExamComponent] = useState<number | null>(null);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(null);
   const [selectedAffiliationId, setSelectedAffiliationId] = useState<number | null>(null);
@@ -232,6 +231,15 @@ export default function ScheduleExamPage() {
     schedule: Schedule;
   }
   const [selectedSubjectPapers, setSelectedSubjectPapers] = useState<SubjectPaperSchedule[]>([]);
+
+  // New flow state variables
+  const [currentSubjectIds, setCurrentSubjectIds] = useState<number[]>([]); // Multi-select subjects
+  const [currentProgramCourseIds, setCurrentProgramCourseIds] = useState<number[]>([]); // Multi-select program courses
+  const [currentPaperIds, setCurrentPaperIds] = useState<number[]>([]); // Multi-select papers
+  const [currentDate, setCurrentDate] = useState<string>("");
+  const [currentStartTime, setCurrentStartTime] = useState<string>("");
+  const [currentDuration, setCurrentDuration] = useState<string>(""); // Duration in minutes
+
   // Keep selectedSubjectIds for backward compatibility with subject selection UI
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
   // Keep subjectSchedules as derived state for backward compatibility (will be removed later)
@@ -600,6 +608,23 @@ export default function ScheduleExamPage() {
     );
   };
 
+  // Filter program courses based on affiliation and regulation
+  const getFilteredProgramCourses = useCallback(() => {
+    let filtered = programCourses.filter((pc) => pc.isActive !== false);
+
+    // Filter by affiliation if selected
+    if (selectedAffiliationId) {
+      filtered = filtered.filter((pc) => pc.affiliation?.id === selectedAffiliationId);
+    }
+
+    // Filter by regulation if selected
+    if (selectedRegulationTypeId) {
+      filtered = filtered.filter((pc) => pc.regulationType?.id === selectedRegulationTypeId);
+    }
+
+    return filtered;
+  }, [programCourses, selectedAffiliationId, selectedRegulationTypeId]);
+
   // Helper to get papers for a subject
   const getPapersForSubject = useCallback(
     (subjectId: number): PaperDto[] => {
@@ -608,137 +633,211 @@ export default function ScheduleExamPage() {
     [papers],
   );
 
-  // Normalize paper code for comparison (trim and lowercase)
-  const normalizePaperCode = (code: string | null | undefined): string => {
-    return (code || "").trim().toLowerCase();
-  };
+  // NEW FLOW HELPERS
 
-  // Handle subject selection - when subject is selected, auto-select ALL its papers
-  const handleSubjectToggle = (subjectId: number) => {
-    setSelectedSubjectIds((prev) => {
-      if (prev.includes(subjectId)) {
-        // Remove subject and all its papers
-        setSelectedSubjectPapers((prevPapers) => prevPapers.filter((sp) => sp.subjectId !== subjectId));
-        return prev.filter((id) => id !== subjectId);
-      } else {
-        // Add subject - auto-select ALL papers for this subject
+  // Get available program courses for selected subjects (from their papers)
+  // Only returns program courses that still have papers that haven't been added
+  const getAvailableProgramCoursesForSubjects = useCallback(
+    (subjectIds: number[]): Array<{ id: number; name: string }> => {
+      if (subjectIds.length === 0) return [];
+
+      const addedPaperIds = new Set(selectedSubjectPapers.map((sp) => sp.paperId));
+      const programCourseIds = new Set<number>();
+
+      // Get papers for all selected subjects
+      subjectIds.forEach((subjectId) => {
         const subjectPapers = getPapersForSubject(subjectId);
-        const newPapers: SubjectPaperSchedule[] = subjectPapers
-          .filter((paper) => paper.id)
-          .map((paper) => ({
-            subjectId,
-            paperId: paper.id!,
-            schedule: { date: "", startTime: "", endTime: "" },
-          }));
+        subjectPapers.forEach((paper) => {
+          // Only include program course if the paper hasn't been added yet
+          if (paper.programCourseId && paper.id && !addedPaperIds.has(paper.id)) {
+            programCourseIds.add(paper.programCourseId);
+          }
+        });
+      });
 
-        setSelectedSubjectPapers((prev) => [...prev, ...newPapers]);
-        return [...prev, subjectId];
-      }
+      return Array.from(programCourseIds)
+        .map((pcId) => {
+          const pc = programCourses.find((p) => p.id === pcId);
+          return pc ? { id: pcId, name: pc.name || `Program Course ${pcId}` } : null;
+        })
+        .filter((pc): pc is { id: number; name: string } => pc !== null)
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+    [getPapersForSubject, programCourses, selectedSubjectPapers],
+  );
+
+  // Get available papers based on current filters (subjects + component + program courses)
+  const getFilteredPapersForCurrentSelection = useCallback((): PaperDto[] => {
+    if (currentSubjectIds.length === 0) return [];
+
+    // Get papers for all selected subjects
+    let filtered: PaperDto[] = [];
+    currentSubjectIds.forEach((subjectId) => {
+      filtered = [...filtered, ...getPapersForSubject(subjectId)];
     });
-  };
 
-  // Room selection handlers moved to allot-exam-page
+    // Filter by selected exam component if one is selected
+    if (selectedExamComponent !== null) {
+      filtered = filtered.filter((paper) => {
+        return (
+          paper.components &&
+          Array.isArray(paper.components) &&
+          paper.components.some((component) => component.examComponent?.id === selectedExamComponent)
+        );
+      });
+    }
 
-  // Group papers by subjectId and normalized paper code
-  const getGroupedSubjectPapers = useCallback(() => {
-    const grouped = new Map<
-      string,
-      {
-        subjectId: number;
-        normalizedCode: string;
-        papers: Array<{ paperId: number; paper: PaperDto; schedule: Schedule }>;
-        representativeSchedule: Schedule; // Use the first paper's schedule as representative
-      }
-    >();
+    // Filter by selected program courses if any are selected
+    if (currentProgramCourseIds.length > 0) {
+      filtered = filtered.filter(
+        (paper) => paper.programCourseId && currentProgramCourseIds.includes(paper.programCourseId),
+      );
+    }
 
-    selectedSubjectPapers.forEach((sp) => {
-      const paper = papers.find((p) => p.id === sp.paperId);
-      if (!paper) return;
+    // Filter out already-added papers
+    const addedPaperIds = new Set(selectedSubjectPapers.map((sp) => sp.paperId));
+    filtered = filtered.filter((paper) => paper.id && !addedPaperIds.has(paper.id));
 
-      const normalizedCode = normalizePaperCode(paper.code);
-      const groupKey = `${sp.subjectId}|${normalizedCode}`;
+    return filtered;
+  }, [currentSubjectIds, selectedExamComponent, currentProgramCourseIds, getPapersForSubject, selectedSubjectPapers]);
 
-      if (!grouped.has(groupKey)) {
-        grouped.set(groupKey, {
-          subjectId: sp.subjectId,
-          normalizedCode,
-          papers: [],
-          representativeSchedule: sp.schedule,
+  // Calculate end time based on start time and duration (in minutes)
+  const calculateEndTime = useCallback((startTime: string, durationMinutes: string): string => {
+    if (!startTime || !durationMinutes) return "";
+
+    const timeParts = startTime.split(":");
+    const hours = parseInt(timeParts[0] || "", 10);
+    const minutes = parseInt(timeParts[1] || "", 10);
+    const duration = parseInt(durationMinutes, 10);
+
+    if (isNaN(hours) || isNaN(minutes) || isNaN(duration)) return "";
+
+    const startDate = new Date();
+    startDate.setHours(hours, minutes, 0, 0);
+
+    const endDate = new Date(startDate.getTime() + duration * 60 * 1000);
+
+    const endHours = endDate.getHours().toString().padStart(2, "0");
+    const endMinutes = endDate.getMinutes().toString().padStart(2, "0");
+
+    return `${endHours}:${endMinutes}`;
+  }, []);
+
+  // Convert 24-hour time to 12-hour AM/PM format
+  const formatTimeToAMPM = useCallback((time24: string): string => {
+    if (!time24) return "";
+
+    const timeParts = time24.split(":");
+    const hours = parseInt(timeParts[0] || "", 10);
+    const minutes = parseInt(timeParts[1] || "", 10);
+
+    if (isNaN(hours) || isNaN(minutes)) return time24;
+
+    const period = hours >= 12 ? "PM" : "AM";
+    const hours12 = hours % 12 || 12; // Convert 0 to 12 for midnight
+    const minutesStr = minutes.toString().padStart(2, "0");
+
+    return `${hours12}:${minutesStr} ${period}`;
+  }, []);
+
+  // Check if a subject has any papers that haven't been added yet
+  const subjectHasAvailablePapers = useCallback(
+    (subjectId: number): boolean => {
+      const subjectPapers = getPapersForSubject(subjectId);
+      const addedPaperIds = new Set(selectedSubjectPapers.map((sp) => sp.paperId));
+
+      // Check if there are any papers for this subject that haven't been added
+      return subjectPapers.some((paper) => paper.id && !addedPaperIds.has(paper.id));
+    },
+    [getPapersForSubject, selectedSubjectPapers],
+  );
+
+  // Get subjects that still have available papers (not fully added)
+  const getAvailableSubjects = useCallback(() => {
+    return getDistinctSubjects().filter((subject) => {
+      if (subject.subjectId == null) return false;
+      return subjectHasAvailablePapers(subject.subjectId);
+    });
+  }, [getDistinctSubjects, subjectHasAvailablePapers]);
+
+  // Handle adding papers with current date/time settings
+  const handleAddPapers = useCallback(() => {
+    if (currentSubjectIds.length === 0 || currentPaperIds.length === 0) {
+      toast.error("Please select at least one subject and one paper");
+      return;
+    }
+
+    if (!currentDate) {
+      toast.error("Please select a date");
+      return;
+    }
+
+    if (!currentStartTime) {
+      toast.error("Please select a start time");
+      return;
+    }
+
+    if (!currentDuration) {
+      toast.error("Please enter duration");
+      return;
+    }
+
+    const endTime = calculateEndTime(currentStartTime, currentDuration);
+
+    if (!endTime) {
+      toast.error("Invalid duration or start time");
+      return;
+    }
+
+    // Validate end time is not before start time
+    if (endTime <= currentStartTime) {
+      toast.error("Duration must be greater than 0");
+      return;
+    }
+
+    // Create new subject-paper schedules for each selected paper
+    const newSchedules: SubjectPaperSchedule[] = [];
+
+    currentPaperIds.forEach((paperId) => {
+      // Find which subject this paper belongs to
+      const paper = papers.find((p) => p.id === paperId);
+      if (paper && paper.subjectId && currentSubjectIds.includes(paper.subjectId)) {
+        newSchedules.push({
+          subjectId: paper.subjectId,
+          paperId,
+          schedule: {
+            date: currentDate,
+            startTime: currentStartTime,
+            endTime,
+          },
         });
       }
-
-      const group = grouped.get(groupKey)!;
-      group.papers.push({
-        paperId: sp.paperId,
-        paper,
-        schedule: sp.schedule,
-      });
-      // Update representative schedule if this one has more complete data
-      if (sp.schedule.date && !group.representativeSchedule.date) {
-        group.representativeSchedule = sp.schedule;
-      }
     });
 
-    return Array.from(grouped.values());
-  }, [selectedSubjectPapers, papers]);
+    if (newSchedules.length === 0) {
+      toast.error("No valid papers to add");
+      return;
+    }
 
-  // Handle schedule change for a group of papers (same subject + normalized code)
-  const handleScheduleChange = (subjectId: number, normalizedCode: string, field: keyof Schedule, value: string) => {
-    // Find all papers in this group
-    const groupPapers = selectedSubjectPapers.filter((sp) => {
-      const paper = papers.find((p) => p.id === sp.paperId);
-      if (!paper) return false;
-      return sp.subjectId === subjectId && normalizePaperCode(paper.code) === normalizedCode;
+    setSelectedSubjectPapers((prev) => [...prev, ...newSchedules]);
+
+    // Update selectedSubjectIds with any new subjects
+    const newSubjectIds = [...new Set(newSchedules.map((s) => s.subjectId))];
+    setSelectedSubjectIds((prev) => {
+      const updated = new Set([...prev, ...newSubjectIds]);
+      return Array.from(updated);
     });
 
-    if (groupPapers.length === 0) return;
+    // Reset current selections
+    setCurrentPaperIds([]);
+    setCurrentDate("");
+    setCurrentStartTime("");
+    setCurrentDuration("");
 
-    // Get current schedule from first paper in group
-    const currentSchedule = groupPapers[0]?.schedule || { date: "", startTime: "", endTime: "" };
+    toast.success(`Added ${newSchedules.length} paper(s) to exam schedule`);
+  }, [currentSubjectIds, currentPaperIds, currentDate, currentStartTime, currentDuration, calculateEndTime, papers]);
 
-    // Validate end time is not less than start time
-    if (field === "endTime" && currentSchedule.startTime && value) {
-      const startTime = currentSchedule.startTime;
-      const endTime = value;
-
-      // Compare time strings (HH:MM format)
-      if (endTime < startTime) {
-        toast.error("End time cannot be less than start time");
-        return;
-      }
-    }
-
-    // If start time is changed and end time exists, validate end time is not less than new start time
-    if (field === "startTime" && currentSchedule.endTime && value) {
-      const startTime = value;
-      const endTime = currentSchedule.endTime;
-
-      if (endTime < startTime) {
-        toast.error("End time cannot be less than start time. Please update end time.");
-        // Optionally clear end time or keep it and let user fix
-      }
-    }
-
-    // Update all papers in the group
-    setSelectedSubjectPapers((prev) =>
-      prev.map((sp) => {
-        const paper = papers.find((p) => p.id === sp.paperId);
-        if (!paper) return sp;
-
-        const spNormalizedCode = normalizePaperCode(paper.code);
-        if (sp.subjectId === subjectId && spNormalizedCode === normalizedCode) {
-          return {
-            ...sp,
-            schedule: {
-              ...sp.schedule,
-              [field]: value,
-            },
-          };
-        }
-        return sp;
-      }),
-    );
-  };
+  // Room selection handlers moved to allot-exam-page
 
   //   const formatTime = (time24?: string) => {
   //     if (!time24) return "";
@@ -825,26 +924,66 @@ export default function ScheduleExamPage() {
     }
   }, [currentAcademicYear, selectedAcademicYearId]);
 
+  // Reset selected program courses when affiliation or regulation changes
+  useEffect(() => {
+    // Clear program courses that don't match the new affiliation/regulation filters
+    const filteredIds = getFilteredProgramCourses()
+      .map((pc) => pc.id)
+      .filter((id): id is number => id !== undefined);
+    setSelectedProgramCourses((prev) => prev.filter((id) => filteredIds.includes(id)));
+  }, [selectedAffiliationId, selectedRegulationTypeId, getFilteredProgramCourses]);
+
   // Reset selected subjects when program courses, subject categories, or semester change
   useEffect(() => {
     setSelectedSubjectIds([]);
     setSelectedSubjectPapers([]);
-    setSelectedSubjectId(null);
+    // Reset new flow state
+    setCurrentSubjectIds([]);
+    setCurrentProgramCourseIds([]);
+    setCurrentPaperIds([]);
+    setCurrentDate("");
+    setCurrentStartTime("");
+    setCurrentDuration("");
   }, [selectedProgramCourses, selectedSubjectCategories, semester]);
 
-  // Auto-select first subject/paper when subjects become available
+  // Auto-reset currentSubjectIds when subjects run out of available papers
   useEffect(() => {
-    if (papers.length === 0 || loadingPapers || fetchingPapers) return;
+    if (currentSubjectIds.length === 0) return;
 
-    const distinctSubjects = getDistinctSubjects();
-    if (distinctSubjects.length > 0 && selectedSubjectId === null) {
-      const firstSubject = distinctSubjects[0];
-      if (firstSubject && firstSubject.subjectId !== null) {
-        setSelectedSubjectId(firstSubject.subjectId);
+    // Check which currently selected subjects still have available papers
+    const validSubjectIds = currentSubjectIds.filter((subjectId) => subjectHasAvailablePapers(subjectId));
+
+    // If some subjects no longer have available papers, remove them
+    if (validSubjectIds.length !== currentSubjectIds.length) {
+      setCurrentSubjectIds(validSubjectIds);
+
+      // Also reset dependent selections
+      setCurrentProgramCourseIds([]);
+      setCurrentPaperIds([]);
+
+      if (validSubjectIds.length === 0) {
+        toast.info("All papers for selected subjects have been added");
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [papers, selectedExamComponent, selectedSubjectId, loadingPapers, fetchingPapers]);
+  }, [selectedSubjectPapers, currentSubjectIds, subjectHasAvailablePapers]);
+
+  // Auto-reset currentProgramCourseIds when program courses run out of available papers
+  useEffect(() => {
+    if (currentProgramCourseIds.length === 0 || currentSubjectIds.length === 0) return;
+
+    // Get program courses that still have available papers for current subjects
+    const availableProgramCourses = getAvailableProgramCoursesForSubjects(currentSubjectIds);
+    const availableProgramCourseIds = new Set(availableProgramCourses.map((pc) => pc.id));
+
+    // Check which currently selected program courses still have available papers
+    const validProgramCourseIds = currentProgramCourseIds.filter((pcId) => availableProgramCourseIds.has(pcId));
+
+    // If some program courses no longer have available papers, remove them
+    if (validProgramCourseIds.length !== currentProgramCourseIds.length) {
+      setCurrentProgramCourseIds(validProgramCourseIds);
+      setCurrentPaperIds([]); // Reset paper selection
+    }
+  }, [selectedSubjectPapers, currentProgramCourseIds, currentSubjectIds, getAvailableProgramCoursesForSubjects]);
 
   // Real-time duplicate exam check state
   const [duplicateCheckResult, setDuplicateCheckResult] = useState<{
@@ -1220,7 +1359,6 @@ export default function ScheduleExamPage() {
     setSelectedProgramCourses([]);
     setSelectedShifts([]);
     setSelectedSubjectCategories([]);
-    setSelectedSubjectId(null);
     setSelectedExamComponent(null);
     setSelectedAcademicYearId(null);
     setSelectedAffiliationId(null);
@@ -1228,6 +1366,13 @@ export default function ScheduleExamPage() {
     setSelectedSubjectPapers([]);
     setSelectedSubjectIds([]);
     setDuplicateCheckResult(null);
+    // Reset new flow state
+    setCurrentSubjectIds([]);
+    setCurrentProgramCourseIds([]);
+    setCurrentPaperIds([]);
+    setCurrentDate("");
+    setCurrentStartTime("");
+    setCurrentDuration("");
   };
 
   const handleScheduleExam = () => {
@@ -1396,35 +1541,50 @@ export default function ScheduleExamPage() {
                         <Button
                           variant="outline"
                           className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                          disabled={loading.programCourses}
+                          disabled={
+                            loading.programCourses ||
+                            !selectedAffiliationId ||
+                            !selectedRegulationTypeId ||
+                            getFilteredProgramCourses().length === 0
+                          }
                         >
                           <span className="text-gray-600">
                             {loading.programCourses
                               ? "Loading..."
-                              : selectedProgramCourses.length > 0
-                                ? `Select Program Courses (${selectedProgramCourses.length})`
-                                : "Select Program Courses"}
+                              : !selectedAffiliationId || !selectedRegulationTypeId
+                                ? "Select affiliation & regulation first"
+                                : getFilteredProgramCourses().length === 0
+                                  ? "No program courses available"
+                                  : selectedProgramCourses.length > 0
+                                    ? `Select Program Courses (${selectedProgramCourses.length})`
+                                    : "Select Program Courses"}
                           </span>
                           <ChevronDown className="w-4 h-4 opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-64 p-2" align="start">
                         <div className="max-h-60 overflow-y-auto space-y-1">
-                          {programCourses.map((course) => (
-                            <button
-                              key={course.id}
-                              type="button"
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                              onClick={() => course.id && handleProgramCourseToggle(course.id)}
-                            >
-                              <Checkbox
-                                checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
-                                onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
-                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                              />
-                              <span className="text-left">{course.name}</span>
-                            </button>
-                          ))}
+                          {getFilteredProgramCourses().length === 0 ? (
+                            <div className="text-center py-4 text-sm text-gray-500">
+                              No program courses available for selected affiliation and regulation
+                            </div>
+                          ) : (
+                            getFilteredProgramCourses().map((course) => (
+                              <button
+                                key={course.id}
+                                type="button"
+                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                onClick={() => course.id && handleProgramCourseToggle(course.id)}
+                              >
+                                <Checkbox
+                                  checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
+                                  onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
+                                  className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                />
+                                <span className="text-left">{course.name}</span>
+                              </button>
+                            ))
+                          )}
                         </div>
                       </PopoverContent>
                     </Popover>
@@ -1477,345 +1637,497 @@ export default function ScheduleExamPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-none">
-              <CardContent className="space-y-5 pb-4 pt-2">
-                {/* Third Row: Other Filters - Full Width */}
-                <div className="flex flex-wrap gap-3 sm:gap-4 items-start w-full ">
-                  {/* Subjects */}
-                  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                    <Label className=" font-medium text-gray-700">Subjects</Label>
-                    {getDistinctSubjects().length === 0 && !loading.papers ? (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
-                        <span className=" text-gray-500 whitespace-nowrap">Select filters to load subjects</span>
-                      </div>
-                    ) : (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="h-8 w-full justify-between border-purple-300 "
-                            disabled={getDistinctSubjects().length === 0}
-                          >
-                            <span className="">Subjects</span>
-                            {selectedSubjectIds.length > 0 && (
-                              <span className=" text-gray-500 ml-1">({selectedSubjectIds.length})</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 p-2" align="start">
-                          <div className="max-h-60 overflow-y-auto space-y-1">
-                            {getDistinctSubjects().map((subject) => {
-                              if (subject.subjectId == null) return null;
-                              const isChecked = selectedSubjectIds.includes(subject.subjectId);
+            {/* Check if all required fields from first section are selected */}
+            {examType &&
+            semester &&
+            selectedProgramCourses.length > 0 &&
+            selectedShifts.length > 0 &&
+            selectedSubjectCategories.length > 0 ? (
+              <>
+                {/* Dotted Separator between sections */}
+                <div className="border-t border-dashed border-gray-400 my-4"></div>
 
-                              return (
-                                <button
-                                  key={subject.subjectId}
-                                  type="button"
-                                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 transition-colors"
-                                  onClick={() => {
-                                    if (subject.subjectId) {
-                                      handleSubjectToggle(subject.subjectId);
-                                    }
-                                  }}
-                                >
-                                  <Checkbox
-                                    checked={isChecked}
-                                    onCheckedChange={() => {
-                                      if (subject.subjectId) {
-                                        handleSubjectToggle(subject.subjectId);
-                                      }
-                                    }}
-                                    className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                  />
-                                  <span className="text-sm text-left flex-1">
-                                    {subject.subjectCode ? (
-                                      <span className="text-gray-700 font-medium">{subject.subjectCode}</span>
-                                    ) : (
-                                      <span className="text-gray-500">{subject.subjectName}</span>
-                                    )}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  </div>
-
-                  {/* Component */}
-                  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                    <Label className=" font-medium text-gray-700">Component</Label>
-                    <Select
-                      value={selectedExamComponent?.toString() || "all"}
-                      onValueChange={(value) => {
-                        setSelectedExamComponent(value === "all" ? null : Number(value));
-                      }}
-                      disabled={loading.examComponents}
-                    >
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ">
-                        <SelectValue placeholder={loading.examComponents ? "Loading..." : "Component"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        {examComponents
-                          .filter((comp) => !comp.disabled)
-                          .map((comp) => (
-                            <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
-                              {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="w-full flex-shrink-0">
-                  <div className="rounded-lg overflow-hidden">
-                    <div className="flex flex-col gap-4">
-                      {/* Subject schedule list */}
-                      <div className="flex-1 min-h-0 flex flex-col">
-                        <div className="flex-1 overflow-auto scrollbar-hide">
-                          {isPapersQueryEnabled && (loadingPapers || fetchingPapers) ? (
-                            <div className="flex items-center justify-center py-8 text-gray-500">
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Loading papers...
+                <Card className="border-0 shadow-none">
+                  <CardContent className="space-y-5 pb-4 pt-2">
+                    {/* New Flow: Subject, Component, Program Courses, Papers, Date/Time */}
+                    <div className="space-y-4 border border-gray-300 rounded-lg p-4">
+                      {/* Added border to grid layout */}
+                      {/* First Row: Subjects, Component, Program Courses, Papers */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                        {/* Subjects - Multi-Select */}
+                        <div className="flex flex-col gap-1">
+                          <Label className="font-medium text-gray-700">Subject(s)</Label>
+                          {getDistinctSubjects().length === 0 && !loading.papers ? (
+                            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md h-8">
+                              <span className="text-gray-500 text-sm whitespace-nowrap">
+                                Select filters to load subjects
+                              </span>
                             </div>
                           ) : (
-                            <div className="border border-gray-400 rounded-lg overflow-hidden">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow className="border-b border-gray-400">
-                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[5%]">
-                                      <div className="font-medium">Sr. No.</div>
-                                    </TableHead>
-                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[15%]">
-                                      <div className="font-medium">Program Course</div>
-                                    </TableHead>
-                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[25%]">
-                                      <div className="font-medium">Subject & Paper</div>
-                                    </TableHead>
-                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
-                                      <div className="font-medium">Code</div>
-                                    </TableHead>
-                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
-                                      <div className="font-medium">Subject Category</div>
-                                    </TableHead>
-                                    <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[12%]">
-                                      <div className="font-medium">Date</div>
-                                    </TableHead>
-                                    <TableHead className="p-2 text-center bg-gray-100 w-[13%]">
-                                      <div className="font-medium">Time</div>
-                                    </TableHead>
-                                    <TableHead className="p-2 text-center bg-gray-100 w-[10%]">
-                                      <div className="font-medium">Action</div>
-                                    </TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {selectedSubjectPapers.length === 0 ? (
-                                    <TableRow>
-                                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                                        {getDistinctSubjects().length === 0
-                                          ? "No subjects available"
-                                          : "Select subjects from the dropdown above and choose papers"}
-                                      </TableCell>
-                                    </TableRow>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                  disabled={getDistinctSubjects().length === 0 || getAvailableSubjects().length === 0}
+                                >
+                                  <span className="text-gray-600 truncate">
+                                    {getAvailableSubjects().length === 0 && getDistinctSubjects().length > 0
+                                      ? "All papers added"
+                                      : currentSubjectIds.length > 0
+                                        ? `${currentSubjectIds.length} subject(s)`
+                                        : "Select Subjects"}
+                                  </span>
+                                  <ChevronDown className="w-4 h-4 opacity-50 flex-shrink-0" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-80 p-2" align="start">
+                                <div className="max-h-60 overflow-y-auto space-y-1">
+                                  {getAvailableSubjects().length === 0 ? (
+                                    <div className="px-2 py-4 text-center text-sm text-gray-500">
+                                      All papers have been added
+                                    </div>
                                   ) : (
-                                    getGroupedSubjectPapers().map((group, index) => {
-                                      // Use first paper as representative for display
-                                      const representativePaper = group.papers[0]?.paper;
-                                      const subject = subjects.find((s) => s.id === group.subjectId);
-                                      if (!representativePaper || !subject) return null;
-
-                                      // Collect all unique program courses for this group
-                                      const uniqueProgramCourseIds = new Set<number>();
-                                      group.papers.forEach(({ paper }) => {
-                                        if (paper.programCourseId) {
-                                          uniqueProgramCourseIds.add(paper.programCourseId);
-                                        }
-                                      });
-
-                                      const programCoursesForGroup = Array.from(uniqueProgramCourseIds)
-                                        .map((pcId) => programCourses.find((pc) => pc.id === pcId))
-                                        .filter((pc): pc is NonNullable<typeof pc> => pc !== undefined);
-
-                                      const subjectType = subjectTypes.find(
-                                        (st) => st.id === representativePaper.subjectTypeId,
-                                      );
-
-                                      // Use representative schedule (from first paper or most complete one)
-                                      const schedule = group.representativeSchedule;
-                                      const dateValue = schedule.date || "";
-                                      const startTimeValue = schedule.startTime || "";
-                                      const endTimeValue = schedule.endTime || "";
-
-                                      // Show count if multiple papers in group
-                                      const paperCount = group.papers.length;
-                                      const showCount = paperCount > 1;
-
+                                    getAvailableSubjects().map((subject) => {
+                                      if (subject.subjectId == null) return null;
                                       return (
-                                        <TableRow
-                                          key={`${group.subjectId}-${group.normalizedCode}-${index}`}
-                                          className="border-b border-gray-400"
+                                        <button
+                                          key={subject.subjectId}
+                                          type="button"
+                                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                          onClick={() => {
+                                            setCurrentSubjectIds((prev) =>
+                                              prev.includes(subject.subjectId!)
+                                                ? prev.filter((id) => id !== subject.subjectId)
+                                                : [...prev, subject.subjectId!],
+                                            );
+                                            // Reset dependent selections
+                                            setCurrentProgramCourseIds([]);
+                                            setCurrentPaperIds([]);
+                                          }}
                                         >
-                                          <TableCell className="p-2 text-center border-r border-gray-400">
-                                            {index + 1}
-                                          </TableCell>
-                                          <TableCell className="p-2 text-center border-r border-gray-400">
-                                            <div className="flex flex-wrap gap-1 justify-center">
-                                              {programCoursesForGroup.length > 0 ? (
-                                                programCoursesForGroup.map((pc) => (
-                                                  <Badge
-                                                    key={pc.id}
-                                                    variant="outline"
-                                                    className="text-xs border-blue-300 text-blue-700 bg-blue-50"
-                                                  >
-                                                    {pc.name}
-                                                  </Badge>
-                                                ))
-                                              ) : (
-                                                <span className="text-muted-foreground">-</span>
-                                              )}
-                                            </div>
-                                          </TableCell>
-                                          <TableCell className="p-2 text-center border-r border-gray-400">
-                                            <div className="flex flex-col gap-1.5 items-center">
-                                              <span className="text-sm font-medium">
-                                                {representativePaper.name || "-"}
-                                                {representativePaper.isOptional === false && (
-                                                  <span className="text-red-500 ml-1">*</span>
-                                                )}
-                                                {showCount && (
-                                                  <span className="text-gray-500 text-xs ml-1">({paperCount})</span>
-                                                )}
-                                              </span>
-                                              <Badge
-                                                variant="outline"
-                                                className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50 w-fit"
-                                              >
-                                                {subject.code || subject.name}
-                                              </Badge>
-                                            </div>
-                                          </TableCell>
-                                          <TableCell className="p-2 text-center border-r border-gray-400 text-sm font-mono">
-                                            {representativePaper.code || "-"}
-                                            {showCount && (
-                                              <span className="text-gray-500 text-xs ml-1">({paperCount})</span>
-                                            )}
-                                          </TableCell>
-                                          <TableCell className="p-2 text-center border-r border-gray-400">
-                                            {subjectType ? (
-                                              <Badge
-                                                variant="outline"
-                                                className="text-xs border-green-300 text-green-700 bg-green-50"
-                                              >
-                                                {subjectType.code || subjectType.name}
-                                              </Badge>
+                                          <Checkbox
+                                            checked={currentSubjectIds.includes(subject.subjectId)}
+                                            onCheckedChange={() => {
+                                              setCurrentSubjectIds((prev) =>
+                                                prev.includes(subject.subjectId!)
+                                                  ? prev.filter((id) => id !== subject.subjectId)
+                                                  : [...prev, subject.subjectId!],
+                                              );
+                                              setCurrentProgramCourseIds([]);
+                                              setCurrentPaperIds([]);
+                                            }}
+                                            className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                          />
+                                          <span className="text-sm text-left flex-1">
+                                            {subject.subjectCode ? (
+                                              <span className="text-gray-700 font-medium">{subject.subjectCode}</span>
                                             ) : (
-                                              <span className="text-muted-foreground">-</span>
+                                              <span className="text-gray-500">{subject.subjectName}</span>
                                             )}
-                                          </TableCell>
-                                          <TableCell className="p-2 text-center border-r border-gray-400">
-                                            <Input
-                                              type="date"
-                                              value={dateValue}
-                                              onChange={(e) =>
-                                                handleScheduleChange(
-                                                  group.subjectId,
-                                                  group.normalizedCode,
-                                                  "date",
-                                                  e.target.value,
-                                                )
-                                              }
-                                              className="h-8 w-full text-sm"
-                                            />
-                                          </TableCell>
-                                          <TableCell className="p-2 text-center">
-                                            <div className="flex flex-col gap-1">
-                                              <Input
-                                                type="time"
-                                                value={startTimeValue}
-                                                onChange={(e) =>
-                                                  handleScheduleChange(
-                                                    group.subjectId,
-                                                    group.normalizedCode,
-                                                    "startTime",
-                                                    e.target.value,
-                                                  )
-                                                }
-                                                className="h-8 w-full text-sm"
-                                                placeholder="Start"
-                                              />
-                                              <Input
-                                                type="time"
-                                                value={endTimeValue}
-                                                onChange={(e) =>
-                                                  handleScheduleChange(
-                                                    group.subjectId,
-                                                    group.normalizedCode,
-                                                    "endTime",
-                                                    e.target.value,
-                                                  )
-                                                }
-                                                className="h-8 w-full text-sm"
-                                                placeholder="End"
-                                              />
-                                            </div>
-                                          </TableCell>
-                                          <TableCell className="p-2 text-center">
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => {
-                                                // Remove all papers in this group
-                                                setSelectedSubjectPapers((prev) =>
-                                                  prev.filter((sp) => {
-                                                    const paper = papers.find((p) => p.id === sp.paperId);
-                                                    if (!paper) return true;
-                                                    const spNormalizedCode = normalizePaperCode(paper.code);
-                                                    return !(
-                                                      sp.subjectId === group.subjectId &&
-                                                      spNormalizedCode === group.normalizedCode
-                                                    );
-                                                  }),
-                                                );
-                                                // Check if this was the last group for this subject
-                                                const remainingPapersForSubject = selectedSubjectPapers.filter((sp) => {
-                                                  const paper = papers.find((p) => p.id === sp.paperId);
-                                                  if (!paper) return false;
-                                                  const spNormalizedCode = normalizePaperCode(paper.code);
-                                                  return (
-                                                    sp.subjectId === group.subjectId &&
-                                                    spNormalizedCode !== group.normalizedCode
-                                                  );
-                                                });
-                                                if (remainingPapersForSubject.length === 0) {
-                                                  setSelectedSubjectIds((prev) =>
-                                                    prev.filter((id) => id !== group.subjectId),
-                                                  );
-                                                }
-                                              }}
-                                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                                            >
-                                              <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                          </TableCell>
-                                        </TableRow>
+                                          </span>
+                                        </button>
                                       );
                                     })
                                   )}
-                                </TableBody>
-                              </Table>
-                            </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           )}
+                        </div>
+
+                        {/* Component - Single Select */}
+                        <div className="flex flex-col gap-1">
+                          <Label className="font-medium text-gray-700">Component</Label>
+                          <Select
+                            value={selectedExamComponent?.toString() || "all"}
+                            onValueChange={(value) => {
+                              setSelectedExamComponent(value === "all" ? null : Number(value));
+                              // Reset paper selection when component changes
+                              setCurrentPaperIds([]);
+                            }}
+                            disabled={loading.examComponents || currentSubjectIds.length === 0}
+                          >
+                            <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                              <SelectValue placeholder={loading.examComponents ? "Loading..." : "All"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              {examComponents
+                                .filter((comp) => !comp.disabled)
+                                .map((comp) => (
+                                  <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
+                                    {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Program Courses (Multi-select) */}
+                        <div className="flex flex-col gap-1">
+                          <Label className="font-medium text-gray-700">Program Course(s)</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                disabled={
+                                  currentSubjectIds.length === 0 ||
+                                  getAvailableProgramCoursesForSubjects(currentSubjectIds).length === 0
+                                }
+                              >
+                                <span className="text-gray-600 truncate">
+                                  {currentSubjectIds.length === 0
+                                    ? "Select subjects first"
+                                    : getAvailableProgramCoursesForSubjects(currentSubjectIds).length === 0
+                                      ? "All papers added"
+                                      : currentProgramCourseIds.length > 0
+                                        ? `${currentProgramCourseIds.length} selected`
+                                        : "All Program Courses"}
+                                </span>
+                                <ChevronDown className="w-4 h-4 opacity-50 flex-shrink-0" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-2" align="start">
+                              <div className="max-h-60 overflow-y-auto space-y-1">
+                                {getAvailableProgramCoursesForSubjects(currentSubjectIds).length === 0 ? (
+                                  <div className="px-2 py-4 text-center text-sm text-gray-500">
+                                    All papers have been added
+                                  </div>
+                                ) : (
+                                  getAvailableProgramCoursesForSubjects(currentSubjectIds).map((pc) => (
+                                    <button
+                                      key={pc.id}
+                                      type="button"
+                                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                      onClick={() => {
+                                        setCurrentProgramCourseIds((prev) =>
+                                          prev.includes(pc.id) ? prev.filter((id) => id !== pc.id) : [...prev, pc.id],
+                                        );
+                                        // Reset paper selection when program courses change
+                                        setCurrentPaperIds([]);
+                                      }}
+                                    >
+                                      <Checkbox
+                                        checked={currentProgramCourseIds.includes(pc.id)}
+                                        onCheckedChange={() => {
+                                          setCurrentProgramCourseIds((prev) =>
+                                            prev.includes(pc.id) ? prev.filter((id) => id !== pc.id) : [...prev, pc.id],
+                                          );
+                                          setCurrentPaperIds([]);
+                                        }}
+                                        className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                      />
+                                      <span className="text-left text-sm">{pc.name}</span>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+
+                        {/* Papers (Multi-select) */}
+                        <div className="flex flex-col gap-1">
+                          <Label className="font-medium text-gray-700">Paper(s)</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                disabled={
+                                  currentSubjectIds.length === 0 || getFilteredPapersForCurrentSelection().length === 0
+                                }
+                              >
+                                <span className="text-gray-600 truncate">
+                                  {currentSubjectIds.length === 0
+                                    ? "Select subjects first"
+                                    : currentPaperIds.length > 0
+                                      ? `${currentPaperIds.length} paper(s)`
+                                      : getFilteredPapersForCurrentSelection().length === 0
+                                        ? "No papers"
+                                        : "Select Papers"}
+                                </span>
+                                <ChevronDown className="w-4 h-4 opacity-50 flex-shrink-0" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-96 p-2" align="start">
+                              <div className="max-h-60 overflow-y-auto space-y-1">
+                                {getFilteredPapersForCurrentSelection().map((paper) => {
+                                  if (!paper.id) return null;
+                                  const subject = subjects.find((s) => s.id === paper.subjectId);
+                                  return (
+                                    <button
+                                      key={paper.id}
+                                      type="button"
+                                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                      onClick={() => {
+                                        setCurrentPaperIds((prev) =>
+                                          prev.includes(paper.id!)
+                                            ? prev.filter((id) => id !== paper.id)
+                                            : [...prev, paper.id!],
+                                        );
+                                      }}
+                                    >
+                                      <Checkbox
+                                        checked={currentPaperIds.includes(paper.id)}
+                                        onCheckedChange={() => {
+                                          setCurrentPaperIds((prev) =>
+                                            prev.includes(paper.id!)
+                                              ? prev.filter((id) => id !== paper.id)
+                                              : [...prev, paper.id!],
+                                          );
+                                        }}
+                                        className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                      />
+                                      <div className="flex flex-col items-start flex-1 text-left">
+                                        <span className="text-sm font-medium">{paper.name || "Unnamed Paper"}</span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs text-gray-500 font-mono">
+                                            {paper.code || "No code"}
+                                          </span>
+                                          {subject && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                                            >
+                                              {subject.code || subject.name}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+
+                      {/* Second Row: Date, Start Time, Duration, Add Button */}
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4 items-end">
+                        {/* Date */}
+                        <div className="flex flex-col gap-1">
+                          <Label className="font-medium text-gray-700">Date</Label>
+                          <Input
+                            type="date"
+                            value={currentDate}
+                            onChange={(e) => setCurrentDate(e.target.value)}
+                            className="h-8 w-full"
+                            disabled={currentSubjectIds.length === 0 || currentPaperIds.length === 0}
+                          />
+                        </div>
+
+                        {/* Start Time */}
+                        <div className="flex flex-col gap-1">
+                          <Label className="font-medium text-gray-700">Start Time</Label>
+                          <Input
+                            type="time"
+                            value={currentStartTime}
+                            onChange={(e) => setCurrentStartTime(e.target.value)}
+                            className="h-8 w-full"
+                            disabled={currentSubjectIds.length === 0 || currentPaperIds.length === 0}
+                          />
+                        </div>
+
+                        {/* Duration (in minutes) */}
+                        <div className="flex flex-col gap-1">
+                          <Label className="font-medium text-gray-700">Duration (mins)</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={currentDuration}
+                            onChange={(e) => setCurrentDuration(e.target.value)}
+                            placeholder="e.g., 180"
+                            className="h-8 w-full"
+                            disabled={currentSubjectIds.length === 0 || currentPaperIds.length === 0}
+                          />
+                        </div>
+
+                        {/* Add Button */}
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            onClick={handleAddPapers}
+                            disabled={
+                              currentSubjectIds.length === 0 ||
+                              currentPaperIds.length === 0 ||
+                              !currentDate ||
+                              !currentStartTime ||
+                              !currentDuration
+                            }
+                            className="h-8 bg-purple-500 hover:bg-purple-600 text-white font-semibold"
+                          >
+                            Add Papers
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Display calculated end time and summary */}
+                      {currentPaperIds.length > 0 && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
+                          <div className="text-sm text-blue-800">
+                            <span className="font-semibold">{currentPaperIds.length}</span> paper(s) will be added
+                            {currentDate && currentStartTime && currentDuration && (
+                              <>
+                                <span> on </span>
+                                <span className="font-semibold">{new Date(currentDate).toLocaleDateString()}</span>
+                                <span> from </span>
+                                <span className="font-mono font-semibold">{formatTimeToAMPM(currentStartTime)}</span>
+                                <span> to </span>
+                                <span className="font-mono font-semibold">
+                                  {formatTimeToAMPM(calculateEndTime(currentStartTime, currentDuration)) || "Invalid"}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {/* Added Papers Table */}
+                    <div className="w-full flex-shrink-0 mt-4">
+                      <div className="rounded-lg overflow-hidden">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Scheduled Exam Papers</h3>
+                        <div className="border border-gray-400 rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-b border-gray-400">
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[5%]">
+                                  <div className="font-medium">Sr. No.</div>
+                                </TableHead>
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[15%]">
+                                  <div className="font-medium">Program Course</div>
+                                </TableHead>
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[20%]">
+                                  <div className="font-medium">Subject</div>
+                                </TableHead>
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[20%]">
+                                  <div className="font-medium">Paper</div>
+                                </TableHead>
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[12%]">
+                                  <div className="font-medium">Code</div>
+                                </TableHead>
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[12%]">
+                                  <div className="font-medium">Date</div>
+                                </TableHead>
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[11%]">
+                                  <div className="font-medium">Time</div>
+                                </TableHead>
+                                <TableHead className="p-2 text-center bg-gray-100 w-[5%]">
+                                  <div className="font-medium">Action</div>
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {selectedSubjectPapers.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                    No papers added yet. Use the form above to add papers to the exam schedule.
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                selectedSubjectPapers.map((sp, index) => {
+                                  const paper = papers.find((p) => p.id === sp.paperId);
+                                  const subject = subjects.find((s) => s.id === sp.subjectId);
+                                  if (!paper || !subject) return null;
+
+                                  const programCourse = programCourses.find((pc) => pc.id === paper.programCourseId);
+                                  const schedule = sp.schedule;
+
+                                  return (
+                                    <TableRow
+                                      key={`${sp.subjectId}-${sp.paperId}-${index}`}
+                                      className="border-b border-gray-400"
+                                    >
+                                      <TableCell className="p-2 text-center border-r border-gray-400">
+                                        {index + 1}
+                                      </TableCell>
+                                      <TableCell className="p-2 text-center border-r border-gray-400">
+                                        {programCourse ? (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                                          >
+                                            {programCourse.name}
+                                          </Badge>
+                                        ) : (
+                                          <span className="text-muted-foreground text-xs">-</span>
+                                        )}
+                                      </TableCell>
+                                      <TableCell className="p-2 text-center border-r border-gray-400">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                                        >
+                                          {subject.code || subject.name}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="p-2 text-center border-r border-gray-400">
+                                        <span className="text-sm font-medium">
+                                          {paper.name || "Unnamed Paper"}
+                                          {paper.isOptional === false && <span className="text-red-500 ml-1">*</span>}
+                                        </span>
+                                      </TableCell>
+                                      <TableCell className="p-2 text-center border-r border-gray-400 text-sm font-mono">
+                                        {paper.code || "-"}
+                                      </TableCell>
+                                      <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
+                                        {schedule.date ? new Date(schedule.date).toLocaleDateString() : "-"}
+                                      </TableCell>
+                                      <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
+                                        {schedule.startTime && schedule.endTime
+                                          ? `${formatTimeToAMPM(schedule.startTime)} - ${formatTimeToAMPM(schedule.endTime)}`
+                                          : "-"}
+                                      </TableCell>
+                                      <TableCell className="p-2 text-center">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedSubjectPapers((prev) =>
+                                              prev.filter(
+                                                (item) =>
+                                                  !(item.subjectId === sp.subjectId && item.paperId === sp.paperId),
+                                              ),
+                                            );
+                                            // If no more papers for this subject, remove from selectedSubjectIds
+                                            const remainingForSubject = selectedSubjectPapers.filter(
+                                              (item) => item.subjectId === sp.subjectId && item.paperId !== sp.paperId,
+                                            );
+                                            if (remainingForSubject.length === 0) {
+                                              setSelectedSubjectIds((prev) => prev.filter((id) => id !== sp.subjectId));
+                                            }
+                                          }}
+                                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })
+                              )}
+                            </TableBody>
+                          </Table>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <div className="p-8 text-center">
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <AlertCircle className="w-12 h-12 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-700">Complete the Basic Information First</h3>
+                  <p className="text-sm text-gray-500 max-w-md">
+                    Please select all required fields above (Exam Type, Semester, Program Courses, Shifts, and Subject
+                    Categories) to proceed with scheduling exam papers.
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            )}
 
             {/* Student Count Display - Show only when subjects are selected */}
             {selectedSubjectPapers.length > 0 && (
@@ -2015,79 +2327,88 @@ export default function ScheduleExamPage() {
             )}
           </div>
 
-          {/* Duplicate Exam Warning */}
-          {duplicateCheckResult?.isDuplicate && (
-            <div className="mt-6 p-5 bg-red-50 border-2 border-red-400 rounded-lg flex items-start gap-4 shadow-lg">
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5 animate-pulse" />
-              <div className="flex-1">
-                <p className="font-bold text-red-900 text-base mb-2">⚠️ Duplicate Exam Detected</p>
-                <p className="text-sm text-red-800 font-medium mb-3">
-                  {duplicateCheckResult.message ||
-                    `An exam with the same configuration already exists${duplicateCheckResult.duplicateExamId ? ` (Exam ID: ${duplicateCheckResult.duplicateExamId})` : ""}. Please modify your selections to create a unique exam.`}
-                </p>
-                {duplicateCheckResult.duplicateExamId && (
-                  <Link
-                    to={`/dashboard/exam-management/exams/${duplicateCheckResult.duplicateExamId}`}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-red-700 hover:text-red-900 underline transition-colors"
-                  >
-                    <span>View Duplicate Exam</span>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      />
-                    </svg>
-                  </Link>
+          {/* Only show these sections when all basic fields are selected */}
+          {examType &&
+            semester &&
+            selectedProgramCourses.length > 0 &&
+            selectedShifts.length > 0 &&
+            selectedSubjectCategories.length > 0 && (
+              <>
+                {/* Duplicate Exam Warning */}
+                {duplicateCheckResult?.isDuplicate && (
+                  <div className="mt-6 p-5 bg-red-50 border-2 border-red-400 rounded-lg flex items-start gap-4 shadow-lg">
+                    <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5 animate-pulse" />
+                    <div className="flex-1">
+                      <p className="font-bold text-red-900 text-base mb-2">⚠️ Duplicate Exam Detected</p>
+                      <p className="text-sm text-red-800 font-medium mb-3">
+                        {duplicateCheckResult.message ||
+                          `An exam with the same configuration already exists${duplicateCheckResult.duplicateExamId ? ` (Exam ID: ${duplicateCheckResult.duplicateExamId})` : ""}. Please modify your selections to create a unique exam.`}
+                      </p>
+                      {duplicateCheckResult.duplicateExamId && (
+                        <Link
+                          to={`/dashboard/exam-management/exams/${duplicateCheckResult.duplicateExamId}`}
+                          className="inline-flex items-center gap-2 text-sm font-semibold text-red-700 hover:text-red-900 underline transition-colors"
+                        >
+                          <span>View Duplicate Exam</span>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
+                          </svg>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
                 )}
-              </div>
-            </div>
-          )}
 
-          {/* Debug info - remove in production */}
-          {process.env.NODE_ENV === "development" && canCheckDuplicate && (
-            <div className="mt-2 p-2 bg-gray-100 border border-gray-300 rounded text-xs">
-              <p>Duplicate Check Status: ✅ Ready</p>
-              {duplicateCheckResult && (
-                <p>Result: {duplicateCheckResult.isDuplicate ? "🔴 Duplicate Found" : "✅ No Duplicate"}</p>
-              )}
-            </div>
-          )}
+                {/* Debug info - remove in production */}
+                {process.env.NODE_ENV === "development" && canCheckDuplicate && (
+                  <div className="mt-2 p-2 bg-gray-100 border border-gray-300 rounded text-xs">
+                    <p>Duplicate Check Status: ✅ Ready</p>
+                    {duplicateCheckResult && (
+                      <p>Result: {duplicateCheckResult.isDuplicate ? "🔴 Duplicate Found" : "✅ No Duplicate"}</p>
+                    )}
+                  </div>
+                )}
 
-          {/* Schedule Exam button */}
-          <div className="mt-8 flex justify-end">
-            <Button
-              onClick={handleScheduleExam}
-              disabled={
-                assignExamMutation.status === "loading" ||
-                duplicateCheckResult?.isDuplicate ||
-                selectedSubjectPapers.length === 0 ||
-                !selectedSubjectPapers.every((sp) => {
-                  const schedule = sp.schedule;
-                  return schedule?.date && schedule?.startTime && schedule?.endTime;
-                }) ||
-                (canFetchStudentCount && totalStudentCount === 0) ||
-                loadingStudentCount
-              }
-              className="w-full sm:w-auto sm:min-w-[180px] h-12 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all"
-            >
-              {assignExamMutation.status === "loading" ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
-                  Scheduling...
-                </>
-              ) : (
-                "Schedule Exam"
-              )}
-            </Button>
-          </div>
+                {/* Schedule Exam button */}
+                <div className="mt-8 flex justify-end">
+                  <Button
+                    onClick={handleScheduleExam}
+                    disabled={
+                      assignExamMutation.status === "loading" ||
+                      duplicateCheckResult?.isDuplicate ||
+                      selectedSubjectPapers.length === 0 ||
+                      !selectedSubjectPapers.every((sp) => {
+                        const schedule = sp.schedule;
+                        return schedule?.date && schedule?.startTime && schedule?.endTime;
+                      }) ||
+                      (canFetchStudentCount && totalStudentCount === 0) ||
+                      loadingStudentCount
+                    }
+                    className="w-full sm:w-auto sm:min-w-[180px] h-12 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all"
+                  >
+                    {assignExamMutation.status === "loading" ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                        Scheduling...
+                      </>
+                    ) : (
+                      "Schedule Exam"
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
         </div>
       </div>
     </div>
