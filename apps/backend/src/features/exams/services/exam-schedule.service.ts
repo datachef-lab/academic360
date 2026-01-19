@@ -3393,6 +3393,8 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
 
       name: userModel.name,
       uid: studentModel.uid,
+      roll_number: studentModel.rollNumber,
+      registration_number: studentModel.registrationNumber,
       email: userModel.email,
       phone: userModel.phone,
       whatsapp_number: userModel.whatsappNumber,
@@ -3474,11 +3476,6 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
 
     .where(eq(examModel.id, examId));
 
-  // 🛑 Safety
-  if (!result.length) {
-    throw new Error("No exam candidates found");
-  }
-
   // ✅ Group by subject / paper
   const groupedBySubject = new Map<string, typeof result>();
 
@@ -3493,29 +3490,40 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
   // ✅ Create Excel
   const workbook = new ExcelJS.Workbook();
 
+  // 🛑 Handle empty result case
+  if (groupedBySubject.size === 0) {
+    const sheet = workbook.addWorksheet("No Candidates");
+    sheet.addRow(["No exam candidates found for this exam"]);
+    sheet.getRow(1).font = { bold: true };
+    return await workbook.xlsx.writeBuffer();
+  }
+
   for (const [subjectKey, rows] of groupedBySubject) {
     const sheet = workbook.addWorksheet(sanitizeWorksheetName(subjectKey));
 
     // 🔥 AUTO-GENERATE COLUMNS FROM RESULT KEYS
-    const columns = Object.keys(rows[0]).map((key) => ({
-      header: key, // keep same name as result key
-      key: key,
-      width: 20,
-    }));
+    if (rows.length > 0) {
+      const columns = Object.keys(rows[0]).map((key) => ({
+        header: key, // keep same name as result key
+        key: key,
+        width: 20,
+      }));
 
-    sheet.columns = columns;
+      sheet.columns = columns;
 
-    // 🔥 ADD FULL OBJECT DIRECTLY
-    rows.forEach((row) => {
-      sheet.addRow(row);
-    });
+      // 🔥 ADD FULL OBJECT DIRECTLY
+      rows.forEach((row) => {
+        sheet.addRow(row);
+      });
 
-    sheet.getRow(1).font = { bold: true };
-    sheet.views = [{ state: "frozen", ySplit: 1 }];
+      sheet.getRow(1).font = { bold: true };
+      sheet.views = [{ state: "frozen", ySplit: 1 }];
+    }
   }
 
   // ✅ Return Excel buffer
-  return await workbook.xlsx.writeBuffer();
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 }
 
 export async function downloadAdmitCardTrackingByExamId(examId: number) {
@@ -3527,6 +3535,8 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
       semester: classModel.name,
       name: userModel.name,
       uid: studentModel.uid,
+      registrationNumber: studentModel.registrationNumber,
+      rollNumber: studentModel.rollNumber,
       email: userModel.email,
       phone: userModel.phone,
       whatsapp_number: userModel.whatsappNumber,
@@ -3593,6 +3603,8 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
     { header: "Semester", key: "semester", width: 15 },
     { header: "Name", key: "name", width: 30 },
     { header: "UID", key: "uid", width: 20 },
+    { header: "Registration Number", key: "registrationNumber", width: 25 },
+    { header: "Roll Number", key: "rollNumber", width: 20 },
     { header: "Email", key: "email", width: 30 },
     { header: "Phone", key: "phone", width: 15 },
     { header: "WhatsApp", key: "whatsapp_number", width: 15 },
@@ -3620,6 +3632,8 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
       semester: row.semester || "",
       name: row.name || "",
       uid: row.uid || "",
+      registrationNumber: row.registrationNumber || "",
+      rollNumber: row.rollNumber || "",
       email: row.email || "",
       phone: row.phone || "",
       whatsapp_number: row.whatsapp_number || "",
@@ -3640,18 +3654,46 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
   });
 
   // Style header row
-  sheet.getRow(1).font = { bold: true };
-  sheet.getRow(1).fill = {
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true, size: 12 };
+  headerRow.fill = {
     type: "pattern",
     pattern: "solid",
-    fgColor: { argb: "FFE0E0E0" },
+    fgColor: { argb: "FFD3D3D3" }, // Grey background
   };
+  headerRow.alignment = { vertical: "middle", horizontal: "left" };
+  headerRow.height = 20;
+
+  // Add borders to header row
+  headerRow.eachCell((cell) => {
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  // Add borders to all data cells
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber > 1) {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFD3D3D3" } },
+          left: { style: "thin", color: { argb: "FFD3D3D3" } },
+          bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+          right: { style: "thin", color: { argb: "FFD3D3D3" } },
+        };
+      });
+    }
+  });
 
   // Freeze header row
   sheet.views = [{ state: "frozen", ySplit: 1 }];
 
   // Return Excel buffer
-  return await workbook.xlsx.writeBuffer();
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 }
 
 export async function downloadSingleAdmitCard(

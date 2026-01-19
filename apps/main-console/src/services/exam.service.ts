@@ -61,10 +61,40 @@ export async function fetchExamById(id: number): Promise<ExamDto> {
 }
 
 export async function triggerExamAdmitCardByExamId(examId: number, uploadSessionId: string): Promise<boolean> {
-  const response = await axiosInstance.get<ApiResponse<boolean>>(
-    `/api/exams/schedule/send-admit-cards?examId=${examId}&uploadSessionId=${uploadSessionId}`,
-  );
-  return response.data.payload;
+  try {
+    const response = await axiosInstance.get<ApiResponse<boolean>>(
+      `/api/exams/schedule/send-admit-cards?examId=${examId}&uploadSessionId=${uploadSessionId}`,
+    );
+    return response.data.payload;
+  } catch (error: any) {
+    console.error("Error triggering admit card emails:", error);
+
+    // Extract error message from response
+    let errorMessage = "Failed to send admit cards to students";
+
+    if (error.response?.data) {
+      const errorData = error.response.data;
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.payload?.message) {
+        errorMessage = errorData.payload.message;
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    // Provide user-friendly error message
+    const userFriendlyMessage =
+      errorMessage.toLowerCase().includes("no admit cards") ||
+      errorMessage.toLowerCase().includes("not found") ||
+      errorMessage.toLowerCase().includes("no candidates")
+        ? "No admit cards are available to send. Please ensure students have been assigned to exam rooms and admit cards have been generated."
+        : errorMessage.includes("email") || errorMessage.toLowerCase().includes("send")
+          ? `Failed to send admit cards: ${errorMessage}`
+          : `An error occurred while sending admit cards. ${errorMessage}`;
+
+    throw new Error(userFriendlyMessage);
+  }
 }
 
 export async function fetchExamPapersStatsByExamId(id: number): Promise<ExamPapersWithStats[]> {
@@ -73,27 +103,51 @@ export async function fetchExamPapersStatsByExamId(id: number): Promise<ExamPape
 }
 
 export async function fetchExamCandidatesByExamId(id: number): Promise<{ downloadUrl: string; fileName: string }> {
-  const response = await axiosInstance.get(`/api/exams/schedule/exam-candidates/download?examId=${id}`, {
-    responseType: "blob",
-  });
+  try {
+    const response = await axiosInstance.get(`/api/exams/schedule/exam-candidates/download?examId=${id}`, {
+      responseType: "blob",
+    });
 
-  const blob = new Blob([response.data], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-
-  const downloadUrl = URL.createObjectURL(blob);
-
-  const contentDisposition = response.headers["content-disposition"];
-  let fileName = `exam_${id}-candidates-${new Date().toISOString().split("T")[0]}.xlsx`;
-
-  if (contentDisposition) {
-    const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
-    if (fileNameMatch) {
-      fileName = fileNameMatch[1];
+    // Check if the response is actually an error (JSON error in blob format)
+    if (response.data.type === "application/json") {
+      const text = await response.data.text();
+      const errorData = JSON.parse(text);
+      throw new Error(errorData.message || "Failed to download exam candidates");
     }
-  }
 
-  return { downloadUrl, fileName };
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const downloadUrl = URL.createObjectURL(blob);
+
+    const contentDisposition = response.headers["content-disposition"];
+    let fileName = `exam_${id}-candidates-${new Date().toISOString().split("T")[0]}.xlsx`;
+
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (fileNameMatch) {
+        fileName = fileNameMatch[1];
+      }
+    }
+
+    return { downloadUrl, fileName };
+  } catch (error: any) {
+    // Handle axios errors
+    if (error.response?.data) {
+      // If error response is a blob, try to parse it
+      if (error.response.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.message || "Failed to download exam candidates");
+        } catch {
+          // If parsing fails, use default error message
+        }
+      }
+    }
+    throw error;
+  }
 }
 
 export async function updateExamSubject(examSubjectId: number, examSubject: ExamSubjectDto) {
