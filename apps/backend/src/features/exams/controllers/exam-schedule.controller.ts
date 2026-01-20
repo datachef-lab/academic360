@@ -702,13 +702,19 @@ export const downloadAdmitCardsController = async (
       return;
     }
 
+    // Ensure zipBuffer is a proper Buffer
+    const zipBuffer = Buffer.isBuffer(result.zipBuffer)
+      ? result.zipBuffer
+      : Buffer.from(result.zipBuffer);
+
     res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Length", zipBuffer.length);
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="exam-${examId}-subject-admit-cards.zip"`,
     );
 
-    res.send(result.zipBuffer);
+    res.send(zipBuffer);
   } catch (error) {
     console.error("[ADMIT-CARD-DOWNLOAD] Error:", error);
     handleError(error, res, next);
@@ -760,13 +766,19 @@ export const downloadAttendanceSheetsByExamIdController = async (
       return;
     }
 
+    // Ensure zipBuffer is a proper Buffer
+    const zipBuffer = Buffer.isBuffer(result.zipBuffer)
+      ? result.zipBuffer
+      : Buffer.from(result.zipBuffer);
+
     res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Length", zipBuffer.length);
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="exam-${examId}-attendance-dr-sheets.zip"`,
     );
 
-    res.send(result.zipBuffer);
+    res.send(zipBuffer);
   } catch (error) {
     console.error("[ATTENDANCE_SHEETS-DOWNLOAD] Error:", error);
     handleError(error, res, next);
