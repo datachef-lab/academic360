@@ -498,6 +498,27 @@
       "when": 1767782018486,
       "tag": "0070_past_gabe_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1768038982974,
+      "tag": "0071_unknown_havok",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1768218768102,
+      "tag": "0072_worthless_silver_fox",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1768388765242,
+      "tag": "0073_slippery_sharon_carter",
+      "breakpoints": true
     }
   ]
 }

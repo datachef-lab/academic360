@@ -184,10 +184,34 @@ app.use(express.urlencoded({ extended: true, limit: "1gb" }));
 
 app.use(cookieParser());
 
-// Setup Socket.IO with CORS
+// Setup Socket.IO with CORS - allow both main console and student console
+const allowedSocketOrigins = [
+  process.env.CORS_ORIGIN || "http://localhost:5173", // Main console
+  "http://localhost:5173",
+  "http://localhost:3000", // Student console
+  "http://localhost:3008", // Student console (production port)
+  "https://stage.academic360.app", // Staging main console
+  "https://academic360.app", // Production main console
+  "https://besc.academic360.app", // Production main console (alternative)
+  // Also allow any origin that starts with the CORS_ORIGIN (for subdomains)
+  ...(process.env.CORS_ORIGIN
+    ? [process.env.CORS_ORIGIN.replace(/\/$/, "")]
+    : []),
+];
+
 export const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN! || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      // Check if origin is in allowed list
+      if (allowedSocketOrigins.some((allowed) => origin.startsWith(allowed))) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST"],
     credentials: true,
   },

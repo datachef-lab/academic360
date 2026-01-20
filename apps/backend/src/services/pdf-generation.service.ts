@@ -475,12 +475,16 @@ export class PdfGenerationService {
       // Set content and wait for resources to load
       await page.setContent(htmlContent, {
         waitUntil: "networkidle0",
+        timeout: 0, // optional but recommended
       });
+      page.setDefaultNavigationTimeout(0);
+      page.setDefaultTimeout(0);
 
       // Generate PDF buffer
       const pdfUint8Array = await page.pdf({
         format: "A4",
         printBackground: true,
+        landscape: true,
         margin: {
           //   top: "0.3in",
           //   right: "0.3in",

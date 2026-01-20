@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+// Mark as dynamic
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import {
   getAllLanguageMediums,
   getLanguageMediumById,
@@ -16,10 +20,7 @@ export async function GET(request: NextRequest) {
     if (id) {
       const result = await getLanguageMediumById(parseInt(id));
       if (!result) {
-        return NextResponse.json(
-          { success: false, error: "Language medium not found" },
-          { status: 404 }
-        );
+        return NextResponse.json({ success: false, error: "Language medium not found" }, { status: 404 });
       }
       return NextResponse.json({ success: true, data: result });
     }
@@ -28,10 +29,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: languageMediums });
   } catch (error) {
     console.error("Error in GET /api/language-mediums:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -41,10 +39,7 @@ export async function POST(request: NextRequest) {
     const { name } = body;
 
     if (!name) {
-      return NextResponse.json(
-        { success: false, error: "Name is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "Name is required" }, { status: 400 });
     }
 
     const result: LanguageMediumResult = await createLanguageMedium(name);
@@ -56,10 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/language-mediums:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -69,26 +61,17 @@ export async function PUT(request: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: "ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "ID is required" }, { status: 400 });
     }
 
     const body = await request.json();
     const { name } = body;
 
     if (!name) {
-      return NextResponse.json(
-        { success: false, error: "Name is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "Name is required" }, { status: 400 });
     }
 
-    const result: LanguageMediumResult = await updateLanguageMedium(
-      parseInt(id),
-      name
-    );
+    const result: LanguageMediumResult = await updateLanguageMedium(parseInt(id), name);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -97,10 +80,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error in PUT /api/language-mediums:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -110,15 +90,10 @@ export async function PATCH(request: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: "ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "ID is required" }, { status: 400 });
     }
 
-    const result: LanguageMediumResult = await toggleLanguageMediumStatus(
-      parseInt(id)
-    );
+    const result: LanguageMediumResult = await toggleLanguageMediumStatus(parseInt(id));
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -127,9 +102,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error in PATCH /api/language-mediums:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
-} 
+}

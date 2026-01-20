@@ -717,3 +717,39 @@ export const importStudentsFromExcelController = async (
     handleError(error, res, next);
   }
 };
+
+// Check if students already exist for a given list of UIDs (used to prevent import overwriting)
+export const checkExistingStudentUidsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const uids = (req.body as any)?.uids as unknown;
+
+    if (!Array.isArray(uids) || uids.length === 0) {
+      return res
+        .status(400)
+        .json(
+          new ApiError(400, "uids array is required and must not be empty"),
+        );
+    }
+
+    const result = await studentService.checkExistingStudentUids(
+      uids.map((u) => String(u ?? "")),
+    );
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "UID existence check completed",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};

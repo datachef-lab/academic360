@@ -1,8 +1,12 @@
-import { NextResponse } from 'next/server';
-import {dbPostgres} from '@/db';
-import { categories } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
+import { NextResponse } from "next/server";
+// Mark as dynamic
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+import { dbPostgres } from "@/db";
+import { categories } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 const categorySchema = z.object({
   id: z.number().optional(),
@@ -16,8 +20,11 @@ export async function GET() {
     const allCategories = await dbPostgres.select().from(categories);
     return NextResponse.json({ success: true, data: allCategories });
   } catch (error: any) {
-    console.error('Error fetching categories:', error);
-    return NextResponse.json({ success: false, message: 'Failed to fetch categories', error: error.message }, { status: 500 });
+    console.error("Error fetching categories:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch categories", error: error.message },
+      { status: 500 },
+    );
   }
 }
 
@@ -33,18 +40,21 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: newCategory });
   } catch (error: any) {
-    console.error('Error creating category:', error);
-    return NextResponse.json({ success: false, message: 'Failed to create category', error: error.message }, { status: 400 });
+    console.error("Error creating category:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to create category", error: error.message },
+      { status: 400 },
+    );
   }
 }
 
 export async function PUT(req: Request) {
   try {
     const url = new URL(req.url);
-    const id = url.searchParams.get('id');
+    const id = url.searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ success: false, message: 'ID is required' }, { status: 400 });
+      return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 });
     }
 
     const body = await req.json();
@@ -57,23 +67,26 @@ export async function PUT(req: Request) {
       .returning();
 
     if (!updatedCategory) {
-      return NextResponse.json({ success: false, message: 'Category not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: "Category not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, data: updatedCategory });
   } catch (error: any) {
-    console.error('Error updating category:', error);
-    return NextResponse.json({ success: false, message: 'Failed to update category', error: error.message }, { status: 400 });
+    console.error("Error updating category:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to update category", error: error.message },
+      { status: 400 },
+    );
   }
 }
 
 export async function DELETE(req: Request) {
   try {
     const url = new URL(req.url);
-    const id = url.searchParams.get('id');
+    const id = url.searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ success: false, message: 'ID is required' }, { status: 400 });
+      return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 });
     }
 
     const [deletedCategory] = await dbPostgres
@@ -82,12 +95,15 @@ export async function DELETE(req: Request) {
       .returning();
 
     if (!deletedCategory) {
-      return NextResponse.json({ success: false, message: 'Category not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: "Category not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, data: deletedCategory });
   } catch (error: any) {
-    console.error('Error deleting category:', error);
-    return NextResponse.json({ success: false, message: 'Failed to delete category', error: error.message }, { status: 500 });
+    console.error("Error deleting category:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to delete category", error: error.message },
+      { status: 500 },
+    );
   }
-} 
+}

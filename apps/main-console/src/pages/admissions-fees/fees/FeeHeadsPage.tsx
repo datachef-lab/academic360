@@ -30,10 +30,12 @@ const FeeHeadsPage: React.FC = () => {
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [form, setForm] = useState<{
     name: string;
+    defaultPercentage: number;
     sequence: number | undefined;
     remarks: string;
   }>({
     name: "",
+    defaultPercentage: 0,
     sequence: undefined,
     remarks: "",
   });
@@ -47,14 +49,15 @@ const FeeHeadsPage: React.FC = () => {
       return (
         head.name?.toLowerCase().includes(searchLower) ||
         head.remarks?.toLowerCase().includes(searchLower) ||
-        head.sequence?.toString().includes(searchText)
+        head.sequence?.toString().includes(searchText) ||
+        head.defaultPercentage?.toString().includes(searchText)
       );
     }) || [];
 
   const handleDownloadTemplate = () => {
     const templateData = [
-      ["Head Name", "Sequence", "Remarks"],
-      ["Example Head", "1", "Example remarks"],
+      ["Head Name", "Default Percentage (%)", "Sequence", "Remarks"],
+      ["Example Head", "0", "1", "Example remarks"],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(templateData);
@@ -100,6 +103,7 @@ const FeeHeadsPage: React.FC = () => {
             try {
               await addFeesHead({
                 name: row["Head Name"] || "",
+                defaultPercentage: row["Default Percentage (%)"] ? parseFloat(row["Default Percentage (%)"]) : 0,
                 sequence: row["Sequence"] ? parseInt(row["Sequence"]) : undefined,
                 remarks: row["Remarks"] || null,
               } as NewFeesHead);
@@ -132,8 +136,14 @@ const FeeHeadsPage: React.FC = () => {
     }
 
     const data = [
-      ["ID", "Head Name", "Sequence", "Remarks"],
-      ...feesHeads.map((h) => [h.id || "", h.name || "", h.sequence || "", h.remarks || ""]),
+      ["ID", "Head Name", "Default Percentage (%)", "Sequence", "Remarks"],
+      ...feesHeads.map((h) => [
+        h.id || "",
+        h.name || "",
+        (h as any).defaultPercentage || 0,
+        h.sequence || "",
+        h.remarks || "",
+      ]),
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
@@ -153,6 +163,12 @@ const FeeHeadsPage: React.FC = () => {
       return;
     }
 
+    // Validate default percentage
+    if (form.defaultPercentage < 0 || form.defaultPercentage > 100) {
+      toast.warning("Default percentage must be between 0 and 100");
+      return;
+    }
+
     // Sequence is optional, but if provided, it must be at least 1
     if (form.sequence !== undefined && form.sequence !== null && form.sequence < 1) {
       toast.warning("Sequence must be at least 1 if provided");
@@ -169,6 +185,7 @@ const FeeHeadsPage: React.FC = () => {
     try {
       const feesHeadData: NewFeesHead = {
         name,
+        defaultPercentage: form.defaultPercentage,
         sequence: form.sequence ?? 0,
         remarks: remarks || null,
       };
@@ -191,6 +208,7 @@ const FeeHeadsPage: React.FC = () => {
     setEditingItem(item);
     setForm({
       name: item.name,
+      defaultPercentage: (item as any).defaultPercentage || 0,
       sequence: item.sequence,
       remarks: item.remarks || "",
     });
@@ -201,6 +219,7 @@ const FeeHeadsPage: React.FC = () => {
     setEditingItem(null);
     setForm({
       name: "",
+      defaultPercentage: 0,
       sequence: undefined,
       remarks: "",
     });
@@ -228,7 +247,7 @@ const FeeHeadsPage: React.FC = () => {
   const handleClose = () => {
     setShowModal(false);
     setEditingItem(null);
-    setForm({ name: "", sequence: undefined, remarks: "" });
+    setForm({ name: "", defaultPercentage: 0, sequence: undefined, remarks: "" });
   };
 
   /* ----------------------- LOADING ----------------------- */
@@ -325,6 +344,27 @@ const FeeHeadsPage: React.FC = () => {
                       />
                     </div>
 
+                    {/* Default Percentage */}
+                    <div className="flex flex-col gap-2">
+                      <Label>
+                        Default Percentage (%) <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={form.defaultPercentage}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            defaultPercentage: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        placeholder="0 - 100"
+                      />
+                    </div>
+
                     {/* Sequence */}
                     <div className="flex flex-col gap-2">
                       <Label>Sequence</Label>
@@ -387,15 +427,16 @@ const FeeHeadsPage: React.FC = () => {
                   <TableRow>
                     <TableHead style={{ width: 60 }}>ID</TableHead>
                     <TableHead style={{ width: 250 }}>Head Name</TableHead>
-                    <TableHead style={{ width: 150 }}>Sequence</TableHead>
-                    <TableHead style={{ width: 300 }}>Remarks</TableHead>
+                    <TableHead style={{ width: 150 }}>Default %</TableHead>
+                    <TableHead style={{ width: 120 }}>Sequence</TableHead>
+                    <TableHead style={{ width: 220 }}>Remarks</TableHead>
                     <TableHead style={{ width: 140 }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredFeesHeads.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center">
+                      <TableCell colSpan={6} className="text-center">
                         No fee heads found.
                       </TableCell>
                     </TableRow>
@@ -404,9 +445,10 @@ const FeeHeadsPage: React.FC = () => {
                       <TableRow key={row.id} className="group">
                         <TableCell style={{ width: 60 }}>{row.id}</TableCell>
                         <TableCell style={{ width: 250 }}>{row.name}</TableCell>
-                        <TableCell style={{ width: 150 }}>{row.sequence || "-"}</TableCell>
-                        <TableCell style={{ width: 300 }}>{row.remarks || "-"}</TableCell>
-                        <TableCell style={{ width: 120 }}>
+                        <TableCell style={{ width: 150 }}>{(row as any).defaultPercentage ?? 0}%</TableCell>
+                        <TableCell style={{ width: 120 }}>{row.sequence || "-"}</TableCell>
+                        <TableCell style={{ width: 220 }}>{row.remarks || "-"}</TableCell>
+                        <TableCell style={{ width: 140 }}>
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">
                               <Edit className="h-4 w-4" />

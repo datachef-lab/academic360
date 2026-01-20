@@ -26,6 +26,7 @@ export function NavMain({
     url: string;
     icon?: LucideIcon;
     isActive?: boolean;
+    badge?: number;
     items?: {
       title: string;
       url: string;
@@ -33,10 +34,6 @@ export function NavMain({
   }[];
   className?: string;
 }) {
-  // No state needed for hover, just use empty functions
-  const handleMouseEnter = () => {};
-  const handleMouseLeave = () => {};
-
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const { isMobile, setOpenMobile } = useSidebar();
 
@@ -91,17 +88,12 @@ export function NavMain({
                     <SidebarMenuButton
                       size="lg"
                       data-active={item.isActive}
-                      onMouseEnter={handleMouseEnter}
-                      onMouseLeave={handleMouseLeave}
                       className={cn(
                         "relative group border-transparent flex items-center px-3 py-2.5 rounded-md transition-all duration-200",
                         item.isActive
-                          ? "bg-[#eff1f7] text-purple-800 font-bold"
+                          ? "bg-[#eff1f7] text-purple-800 font-bold hover:bg-[#eff1f7]"
                           : "text-white hover:text-white hover:bg-purple-700",
                       )}
-                      style={{
-                        backgroundColor: item.isActive ? "#eff1f7" : "transparent",
-                      }}
                     >
                       {item.icon && (
                         <motion.div
@@ -138,6 +130,14 @@ export function NavMain({
                       >
                         {item.title}
                       </span>
+
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span className="ml-auto mr-2 group-data-[collapsible=icon]:hidden">
+                          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
+                            {item.badge}
+                          </span>
+                        </span>
+                      )}
 
                       {(item.items?.length ?? 0) > 0 && (
                         <motion.div

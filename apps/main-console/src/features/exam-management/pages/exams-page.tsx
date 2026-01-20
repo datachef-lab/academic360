@@ -1,19 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { FileText, Edit } from "lucide-react";
-// import * as XLSX from "xlsx";
-// import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-// import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
-// import {
-//   AlertDialog,
-//   AlertDialogContent,
-//   AlertDialogHeader,
-//   AlertDialogTitle,
-//   AlertDialogTrigger,
-// } from "@/components/ui/alert-dialog";
+import { FileText, Edit, Filter, X } from "lucide-react";
+import { useSocket } from "@/hooks/useSocket";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 // import { PaperEditModal } from "./paper-edit-modal";
 // import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -61,14 +56,39 @@ import type {
 // import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
 // import { useAcademicYear } from "@/hooks/useAcademicYear";
 // import { PaperEditModal } from "@/pages/courses-subjects-design/subject-paper-mapping/paper-edit-modal";
-import { fetchExams } from "@/services/exam.service";
+import { fetchExams, type ExamFilters } from "@/services/exam.service";
+import { getAllExamTypes, type ExamTypeT } from "@/services/exam-type.service";
+import { getAllClasses } from "@/services/classes.service";
+import { getAffiliations, getRegulationTypes } from "@/services/course-design.api";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
+import { Class } from "@/types/academics/class";
+import { Affiliation, RegulationType } from "@repo/db/index";
 import { Link } from "react-router-dom";
 
 const ExamsPage = () => {
-  const { accessToken, displayFlag } = useAuth();
-  //   const { availableAcademicYears } = useAcademicYear();
+  const { accessToken, displayFlag, user } = useAuth();
+  const { currentAcademicYear, availableAcademicYears } = useAcademicYear();
 
-  const [searchText, setSearchText] = React.useState("");
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = React.useState(false);
+  const [isInitialized, setIsInitialized] = React.useState(false);
+
+  // Filter state
+  const [filters, setFilters] = React.useState<ExamFilters>({
+    examTypeId: null,
+    classId: null,
+    academicYearId: null,
+    affiliationId: null,
+    regulationTypeId: null,
+    dateFrom: null,
+    dateTo: null,
+    status: null,
+  });
+
+  // Options for filters
+  const [examTypes, setExamTypes] = React.useState<ExamTypeT[]>([]);
+  const [classes, setClasses] = React.useState<Class[]>([]);
+  const [affiliations, setAffiliations] = React.useState<Affiliation[]>([]);
+  const [regulationTypes, setRegulationTypes] = React.useState<RegulationType[]>([]);
 
   //   const setIsFormOpen = React.useState(false)[1];
   //   const  setSelectedPaper = React.useState<PaperDto | null>(null)[1];
@@ -335,11 +355,111 @@ const ExamsPage = () => {
   //     [fetchFilteredData, currentAcademicYear],
   //   );
 
+  // Setup socket connection for real-time exam updates
+  const userId = user?.id?.toString();
+  const { socket, isConnected } = useSocket({
+    userId,
+  });
+
+  // Fetch filter options on mount
+  React.useEffect(() => {
+    Promise.all([getAllExamTypes(), getAllClasses(), getAffiliations(), getRegulationTypes()]).then(
+      ([examTypesRes, classesData, affiliationsData, regulationTypesData]) => {
+        setExamTypes(examTypesRes.payload || []);
+        setClasses(classesData || []);
+        setAffiliations(affiliationsData || []);
+        setRegulationTypes(regulationTypesData || []);
+      },
+    );
+  }, []);
+
+  // Set default filters after data loads
+  React.useEffect(() => {
+    if (!isInitialized && currentAcademicYear && exams.length > 0) {
+      // Determine smart default status
+      const now = new Date();
+      let hasRecent = false;
+      let hasUpcoming = false;
+
+      exams.forEach((exam) => {
+        if (!exam.examSubjects || exam.examSubjects.length === 0) return;
+
+        const dates = exam.examSubjects
+          .map((sub) => ({
+            start: new Date(sub.startTime),
+            end: new Date(sub.endTime),
+          }))
+          .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+        const firstStart = dates[0]?.start;
+        const lastEnd = dates[dates.length - 1]?.end;
+
+        if (firstStart && lastEnd) {
+          // Check if recent (ongoing or ended within 7 days)
+          if (firstStart <= now && lastEnd >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)) {
+            hasRecent = true;
+          }
+          // Check if upcoming
+          if (firstStart > now) {
+            hasUpcoming = true;
+          }
+        }
+      });
+
+      const defaultStatus = hasRecent ? "recent" : hasUpcoming ? "upcoming" : "previous";
+
+      setFilters((prev) => ({
+        ...prev,
+        academicYearId: currentAcademicYear.id!,
+        status: defaultStatus,
+      }));
+      setIsInitialized(true);
+    }
+  }, [currentAcademicYear, exams, isInitialized]);
+
+  // Memoize fetch function to avoid recreating on every render
+  const refetchExams = React.useCallback(() => {
+    fetchExams(currentPage, itemsPerPage, filters).then((data) => {
+      setExams(data.content);
+      setTotalPages(data.totalPages);
+      setTotalItems(data.totalElements);
+    });
+  }, [currentPage, itemsPerPage, filters]);
+
+  // Listen for exam creation/update events
+  React.useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    const handleExamCreated = (data: { examId: number; type: string; message: string }) => {
+      console.log("[Exams Page] Exam created:", data);
+      toast.info("A new exam has been created. Refreshing...", {
+        duration: 3000,
+      });
+      refetchExams();
+    };
+
+    const handleExamUpdated = (data: { examId: number; type: string; message: string }) => {
+      console.log("[Exams Page] Exam updated:", data);
+      toast.info("An exam has been updated. Refreshing...", {
+        duration: 3000,
+      });
+      refetchExams();
+    };
+
+    socket.on("exam_created", handleExamCreated);
+    socket.on("exam_updated", handleExamUpdated);
+
+    return () => {
+      socket.off("exam_created", handleExamCreated);
+      socket.off("exam_updated", handleExamUpdated);
+    };
+  }, [socket, isConnected, refetchExams]);
+
   useEffect(() => {
     // Only fetch data when authentication is ready, and only on initial mount
     if (displayFlag && accessToken && !hasInitialized.current) {
       hasInitialized.current = true;
-      fetchExams(currentPage, itemsPerPage).then((data) => {
+      fetchExams(currentPage, itemsPerPage, filters).then((data) => {
         setExams(data.content);
         setTotalItems(data.totalElements);
         setTotalPages(data.totalPages);
@@ -347,7 +467,20 @@ const ExamsPage = () => {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayFlag, accessToken, currentPage]);
+  }, [displayFlag, accessToken, currentPage, filters]);
+
+  // Refetch when filters change (after initialization)
+  useEffect(() => {
+    if (hasInitialized.current && displayFlag && accessToken) {
+      fetchExams(currentPage, itemsPerPage, filters).then((data) => {
+        setExams(data.content);
+        setTotalItems(data.totalElements);
+        setTotalPages(data.totalPages);
+        setCurrentPage(data.page);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, currentPage]);
 
   //   const handlePaperEditSubmit = async (data: PaperDto) => {
   //     console.log("Paper edit submitted with data:", data);
@@ -1046,6 +1179,27 @@ const ExamsPage = () => {
     );
   }
 
+  // Helper function to normalize subject names (trim and lowercase)
+  const normalizeSubjectName = (name: string | null | undefined): string => {
+    return (name || "").trim().toLowerCase();
+  };
+
+  // Helper function to get unique subjects (grouped by normalized name)
+  const getUniqueSubjects = (examSubjects: ExamSubjectDto[]): ExamSubjectDto[] => {
+    if (!examSubjects || examSubjects.length === 0) return [];
+
+    const seen = new Map<string, ExamSubjectDto>();
+
+    examSubjects.forEach((es) => {
+      const normalizedName = normalizeSubjectName(es.subject?.name);
+      if (normalizedName && !seen.has(normalizedName)) {
+        seen.set(normalizedName, es);
+      }
+    });
+
+    return Array.from(seen.values());
+  };
+
   const formatExamDateRange = (examSubjects: ExamSubjectDto[]) => {
     if (!examSubjects || examSubjects.length === 0) return "-";
 
@@ -1089,16 +1243,16 @@ const ExamsPage = () => {
   return (
     <div className="p-2 sm:p-4">
       <Card className="border-none">
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center mb-3 justify-between gap-4 border rounded-md p-4 sticky top-0 z-30 bg-background">
-          <div className="flex-1 min-w-0">
+        <CardHeader className="flex flex-col items-start mb-3 gap-4 border rounded-md p-4 sticky top-0 z-30 bg-background">
+          <div className="flex-1 min-w-0 w-full">
             <CardTitle className="flex items-center text-lg sm:text-xl">
               <FileText className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
               <span className="truncate">Exams</span>
             </CardTitle>
             <div className="text-xs sm:text-sm text-muted-foreground mt-1">List of exams got scheduled.</div>
           </div>
-          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
-            {/* <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+          {/* <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="flex-shrink-0">
                   <Upload className="mr-2 h-4 w-4" />
@@ -1148,12 +1302,12 @@ const ExamsPage = () => {
                 </div>
               </DialogContent>
             </Dialog> */}
-            {/* <Button variant="outline" onClick={handleDownloadTemplate} className="flex-shrink-0">
+          {/* <Button variant="outline" onClick={handleDownloadTemplate} className="flex-shrink-0">
               <Download className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Download Template</span>
               <span className="sm:hidden">Template</span>
             </Button> */}
-            {/* <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          {/* <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
                 <Button
                   onClick={handleAddNew}
@@ -1190,12 +1344,12 @@ const ExamsPage = () => {
                   isLoading={false}
                 />
               </AlertDialogContent>
-            </AlertDialog> */}
-          </div>
+            </AlertDialog>
+          </div> */}
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-[72px] z-40 bg-background p-2 sm:p-4 border-b flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-0">
-            <div className="flex flex-wrap gap-2 items-center flex-1">
+          <div className="sticky top-[72px] z-40 bg-background p-2 sm:p-4 border-b flex flex-col items-start gap-3 mb-0">
+            <div className="flex flex-wrap gap-2 items-center w-full">
               {/* <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline">Filters</Button>
@@ -1607,12 +1761,367 @@ const ExamsPage = () => {
                 )}
               </div> */}
             </div>
-            <Input
-              placeholder="Search..."
-              className="w-full sm:w-64"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
+
+            {/* Filter Button and Active Filter Badges */}
+            <div className="flex flex-wrap items-center gap-2 justify-start">
+              {/* Filter Dialog Trigger */}
+              <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    Filters
+                    {Object.values(filters).filter((v) => v !== null && v !== undefined).length > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                      >
+                        {Object.values(filters).filter((v) => v !== null && v !== undefined).length}
+                      </Badge>
+                    )}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Filter Exams</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    {/* Grid layout for main filters - 2 rows x 3 columns */}
+                    <div className="grid grid-cols-3 gap-4">
+                      {/* Academic Year Filter */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="academic-year">Academic Year</Label>
+                        <Select
+                          value={filters.academicYearId?.toString() || "all"}
+                          onValueChange={(value) =>
+                            setFilters({ ...filters, academicYearId: value === "all" ? null : Number(value) })
+                          }
+                        >
+                          <SelectTrigger id="academic-year">
+                            <SelectValue placeholder="All Academic Years" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Academic Years</SelectItem>
+                            {availableAcademicYears.map((year) => (
+                              <SelectItem key={year.id} value={year.id!.toString()}>
+                                {year.year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Exam Type Filter */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="exam-type">Exam Type</Label>
+                        <Select
+                          value={filters.examTypeId?.toString() || "all"}
+                          onValueChange={(value) =>
+                            setFilters({ ...filters, examTypeId: value === "all" ? null : Number(value) })
+                          }
+                        >
+                          <SelectTrigger id="exam-type">
+                            <SelectValue placeholder="All Exam Types" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Exam Types</SelectItem>
+                            {examTypes.map((type) => (
+                              <SelectItem key={type.id} value={type.id!.toString()}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Semester Filter */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="semester">Semester</Label>
+                        <Select
+                          value={filters.classId?.toString() || "all"}
+                          onValueChange={(value) =>
+                            setFilters({ ...filters, classId: value === "all" ? null : Number(value) })
+                          }
+                        >
+                          <SelectTrigger id="semester">
+                            <SelectValue placeholder="All Semesters" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Semesters</SelectItem>
+                            {classes
+                              .filter((c) => c.type === "SEMESTER")
+                              .map((cls) => (
+                                <SelectItem key={cls.id} value={cls.id!.toString()}>
+                                  {cls.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Affiliation Filter */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="affiliation">Affiliation</Label>
+                        <Select
+                          value={filters.affiliationId?.toString() || "all"}
+                          onValueChange={(value) =>
+                            setFilters({ ...filters, affiliationId: value === "all" ? null : Number(value) })
+                          }
+                        >
+                          <SelectTrigger id="affiliation">
+                            <SelectValue placeholder="All Affiliations" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Affiliations</SelectItem>
+                            {affiliations.map((affiliation) => (
+                              <SelectItem key={affiliation.id} value={affiliation.id!.toString()}>
+                                {affiliation.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Regulation Type Filter */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="regulation">Regulation</Label>
+                        <Select
+                          value={filters.regulationTypeId?.toString() || "all"}
+                          onValueChange={(value) =>
+                            setFilters({ ...filters, regulationTypeId: value === "all" ? null : Number(value) })
+                          }
+                        >
+                          <SelectTrigger id="regulation">
+                            <SelectValue placeholder="All Regulations" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Regulations</SelectItem>
+                            {regulationTypes.map((regulation) => (
+                              <SelectItem key={regulation.id} value={regulation.id!.toString()}>
+                                {regulation.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Status Filter */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="status">Status</Label>
+                        <Select
+                          value={filters.status || "all"}
+                          onValueChange={(value) =>
+                            setFilters({ ...filters, status: value === "all" ? null : (value as any) })
+                          }
+                        >
+                          <SelectTrigger id="status">
+                            <SelectValue placeholder="All Statuses" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="upcoming">Upcoming</SelectItem>
+                            <SelectItem value="recent">Recent</SelectItem>
+                            <SelectItem value="previous">Previous</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Date Range Filter - Full Width */}
+                    <div className="grid gap-2">
+                      <Label>Date Range (Admit Card Window)</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="date-from" className="text-xs text-muted-foreground">
+                            From
+                          </Label>
+                          <Input
+                            id="date-from"
+                            type="date"
+                            value={filters.dateFrom || ""}
+                            onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value || null })}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="date-to" className="text-xs text-muted-foreground">
+                            To
+                          </Label>
+                          <Input
+                            id="date-to"
+                            type="date"
+                            value={filters.dateTo || ""}
+                            onChange={(e) => setFilters({ ...filters, dateTo: e.target.value || null })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const defaultAcademicYearId = currentAcademicYear?.id || null;
+                        setFilters({
+                          examTypeId: null,
+                          classId: null,
+                          academicYearId: defaultAcademicYearId,
+                          affiliationId: null,
+                          regulationTypeId: null,
+                          dateFrom: null,
+                          dateTo: null,
+                          status: null,
+                        });
+                        setCurrentPage(1);
+                      }}
+                    >
+                      Clear All
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setCurrentPage(1);
+                        setIsFilterDialogOpen(false);
+                        refetchExams();
+                      }}
+                    >
+                      Apply Filters
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Active Filter Badges */}
+              <div className="flex flex-wrap items-center gap-2 ml-2">
+                {filters.academicYearId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-slate-300 text-slate-700 bg-slate-50 flex items-center gap-1"
+                  >
+                    {availableAcademicYears.find((y) => y.id === filters.academicYearId)?.year || "Academic Year"}
+                    <button
+                      aria-label="Clear academic year filter"
+                      className="ml-1 hover:text-slate-900"
+                      onClick={() => {
+                        setFilters({ ...filters, academicYearId: null });
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filters.examTypeId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50 flex items-center gap-1"
+                  >
+                    {examTypes.find((t) => t.id === filters.examTypeId)?.name || "Exam Type"}
+                    <button
+                      aria-label="Clear exam type filter"
+                      className="ml-1 hover:text-indigo-900"
+                      onClick={() => {
+                        setFilters({ ...filters, examTypeId: null });
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filters.classId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-orange-300 text-orange-700 bg-orange-50 flex items-center gap-1"
+                  >
+                    {classes.find((c) => c.id === filters.classId)?.name || "Semester"}
+                    <button
+                      aria-label="Clear semester filter"
+                      className="ml-1 hover:text-orange-900"
+                      onClick={() => {
+                        setFilters({ ...filters, classId: null });
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filters.affiliationId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-purple-300 text-purple-700 bg-purple-50 flex items-center gap-1"
+                  >
+                    {affiliations.find((a) => a.id === filters.affiliationId)?.name || "Affiliation"}
+                    <button
+                      aria-label="Clear affiliation filter"
+                      className="ml-1 hover:text-purple-900"
+                      onClick={() => {
+                        setFilters({ ...filters, affiliationId: null });
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filters.regulationTypeId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-teal-300 text-teal-700 bg-teal-50 flex items-center gap-1"
+                  >
+                    {regulationTypes.find((r) => r.id === filters.regulationTypeId)?.name || "Regulation"}
+                    <button
+                      aria-label="Clear regulation filter"
+                      className="ml-1 hover:text-teal-900"
+                      onClick={() => {
+                        setFilters({ ...filters, regulationTypeId: null });
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {(filters.dateFrom || filters.dateTo) && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-blue-300 text-blue-700 bg-blue-50 flex items-center gap-1"
+                  >
+                    {filters.dateFrom && filters.dateTo
+                      ? `${filters.dateFrom} to ${filters.dateTo}`
+                      : filters.dateFrom
+                        ? `From ${filters.dateFrom}`
+                        : `To ${filters.dateTo}`}
+                    <button
+                      aria-label="Clear date range filter"
+                      className="ml-1 hover:text-blue-900"
+                      onClick={() => {
+                        setFilters({ ...filters, dateFrom: null, dateTo: null });
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filters.status && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-rose-300 text-rose-700 bg-rose-50 flex items-center gap-1"
+                  >
+                    {filters.status.charAt(0).toUpperCase() + filters.status.slice(1)}
+                    <button
+                      aria-label="Clear status filter"
+                      className="ml-1 hover:text-rose-900"
+                      onClick={() => {
+                        setFilters({ ...filters, status: null });
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+              </div>
+            </div>
             {/* <div className="relative flex-shrink-0">
               <Button
                 variant="outline"
@@ -1752,8 +2261,8 @@ const ExamsPage = () => {
                           )} */}
                         </p>
                         <div className="mt-1 flex flex-col gap-1">
-                          {exm.examSubjects.map((es: ExamSubjectDto) => (
-                            <p>
+                          {getUniqueSubjects(exm.examSubjects).map((es: ExamSubjectDto, subjectIndex: number) => (
+                            <p key={`subject-${es.subject?.id}-${subjectIndex}`}>
                               <Badge
                                 variant="outline"
                                 className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"

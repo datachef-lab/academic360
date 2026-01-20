@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
+// Mark as dynamic
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { dbPostgres } from "@/db";
 import { academicSubjects } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { createSubject, updateSubject, toggleSubjectStatus, getAllSubjects } from "@/lib/services/academic-subject.service";
+import {
+  createSubject,
+  updateSubject,
+  toggleSubjectStatus,
+  getAllSubjects,
+} from "@/lib/services/academic-subject.service";
 
 export async function GET() {
   try {
@@ -10,10 +19,7 @@ export async function GET() {
     return NextResponse.json({ success: true, data: academicSubjects });
   } catch (error) {
     console.error("Error fetching academic subjects:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch academic subjects" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Failed to fetch academic subjects" }, { status: 500 });
   }
 }
 
@@ -71,4 +77,4 @@ export async function PATCH(request: Request) {
     console.error("Error toggling subject status:", error);
     return NextResponse.json({ error: "Failed to toggle subject status" }, { status: 500 });
   }
-} 
+}

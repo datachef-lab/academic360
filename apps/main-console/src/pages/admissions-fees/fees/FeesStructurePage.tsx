@@ -1,33 +1,58 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Banknote, PlusCircle, Pencil } from "lucide-react";
-// import { toast } from "sonner";
-// import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureForm";
+import React, { useState, useEffect, useMemo } from "react";
+import { Banknote, PlusCircle, Pencil, Filter, X } from "lucide-react";
 import FeeStructureMaster from "@/components/fees/FeeStructureMaster";
-// import { getAllCourses } from "../../services/course-api";
 import { FeeStructureDto, CreateFeeStructureDto } from "@repo/db/dtos/fees";
-import { AcademicYear } from "@/types/academics/academic-year";
+// import { AcademicYear } from "@/types/academics/academic-year";
 import { updateFeeStructureByDto } from "@/services/fees-api";
 import { useFeesStructures, useAcademicYearsFromFeesStructures, useFeesHeads } from "@/hooks/useFees";
 import { useFeesReceiptTypes } from "@/hooks/useFees";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FeesReceiptType } from "@/types/fees";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+// import { FeesReceiptType } from "@/types/fees";
 import { Class } from "@/types/academics/class";
 import { getAllClasses } from "@/services/classes.service";
-import { Pagination } from "@/components/ui/pagination";
+import { getAllShifts } from "@/services/academic";
+import { Shift } from "@/types/academics/shift";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
+
+interface FeeStructureFilters {
+  academicYearId: number | null;
+  receiptTypeId: number | null;
+  classId: number | null;
+  shiftId: number | null;
+}
 
 const FeesStructurePage: React.FC = () => {
+  const { currentAcademicYear } = useAcademicYear();
   const [showAddModal, setShowAddModal] = useState(false);
   const [classes, setClasses] = useState<Class[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
   const [selectedFeeStructureForEdit, setSelectedFeeStructureForEdit] = useState<FeeStructureDto | null>(null);
   const [selectedConcessionSlabModal, setSelectedConcessionSlabModal] = useState<FeeStructureDto | null>(null);
-  const [feesStructures, setFeesStructures] = useState<FeeStructureDto[]>([]);
-  const [selectedAcademicYear, setSelectedAcademicYear] = useState<AcademicYear | null>(null);
-  const [selectedReceiptType, setSelectedReceiptType] = useState<FeesReceiptType | null>(null);
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+
+  // Filter state
+  const [filters, setFilters] = useState<FeeStructureFilters>({
+    academicYearId: null,
+    receiptTypeId: null,
+    classId: null,
+    shiftId: null,
+  });
+
+  // Local filter state for dialog (only applied when "Apply Filters" is clicked)
+  const [localFilters, setLocalFilters] = useState<FeeStructureFilters>(filters);
 
   // Use the fees API hook with pagination
   const {
@@ -40,42 +65,75 @@ const FeesStructurePage: React.FC = () => {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10);
   const { feesReceiptTypes, loading: receiptTypesLoading } = useFeesReceiptTypes();
   const { loading: feesHeadsLoading } = useFeesHeads();
 
   // Use the new hooks
   const { academicYears, loading: academicYearsLoading } = useAcademicYearsFromFeesStructures();
 
-  // State for selected class (used for filtering)
-  const [selectedClassFilter, setSelectedClassFilter] = useState<Class | null>(null);
-
-  // When academic year changes, reset selected class filter
+  // Set default academic year from Redux
   useEffect(() => {
-    setSelectedClassFilter(null);
-  }, [selectedAcademicYear]);
+    if (currentAcademicYear?.id && !filters.academicYearId) {
+      setFilters((prev) => ({
+        ...prev,
+        academicYearId: currentAcademicYear.id!,
+      }));
+      setLocalFilters((prev) => ({
+        ...prev,
+        academicYearId: currentAcademicYear.id!,
+      }));
+    }
+  }, [currentAcademicYear]);
+
+  // Sync local filters with actual filters when dialog opens
+  useEffect(() => {
+    if (isFilterDialogOpen) {
+      setLocalFilters(filters);
+    }
+  }, [isFilterDialogOpen, filters]);
 
   useEffect(() => {
     getAllClasses().then((data) => setClasses(data));
+    getAllShifts().then((data) => setShifts(data));
   }, []);
 
-  const handleReceiptTypeChange = useCallback(
-    (value: string) => {
-      const id = Number(value);
-      const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id === id);
-      setSelectedReceiptType(tmpSelectedFeesReceiptType ?? null);
-    },
-    [feesReceiptTypes],
-  );
+  // Memoize filters object for API call
+  const apiFilters = useMemo(() => {
+    const filterObj: {
+      academicYearId?: number;
+      classId?: number;
+      receiptTypeId?: number;
+      programCourseId?: number;
+      shiftId?: number;
+    } = {};
 
-  const handleClassChange = useCallback(
-    (value: string) => {
-      const id = Number(value);
-      const tmpSelectedClass = classes.find((ele) => ele.id === id);
-      setSelectedClassFilter(tmpSelectedClass ?? null);
-    },
-    [classes],
-  );
+    if (filters.academicYearId) {
+      filterObj.academicYearId = filters.academicYearId;
+    }
+    if (filters.receiptTypeId) {
+      filterObj.receiptTypeId = filters.receiptTypeId;
+    }
+    if (filters.classId) {
+      filterObj.classId = filters.classId;
+    }
+    if (filters.shiftId) {
+      filterObj.shiftId = filters.shiftId;
+    }
+
+    return filterObj;
+  }, [filters]);
+
+  // Fetch fees structures with pagination
+  useEffect(() => {
+    fetchFeesStructuresPaginated(currentPage, pageSize, apiFilters);
+  }, [currentPage, pageSize, apiFilters, fetchFeesStructuresPaginated]);
+
+  // Refetch when filters change (after initialization)
+  useEffect(() => {
+    if (currentPage === 1) return; // Already handled by the effect above
+    setCurrentPage(1);
+  }, [filters]);
 
   const handleEdit = (fs: FeeStructureDto) => {
     setSelectedFeeStructureForEdit(fs);
@@ -87,98 +145,18 @@ const FeesStructurePage: React.FC = () => {
     setShowFeeStructureForm(true);
   };
 
-  // Memoize filters to prevent unnecessary re-renders
-  const filters = useMemo(() => {
-    const filterObj: {
-      academicYearId?: number;
-      classId?: number;
-      receiptTypeId?: number;
-      programCourseId?: number;
-      shiftId?: number;
-    } = {};
-
-    if (selectedAcademicYear?.id) {
-      filterObj.academicYearId = selectedAcademicYear.id;
-    }
-    if (selectedReceiptType?.id) {
-      filterObj.receiptTypeId = selectedReceiptType.id;
-    }
-    if (selectedClassFilter?.id) {
-      filterObj.classId = selectedClassFilter.id;
-    }
-
-    return filterObj;
-  }, [selectedAcademicYear?.id, selectedReceiptType?.id, selectedClassFilter?.id]);
-
-  // Fetch fees structures with pagination
-  useEffect(() => {
-    fetchFeesStructuresPaginated(currentPage, pageSize, filters);
-  }, [currentPage, pageSize, filters, fetchFeesStructuresPaginated]);
-
-  // Update fees structures when paginated data changes
-  useEffect(() => {
-    setFeesStructures(paginatedFeesStructures);
-  }, [paginatedFeesStructures]);
-
-  // Auto-select receipt type only once when data first loads
-  useEffect(() => {
-    if (paginatedFeesStructures.length > 0 && !selectedReceiptType && feesReceiptTypes.length > 0) {
-      const firstReceiptTypeId = paginatedFeesStructures[0]?.receiptType?.id;
-      if (firstReceiptTypeId) {
-        const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id === firstReceiptTypeId);
-        if (tmpSelectedFeesReceiptType) {
-          setSelectedReceiptType(tmpSelectedFeesReceiptType);
-        }
-      }
-    }
-  }, [paginatedFeesStructures, feesReceiptTypes, selectedReceiptType]);
-
-  // Memoize filtered structures based on receipt type, class, and academic year
-  const memoizedFilteredFeesStructures = useMemo(() => {
-    let filtered = paginatedFeesStructures;
-
-    if (selectedReceiptType?.id) {
-      filtered = filtered.filter((ele) => ele.receiptType?.id === selectedReceiptType.id);
-    }
-
-    if (selectedClassFilter?.id) {
-      filtered = filtered.filter((ele) => ele.class?.id === selectedClassFilter.id);
-    }
-
-    if (selectedAcademicYear?.id) {
-      filtered = filtered.filter((ele) => ele.academicYear?.id === selectedAcademicYear.id);
-    }
-
-    return filtered;
-  }, [paginatedFeesStructures, selectedReceiptType?.id, selectedClassFilter?.id, selectedAcademicYear?.id]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedAcademicYear, selectedReceiptType, selectedClassFilter]);
-
-  // Auto-select current/active academic year if not set (prioritize isCurrentYear === true)
-  useEffect(() => {
-    if (!selectedAcademicYear && academicYears.length > 0) {
-      // First, try to find the academic year marked as current
-      const currentYear = academicYears.find((year) => year.isCurrentYear === true);
-      if (currentYear) {
-        setSelectedAcademicYear(currentYear);
-      } else {
-        // Fallback to first academic year if no current year is found
-        setSelectedAcademicYear(academicYears[0] || null);
-      }
-    }
-  }, [academicYears, selectedAcademicYear]);
-
-  // Memoize sorted filtered structures to prevent unnecessary re-sorting
-  const sortedFilteredFeesStructures = useMemo(() => {
-    return [...memoizedFilteredFeesStructures].sort((a, b) => {
+  // Memoize sorted structures (backend already filters, so just sort)
+  const sortedFeesStructures = useMemo(() => {
+    return [...paginatedFeesStructures].sort((a, b) => {
       const aName = a.programCourse?.name || "";
       const bName = b.programCourse?.name || "";
       return aName.localeCompare(bName);
     });
-  }, [memoizedFilteredFeesStructures]);
+  }, [paginatedFeesStructures]);
+
+  // Calculate total items and pages
+  const totalItems = pagination?.totalElements || 0;
+  const totalPages = pagination?.totalPages || 1;
 
   if (academicYearsLoading || feesLoading || receiptTypesLoading || feesHeadsLoading) {
     return (
@@ -201,87 +179,234 @@ const FeesStructurePage: React.FC = () => {
               <p className="text-sm text-gray-600">Manage and organize fee structures</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Academic Year</label>
-              <Select
-                value={selectedAcademicYear?.id ? String(selectedAcademicYear.id) : "all"}
-                onValueChange={(val) => {
-                  const year = academicYears.find((y) => String(y.id) === val);
-                  setSelectedAcademicYear(year || null);
-                }}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select Academic Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {academicYears.map((year) => (
-                    <SelectItem key={year.id} value={String(year.id)}>
-                      {year.year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <Button onClick={handleCreate} size="sm">
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Create Structure
+          </Button>
         </div>
       </div>
 
-      <div className="border-b border-gray-200 flex items-center justify-between">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          <div className="flex items-center gap-4 py-2">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Receipt Type</label>
-              <Select
-                value={selectedReceiptType ? String(selectedReceiptType.id) : ""}
-                onValueChange={handleReceiptTypeChange}
-                // Always enabled
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select Receipt Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {feesReceiptTypes
-                    .filter((rt) => feesStructures.some((fs) => fs.receiptType?.id === rt.id))
-                    .map((rt) => (
-                      <SelectItem key={rt.id} value={String(rt.id)}>
-                        {rt.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+      {/* Filter Button and Active Filter Badges */}
+      <div className="flex flex-wrap items-center gap-2 justify-start mb-4">
+        {/* Filter Dialog Trigger */}
+        <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Filter className="h-4 w-4" />
+              Filters
+              {Object.values(filters).filter((v) => v !== null && v !== undefined).length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                >
+                  {Object.values(filters).filter((v) => v !== null && v !== undefined).length}
+                </Badge>
+              )}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Filter Fee Structures</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {/* Grid layout for filters - 2 rows x 2 columns */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Academic Year Filter */}
+                <div className="grid gap-2">
+                  <Label htmlFor="academic-year">Academic Year</Label>
+                  <Select
+                    value={localFilters.academicYearId?.toString() || "all"}
+                    onValueChange={(value) =>
+                      setLocalFilters({ ...localFilters, academicYearId: value === "all" ? null : Number(value) })
+                    }
+                  >
+                    <SelectTrigger id="academic-year">
+                      <SelectValue placeholder="All Academic Years" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Academic Years</SelectItem>
+                      {academicYears.map((year) => (
+                        <SelectItem key={year.id} value={year.id!.toString()}>
+                          {year.year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Receipt Type Filter */}
+                <div className="grid gap-2">
+                  <Label htmlFor="receipt-type">Receipt Type</Label>
+                  <Select
+                    value={localFilters.receiptTypeId?.toString() || "all"}
+                    onValueChange={(value) =>
+                      setLocalFilters({ ...localFilters, receiptTypeId: value === "all" ? null : Number(value) })
+                    }
+                  >
+                    <SelectTrigger id="receipt-type">
+                      <SelectValue placeholder="All Receipt Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Receipt Types</SelectItem>
+                      {feesReceiptTypes.map((type) => (
+                        <SelectItem key={type.id} value={type.id!.toString()}>
+                          {type.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Class/Semester Filter */}
+                <div className="grid gap-2">
+                  <Label htmlFor="class">Class/Semester</Label>
+                  <Select
+                    value={localFilters.classId?.toString() || "all"}
+                    onValueChange={(value) =>
+                      setLocalFilters({ ...localFilters, classId: value === "all" ? null : Number(value) })
+                    }
+                  >
+                    <SelectTrigger id="class">
+                      <SelectValue placeholder="All Classes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Classes</SelectItem>
+                      {classes.map((cls) => (
+                        <SelectItem key={cls.id} value={cls.id!.toString()}>
+                          {cls.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Shift Filter */}
+                <div className="grid gap-2">
+                  <Label htmlFor="shift">Shift</Label>
+                  <Select
+                    value={localFilters.shiftId?.toString() || "all"}
+                    onValueChange={(value) =>
+                      setLocalFilters({ ...localFilters, shiftId: value === "all" ? null : Number(value) })
+                    }
+                  >
+                    <SelectTrigger id="shift">
+                      <SelectValue placeholder="All Shifts" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Shifts</SelectItem>
+                      {shifts.map((shift) => (
+                        <SelectItem key={shift.id} value={shift.id!.toString()}>
+                          {shift.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Class/Semester</label>
-              <Select
-                value={selectedClassFilter ? String(selectedClassFilter.id) : ""}
-                onValueChange={handleClassChange}
-                disabled={!selectedReceiptType}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const defaultAcademicYearId = currentAcademicYear?.id || null;
+                  setLocalFilters({
+                    academicYearId: defaultAcademicYearId,
+                    receiptTypeId: null,
+                    classId: null,
+                    shiftId: null,
+                  });
+                }}
               >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select Class" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes
-                    .filter((cls) =>
-                      feesStructures.some(
-                        (fs) => fs.receiptType?.id === selectedReceiptType?.id && fs.class?.id === cls.id,
-                      ),
-                    )
-                    .map((cls) => (
-                      <SelectItem key={cls.id} value={String(cls.id)}>
-                        {cls.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                Clear All
+              </Button>
+              <Button
+                onClick={() => {
+                  setFilters(localFilters);
+                  setCurrentPage(1);
+                  setIsFilterDialogOpen(false);
+                }}
+              >
+                Apply Filters
+              </Button>
             </div>
-          </div>
-        </nav>
-        <Button onClick={handleCreate} size="sm">
-          <PlusCircle className="h-4 w-4" />
-          Create Structure
-        </Button>
+          </DialogContent>
+        </Dialog>
+
+        {/* Active Filter Badges */}
+        <div className="flex flex-wrap items-center gap-2 ml-2">
+          {filters.academicYearId && (
+            <Badge
+              variant="outline"
+              className="text-xs border-slate-300 text-slate-700 bg-slate-50 flex items-center gap-1"
+            >
+              {academicYears.find((y) => y.id === filters.academicYearId)?.year || "Academic Year"}
+              <button
+                aria-label="Clear academic year filter"
+                className="ml-1 hover:text-slate-900"
+                onClick={() => {
+                  setFilters({ ...filters, academicYearId: null });
+                  setCurrentPage(1);
+                }}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {filters.receiptTypeId && (
+            <Badge
+              variant="outline"
+              className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50 flex items-center gap-1"
+            >
+              {feesReceiptTypes.find((t) => t.id === filters.receiptTypeId)?.name || "Receipt Type"}
+              <button
+                aria-label="Clear receipt type filter"
+                className="ml-1 hover:text-indigo-900"
+                onClick={() => {
+                  setFilters({ ...filters, receiptTypeId: null });
+                  setCurrentPage(1);
+                }}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {filters.classId && (
+            <Badge
+              variant="outline"
+              className="text-xs border-orange-300 text-orange-700 bg-orange-50 flex items-center gap-1"
+            >
+              {classes.find((c) => c.id === filters.classId)?.name || "Class"}
+              <button
+                aria-label="Clear class filter"
+                className="ml-1 hover:text-orange-900"
+                onClick={() => {
+                  setFilters({ ...filters, classId: null });
+                  setCurrentPage(1);
+                }}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+          {filters.shiftId && (
+            <Badge
+              variant="outline"
+              className="text-xs border-purple-300 text-purple-700 bg-purple-50 flex items-center gap-1"
+            >
+              {shifts.find((s) => s.id === filters.shiftId)?.name || "Shift"}
+              <button
+                aria-label="Clear shift filter"
+                className="ml-1 hover:text-purple-900"
+                onClick={() => {
+                  setFilters({ ...filters, shiftId: null });
+                  setCurrentPage(1);
+                }}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          )}
+        </div>
       </div>
 
       <div className="mt-6">
@@ -298,7 +423,7 @@ const FeesStructurePage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedFilteredFeesStructures.map((fs) => {
+              {sortedFeesStructures.map((fs) => {
                 const programCourseName = fs.programCourse?.name || "-";
                 const baseAmount = fs.baseAmount || 0;
                 const shiftName = fs.shift?.name || "-";
@@ -380,22 +505,56 @@ const FeesStructurePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Pagination Controls */}
-      {pagination && pagination.totalElements > 0 && (
-        <div className="mt-4">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={pagination.totalPages}
-            totalItems={pagination.totalElements}
-            itemsPerPage={pageSize}
-            startIndex={(currentPage - 1) * pageSize}
-            endIndex={Math.min(currentPage * pageSize, pagination.totalElements)}
-            onPageChange={(page) => setCurrentPage(page)}
-            onItemsPerPageChange={(newPageSize) => {
-              setPageSize(newPageSize);
-              setCurrentPage(1);
-            }}
-          />
+      {/* Pagination Controls - Matching exams page style */}
+      {!feesLoading && totalItems > 0 && (
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-2 sm:px-0">
+          <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
+            <span className="hidden sm:inline">
+              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of{" "}
+              {totalItems} results
+            </span>
+            <span className="sm:hidden">
+              Page {currentPage} of {totalPages} ({totalItems} total)
+            </span>
+          </div>
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto w-full sm:w-auto justify-center sm:justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="flex-shrink-0"
+            >
+              <span className="hidden sm:inline">Previous</span>
+              <span className="sm:hidden">Prev</span>
+            </Button>
+            <div className="flex items-center gap-1 overflow-x-auto">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                if (pageNum > totalPages) return null;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className="w-8 h-8 p-0 flex-shrink-0"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="flex-shrink-0"
+            >
+              Next
+            </Button>
+          </div>
         </div>
       )}
 
@@ -491,21 +650,7 @@ const FeesStructurePage: React.FC = () => {
             setShowFeeStructureForm(false);
             setSelectedFeeStructureForEdit(null);
             // Refresh the fees structures list
-            const filters: {
-              academicYearId?: number;
-              receiptTypeId?: number;
-              classId?: number;
-            } = {};
-            if (selectedAcademicYear?.id) {
-              filters.academicYearId = selectedAcademicYear.id;
-            }
-            if (selectedReceiptType?.id) {
-              filters.receiptTypeId = selectedReceiptType.id;
-            }
-            if (selectedClassFilter?.id) {
-              filters.classId = selectedClassFilter.id;
-            }
-            await fetchFeesStructuresPaginated(currentPage, pageSize, filters);
+            await fetchFeesStructuresPaginated(currentPage, pageSize, apiFilters);
           } catch (error) {
             console.error("Error saving fee structure:", error);
             alert("Failed to save fee structure. Please try again.");

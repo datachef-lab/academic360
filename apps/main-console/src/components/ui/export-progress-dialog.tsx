@@ -12,6 +12,8 @@ interface ExportProgressDialogProps {
   progressUpdate?: ProgressUpdate | null;
 }
 
+type StepItem = { label: string; done: boolean };
+
 export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: ExportProgressDialogProps) {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
@@ -127,13 +129,78 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
     }
   };
 
+  const operation = (progressUpdate?.meta?.operation as string | undefined) ?? undefined;
+
+  const getDialogTitle = () => {
+    if (progressUpdate?.type === "download_progress") return "Download Progress";
+    if (operation?.includes("student_")) return "Upload Progress";
+    return "Export Progress";
+  };
+
+  const getStepsTitle = () => {
+    if (progressUpdate?.type === "download_progress") return "Download Steps:";
+    if (operation?.includes("student_")) return "Upload Steps:";
+    return "Export Steps:";
+  };
+
+  const getSteps = (): StepItem[] => {
+    const isCompleted = status === "completed" || progress >= 100;
+
+    // Operation-specific steps (uploads)
+    if (operation === "student_cu_roll_reg_update") {
+      return [
+        { label: "Uploading Excel file", done: status !== "started" || progress > 0 },
+        { label: "Matching UIDs", done: progress >= 5 || isCompleted },
+        { label: "Updating roll/registration numbers", done: progress >= 30 || isCompleted },
+        { label: "Completed", done: isCompleted },
+      ];
+    }
+
+    if (operation === "student_import_legacy_students") {
+      // This endpoint currently returns after completion (no server progress updates),
+      // so keep steps minimal and status-based.
+      return [
+        { label: "Uploading Excel file", done: status !== "started" || progress > 0 },
+        { label: "Importing students", done: status === "in_progress" || isCompleted },
+        { label: "Completed", done: isCompleted },
+      ];
+    }
+
+    // Download progress steps (based on stage)
+    if (progressUpdate?.type === "download_progress") {
+      const currentStage = progressUpdate.stage || stage;
+      const stageOrder: Array<{ key: string; label: string }> = [
+        { key: "listing", label: "Listing files" },
+        { key: "downloading_pdfs", label: "Downloading PDFs" },
+        { key: "downloading_documents", label: "Downloading documents" },
+        { key: "creating_zips", label: "Creating ZIP(s)" },
+        { key: "completed", label: "Completed" },
+      ];
+      const idx = stageOrder.findIndex((s) => s.key === currentStage);
+      return stageOrder.map((s, i) => ({
+        label: s.label,
+        done: isCompleted || (idx !== -1 && i <= idx),
+      }));
+    }
+
+    // Generic export steps (fallback)
+    return [
+      { label: "Preparing", done: progress >= 10 || status !== "started" },
+      { label: "Processing", done: progress >= 50 || isCompleted },
+      { label: "Finalizing", done: progress >= 90 || isCompleted },
+      { label: "Completed", done: isCompleted },
+    ];
+  };
+
+  const steps = getSteps();
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getStatusIcon()}
-            {progressUpdate?.type === "download_progress" ? "Download Progress" : "Export Progress"}
+            {getDialogTitle()}
             {getStatusBadge()}
           </DialogTitle>
         </DialogHeader>
@@ -214,24 +281,17 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
 
           {/* Progress Steps */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-600">Export Steps:</p>
+            <p className="text-xs font-medium text-slate-600">{getStepsTitle()}</p>
             <div className="space-y-1 text-xs">
-              <div className={`flex items-center gap-2 ${progress >= 10 ? "text-green-600" : "text-slate-400"}`}>
-                <div className={`w-2 h-2 rounded-full ${progress >= 10 ? "bg-green-600" : "bg-slate-300"}`} />
-                Fetching metadata
-              </div>
-              <div className={`flex items-center gap-2 ${progress >= 30 ? "text-green-600" : "text-slate-400"}`}>
-                <div className={`w-2 h-2 rounded-full ${progress >= 30 ? "bg-green-600" : "bg-slate-300"}`} />
-                Loading student data
-              </div>
-              <div className={`flex items-center gap-2 ${progress >= 80 ? "text-green-600" : "text-slate-400"}`}>
-                <div className={`w-2 h-2 rounded-full ${progress >= 80 ? "bg-green-600" : "bg-slate-300"}`} />
-                Generating Excel file
-              </div>
-              <div className={`flex items-center gap-2 ${progress >= 100 ? "text-green-600" : "text-slate-400"}`}>
-                <div className={`w-2 h-2 rounded-full ${progress >= 100 ? "bg-green-600" : "bg-slate-300"}`} />
-                Export completed
-              </div>
+              {steps.map((s) => (
+                <div
+                  key={s.label}
+                  className={`flex items-center gap-2 ${s.done ? "text-green-600" : "text-slate-400"}`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${s.done ? "bg-green-600" : "bg-slate-300"}`} />
+                  {s.label}
+                </div>
+              ))}
             </div>
           </div>
         </div>

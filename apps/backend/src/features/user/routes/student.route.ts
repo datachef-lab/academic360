@@ -14,6 +14,7 @@ import {
   updateFamilyMemberTitlesController,
   bulkUpdateFamilyMemberTitlesController,
   importStudentsFromExcelController,
+  checkExistingStudentUidsController,
   exportStudentDetailedReportController,
   exportStudentAcademicSubjectsReportController,
   downloadStudentImagesController,
@@ -21,6 +22,7 @@ import {
 
 import { uploadMiddleware } from "../controllers/student-apaar-update.controller.js";
 import { updateApaarIdsFromExcel } from "../controllers/student-apaar-update.controller.js";
+import { updateCuRollAndRegistrationFromExcel } from "../controllers/student-cu-roll-reg-update.controller.js";
 
 const router = express.Router();
 
@@ -48,9 +50,21 @@ router.get("/query", (req: Request, res: Response, next: NextFunction) => {
 router.put("/", updateStudent);
 router.put("/:id/status", updateStudentStatus);
 
+// POST /api/students/uids/check-existing
+// Check if any of the given UIDs already exist (prevents importing/updating existing students)
+router.post("/uids/check-existing", checkExistingStudentUidsController);
+
 // POST /api/students/update-apaar-ids
 // Upload Excel file and update APAAR IDs for students
 router.post("/update-apaar-ids", uploadMiddleware, updateApaarIdsFromExcel);
+
+// POST /api/students/update-cu-roll-reg
+// Upload Excel file and update CU Roll Number + CU Registration Number for students (matched by UID)
+router.post(
+  "/update-cu-roll-reg",
+  uploadMiddleware,
+  updateCuRollAndRegistrationFromExcel,
+);
 
 // POST /api/students/bulk-update-family-titles
 // Upload Excel file and bulk update family member titles

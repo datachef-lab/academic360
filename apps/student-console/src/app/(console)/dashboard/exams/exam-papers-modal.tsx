@@ -206,21 +206,42 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
               <DialogTitle className="text-2xl font-semibold text-white tracking-tight">Exam Schedule</DialogTitle>
               <p className="text-white/80 text-sm font-medium"></p>
             </div>
-            {paperDetails.length > 0 && (
-              <Button
-                onClick={handleDownloadAdmitCard}
-                disabled={downloading || loading}
-                title="Download admit card (PDF)"
-                className="h-10 w-10 mr-3 rounded-full flex items-center justify-center bg-indigo-00/40 drop-shadow-sm text-white hover:bg-indigo-700 shadow-sm"
-                aria-label="Download admit card"
-              >
-                {downloading ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-white" />
-                ) : (
-                  <Download className="h-5 w-5 text-white" />
-                )}
-              </Button>
-            )}
+            {paperDetails.length > 0 &&
+              (() => {
+                const now = new Date();
+                const nowTime = now.getTime();
+
+                // Check if current time is within the admit card download window
+                const startDate = exam?.admitCardStartDownloadDate
+                  ? new Date(exam.admitCardStartDownloadDate).getTime()
+                  : null;
+                const endDate = exam?.admitCardLastDownloadDate
+                  ? new Date(exam.admitCardLastDownloadDate).getTime()
+                  : null;
+
+                // Show button only if within download window
+                const isWithinWindow = startDate && nowTime >= startDate && (!endDate || nowTime <= endDate);
+
+                if (!isWithinWindow) {
+                  return null; // Hide button if outside download window
+                }
+
+                return (
+                  <Button
+                    onClick={handleDownloadAdmitCard}
+                    disabled={downloading || loading}
+                    title="Download admit card (PDF)"
+                    className="h-10 w-10 mr-3 rounded-full flex items-center justify-center bg-indigo-00/40 drop-shadow-sm text-white hover:bg-indigo-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Download admit card"
+                  >
+                    {downloading ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    ) : (
+                      <Download className="h-5 w-5 text-white" />
+                    )}
+                  </Button>
+                );
+              })()}
           </div>
         </DialogHeader>
 
@@ -258,7 +279,7 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
                       <TableCell className="py-4 pl-6 pr-4 ">
                         <div className="space-y-0.5">
                           <div className="font-semibold text-gray-800 text-sm">
-                            {format(detail.startTime, "MMM d, yyyy")}
+                            {format(detail.startTime, "dd/MM/yyyy")}
                           </div>
                           <div className="text-muted-gray-800 text-xs font-mono">
                             {format(detail.startTime, "hh:mm a")} – {format(detail.endTime, "hh:mm a")}
@@ -267,7 +288,7 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
                       </TableCell>
                       <TableCell className="py-4 px-4 ">
                         <div className="space-y-0.5">
-                          <div className="font-semibold text-gray-800 text-sm">{detail.room}</div>
+                          <div className="font-semibold text-gray-800 text-sm">Room: {detail.room}</div>
                           <div className="text-muted-gray-800 text-xs flex items-center font-mono gap-1.5">
                             {detail.floor} •
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-600/10 font-mono text-accent-gray-800 text-xs font-medium">
