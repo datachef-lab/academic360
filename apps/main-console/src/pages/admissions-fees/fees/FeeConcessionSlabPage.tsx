@@ -375,7 +375,7 @@ const FeeConcessionSlabPage: React.FC = () => {
                     {/* Default Rate */}
                     <div className="flex flex-col gap-2">
                       <Label>
-                        Default Rate (%) <span className="text-red-500">*</span>
+                        Concession Rate (%) <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         type="number"

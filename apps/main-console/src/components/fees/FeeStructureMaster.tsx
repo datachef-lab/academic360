@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -519,6 +519,14 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   //   setShowComponentModal(true);
   // };
 
+  // Calculate total allocation percentage
+  const totalAllocationPercentage = useMemo(() => {
+    return feeStructureRow.feeComponents.reduce((sum, comp) => sum + comp.percentage, 0);
+  }, [feeStructureRow.feeComponents]);
+
+  // Check if allocation exceeds 100%
+  const isAllocationExceeded = totalAllocationPercentage > 100;
+
   const checkStructure = () => {
     recalcSlabs();
     const issues: string[] = [];
@@ -526,6 +534,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     if (!selectedAcademicYear) issues.push("Academic Year not selected");
     if (!feeStructureRow.amount || feeStructureRow.amount <= 0) issues.push("Fee Amount must be greater than 0");
     if (feeStructureRow.concessionSlabs.length === 0) issues.push("No concession slabs defined");
+    if (isAllocationExceeded)
+      issues.push(`Total allocation percentage (${totalAllocationPercentage.toFixed(2)}%) exceeds 100%`);
 
     if (issues.length === 0) {
       alert("Structure check passed. No issues found.");
@@ -767,7 +777,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             </Select>
                           </TableHead>
                           <TableHead className="w-[120px] border-r-2 border-gray-400 p-2 text-center bg-gray-100 whitespace-nowrap">
-                            <div className="text-base font-semibold text-gray-900">Amount</div>
+                            <div className="text-base font-semibold text-gray-900">Total Course Fee</div>
                           </TableHead>
                           <TableHead className="w-[200px] border-r-2 border-gray-400 p-2 relative text-center whitespace-nowrap">
                             <Select
@@ -1074,6 +1084,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                   </Button>
                 </div>
                 <div className="flex-1 overflow-hidden border-2 border-gray-400 rounded flex flex-col min-h-0">
+                  {isAllocationExceeded && (
+                    <div className="bg-red-50 border-b-2 border-red-300 px-4 py-2 text-sm text-red-700">
+                      ⚠️ Total allocation percentage ({totalAllocationPercentage.toFixed(2)}%) exceeds 100%. Please
+                      adjust the allocation percentages.
+                    </div>
+                  )}
                   <div className="flex-1 overflow-y-auto">
                     <Table className="table-fixed w-full">
                       <TableHeader>
@@ -1247,7 +1263,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             Concession Rate
                           </TableHead>
                           <TableHead className="border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
-                            Total Amount
+                            Payable After Concession
                           </TableHead>
                           <TableHead className="w-[80px] p-2 text-center text-base font-semibold whitespace-nowrap">
                             Action
@@ -1375,7 +1391,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
               <Button onClick={checkStructure} className="flex-1 sm:flex-none">
                 Check Structure
               </Button>
-              <Button onClick={openPreview} variant="outline" className="flex-1 sm:flex-none">
+              <Button
+                onClick={openPreview}
+                variant="outline"
+                className="flex-1 sm:flex-none"
+                disabled={isAllocationExceeded}
+              >
                 Preview Structure
               </Button>
             </div>
@@ -1385,7 +1406,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
             <Button variant="outline" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={saving || (validationResult !== null && !validationResult.isUnique)}>
+            <Button
+              onClick={handleSave}
+              disabled={saving || isAllocationExceeded || (validationResult !== null && !validationResult.isUnique)}
+            >
               {saving ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
@@ -1977,7 +2001,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
             <Button variant="outline" onClick={() => setShowPreviewModal(false)}>
               Close
             </Button>
-            <Button onClick={handleSave} disabled={saving || (validationResult !== null && !validationResult.isUnique)}>
+            <Button
+              onClick={handleSave}
+              disabled={saving || isAllocationExceeded || (validationResult !== null && !validationResult.isUnique)}
+            >
               {saving ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
