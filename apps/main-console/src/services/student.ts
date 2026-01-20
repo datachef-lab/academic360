@@ -52,3 +52,9 @@ export async function getSearchedStudentsByRollNumber(rollNumber: string): Promi
   const res = await axiosInstance.get(`/api/students/roll/${rollNumber}`);
   return res.data.payload as StudentDto;
 }
+
+// Online students (via WebSocket tracking on backend)
+export async function getOnlineStudents(): Promise<StudentDto[]> {
+  const res = await axiosInstance.get(`/api/students/online`);
+  return (res.data?.payload ?? []) as StudentDto[];
+}
