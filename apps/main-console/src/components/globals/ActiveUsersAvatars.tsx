@@ -129,10 +129,9 @@ export function ActiveUsersAvatars() {
             </div>
           )}
 
-              {/* Online indicator */}
-              <div className="h-3 w-3 rounded-full bg-green-500 ring-2 ring-white" />
-            </div>
-          )}
+          {/* Online indicator */}
+          <div className="h-3 w-3 rounded-full bg-green-500 ring-2 ring-white" />
+
           {studentsOnlineCount > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -149,7 +148,6 @@ export function ActiveUsersAvatars() {
                  "
                 >
                   <Users className="h-4 w-4" />
-                  <span className="ml-1">Students </span>
 
                   <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold">
                     {studentsOnlineCount}
