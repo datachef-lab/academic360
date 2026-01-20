@@ -37,10 +37,10 @@ export function OnlineStudentsModal({ open, onOpenChange, students, loading, isE
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl p-0 max-h-[70vh] border-none overflow-hidden">
+      <DialogContent className="max-w-6xl p-0 border-none overflow-hidden">
         {/* ---------------- Header ---------------- */}
 
-        <DialogHeader className="relative px-6 py-5 bg-blue-600 overflow-hidden">
+        <DialogHeader className="relative px-6 py-5 bg-purple-600 overflow-hidden">
           {/* Decorative elements */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.2)_0%,_transparent_60%)]" />
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -63,7 +63,7 @@ export function OnlineStudentsModal({ open, onOpenChange, students, loading, isE
         </DialogHeader>
 
         {/* ---------------- Body ---------------- */}
-        <div className="p-4 max-h-[60vh] overflow-auto">
+        <div className="p-4 max-h-[70vh] overflow-auto">
           <div className="border rounded-xl overflow-hidden">
             <Table>
               <TableHeader className="bg-muted/40">

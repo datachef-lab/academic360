@@ -98,39 +98,39 @@ export function ActiveUsersAvatars() {
       <TooltipProvider delayDuration={200}>
         <div className="flex items-center gap-2">
           {/* Avatars */}
-          {otherActiveUsers.length > 0 && (
-            <div className="flex items-center -space-x-2">
-              {visibleUsers.map((activeUser) => (
-                <Tooltip key={activeUser.id}>
-                  <TooltipTrigger asChild>
-                    <UserAvatar
-                      user={{
-                        name: activeUser.name,
-                        image: activeUser.image || undefined,
-                      }}
-                      size="sm"
-                      className={[
-                        "border-2 border-white bg-white hover:border-purple-300 transition",
-                        activeUser.tabActive === false ? "opacity-70 blur-[1px]" : "",
-                      ].join(" ")}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="text-xs">
-                      <div className="font-semibold">{activeUser.name}</div>
-                      <div className="text-muted-foreground">{activeUser.type}</div>
-                      {activeUser.tabActive === false && (
-                        <div className="text-muted-foreground">Online • Tab inactive</div>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              ))}
+          {/* {otherActiveUsers.length > 0 && ( */}
+          <div className="flex items-center -space-x-2">
+            {visibleUsers.map((activeUser) => (
+              <Tooltip key={activeUser.id}>
+                <TooltipTrigger asChild>
+                  <UserAvatar
+                    user={{
+                      name: activeUser.name,
+                      image: activeUser.image || undefined,
+                    }}
+                    size="sm"
+                    className={[
+                      "border-2 border-white bg-white hover:border-purple-300 transition",
+                      activeUser.tabActive === false ? "opacity-70 blur-[1px]" : "",
+                    ].join(" ")}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="text-xs">
+                    <div className="font-semibold">{activeUser.name}</div>
+                    <div className="text-muted-foreground">{activeUser.type}</div>
+                    {activeUser.tabActive === false && (
+                      <div className="text-muted-foreground">Online • Tab inactive</div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
 
-              {/* Online indicator */}
-              <div className="h-3 w-3 rounded-full bg-green-500 ring-2 ring-white" />
-            </div>
-          )}
+          {/* Online indicator */}
+          <div className="h-3 w-3 rounded-full bg-green-500 ring-2 ring-white" />
+
           {studentsOnlineCount > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -144,7 +144,6 @@ export function ActiveUsersAvatars() {
                  "
                 >
                   <Users className="h-4 w-4" />
-                  <span className="ml-1">Students </span>
 
                   <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold">
                     {studentsOnlineCount}
