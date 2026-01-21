@@ -32,6 +32,7 @@ type ConcessionSlabUI = {
   name: string; // From FeeConcessionSlabT
   defaultConcessionRate: number; // From FeeConcessionSlabT (not null)
   concessionAmount: number; // Calculated based on amount and rate
+  payableAmount: number; // Payable after concession (editable)
 };
 
 type FeeComponentUI = {
@@ -334,12 +335,19 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
           }) || [],
         // Map concession slabs
         concessionSlabs:
-          feeStructure.feeStructureConcessionSlabs?.map((slab) => ({
-            id: slab.feeConcessionSlab?.id || 0,
-            name: slab.feeConcessionSlab?.name || "",
-            defaultConcessionRate: slab.concessionRate || 0,
-            concessionAmount: Math.round(((feeStructure.baseAmount || 0) * (slab.concessionRate || 0)) / 100),
-          })) || [],
+          feeStructure.feeStructureConcessionSlabs?.map((slab) => {
+            const baseAmount = feeStructure.baseAmount || 0;
+            const concessionRate = slab.concessionRate || 0;
+            const concessionAmount = Math.round((baseAmount * concessionRate) / 100);
+            const payableAmount = baseAmount - concessionAmount;
+            return {
+              id: slab.feeConcessionSlab?.id || 0,
+              name: slab.feeConcessionSlab?.name || "",
+              defaultConcessionRate: concessionRate,
+              concessionAmount,
+              payableAmount,
+            };
+          }) || [],
       }));
       // Mark initialization as complete after a short delay to allow form to populate
       setTimeout(() => setIsInitializing(false), 300);
@@ -403,10 +411,15 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   const recalcSlabs = () => {
     setFeeStructureRow((prev) => ({
       ...prev,
-      concessionSlabs: prev.concessionSlabs.map((slab) => ({
-        ...slab,
-        concessionAmount: Math.round((prev.amount * (slab.defaultConcessionRate || 0)) / 100),
-      })),
+      concessionSlabs: prev.concessionSlabs.map((slab) => {
+        const concessionAmount = Math.round((prev.amount * (slab.defaultConcessionRate || 0)) / 100);
+        const payableAmount = prev.amount - concessionAmount;
+        return {
+          ...slab,
+          concessionAmount,
+          payableAmount, // Recalculate based on rate when total course fee changes
+        };
+      }),
     }));
   };
 
@@ -451,15 +464,21 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
       return;
     }
 
-    // Use defaultPercentage from fee head to calculate default amount if amount not provided
+    // Use defaultPercentage from fee head as the allocation percentage
     const defaultPercentage = feeHead.defaultPercentage ?? 0;
+    // If amount is provided, calculate percentage from it; otherwise use defaultPercentage and calculate amount
     const componentAmount = amount ?? Math.round((feeStructureRow.amount * defaultPercentage) / 100);
+    const componentPercentage = amount
+      ? feeStructureRow.amount > 0
+        ? (amount / feeStructureRow.amount) * 100
+        : 0
+      : defaultPercentage;
 
     const newComponent: FeeComponentUI = {
       id: feeHeadId,
       name: feeHead.name,
       amount: componentAmount,
-      percentage: feeStructureRow.amount > 0 ? (componentAmount / feeStructureRow.amount) * 100 : 0,
+      percentage: componentPercentage,
     };
 
     setFeeStructureRow((prev) => ({
@@ -507,11 +526,15 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     }
 
     setFeeStructureRow((prev) => {
+      const concessionRate = selectedSlab.defaultConcessionRate || 0;
+      const concessionAmount = Math.round((prev.amount * concessionRate) / 100);
+      const payableAmount = prev.amount - concessionAmount;
       const newSlab: ConcessionSlabUI = {
         id: selectedSlab.id!,
         name: selectedSlab.name,
-        defaultConcessionRate: selectedSlab.defaultConcessionRate || 0,
-        concessionAmount: Math.round((prev.amount * (selectedSlab.defaultConcessionRate || 0)) / 100),
+        defaultConcessionRate: concessionRate,
+        concessionAmount,
+        payableAmount,
       };
       return {
         ...prev,
@@ -532,8 +555,18 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     return feeStructureRow.feeComponents.reduce((sum, comp) => sum + comp.amount, 0);
   }, [feeStructureRow.feeComponents]);
 
+  // Calculate total allocation percentage
+  const totalAllocationPercentage = useMemo(() => {
+    return feeStructureRow.amount > 0 ? (totalAllocationAmount / feeStructureRow.amount) * 100 : 0;
+  }, [totalAllocationAmount, feeStructureRow.amount]);
+
   // Check if allocation exceeds total course fee
   const isAllocationExceeded = totalAllocationAmount > feeStructureRow.amount;
+
+  // Check if allocation is exactly 100%
+  const isAllocationComplete = useMemo(() => {
+    return Math.abs(totalAllocationPercentage - 100) < 0.01; // Allow small floating point differences
+  }, [totalAllocationPercentage]);
 
   const checkStructure = () => {
     recalcSlabs();
@@ -545,6 +578,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     if (isAllocationExceeded)
       issues.push(
         `Total component amount (₹${totalAllocationAmount.toLocaleString()}) exceeds total course fee (₹${feeStructureRow.amount.toLocaleString()})`,
+      );
+    if (!isAllocationComplete)
+      issues.push(
+        `Total allocation must be exactly 100%. Current allocation: ${totalAllocationPercentage.toFixed(2)}%`,
       );
 
     if (issues.length === 0) {
@@ -1040,9 +1077,17 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                               feeStructureRow.concessionSlabs.map((slab, index) => (
                                 <TableRow key={index}>
                                   <TableCell className="font-medium">{slab.name}</TableCell>
-                                  <TableCell className="font-medium">{slab.defaultConcessionRate}%</TableCell>
+                                  <TableCell className="font-medium">
+                                    {slab.defaultConcessionRate.toFixed(2)}%
+                                  </TableCell>
                                   <TableCell className="font-semibold">
-                                    ₹{(feeStructureRow.amount - slab.concessionAmount).toLocaleString()}
+                                    ₹
+                                    {(
+                                      slab.payableAmount ?? feeStructureRow.amount - slab.concessionAmount
+                                    ).toLocaleString("en-IN", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
                                   </TableCell>
                                   <TableCell>
                                     <Button
@@ -1100,6 +1145,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                       {feeStructureRow.amount.toLocaleString()}). Please adjust the component amounts.
                     </div>
                   )}
+                  {!isAllocationExceeded && !isAllocationComplete && (
+                    <div className="bg-yellow-50 border-b-2 border-yellow-300 px-4 py-2 text-sm text-yellow-700">
+                      ⚠️ Total allocation must be exactly 100%. Current allocation:{" "}
+                      {totalAllocationPercentage.toFixed(2)}%
+                    </div>
+                  )}
                   <div className="flex-1 overflow-y-auto">
                     <Table className="table-fixed w-full">
                       <TableHeader>
@@ -1147,7 +1198,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                           (fc) => fc.id === newFeeHeadId && fc.id !== component.id,
                                         )
                                       ) {
-                                        // Use defaultPercentage from the new fee head to calculate default amount
+                                        // Use defaultPercentage from the new fee head as the allocation percentage
                                         const defaultPercentage = newFeeHead.defaultPercentage ?? 0;
                                         const defaultAmount = Math.round(
                                           (feeStructureRow.amount * defaultPercentage) / 100,
@@ -1161,7 +1212,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                                   id: newFeeHeadId,
                                                   name: newFeeHead.name,
                                                   amount: defaultAmount,
-                                                  percentage: prev.amount > 0 ? (defaultAmount / prev.amount) * 100 : 0,
+                                                  percentage: defaultPercentage, // Use defaultPercentage directly
                                                 }
                                               : comp,
                                           ),
@@ -1192,7 +1243,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                   <div className="flex items-center justify-center gap-1">
                                     <Input
                                       type="number"
-                                      value={component.percentage}
+                                      value={Number(component.percentage.toFixed(2))}
                                       onChange={(e) => {
                                         const newPercentage = parseFloat(e.target.value) || 0;
                                         setFeeStructureRow((prev) => ({
@@ -1221,7 +1272,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                     <span className="text-gray-900 font-medium">₹</span>
                                     <Input
                                       type="number"
-                                      value={component.amount}
+                                      value={Number(component.amount.toFixed(2))}
                                       onChange={(e) => {
                                         const newAmount = parseFloat(e.target.value) || 0;
                                         setFeeStructureRow((prev) => ({
@@ -1336,22 +1387,26 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                           (cs) => cs.id === newSlabId && cs.id !== slab.id,
                                         )
                                       ) {
-                                        setFeeStructureRow((prev) => ({
-                                          ...prev,
-                                          concessionSlabs: prev.concessionSlabs.map((s, idx) =>
-                                            idx === index
-                                              ? {
-                                                  ...s,
-                                                  id: newSlab.id!,
-                                                  name: newSlab.name,
-                                                  defaultConcessionRate: newSlab.defaultConcessionRate || 0,
-                                                  concessionAmount: Math.round(
-                                                    (prev.amount * (newSlab.defaultConcessionRate || 0)) / 100,
-                                                  ),
-                                                }
-                                              : s,
-                                          ),
-                                        }));
+                                        setFeeStructureRow((prev) => {
+                                          const concessionRate = newSlab.defaultConcessionRate || 0;
+                                          const concessionAmount = Math.round((prev.amount * concessionRate) / 100);
+                                          const payableAmount = prev.amount - concessionAmount;
+                                          return {
+                                            ...prev,
+                                            concessionSlabs: prev.concessionSlabs.map((s, idx) =>
+                                              idx === index
+                                                ? {
+                                                    ...s,
+                                                    id: newSlab.id!,
+                                                    name: newSlab.name,
+                                                    defaultConcessionRate: concessionRate,
+                                                    concessionAmount,
+                                                    payableAmount,
+                                                  }
+                                                : s,
+                                            ),
+                                          };
+                                        });
                                       }
                                     }}
                                   >
@@ -1377,20 +1432,24 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                 <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[60px]">
                                   <Input
                                     type="number"
-                                    value={slab.defaultConcessionRate}
+                                    value={Number(slab.defaultConcessionRate.toFixed(2))}
                                     onChange={(e) => {
                                       const newRate = parseFloat(e.target.value) || 0;
                                       setFeeStructureRow((prev) => ({
                                         ...prev,
-                                        concessionSlabs: prev.concessionSlabs.map((s, idx) =>
-                                          idx === index
-                                            ? {
-                                                ...s,
-                                                defaultConcessionRate: newRate,
-                                                concessionAmount: Math.round((prev.amount * newRate) / 100),
-                                              }
-                                            : s,
-                                        ),
+                                        concessionSlabs: prev.concessionSlabs.map((s, idx) => {
+                                          if (idx === index) {
+                                            const concessionAmount = Math.round((prev.amount * newRate) / 100);
+                                            const payableAmount = prev.amount - concessionAmount;
+                                            return {
+                                              ...s,
+                                              defaultConcessionRate: newRate,
+                                              concessionAmount,
+                                              payableAmount,
+                                            };
+                                          }
+                                          return s;
+                                        }),
                                       }));
                                     }}
                                     className="w-full h-8 text-sm text-center"
@@ -1400,11 +1459,47 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                   />
                                 </TableCell>
                                 <TableCell
-                                  className={`text-center border-r-2 border-gray-400 p-2 font-semibold min-h-[60px] ${
+                                  className={`text-center border-r-2 border-gray-400 p-2 min-h-[60px] ${
                                     hasSlabConflict(slab.id) ? "bg-red-100 border-red-400 text-red-800" : ""
                                   }`}
                                 >
-                                  ₹ {(feeStructureRow.amount - slab.concessionAmount).toLocaleString()}
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span className="text-gray-900 font-medium">₹</span>
+                                    <Input
+                                      type="number"
+                                      value={Number(
+                                        (slab.payableAmount ?? feeStructureRow.amount - slab.concessionAmount).toFixed(
+                                          2,
+                                        ),
+                                      )}
+                                      onChange={(e) => {
+                                        const newPayableAmount = parseFloat(e.target.value) || 0;
+                                        setFeeStructureRow((prev) => ({
+                                          ...prev,
+                                          concessionSlabs: prev.concessionSlabs.map((s, idx) => {
+                                            if (idx === index) {
+                                              // Calculate concession rate from payable amount
+                                              const concessionRate =
+                                                prev.amount > 0
+                                                  ? ((prev.amount - newPayableAmount) / prev.amount) * 100
+                                                  : 0;
+                                              const concessionAmount = prev.amount - newPayableAmount;
+                                              return {
+                                                ...s,
+                                                defaultConcessionRate: Math.max(0, Math.min(100, concessionRate)),
+                                                concessionAmount: Math.max(0, concessionAmount),
+                                                payableAmount: newPayableAmount,
+                                              };
+                                            }
+                                            return s;
+                                          }),
+                                        }));
+                                      }}
+                                      className="w-full h-8 text-sm text-center"
+                                      min="0"
+                                      step="0.01"
+                                    />
+                                  </div>
                                 </TableCell>
                                 <TableCell className="text-center p-2 min-h-[60px]">
                                   <Button
@@ -1435,7 +1530,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 onClick={openPreview}
                 variant="outline"
                 className="flex-1 sm:flex-none"
-                disabled={isAllocationExceeded}
+                disabled={isAllocationExceeded || !isAllocationComplete}
               >
                 Preview Structure
               </Button>
@@ -1448,7 +1543,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving || isAllocationExceeded || (validationResult !== null && !validationResult.isUnique)}
+              disabled={
+                saving ||
+                isAllocationExceeded ||
+                !isAllocationComplete ||
+                (validationResult !== null && !validationResult.isUnique)
+              }
             >
               {saving ? "Saving..." : "Save"}
             </Button>
@@ -1891,7 +1991,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                     : "#e0e7ff", // indigo-100
                           }}
                         >
-                          {slab.name} ({slab.defaultConcessionRate}%)
+                          {slab.name} ({slab.defaultConcessionRate.toFixed(2)}%)
                         </TableHead>
                       ))}
                     </TableRow>
@@ -1911,10 +2011,14 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             {index + 1}
                           </TableCell>
                           <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-green-50">
-                            {component.name} <span className="text-red-600">({component.percentage}%)</span>
+                            {component.name} <span className="text-red-600">({component.percentage.toFixed(2)}%)</span>
                           </TableCell>
                           <TableCell className="text-center border-r-2 border-gray-400 p-2 font-semibold bg-yellow-50">
-                            ₹{componentAmount.toLocaleString()}
+                            ₹
+                            {componentAmount.toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </TableCell>
                           {feeStructureRow.concessionSlabs.map((slab, slabIndex) => {
                             // Calculate concession amount for this component with this slab
@@ -1938,7 +2042,11 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                           : "#e0e7ff", // indigo-100
                                 }}
                               >
-                                ₹{totalAfterConcession.toLocaleString()}
+                                ₹
+                                {totalAfterConcession.toLocaleString("en-IN", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
                               </TableCell>
                             );
                           })}
@@ -1982,7 +2090,11 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                       : "#e0e7ff", // indigo-100
                             }}
                           >
-                            ₹{columnTotal.toLocaleString()}
+                            ₹
+                            {columnTotal.toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </TableCell>
                         );
                       })}
@@ -2044,7 +2156,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving || isAllocationExceeded || (validationResult !== null && !validationResult.isUnique)}
+              disabled={
+                saving ||
+                isAllocationExceeded ||
+                !isAllocationComplete ||
+                (validationResult !== null && !validationResult.isUnique)
+              }
             >
               {saving ? "Saving..." : "Save"}
             </Button>
