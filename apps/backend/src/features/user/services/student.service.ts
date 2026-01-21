@@ -49,6 +49,7 @@ import { marksheetModel } from "@repo/db/schemas/models/academics";
 import { processClassBySemesterNumber } from "@/features/academics/services/class.service.js";
 import { StudentDto } from "@repo/db/dtos/user/index.js";
 import XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 function generateStudentReferenceAcademicSubjectColumns(
   studentReferenceAcademicSubjects: any[] | null,
@@ -1319,6 +1320,74 @@ export async function generateExport() {
   };
 }
 
+// Helper function to convert camelCase/snake_case to sentence case
+function toSentenceCase(str: string): string {
+  let result = str
+    .replace(/_/g, " ") // Replace underscores with spaces
+    .replace(/([a-z])([A-Z])/g, "$1 $2") // Add space before capital letters
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+
+  // Remove "Student" prefix from registration and roll number headers
+  result = result.replace(
+    /^Student Registration Number$/,
+    "Registration Number",
+  );
+  result = result.replace(/^Student Roll Number$/, "Roll Number");
+
+  return result;
+}
+
+// Helper function to transform data values for Excel export
+function transformValueForExcel(value: any): any {
+  // Convert null or undefined to empty string
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  // Convert boolean to Yes/No
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
+
+  // Return value as-is for other types
+  return value;
+}
+
+// Helper function to transform a row object for Excel export
+function transformRowForExcel(row: Record<string, any>): Record<string, any> {
+  const transformedRow: Record<string, any> = {};
+  for (const [key, value] of Object.entries(row)) {
+    transformedRow[key] = transformValueForExcel(value);
+  }
+  return transformedRow;
+}
+
+// Helper function to calculate column width based on header and data
+function calculateColumnWidth(header: string, allData?: any[]): number {
+  const headerLength = header.length;
+  let maxDataLength = headerLength;
+
+  // Check all data if provided to find maximum length
+  if (allData && allData.length > 0) {
+    const allLengths = allData.map((val) => {
+      if (val === null || val === undefined) return 0;
+      const str = String(val);
+      // For very long strings, consider wrapping - but still use full length for width
+      return str.length;
+    });
+    maxDataLength = Math.max(headerLength, ...allLengths);
+  }
+
+  // Add generous padding (5 characters) and ensure minimum width of 12
+  // Remove max cap to allow columns to expand as needed
+  const calculatedWidth = Math.max(maxDataLength + 5, 12);
+
+  // Cap at 100 to prevent extremely wide columns, but allow more flexibility
+  return Math.min(calculatedWidth, 100);
+}
+
 export async function exportStudentDetailedReport(academicYearId: number) {
   console.log(
     "[STUDENT-EXPORT] Generating detailed student report for academic year:",
@@ -1440,6 +1509,8 @@ export async function exportStudentDetailedReport(academicYearId: number) {
         u.is_active AS user_is_active,
         std.uid AS student_uid,
         std.old_uid AS student_old_uid,
+        std.registration_number AS student_registration_number,
+        std.roll_number AS student_roll_number,
         sh.name AS shift,
         sec.name AS section,
         std.rfid_number AS student_rfid_number,
@@ -1535,28 +1606,97 @@ export async function exportStudentDetailedReport(academicYearId: number) {
     `[STUDENT-EXPORT] Retrieved ${rows.length} rows for detailed student report`,
   );
 
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("student_data");
 
   if (rows.length > 0) {
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(workbook, worksheet, "student_data");
+    // Transform rows: convert booleans to Yes/No and nulls to empty strings
+    const transformedRows = rows.map((row) => transformRowForExcel(row));
+
+    // Define columns from first row keys with sentence case headers
+    const headers = Object.keys(transformedRows[0]);
+
+    // Calculate column widths based on header and transformed data
+    sheet.columns = headers.map((header) => {
+      const sentenceCaseHeader = toSentenceCase(header);
+      // Get all transformed data for this column to find maximum length
+      const allColumnData = transformedRows.map((row) => row[header]);
+      const width = calculateColumnWidth(sentenceCaseHeader, allColumnData);
+
+      return {
+        header: sentenceCaseHeader,
+        key: header,
+        width,
+      };
+    });
+
+    // Add transformed rows
+    transformedRows.forEach((row) => {
+      sheet.addRow(row);
+    });
+
+    // Recalculate column widths after adding all rows to ensure accuracy
+    headers.forEach((header, colIndex) => {
+      const sentenceCaseHeader = toSentenceCase(header);
+      const allColumnData = transformedRows.map((row) => row[header]);
+      const calculatedWidth = calculateColumnWidth(
+        sentenceCaseHeader,
+        allColumnData,
+      );
+      const column = sheet.getColumn(colIndex + 1);
+      if (column) {
+        column.width = calculatedWidth;
+      }
+    });
+
+    // Style header row
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, size: 12 };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFD3D3D3" }, // Grey background
+    };
+    headerRow.alignment = { vertical: "middle", horizontal: "left" };
+    headerRow.height = 20;
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // Add borders to all cells
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: "thin", color: { argb: "FFD3D3D3" } },
+            left: { style: "thin", color: { argb: "FFD3D3D3" } },
+            bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+            right: { style: "thin", color: { argb: "FFD3D3D3" } },
+          };
+        });
+      }
+    });
+
+    // Freeze header row
+    sheet.views = [{ state: "frozen", ySplit: 1 }];
   } else {
-    const worksheet = XLSX.utils.aoa_to_sheet([
-      ["message"],
-      ["No data available"],
-    ]);
-    XLSX.utils.book_append_sheet(workbook, worksheet, "student_data");
+    sheet.columns = [{ header: "message", key: "message", width: 20 }];
+    sheet.addRow({ message: "No data available" });
   }
 
-  const excelBuffer = XLSX.write(workbook, {
-    type: "buffer",
-    bookType: "xlsx",
-  });
+  const excelBuffer = await workbook.xlsx.writeBuffer();
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 
   return {
-    buffer: excelBuffer,
+    buffer: Buffer.isBuffer(excelBuffer)
+      ? excelBuffer
+      : Buffer.from(excelBuffer),
     fileName: `student_data_export_${timestamp}.xlsx`,
     totalRecords: rows.length,
   };
@@ -1646,36 +1786,97 @@ export async function exportStudentAcademicSubjectsReport(
     `[STUDENT-EXPORT] Retrieved ${rows.length} rows for academic subjects report`,
   );
 
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("student_academic_subjects");
 
   if (rows.length > 0) {
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "student_academic_subjects",
-    );
+    // Transform rows: convert booleans to Yes/No and nulls to empty strings
+    const transformedRows = rows.map((row) => transformRowForExcel(row));
+
+    // Define columns from first row keys with sentence case headers
+    const headers = Object.keys(transformedRows[0]);
+
+    // Calculate column widths based on header and transformed data
+    sheet.columns = headers.map((header) => {
+      const sentenceCaseHeader = toSentenceCase(header);
+      // Get all transformed data for this column to find maximum length
+      const allColumnData = transformedRows.map((row) => row[header]);
+      const width = calculateColumnWidth(sentenceCaseHeader, allColumnData);
+
+      return {
+        header: sentenceCaseHeader,
+        key: header,
+        width,
+      };
+    });
+
+    // Add transformed rows
+    transformedRows.forEach((row) => {
+      sheet.addRow(row);
+    });
+
+    // Recalculate column widths after adding all rows to ensure accuracy
+    headers.forEach((header, colIndex) => {
+      const sentenceCaseHeader = toSentenceCase(header);
+      const allColumnData = transformedRows.map((row) => row[header]);
+      const calculatedWidth = calculateColumnWidth(
+        sentenceCaseHeader,
+        allColumnData,
+      );
+      const column = sheet.getColumn(colIndex + 1);
+      if (column) {
+        column.width = calculatedWidth;
+      }
+    });
+
+    // Style header row
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, size: 12 };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFD3D3D3" }, // Grey background
+    };
+    headerRow.alignment = { vertical: "middle", horizontal: "left" };
+    headerRow.height = 20;
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // Add borders to all cells
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: "thin", color: { argb: "FFD3D3D3" } },
+            left: { style: "thin", color: { argb: "FFD3D3D3" } },
+            bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+            right: { style: "thin", color: { argb: "FFD3D3D3" } },
+          };
+        });
+      }
+    });
+
+    // Freeze header row
+    sheet.views = [{ state: "frozen", ySplit: 1 }];
   } else {
-    const worksheet = XLSX.utils.aoa_to_sheet([
-      ["message"],
-      ["No data available"],
-    ]);
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "student_academic_subjects",
-    );
+    sheet.columns = [{ header: "message", key: "message", width: 20 }];
+    sheet.addRow({ message: "No data available" });
   }
 
-  const excelBuffer = XLSX.write(workbook, {
-    type: "buffer",
-    bookType: "xlsx",
-  });
+  const excelBuffer = await workbook.xlsx.writeBuffer();
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 
   return {
-    buffer: excelBuffer,
+    buffer: Buffer.isBuffer(excelBuffer)
+      ? excelBuffer
+      : Buffer.from(excelBuffer),
     fileName: `student_academic_subjects_${timestamp}.xlsx`,
     totalRecords: rows.length,
   };

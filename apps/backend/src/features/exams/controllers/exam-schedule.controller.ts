@@ -662,27 +662,29 @@ export const downloadAdmitCardsController = async (
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
-  console.log(req.query);
+  console.log("[ADMIT-CARD-DOWNLOAD] Route hit", {
+    path: req.path,
+    query: req.query,
+  });
   try {
     const { examId, uploadSessionId } = req.query;
 
     if (!examId) {
-      res
-        .status(400)
-        .json(new ApiError(400, "examId and examSubjectId are required"));
+      res.status(400).json(new ApiError(400, "examId is required"));
       return;
     }
 
     const examIdNum = Number(examId);
 
     if (isNaN(examIdNum)) {
-      res
-        .status(400)
-        .json(new ApiError(400, "Invalid examId or examSubjectId"));
+      res.status(400).json(new ApiError(400, "Invalid examId"));
       return;
     }
 
-    console.info(`[ADMIT-CARD-DOWNLOAD] Starting download`, { examIdNum });
+    console.info(`[ADMIT-CARD-DOWNLOAD] Starting download`, {
+      examIdNum,
+      uploadSessionId,
+    });
 
     const result = await downloadAdmitCardsAsZip(
       examIdNum,
@@ -691,17 +693,28 @@ export const downloadAdmitCardsController = async (
     );
 
     if (result.admitCardCount === 0) {
-      res.status(404).json(new ApiError(404, "No admit cards found"));
+      console.warn(
+        `[ADMIT-CARD-DOWNLOAD] No admit cards found for examId: ${examIdNum}`,
+      );
+      res
+        .status(404)
+        .json(new ApiError(404, "No admit cards found for this exam"));
       return;
     }
 
+    // Ensure zipBuffer is a proper Buffer
+    const zipBuffer = Buffer.isBuffer(result.zipBuffer)
+      ? result.zipBuffer
+      : Buffer.from(result.zipBuffer);
+
     res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Length", zipBuffer.length);
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="exam-${examId}-subject-admit-cards.zip"`,
     );
 
-    res.send(result.zipBuffer);
+    res.send(zipBuffer);
   } catch (error) {
     console.error("[ADMIT-CARD-DOWNLOAD] Error:", error);
     handleError(error, res, next);
@@ -742,17 +755,30 @@ export const downloadAttendanceSheetsByExamIdController = async (
     );
 
     if (result.roomCount === 0) {
-      res.status(404).json(new ApiError(404, "No attendance dr sheet found"));
+      res
+        .status(404)
+        .json(
+          new ApiError(
+            404,
+            "No attendance sheets found for this exam. Students must be assigned to exam rooms before attendance sheets can be generated.",
+          ),
+        );
       return;
     }
 
+    // Ensure zipBuffer is a proper Buffer
+    const zipBuffer = Buffer.isBuffer(result.zipBuffer)
+      ? result.zipBuffer
+      : Buffer.from(result.zipBuffer);
+
     res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Length", zipBuffer.length);
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="exam-${examId}-attendance-dr-sheets.zip"`,
     );
 
-    res.send(result.zipBuffer);
+    res.send(zipBuffer);
   } catch (error) {
     console.error("[ATTENDANCE_SHEETS-DOWNLOAD] Error:", error);
     handleError(error, res, next);
@@ -784,6 +810,11 @@ export const downloadExamCandidatesController = async (
 
     const excelBuffer = await downloadExamCandidatesbyExamId(examIdNum);
 
+    // Ensure excelBuffer is a Buffer
+    const buffer = Buffer.isBuffer(excelBuffer)
+      ? excelBuffer
+      : Buffer.from(excelBuffer as ArrayBuffer);
+
     // ✅ IMPORTANT HEADERS
     res.setHeader(
       "Content-Type",
@@ -795,9 +826,13 @@ export const downloadExamCandidatesController = async (
     );
 
     // 🚀 Send buffer
-    res.send(Buffer.from(excelBuffer));
+    res.send(buffer);
   } catch (error) {
     console.error("[EXAM-CANDIDATE-DOWNLOAD] Error:", error);
+    // Don't call handleError if headers were already sent
+    if (res.headersSent) {
+      return next(error);
+    }
     handleError(error, res, next);
   }
 };
@@ -918,8 +953,9 @@ export const triggerExamCandidatesEmailController = async (
       return;
     }
 
-    console.info("[EXAM-CANDIDATE-DOWNLOAD] Starting Excel download", {
+    console.info("[EXAM-ADMIT-CARD-EMAIL] Starting email send", {
       examId: examIdNum,
+      uploadSessionId,
     });
 
     await sendExamAdmitCardEmails(
@@ -939,7 +975,7 @@ export const triggerExamCandidatesEmailController = async (
         ),
       );
   } catch (error) {
-    console.error("[EXAM-CANDIDATE-DOWNLOAD] Error:", error);
+    console.error("[EXAM-ADMIT-CARD-EMAIL] Error:", error);
     handleError(error, res, next);
   }
 };

@@ -107,7 +107,7 @@ export async function countStudentsBreakdownForExam(
 }
 
 export interface GetStudentsParams extends CountStudentsParams {
-  assignBy: "UID" | "CU_ROLL_NUMBER";
+  assignBy: "UID" | "CU_ROLL_NUMBER" | "CU_REGISTRATION_NUMBER";
   roomAssignments: Array<{
     roomId: number;
     floorId: number | null;
@@ -115,6 +115,7 @@ export interface GetStudentsParams extends CountStudentsParams {
     roomName: string;
     maxStudentsPerBench: number;
     numberOfBenches: number;
+    capacity: number;
   }>;
 }
 

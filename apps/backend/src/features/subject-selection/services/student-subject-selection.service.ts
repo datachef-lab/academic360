@@ -31,6 +31,7 @@ import {
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import * as studentSubjectsService from "./student-subjects.service";
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { socketService } from "@/services/socketService.js";
 import { enqueueNotification } from "@/services/notificationClient.js";
 import {
@@ -2282,6 +2283,65 @@ ORDER BY q.uid,
          q.paper_code;
 `;
 
+// Helper function to convert camelCase/snake_case to sentence case
+function toSentenceCase(str: string): string {
+  return str
+    .replace(/_/g, " ") // Replace underscores with spaces
+    .replace(/([a-z])([A-Z])/g, "$1 $2") // Add space before capital letters
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+// Helper function to transform data values for Excel export
+function transformValueForExcel(value: any): any {
+  // Convert null or undefined to empty string
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  // Convert boolean to Yes/No
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
+
+  // Return value as-is for other types
+  return value;
+}
+
+// Helper function to transform a row object for Excel export
+function transformRowForExcel(row: Record<string, any>): Record<string, any> {
+  const transformedRow: Record<string, any> = {};
+  for (const [key, value] of Object.entries(row)) {
+    transformedRow[key] = transformValueForExcel(value);
+  }
+  return transformedRow;
+}
+
+// Helper function to calculate column width based on header and data
+function calculateColumnWidth(header: string, allData?: any[]): number {
+  const headerLength = header.length;
+  let maxDataLength = headerLength;
+
+  // Check all data if provided to find maximum length
+  if (allData && allData.length > 0) {
+    const allLengths = allData.map((val) => {
+      if (val === null || val === undefined) return 0;
+      const str = String(val);
+      // For very long strings, consider wrapping - but still use full length for width
+      return str.length;
+    });
+    maxDataLength = Math.max(headerLength, ...allLengths);
+  }
+
+  // Add generous padding (5 characters) and ensure minimum width of 12
+  // Remove max cap to allow columns to expand as needed
+  const calculatedWidth = Math.max(maxDataLength + 5, 12);
+
+  // Cap at 100 to prevent extremely wide columns, but allow more flexibility
+  return Math.min(calculatedWidth, 100);
+}
+
 export async function exportStudentSubjectsReport(
   academicYearId: number,
 ): Promise<Buffer> {
@@ -2297,18 +2357,91 @@ export async function exportStudentSubjectsReport(
       `[SUBJECTS-EXPORT] Retrieved ${rows.length} rows for academic year ${academicYearId}`,
     );
 
-    const workbook = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("student-subjects");
 
     if (rows.length === 0) {
-      const ws = XLSX.utils.aoa_to_sheet([["No data available"]]);
-      XLSX.utils.book_append_sheet(workbook, ws, "student-subjects");
+      sheet.columns = [{ header: "message", key: "message", width: 20 }];
+      sheet.addRow({ message: "No data available" });
     } else {
-      const ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(workbook, ws, "student-subjects");
+      // Transform rows: convert booleans to Yes/No and nulls to empty strings
+      const transformedRows = rows.map((row) => transformRowForExcel(row));
+
+      // Define columns from first row keys with sentence case headers
+      const headers = Object.keys(transformedRows[0]);
+
+      // Calculate column widths based on header and transformed data
+      sheet.columns = headers.map((header) => {
+        const sentenceCaseHeader = toSentenceCase(header);
+        // Get all transformed data for this column to find maximum length
+        const allColumnData = transformedRows.map((row) => row[header]);
+        const width = calculateColumnWidth(sentenceCaseHeader, allColumnData);
+
+        return {
+          header: sentenceCaseHeader,
+          key: header,
+          width,
+        };
+      });
+
+      // Add transformed rows
+      transformedRows.forEach((row) => {
+        sheet.addRow(row);
+      });
+
+      // Recalculate column widths after adding all rows to ensure accuracy
+      headers.forEach((header, colIndex) => {
+        const sentenceCaseHeader = toSentenceCase(header);
+        const allColumnData = transformedRows.map((row) => row[header]);
+        const calculatedWidth = calculateColumnWidth(
+          sentenceCaseHeader,
+          allColumnData,
+        );
+        const column = sheet.getColumn(colIndex + 1);
+        if (column) {
+          column.width = calculatedWidth;
+        }
+      });
+
+      // Style header row
+      const headerRow = sheet.getRow(1);
+      headerRow.font = { bold: true, size: 12 };
+      headerRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFD3D3D3" }, // Grey background
+      };
+      headerRow.alignment = { vertical: "middle", horizontal: "left" };
+      headerRow.height = 20;
+      headerRow.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+
+      // Add borders to all cells
+      sheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: "thin", color: { argb: "FFD3D3D3" } },
+              left: { style: "thin", color: { argb: "FFD3D3D3" } },
+              bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+              right: { style: "thin", color: { argb: "FFD3D3D3" } },
+            };
+          });
+        }
+      });
+
+      // Freeze header row
+      sheet.views = [{ state: "frozen", ySplit: 1 }];
     }
 
-    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
-    return Buffer.from(buffer);
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
   } catch (error) {
     console.error(
       "[SUBJECTS-EXPORT] Failed to export student subjects:",
@@ -3836,37 +3969,83 @@ export async function exportStudentSubjectSelections(
   }
 
   // Generate Excel file
-  const wb = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Student Subject Selections");
 
-  // Set column widths
-  const colWidths = [
-    { wch: 15 }, // UID
-    { wch: 30 }, // Name
-    { wch: 28 }, // Program-Course
-    { wch: 15 }, // Class Roll No.
-    { wch: 20 }, // Session
-    { wch: 15 }, // Section
-  ];
+  if (excelData.length > 0) {
+    // Transform rows: convert booleans to Yes/No and nulls to empty strings
+    const transformedData = excelData.map((row) => transformRowForExcel(row));
 
-  // Add widths for subject selection meta columns
-  allMetasForYear.forEach(() => {
-    colWidths.push({ wch: 25 });
-  });
+    // Define columns from first row keys with dynamic width calculation
+    const headers = Object.keys(transformedData[0]);
 
-  // Add widths for remaining columns
-  colWidths.push(
-    { wch: 18 }, // Last updated by user type
-    { wch: 20 }, // Last Updated
-    { wch: 30 }, // Remarks
-    { wch: 25 }, // By User Name
-  );
+    // Calculate column widths based on header and transformed data
+    sheet.columns = headers.map((header) => {
+      // Get all transformed data for this column to find maximum length
+      const allColumnData = transformedData.map((row) => row[header]);
+      const width = calculateColumnWidth(header, allColumnData);
 
-  const ws = XLSX.utils.json_to_sheet(excelData);
-  ws["!cols"] = colWidths;
-  XLSX.utils.book_append_sheet(wb, ws, "Student Subject Selections");
+      return {
+        header,
+        key: header,
+        width,
+      };
+    });
+
+    // Add transformed rows
+    transformedData.forEach((row) => {
+      sheet.addRow(row);
+    });
+
+    // Recalculate column widths after adding all rows to ensure accuracy
+    headers.forEach((header, colIndex) => {
+      const allColumnData = transformedData.map((row) => row[header]);
+      const calculatedWidth = calculateColumnWidth(header, allColumnData);
+      const column = sheet.getColumn(colIndex + 1);
+      if (column) {
+        column.width = calculatedWidth;
+      }
+    });
+
+    // Style header row
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, size: 12 };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFD3D3D3" }, // Grey background
+    };
+    headerRow.alignment = { vertical: "middle", horizontal: "left" };
+    headerRow.height = 20;
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // Add borders to all cells
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: "thin", color: { argb: "FFD3D3D3" } },
+            left: { style: "thin", color: { argb: "FFD3D3D3" } },
+            bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+            right: { style: "thin", color: { argb: "FFD3D3D3" } },
+          };
+        });
+      }
+    });
+
+    // Freeze header row
+    sheet.views = [{ state: "frozen", ySplit: 1 }];
+  }
 
   // Generate buffer
-  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  const buffer = await workbook.xlsx.writeBuffer();
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const fileName = `student_subject_selections_academic_year_${academicYearId}_${timestamp}.xlsx`;
@@ -3886,7 +4065,7 @@ export async function exportStudentSubjectSelections(
   }
 
   return {
-    buffer,
+    buffer: Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer),
     fileName,
     totalRecords: excelData.length,
     allMetasForYear: allMetasForYear, // Include meta information for consistency

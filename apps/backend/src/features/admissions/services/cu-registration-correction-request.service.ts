@@ -2995,6 +2995,65 @@ interface CuRegistrationExportData {
   updatedByUserName: string;
 }
 
+// Helper function to convert camelCase/snake_case to sentence case
+function toSentenceCase(str: string): string {
+  return str
+    .replace(/_/g, " ") // Replace underscores with spaces
+    .replace(/([a-z])([A-Z])/g, "$1 $2") // Add space before capital letters
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+// Helper function to transform data values for Excel export
+function transformValueForExcel(value: any): any {
+  // Convert null or undefined to empty string
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  // Convert boolean to Yes/No
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
+
+  // Return value as-is for other types
+  return value;
+}
+
+// Helper function to transform a row object for Excel export
+function transformRowForExcel(row: Record<string, any>): Record<string, any> {
+  const transformedRow: Record<string, any> = {};
+  for (const [key, value] of Object.entries(row)) {
+    transformedRow[key] = transformValueForExcel(value);
+  }
+  return transformedRow;
+}
+
+// Helper function to calculate column width based on header and data
+function calculateColumnWidth(header: string, allData?: any[]): number {
+  const headerLength = header.length;
+  let maxDataLength = headerLength;
+
+  // Check all data if provided to find maximum length
+  if (allData && allData.length > 0) {
+    const allLengths = allData.map((val) => {
+      if (val === null || val === undefined) return 0;
+      const str = String(val);
+      // For very long strings, consider wrapping - but still use full length for width
+      return str.length;
+    });
+    maxDataLength = Math.max(headerLength, ...allLengths);
+  }
+
+  // Add generous padding (5 characters) and ensure minimum width of 12
+  // Remove max cap to allow columns to expand as needed
+  const calculatedWidth = Math.max(maxDataLength + 5, 12);
+
+  // Cap at 100 to prevent extremely wide columns, but allow more flexibility
+  return Math.min(calculatedWidth, 100);
+}
+
 // Export service function
 export const exportCuRegistrationCorrectionRequests = async (
   academicYearId: number,
@@ -4097,27 +4156,83 @@ export const exportCuRegistrationCorrectionRequests = async (
     );
 
     const cuRegWorksheet = workbook.addWorksheet("cu-reg-report");
-    const cuRegHeaders = Object.keys(
-      cuRegistrationReportRows[0] || {},
-    ) as string[];
+
+    // Transform rows: convert booleans to Yes/No and nulls to empty strings
+    const transformedRows = cuRegistrationReportRows.map((row) =>
+      transformRowForExcel(row),
+    );
+
+    const cuRegHeaders = Object.keys(transformedRows[0] || {}) as string[];
 
     if (cuRegHeaders.length > 0) {
-      cuRegWorksheet.columns = cuRegHeaders.map((header) => ({
-        header,
-        key: header,
-        width: 20,
-      }));
+      // Calculate column widths based on header and transformed data
+      cuRegWorksheet.columns = cuRegHeaders.map((header) => {
+        const sentenceCaseHeader = toSentenceCase(header);
+        // Get all transformed data for this column to find maximum length
+        const allColumnData = transformedRows.map((row) => row[header]);
+        const width = calculateColumnWidth(sentenceCaseHeader, allColumnData);
 
-      cuRegWorksheet.getRow(1).font = { bold: true };
-      cuRegWorksheet.getRow(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFE0E0E0" },
-      };
+        return {
+          header: sentenceCaseHeader,
+          key: header,
+          width,
+        };
+      });
 
-      cuRegistrationReportRows.forEach((row) => {
+      // Add transformed rows
+      transformedRows.forEach((row) => {
         cuRegWorksheet.addRow(row);
       });
+
+      // Recalculate column widths after adding all rows to ensure accuracy
+      cuRegHeaders.forEach((header, colIndex) => {
+        const sentenceCaseHeader = toSentenceCase(header);
+        const allColumnData = transformedRows.map((row) => row[header]);
+        const calculatedWidth = calculateColumnWidth(
+          sentenceCaseHeader,
+          allColumnData,
+        );
+        const column = cuRegWorksheet.getColumn(colIndex + 1);
+        if (column) {
+          column.width = calculatedWidth;
+        }
+      });
+
+      // Style header row
+      const headerRow = cuRegWorksheet.getRow(1);
+      headerRow.font = { bold: true, size: 12 };
+      headerRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFD3D3D3" }, // Grey background
+      };
+      headerRow.alignment = { vertical: "middle", horizontal: "left" };
+      headerRow.height = 20;
+      headerRow.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+
+      // Add borders to all cells
+      cuRegWorksheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: "thin", color: { argb: "FFD3D3D3" } },
+              left: { style: "thin", color: { argb: "FFD3D3D3" } },
+              bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+              right: { style: "thin", color: { argb: "FFD3D3D3" } },
+            };
+          });
+        }
+      });
+
+      // Freeze header row
+      cuRegWorksheet.views = [{ state: "frozen", ySplit: 1 }];
     } else {
       cuRegWorksheet.addRow(["No data available"]);
     }

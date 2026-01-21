@@ -539,13 +539,16 @@ export default function AllotExamPage() {
       const roomAssignments = selectedRooms.map((room) => {
         const floor = floors.find((f) => f.id === room.floor.id);
         const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+        const numberOfBenches = room.numberOfBenches || 0;
+        const capacity = room.capacity || numberOfBenches * maxStudentsPerBench;
         return {
           roomId: room.id!,
           floorId: room.floor.id,
           floorName: floor?.name || null,
           roomName: room.name || `Room ${room.id}`,
           maxStudentsPerBench,
-          numberOfBenches: room.numberOfBenches || 0,
+          numberOfBenches,
+          capacity,
         };
       });
 
@@ -556,7 +559,7 @@ export default function AllotExamPage() {
           paperIds,
           academicYearIds: [selectedExam.academicYear.id!],
           shiftIds: shiftIds.length > 0 ? shiftIds : undefined,
-          assignBy: assignBy === "UID" ? "UID" : "CU_ROLL_NUMBER",
+          assignBy: assignBy,
           roomAssignments,
           gender: gender === "ALL" ? null : gender,
         },
@@ -1882,7 +1885,7 @@ export default function AllotExamPage() {
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-y-auto max-h-[60vh] relative">
+                <div className="overflow-y-auto max-h-[60vh] relative custom-scrollbar">
                   <table className="w-full caption-bottom text-sm border-collapse">
                     <thead className="sticky top-0 z-10 bg-gray-100">
                       <tr className="border-b bg-gray-100">

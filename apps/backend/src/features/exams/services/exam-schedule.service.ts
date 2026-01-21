@@ -957,22 +957,55 @@ export async function getStudentsByPapers(
     return aStr.localeCompare(bStr);
   });
 
+  // Fetch original room data to determine if social distancing is applied
+  const roomIds = roomAssignments.map((r) => Number(r.roomId));
+  const roomsData = await db
+    .select({
+      id: roomModel.id,
+      maxStudentsPerBench: roomModel.maxStudentsPerBench,
+    })
+    .from(roomModel)
+    .where(inArray(roomModel.id, roomIds));
+
+  console.log(
+    "[EXAM-SCHEDULE] Fetched original room capacities:",
+    roomsData.map((r) => ({
+      roomId: r.id,
+      maxStudentsPerBench: r.maxStudentsPerBench,
+    })),
+  );
+
+  const originalRoomCapacityMap = new Map(
+    roomsData.map((r) => [r.id, r.maxStudentsPerBench || 2]),
+  );
+
   const result: StudentWithSeat[] = [];
   let studentIdx = 0;
 
   for (const room of roomAssignments) {
     console.log("[EXAM-SCHEDULE] Room:", room);
-    const letters = generateSeatPositions(room.maxStudentsPerBench);
-    console.log("[EXAM-SCHEDULE] Letters:", letters);
+    const roomIdNum = Number(room.roomId);
+    const actualStudentsPerBench = Number(room.maxStudentsPerBench);
+    const originalRoomCapacity = originalRoomCapacityMap.get(roomIdNum);
+    console.log(
+      `[EXAM-SCHEDULE] Room ${roomIdNum}: actualStudentsPerBench=${actualStudentsPerBench}, originalRoomCapacity=${originalRoomCapacity}, isSocialDistancing=${actualStudentsPerBench < (originalRoomCapacity || actualStudentsPerBench)}`,
+    );
+    const letters = generateSeatPositions(
+      actualStudentsPerBench,
+      originalRoomCapacity,
+    );
+    console.log(
+      `[EXAM-SCHEDULE] Generated seat positions for room ${roomIdNum}:`,
+      letters,
+    );
     let seatIdx = 0;
 
     while (
       studentIdx < students.length &&
-      seatIdx <
-        (room.capacity || room.maxStudentsPerBench * room.numberOfBenches)
+      seatIdx < (room.capacity || actualStudentsPerBench * room.numberOfBenches)
     ) {
-      const bench = Math.floor(seatIdx / room.maxStudentsPerBench) + 1;
-      const letter = letters[seatIdx % room.maxStudentsPerBench];
+      const bench = Math.floor(seatIdx / actualStudentsPerBench) + 1;
+      const letter = letters[seatIdx % actualStudentsPerBench];
       const seatNumber = `${bench}${letter}`;
 
       const s = students[studentIdx++];
@@ -1010,28 +1043,55 @@ export async function getStudentsByPapers(
  * For 4 students: A, D, B, C (extremes first, then fill middle)
  * For 5 students: A, E, B, D, C (extremes first, then alternate inward)
  */
-function generateSeatPositions(maxStudentsPerBench: number): string[] {
+/**
+ * Generate seat positions based on capacity and actual students per bench
+ * @param actualStudentsPerBench - Number of students actually being seated (may be overridden for social distancing)
+ * @param roomMaxCapacity - Original room capacity from rooms table (optional, defaults to actualStudentsPerBench)
+ * @returns Array of seat position letters
+ *
+ * Social Distancing Logic:
+ * - If actualStudentsPerBench < roomMaxCapacity: Use extreme positions (A, C for 2 out of 3, skip middle for distance)
+ * - If actualStudentsPerBench == roomMaxCapacity: Use sequential positions (A, B, C - no distancing needed)
+ */
+function generateSeatPositions(
+  actualStudentsPerBench: number,
+  roomMaxCapacity?: number,
+): string[] {
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
   const positions: string[] = [];
 
-  if (maxStudentsPerBench === 1) {
+  // If no room capacity provided, assume no override (use sequential)
+  const maxCapacity = roomMaxCapacity || actualStudentsPerBench;
+  const isSocialDistancing = actualStudentsPerBench < maxCapacity;
+
+  if (!isSocialDistancing) {
+    // No social distancing needed - use sequential positions
+    for (let i = 0; i < actualStudentsPerBench; i++) {
+      positions.push(letters[i]!);
+    }
+    return positions;
+  }
+
+  // Social distancing mode - spread students across available positions
+  if (actualStudentsPerBench === 1) {
     return ["A"];
-  } else if (maxStudentsPerBench === 2) {
-    // Extreme left and right: A, C (skip B)
-    return ["A", "C"];
-  } else if (maxStudentsPerBench === 3) {
-    // All positions: A, B, C
-    return ["A", "B", "C"];
+  } else if (actualStudentsPerBench === 2) {
+    // For 2 students with distancing: use extreme left and right
+    // If capacity is 3: A, C (skip B)
+    // If capacity is 4+: A, D (use extremes)
+    if (maxCapacity === 3) {
+      return ["A", "C"];
+    } else {
+      return ["A", letters[maxCapacity - 1]!]; // Use first and last position
+    }
   } else {
-    // For 4+: Fill from extremes inward
-    // Strategy: Alternate between left and right extremes
+    // For 3+ students with distancing: spread across available positions
+    // Use extremes first, then fill inward
     const usedIndices = new Set<number>();
-
     let leftIndex = 0;
-    let rightIndex = maxStudentsPerBench - 1;
+    let rightIndex = maxCapacity - 1;
 
-    // Alternate between left and right extremes
-    while (positions.length < maxStudentsPerBench) {
+    while (positions.length < actualStudentsPerBench) {
       // Add from left if available
       if (leftIndex <= rightIndex && !usedIndices.has(leftIndex)) {
         positions.push(letters[leftIndex]!);
@@ -1039,11 +1099,11 @@ function generateSeatPositions(maxStudentsPerBench: number): string[] {
         leftIndex++;
       }
 
-      // Add from right if available
+      // Add from right if available and still need more
       if (
         rightIndex >= leftIndex &&
         !usedIndices.has(rightIndex) &&
-        positions.length < maxStudentsPerBench
+        positions.length < actualStudentsPerBench
       ) {
         positions.push(letters[rightIndex]!);
         usedIndices.add(rightIndex);
@@ -3393,6 +3453,8 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
 
       name: userModel.name,
       uid: studentModel.uid,
+      roll_number: studentModel.rollNumber,
+      registration_number: studentModel.registrationNumber,
       email: userModel.email,
       phone: userModel.phone,
       whatsapp_number: userModel.whatsappNumber,
@@ -3474,10 +3536,44 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
 
     .where(eq(examModel.id, examId));
 
-  // 🛑 Safety
-  if (!result.length) {
-    throw new Error("No exam candidates found");
+  // Sort based on exam order type
+  if (result.length > 0 && result[0].orderType) {
+    result.sort((a, b) => {
+      let aValue: string | null | undefined;
+      let bValue: string | null | undefined;
+
+      if (a.orderType === "UID") {
+        aValue = a.uid;
+        bValue = b.uid;
+      } else if (a.orderType === "CU_REGISTRATION_NUMBER") {
+        aValue = a.registration_number;
+        bValue = b.registration_number;
+      } else {
+        // CU_ROLL_NUMBER
+        aValue = a.roll_number;
+        bValue = b.roll_number;
+      }
+
+      // Normalize to empty string if null/undefined
+      const aStr = aValue?.trim() || "";
+      const bStr = bValue?.trim() || "";
+
+      // Push empty values to the end
+      if (!aStr && !bStr) return 0; // Both empty, equal
+      if (!aStr) return 1; // a is empty, comes after b
+      if (!bStr) return -1; // b is empty, comes after a
+
+      // Both have values, compare normally
+      return aStr.localeCompare(bStr);
+    });
   }
+
+  // Transform gender: null -> "ALL"
+  result.forEach((row) => {
+    if (!row.gender) {
+      (row as any).gender = "ALL";
+    }
+  });
 
   // ✅ Group by subject / paper
   const groupedBySubject = new Map<string, typeof result>();
@@ -3493,29 +3589,108 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
   // ✅ Create Excel
   const workbook = new ExcelJS.Workbook();
 
+  // 🛑 Handle empty result case
+  if (groupedBySubject.size === 0) {
+    const sheet = workbook.addWorksheet("No Candidates");
+    sheet.addRow(["No exam candidates found for this exam"]);
+    sheet.getRow(1).font = { bold: true };
+    return await workbook.xlsx.writeBuffer();
+  }
+
   for (const [subjectKey, rows] of groupedBySubject) {
     const sheet = workbook.addWorksheet(sanitizeWorksheetName(subjectKey));
 
-    // 🔥 AUTO-GENERATE COLUMNS FROM RESULT KEYS
-    const columns = Object.keys(rows[0]).map((key) => ({
-      header: key, // keep same name as result key
-      key: key,
-      width: 20,
-    }));
+    // 🔥 DEFINE COLUMNS WITH PROPER HEADERS
+    if (rows.length > 0) {
+      const headerMapping: Record<string, string> = {
+        examType: "Exam Type",
+        academicYear: "Academic Year",
+        session: "Session",
+        semester: "Semester",
+        orderType: "Order Type",
+        gender: "Gender",
+        examCreatedAt: "Exam Created At",
+        examUpdatedAt: "Exam Updated At",
+        floor: "Floor",
+        room: "Room",
+        startDate: "Start Date",
+        startTime: "Start Time",
+        endDate: "End Date",
+        endTime: "End Time",
+        name: "Name",
+        uid: "UID",
+        roll_number: "Roll Number",
+        registration_number: "Registration Number",
+        email: "Email",
+        phone: "Phone",
+        whatsapp_number: "WhatsApp Number",
+        program_course: "Program Course",
+        section: "Section",
+        shift: "Shift",
+        subject: "Subject",
+        subject_type: "Subject Type",
+        paper: "Paper",
+        paper_code: "Paper Code",
+        seat: "Seat Number",
+        foilNumber: "Foil Number",
+      };
 
-    sheet.columns = columns;
+      const columns = Object.keys(rows[0]).map((key) => ({
+        header: headerMapping[key] || key,
+        key: key,
+        width: 20,
+      }));
 
-    // 🔥 ADD FULL OBJECT DIRECTLY
-    rows.forEach((row) => {
-      sheet.addRow(row);
-    });
+      sheet.columns = columns;
 
-    sheet.getRow(1).font = { bold: true };
-    sheet.views = [{ state: "frozen", ySplit: 1 }];
+      // 🔥 ADD FULL OBJECT DIRECTLY
+      rows.forEach((row) => {
+        sheet.addRow(row);
+      });
+
+      // Style header row with grey background and borders
+      const headerRow = sheet.getRow(1);
+      headerRow.font = { bold: true, size: 12 };
+      headerRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFD3D3D3" }, // Grey background
+      };
+      headerRow.alignment = { vertical: "middle", horizontal: "left" };
+      headerRow.height = 20;
+
+      // Add borders to header row
+      headerRow.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+
+      // Add borders to all data cells
+      sheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: "thin", color: { argb: "FFD3D3D3" } },
+              left: { style: "thin", color: { argb: "FFD3D3D3" } },
+              bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+              right: { style: "thin", color: { argb: "FFD3D3D3" } },
+            };
+          });
+        }
+      });
+
+      // Freeze header row
+      sheet.views = [{ state: "frozen", ySplit: 1 }];
+    }
   }
 
   // ✅ Return Excel buffer
-  return await workbook.xlsx.writeBuffer();
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 }
 
 export async function downloadAdmitCardTrackingByExamId(examId: number) {
@@ -3525,8 +3700,11 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
       academicYear: academicYearModel.year,
       session: sessionModel.name,
       semester: classModel.name,
+      orderType: examModel.orderType,
       name: userModel.name,
       uid: studentModel.uid,
+      registrationNumber: studentModel.registrationNumber,
+      rollNumber: studentModel.rollNumber,
       email: userModel.email,
       phone: userModel.phone,
       whatsapp_number: userModel.whatsappNumber,
@@ -3581,6 +3759,38 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
     throw new Error("No exam candidates found");
   }
 
+  // Sort based on exam order type
+  if (result[0].orderType) {
+    result.sort((a, b) => {
+      let aValue: string | null | undefined;
+      let bValue: string | null | undefined;
+
+      if (a.orderType === "UID") {
+        aValue = a.uid;
+        bValue = b.uid;
+      } else if (a.orderType === "CU_REGISTRATION_NUMBER") {
+        aValue = a.registrationNumber;
+        bValue = b.registrationNumber;
+      } else {
+        // CU_ROLL_NUMBER
+        aValue = a.rollNumber;
+        bValue = b.rollNumber;
+      }
+
+      // Normalize to empty string if null/undefined
+      const aStr = aValue?.trim() || "";
+      const bStr = bValue?.trim() || "";
+
+      // Push empty values to the end
+      if (!aStr && !bStr) return 0; // Both empty, equal
+      if (!aStr) return 1; // a is empty, comes after b
+      if (!bStr) return -1; // b is empty, comes after a
+
+      // Both have values, compare normally
+      return aStr.localeCompare(bStr);
+    });
+  }
+
   // Create Excel workbook
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Admit Card Downloads");
@@ -3593,6 +3803,8 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
     { header: "Semester", key: "semester", width: 15 },
     { header: "Name", key: "name", width: 30 },
     { header: "UID", key: "uid", width: 20 },
+    { header: "Registration Number", key: "registrationNumber", width: 25 },
+    { header: "Roll Number", key: "rollNumber", width: 20 },
     { header: "Email", key: "email", width: 30 },
     { header: "Phone", key: "phone", width: 15 },
     { header: "WhatsApp", key: "whatsapp_number", width: 15 },
@@ -3611,7 +3823,7 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
     },
   ];
 
-  // Add rows
+  // Add rows (excluding orderType as it's only for sorting)
   result.forEach((row) => {
     sheet.addRow({
       examType: row.examType || "",
@@ -3620,6 +3832,8 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
       semester: row.semester || "",
       name: row.name || "",
       uid: row.uid || "",
+      registrationNumber: row.registrationNumber || "",
+      rollNumber: row.rollNumber || "",
       email: row.email || "",
       phone: row.phone || "",
       whatsapp_number: row.whatsapp_number || "",
@@ -3640,18 +3854,46 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
   });
 
   // Style header row
-  sheet.getRow(1).font = { bold: true };
-  sheet.getRow(1).fill = {
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true, size: 12 };
+  headerRow.fill = {
     type: "pattern",
     pattern: "solid",
-    fgColor: { argb: "FFE0E0E0" },
+    fgColor: { argb: "FFD3D3D3" }, // Grey background
   };
+  headerRow.alignment = { vertical: "middle", horizontal: "left" };
+  headerRow.height = 20;
+
+  // Add borders to header row
+  headerRow.eachCell((cell) => {
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  // Add borders to all data cells
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber > 1) {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFD3D3D3" } },
+          left: { style: "thin", color: { argb: "FFD3D3D3" } },
+          bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+          right: { style: "thin", color: { argb: "FFD3D3D3" } },
+        };
+      });
+    }
+  });
 
   // Freeze header row
   sheet.views = [{ state: "frozen", ySplit: 1 }];
 
   // Return Excel buffer
-  return await workbook.xlsx.writeBuffer();
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 }
 
 export async function downloadSingleAdmitCard(

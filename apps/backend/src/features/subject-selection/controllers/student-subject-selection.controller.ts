@@ -804,7 +804,9 @@ export async function exportStudentSubjectSelectionsHandler(
     // Check if no data was found - return empty Excel file instead of 404
     if (!exportResult.buffer) {
       // Create empty Excel file with the same structure as when data exists
-      const wb = XLSX.utils.book_new();
+      const ExcelJS = (await import("exceljs")).default;
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet("Student Subject Selections");
 
       // Create empty row with all expected columns to maintain consistent structure
       const emptyRow: Record<string, string> = {
@@ -829,9 +831,18 @@ export async function exportStudentSubjectSelectionsHandler(
       emptyRow["Remarks"] = "";
       emptyRow["By User Name"] = "";
 
-      const ws = XLSX.utils.json_to_sheet([emptyRow]);
-      XLSX.utils.book_append_sheet(wb, ws, "Student Subject Selections");
-      const emptyBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      const headers = Object.keys(emptyRow);
+      sheet.columns = headers.map((header) => ({
+        header,
+        key: header,
+        width: 20,
+      }));
+      sheet.addRow(emptyRow);
+
+      const emptyBuffer = await workbook.xlsx.writeBuffer();
+      const buffer = Buffer.isBuffer(emptyBuffer)
+        ? emptyBuffer
+        : Buffer.from(emptyBuffer);
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const fileName = `student_subject_selections_empty_${timestamp}.xlsx`;
@@ -845,10 +856,10 @@ export async function exportStudentSubjectSelectionsHandler(
         "Content-Disposition",
         `attachment; filename="${fileName}"`,
       );
-      res.setHeader("Content-Length", emptyBuffer.length);
+      res.setHeader("Content-Length", buffer.length);
 
       console.log("Export completed with empty data. Total records: 0");
-      res.status(200).send(emptyBuffer);
+      res.status(200).send(buffer);
       return;
     }
 

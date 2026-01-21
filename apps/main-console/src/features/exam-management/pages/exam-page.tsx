@@ -12,7 +12,7 @@ import {
   updateExamSubject,
 } from "@/services/exam.service";
 
-import { IdCard, Mail, Sheet, Trash2, UsersRound, Download, Calendar } from "lucide-react";
+import { IdCard, Mail, Sheet, Trash2, UsersRound, Download, Calendar, AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ExamPaperRow from "../components/exam-paper-row";
@@ -59,6 +59,7 @@ export default function ExamPage() {
   const [updatingDates, setUpdatingDates] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingExam, setDeletingExam] = useState(false);
+  const [sendAdmitCardDialogOpen, setSendAdmitCardDialogOpen] = useState(false);
 
   const [exportProgressOpen, setExportProgressOpen] = useState(false);
   const setIsExporting = useState(false)[1];
@@ -363,18 +364,14 @@ export default function ExamPage() {
   };
 
   const triggerAdmitCard = async () => {
-    // // Extract year from academic year string (e.g., "2025-2026" -> 2025)
-    // const yearMatch = selectedAcademicYear?.year?.match(/^(\d{4})/);
-    // const year = yearMatch?.[1] ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
-
     // Generate a unique session ID for socket progress tracking
     const sessionId = `send-exam-admit-card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Update progress for CU registration documents download (Socket.IO will handle live updates)
+    // Update progress for sending admit cards (Socket.IO will handle live updates)
     setCurrentProgressUpdate({
       id: sessionId,
       userId: user!.id!.toString(),
-      type: "in_progress", // Changed back to download_progress for Socket.IO
+      type: "in_progress",
       message: `Sending Admit Cards to the students...`,
       progress: 0,
       status: "started",
@@ -390,23 +387,14 @@ export default function ExamPage() {
     setCurrentProgressUpdate({
       id: sessionId,
       userId: user!.id!.toString()!,
-      type: "download_progress",
-      message: `All admit-card pdfs documents downloaded successfully!`,
+      type: "in_progress",
+      message: `All admit-card pdfs documents sent successfully!`,
       progress: 100,
       status: "completed",
-      //   fileName: result.data?.fileName,
-      //   downloadUrl: result.data?.downloadUrl,
       createdAt: new Date(),
     });
 
     toast.success(`All admit-card pdfs documents sent successfully!`);
-
-    // if (result.success && result.data) {
-    //   // Trigger download
-    //   ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-    // } else {
-    //   throw new Error(result.message || "Download failed");
-    // }
   };
 
   const handleDownloadAdmitCard = async () => {
@@ -428,18 +416,37 @@ export default function ExamPage() {
       await downloadAdmitCard();
     } catch (error) {
       console.error(`Download failed for admit-card:`, error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+
+      // Determine if it's a "no admit cards" error
+      const isNoAdmitCardsError =
+        errorMessage.toLowerCase().includes("no admit cards") || errorMessage.toLowerCase().includes("not available");
+
       setCurrentProgressUpdate({
         id: `export_${Date.now()}`,
         userId: user!.id!.toString(),
         type: "export_progress",
-        message: "Export failed due to an error",
+        message: isNoAdmitCardsError ? "No admit cards available for download" : "Download failed due to an error",
         progress: 0,
         status: "error",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
         createdAt: new Date(),
       });
       setIsExporting(false);
-      toast.error(`Failed to download for admit-card`);
+
+      // Show user-friendly toast message
+      if (isNoAdmitCardsError) {
+        toast.error("No Admit Cards Available", {
+          description:
+            "There are no admit cards available for this exam. Please ensure students have been assigned to exam rooms and admit cards have been generated.",
+          duration: 5000,
+        });
+      } else {
+        toast.error("Download Failed", {
+          description: errorMessage,
+          duration: 5000,
+        });
+      }
     }
   };
 
@@ -461,19 +468,42 @@ export default function ExamPage() {
 
       await downloadAttendanceSheets();
     } catch (error) {
-      console.error(`Download failed for admit-card:`, error);
+      console.error(`Download failed for attendance sheets:`, error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+
+      // Determine if it's a "no attendance sheets" error
+      const rawMessage = errorMessage.toLowerCase();
+      const isNoSheetsError =
+        rawMessage.includes("no attendance") ||
+        (rawMessage.includes("attendance") && rawMessage.includes("not found")) ||
+        (rawMessage.includes("attendance") && rawMessage.includes("found")) ||
+        rawMessage.includes("not available");
+
       setCurrentProgressUpdate({
         id: `export_${Date.now()}`,
         userId: user!.id!.toString(),
         type: "export_progress",
-        message: "Export failed due to an error",
+        message: isNoSheetsError ? "No attendance sheets available for download" : "Download failed due to an error",
         progress: 0,
         status: "error",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
         createdAt: new Date(),
       });
       setIsExporting(false);
-      toast.error(`Failed to download for admit-card`);
+
+      // Show user-friendly toast message
+      if (isNoSheetsError) {
+        toast.error("No Attendance Sheets Available", {
+          description:
+            "No attendance sheets are available for this exam. This usually means that students have not been assigned to exam rooms yet. Please complete the exam room allocation process before downloading attendance sheets.",
+          duration: 6000,
+        });
+      } else {
+        toast.error("Download Failed", {
+          description: errorMessage,
+          duration: 5000,
+        });
+      }
     }
   };
 
@@ -495,19 +525,50 @@ export default function ExamPage() {
 
       await triggerAdmitCard();
     } catch (error) {
-      console.error(`Download failed for admit-card:`, error);
+      console.error(`Failed to send admit cards:`, error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+
+      // Determine error type for better messaging
+      const rawMessage = errorMessage.toLowerCase();
+      const isNoAdmitCardsError =
+        rawMessage.includes("no admit cards") ||
+        rawMessage.includes("not found") ||
+        rawMessage.includes("no candidates") ||
+        rawMessage.includes("not available");
+      const isEmailError = rawMessage.includes("email") || rawMessage.includes("send") || rawMessage.includes("mail");
+
       setCurrentProgressUpdate({
         id: `export_${Date.now()}`,
         userId: user!.id!.toString(),
         type: "in_progress",
-        message: "Triggered failed due to an error",
+        message: isNoAdmitCardsError ? "No admit cards available to send" : "Failed to send admit cards",
         progress: 0,
         status: "error",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
         createdAt: new Date(),
       });
       setIsExporting(false);
-      toast.error(`Failed to send the admit-card`);
+
+      // Show user-friendly toast message
+      if (isNoAdmitCardsError) {
+        toast.error("No Admit Cards Available", {
+          description:
+            "No admit cards are available to send. Please ensure students have been assigned to exam rooms and admit cards have been generated before sending them via email.",
+          duration: 6000,
+        });
+      } else if (isEmailError) {
+        toast.error("Failed to Send Admit Cards", {
+          description: errorMessage,
+          duration: 6000,
+        });
+      } else {
+        toast.error("Send Failed", {
+          description:
+            errorMessage ||
+            "An error occurred while sending admit cards. Please try again later or contact support if the issue persists.",
+          duration: 6000,
+        });
+      }
     }
   };
 
@@ -719,8 +780,12 @@ export default function ExamPage() {
                     <Button
                       variant="outline"
                       onClick={async () => {
-                        const response = await fetchExamCandidatesByExamId(Number(examId!));
-                        ExportService.downloadFile(response.downloadUrl, response.fileName);
+                        try {
+                          const response = await fetchExamCandidatesByExamId(Number(examId!));
+                          ExportService.downloadFile(response.downloadUrl, response.fileName);
+                        } catch (error: any) {
+                          toast.error(error?.message || "Failed to download exam candidates. Please try again.");
+                        }
                       }}
                       className="p-2"
                     >
@@ -737,18 +802,7 @@ export default function ExamPage() {
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        const isConfirmed = confirm(
-                          "Are you sure that you want to send the admit-cards to the students (via email)?",
-                        );
-                        if (isConfirmed) {
-                          handleTriggerAdmitCard();
-                        }
-                      }}
-                      className="p-2"
-                    >
+                    <Button variant="outline" onClick={() => setSendAdmitCardDialogOpen(true)} className="p-2">
                       <Mail className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -989,6 +1043,65 @@ export default function ExamPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Send Admit Cards Confirmation */}
+      <AlertDialog open={sendAdmitCardDialogOpen} onOpenChange={setSendAdmitCardDialogOpen}>
+        <AlertDialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                <AlertTriangle className="h-6 w-6 text-amber-600" />
+              </div>
+              <AlertDialogTitle className="text-2xl">Send Admit Cards via Email</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-4 pt-2 text-base">
+              <p className="text-lg font-medium text-gray-900">
+                Are you sure you want to send admit cards to all students via email?
+              </p>
+
+              <div className="space-y-3 text-base text-gray-700">
+                <p className="font-semibold text-lg">This action will:</p>
+                <ul className="list-disc list-inside space-y-2 ml-3">
+                  <li>Send admit card PDFs via email to all students assigned to exam rooms</li>
+                  <li>Include exam details, room assignments, seat numbers, and exam schedule</li>
+                  <li>Trigger email notifications for potentially hundreds of students</li>
+                </ul>
+              </div>
+
+              <div className="rounded-lg bg-amber-50 border-2 border-amber-200 p-4 mt-4">
+                <div className="flex gap-3">
+                  <AlertTriangle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-base text-amber-800">
+                    <p className="font-semibold mb-2 text-lg">Please verify before proceeding:</p>
+                    <ul className="list-disc list-inside space-y-2 ml-2">
+                      <li>All students have been correctly assigned to exam rooms</li>
+                      <li>Exam schedule and room details are accurate</li>
+                      <li>Email addresses are valid and up-to-date</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-base text-gray-600 mt-4">
+                This process may take several minutes depending on the number of students. You can track the progress in
+                the export dialog.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSendAdmitCardDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setSendAdmitCardDialogOpen(false);
+                handleTriggerAdmitCard();
+              }}
+              className="bg-blue-600 hover:bg-blue-700 focus:ring-blue-600"
+            >
+              Yes, Send Admit Cards
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Exam Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
