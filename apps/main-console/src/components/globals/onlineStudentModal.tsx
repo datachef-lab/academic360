@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { StudentDto } from "@repo/db/dtos/user";
 import { Circle, User } from "lucide-react";
+import { Badge } from "../ui/badge";
 
 /**
  * Batch-related info for a student.
@@ -35,12 +36,47 @@ export function OnlineStudentsModal({ open, onOpenChange, students, loading, isE
     }
   }, [students]);
 
+  const normalizeSemester = (raw?: string | null) => {
+    if (!raw) return null;
+    const s = String(raw).trim();
+    const romanMatch = s.match(/\b(I|II|III|IV|V|VI|VII|VIII|IX|X)\b/i);
+    if (romanMatch) return romanMatch[0].toUpperCase();
+    const numMatch = s.match(/\d+/);
+    if (numMatch) {
+      const n = parseInt(numMatch[0], 10);
+      const map = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+      return map[n] ?? String(n);
+    }
+    return s || null;
+  };
+
+  const shiftToBadge = (raw?: string | null) => {
+    if (!raw) return null;
+    const s = String(raw).trim().toLowerCase();
+    switch (s) {
+      case "morning":
+      case "morn":
+      case "am":
+        return { label: "Morning", className: "bg-amber-50 text-amber-800 border border-amber-600" };
+      case "day":
+        return { label: "Day", className: "bg-emerald-50 text-emerald-800 border border-emerald-600" };
+      case "afternoon":
+      case "pm":
+        return { label: "Afternoon", className: "bg-purple-50 text-purple-800 border border-purple-600" };
+      case "night":
+      case "eve":
+        return { label: "Night", className: "bg-slate-50 text-slate-800 border border-slate-600" };
+      default:
+        return { label: raw.trim(), className: "bg-muted/20 text-foreground border border-muted-400" };
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl p-0 border-none overflow-hidden">
+      <DialogContent className="max-w-6xl p-0   border-none overflow-hidden">
         {/* ---------------- Header ---------------- */}
 
-        <DialogHeader className="relative px-6 py-5 bg-purple-600 overflow-hidden">
+        <DialogHeader className="relative px-6 py-5 bg-blue-500 overflow-hidden">
           {/* Decorative elements */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.2)_0%,_transparent_60%)]" />
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -63,19 +99,19 @@ export function OnlineStudentsModal({ open, onOpenChange, students, loading, isE
         </DialogHeader>
 
         {/* ---------------- Body ---------------- */}
-        <div className="p-4 max-h-[70vh] overflow-auto">
-          <div className="border rounded-xl overflow-hidden">
+        <div className="p-4 min-h-[60vh] h-[70vh] overflow-auto">
+          <div className="border rounded-md overflow-hidden">
             <Table>
-              <TableHeader className="bg-muted/40">
+              <TableHeader className="bg-gray-200">
                 <TableRow>
-                  <TableHead className="w-14 text-center">#</TableHead>
-                  <TableHead>Program</TableHead>
-                  <TableHead>Session</TableHead>
-                  <TableHead>Shift</TableHead>
-                  <TableHead>Section</TableHead>
-                  <TableHead>Semester</TableHead>
-                  <TableHead>UID</TableHead>
-                  <TableHead>Roll No.</TableHead>
+                  <TableHead className="w-20 border-r border-gray-300 text-center whitespace-nowrap">Sr. No.</TableHead>
+                  <TableHead className="border-r border-gray-300">Program</TableHead>
+                  <TableHead className="border-r border-gray-300">Session</TableHead>
+                  <TableHead className="border-r border-gray-300">Shift</TableHead>
+                  <TableHead className="border-r border-gray-300">Section</TableHead>
+                  <TableHead className="border-r border-gray-300">Semester</TableHead>
+                  <TableHead className="border-r border-gray-300">UID</TableHead>
+                  <TableHead className="border-r border-gray-300">Roll No.</TableHead>
                   <TableHead>Reg. No.</TableHead>
                 </TableRow>
               </TableHeader>
@@ -113,15 +149,35 @@ export function OnlineStudentsModal({ open, onOpenChange, students, loading, isE
                   !isError &&
                   students.map((student, index) => {
                     //   const batch = student.currentBatch as BatchInfo | null;
+                    const sem = normalizeSemester(student.currentPromotion?.class?.name);
 
                     return (
                       <TableRow key={student.id ?? index} className="hover:bg-muted/50 transition">
-                        <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                        <TableCell>{student.programCourse?.name ?? "-"}</TableCell>
+                        <TableCell className="text-center font-medium whitespace-nowrap">{index + 1}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-indigo-50 text-indigo-800 border border-indigo-600">
+                            {student.programCourse?.name ?? "-"}
+                          </Badge>
+                        </TableCell>
                         <TableCell>{student.currentPromotion?.session?.name ?? "-"}</TableCell>
-                        <TableCell>{student.currentPromotion?.shift?.name ?? "-"}</TableCell>
-                        <TableCell>{student.currentPromotion?.section?.name ?? "-"}</TableCell>
-                        <TableCell>{student.currentPromotion?.class?.name ?? "-"}</TableCell>
+                        <TableCell>
+                          {(() => {
+                            const b = shiftToBadge(student.currentPromotion?.shift?.name);
+                            return b ? <Badge className={b.className}>{b.label}</Badge> : "-";
+                          })()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-blue-50 text-blue-800 border border-blue-600">
+                            {student.currentPromotion?.section?.name ?? "-"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {sem ? (
+                            <Badge className="bg-rose-50 text-rose-800 border px-3 border-rose-600">{sem}</Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
                         <TableCell>{student.uid ?? "-"}</TableCell>
                         <TableCell>{student.rollNumber ?? "-"}</TableCell>
                         <TableCell>{student.registrationNumber ?? "-"}</TableCell>
