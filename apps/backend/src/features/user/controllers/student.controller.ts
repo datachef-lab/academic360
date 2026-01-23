@@ -15,6 +15,7 @@ import XLSX from "xlsx";
 import { academicYearModel } from "@repo/db/index.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
+import { socketService } from "@/services/socketService.js";
 
 export const createStudent = async (
   req: Request,
@@ -138,6 +139,56 @@ export const getStudentById = async (
     res
       .status(200)
       .json(new ApiResponse(201, "SUCCESS", foundStudent, "Student fetched!"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// GET /api/students/online
+// Returns a lightweight list of currently online students based on active WebSocket connections
+export const getOnlineStudents = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userIds = socketService.getOnlineStudentUserIds();
+
+    if (userIds.length === 0) {
+      res
+        .status(200)
+        .json(new ApiResponse(200, "SUCCESS", [], "No students online"));
+      return;
+    }
+
+    const students = await Promise.all(
+      userIds.map(async (userId) => {
+        try {
+          return await studentService.findByUserId(userId);
+        } catch (e) {
+          console.error(
+            "[getOnlineStudents] Failed to fetch student for userId",
+            userId,
+            e,
+          );
+          return null;
+        }
+      }),
+    );
+
+    // Filter out any nulls just in case
+    const filtered = students.filter((s) => s !== null);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          filtered,
+          `Fetched ${filtered.length} online students`,
+        ),
+      );
   } catch (error) {
     handleError(error, res, next);
   }
