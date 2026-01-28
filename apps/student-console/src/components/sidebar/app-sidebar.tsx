@@ -13,6 +13,7 @@ import {
   UserPlus,
   FileText,
   UploadCloud,
+  UploadCloud,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -263,7 +264,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       badge: upcomingExamCount > 0 ? upcomingExamCount : undefined,
     },
     {
-      title: "CU Exam Form Upload",
+      title: "CU Form Upload",
       url: "/dashboard/cu-form-upload",
       icon: UploadCloud,
       isActive: pathname === "/dashboard/cu-form-upload",
