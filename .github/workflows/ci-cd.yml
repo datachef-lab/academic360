@@ -433,6 +433,7 @@ jobs:
           script: |
             echo "🏗️  Creating remote directory for STAGING deployment..."
             echo "Target directory: ${{ steps.host.outputs.remotedir }}"
+            pwd
             echo "Current user: $(whoami)"
             echo "Current directory: $(pwd)"
 
