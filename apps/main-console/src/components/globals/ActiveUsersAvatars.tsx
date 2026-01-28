@@ -131,39 +131,39 @@ export function ActiveUsersAvatars() {
       <TooltipProvider delayDuration={200}>
         <div className="flex items-center gap-2">
           {/* Avatars */}
-          {/* {otherActiveUsers.length > 0 && ( */}
-          <div className="flex items-center -space-x-2">
-            {visibleUsers.map((activeUser) => (
-              <Tooltip key={activeUser.id}>
-                <TooltipTrigger asChild>
-                  <UserAvatar
-                    user={{
-                      name: activeUser.name,
-                      image: activeUser.image || undefined,
-                    }}
-                    size="sm"
-                    className={[
-                      "border-2 border-white bg-white hover:border-purple-300 transition",
-                      activeUser.tabActive === false ? "opacity-70 blur-[1px]" : "",
-                    ].join(" ")}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="text-xs">
-                    <div className="font-semibold">{activeUser.name}</div>
-                    <div className="text-muted-foreground">{activeUser.type}</div>
-                    {activeUser.tabActive === false && (
-                      <div className="text-muted-foreground">Online • Tab inactive</div>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
+          {otherActiveUsers.length > 0 && (
+            <div className="flex items-center -space-x-2">
+              {visibleUsers.map((activeUser) => (
+                <Tooltip key={activeUser.id}>
+                  <TooltipTrigger asChild>
+                    <UserAvatar
+                      user={{
+                        name: activeUser.name,
+                        image: activeUser.image || undefined,
+                      }}
+                      size="sm"
+                      className={[
+                        "border-2 border-white bg-white hover:border-purple-300 transition",
+                        activeUser.tabActive === false ? "opacity-70 blur-[1px]" : "",
+                      ].join(" ")}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="text-xs">
+                      <div className="font-semibold">{activeUser.name}</div>
+                      <div className="text-muted-foreground">{activeUser.type}</div>
+                      {activeUser.tabActive === false && (
+                        <div className="text-muted-foreground">Online • Tab inactive</div>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
 
-          {/* Online indicator */}
-          <div className="h-3 w-3 rounded-full bg-green-500 ring-2 ring-white" />
-
+              {/* Online indicator */}
+              <div className="h-3 w-3 rounded-full bg-green-500 ring-2 ring-white" />
+            </div>
+          )}
           {studentsOnlineCount > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -171,16 +171,15 @@ export function ActiveUsersAvatars() {
                   onClick={() => setIsStudentsModalOpen(true)}
                   className="
                    group flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                   bg-gradient-to-r from-purple-500 to-purple-600
-                   text-white text-sm font-medium
-                   shadow-sm shadow-purple-500/25
-                   hover:shadow-md hover:shadow-purple-500/40
-                   hover:from-purple-600 hover:to-purple-700
-                   transition-all duration-200 ease-out
+                   bg-blue-50 
+                   text-blue-700 text-sm font-medium
+                   shadow-sm shadow-blue-500/25
+                  
                   
                  "
                 >
                   <Users className="h-4 w-4" />
+                  <span className="ml-1">Students </span>
 
                   <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold">
                     {studentsOnlineCount}
