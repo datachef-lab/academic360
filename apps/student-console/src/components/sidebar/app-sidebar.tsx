@@ -33,12 +33,14 @@ import { fetchStudentSubjectSelections } from "@/services/subject-selection";
 import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { ExamDto } from "@/dtos";
 import { useAuth } from "@/hooks/use-auth";
+import { useCollegeSettings } from "@/hooks/use-college-settings";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isNestedIframe = window.self !== window.top;
   const pathname = usePathname();
   const { user } = useAuth();
   const { accessControl, student } = useStudent();
+  const { name: collegeName, logoUrl: collegeLogoUrl, isLoading: isLoadingSettings } = useCollegeSettings();
   const [upcomingExamCount, setUpcomingExamCount] = React.useState<number>(0);
   const socketRef = React.useRef<any | null>(null);
   //   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = React.useState<boolean>(false);
@@ -298,16 +300,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="cursor-default hover:bg-transparent">
               <div className="flex aspect-square w-8 h-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <Image
-                  width={32}
-                  height={32}
-                  src={`https://besc.academic360.app/student-console/logo.jpeg`}
-                  alt={"BESC Logo"}
-                  className="w-8 h-8 rounded-lg object-cover"
-                />
+                {collegeLogoUrl ? (
+                  <Image
+                    width={32}
+                    height={32}
+                    src={collegeLogoUrl}
+                    alt={collegeName}
+                    className="w-8 h-8 rounded-lg object-cover"
+                    unoptimized
+                    onError={(e) => {
+                      // Fallback if image fails to load
+                      const img = e.target as HTMLImageElement;
+                      img.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-purple-400 flex items-center justify-center text-white font-bold text-sm">
+                    {collegeName.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
               <div className="grid flex-1 text-left text-sm">
-                <span className="truncate font-semibold text-wrap text-white">BESC | Student Console</span>
+                <span className="truncate font-semibold text-wrap text-white">
+                  {isLoadingSettings ? "Loading..." : `${collegeName} | Student Console`}
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
