@@ -31,116 +31,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # - name: Select server host, compose file, and remote dir
-      #   id: host
-      #   shell: bash
-      #   run: |
-      #     echo "🚀 Starting deployment configuration..."
-      #     echo "GitHub Event: ${{ github.event_name }}"
-      #     echo "GitHub Ref: ${{ github.ref_name }}"
-      #     echo "GitHub Input Environment: ${{ github.event.inputs.environment }}"
-
-      #     if [ -n "${{ github.event.inputs.environment }}" ]; then
-      #       ENV="${{ github.event.inputs.environment }}"
-      #       echo "✅ Using manual input environment: $ENV"
-      #     else
-      #       if [ "${GITHUB_REF_NAME}" = "staging" ]; then ENV="staging"; else ENV="production"; fi
-      #       echo "✅ Auto-detected environment from branch: $ENV"
-      #     fi
-      #     echo "env=${ENV}" >> $GITHUB_OUTPUT
-
-      #     if [ "$ENV" = "production" ]; then
-      #       echo "🏭 Configuring for PRODUCTION environment"
-      #       echo "host=${{ secrets.PROD_HOST }}" >> $GITHUB_OUTPUT
-      #       echo "compose=deploy/docker-compose.prod.yml" >> $GITHUB_OUTPUT
-      #       echo "envfile=.env.production" >> $GITHUB_OUTPUT
-      #       # Prefer PROD_REMOTE_DEPLOY_DIR, fallback to REMOTE_DEPLOY_DIR
-      #       if [ -n "${{ secrets.PROD_REMOTE_DEPLOY_DIR }}" ]; then
-      #         echo "remotedir=${{ secrets.PROD_REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
-      #         echo "✅ Using PROD_REMOTE_DEPLOY_DIR: ${{ secrets.PROD_REMOTE_DEPLOY_DIR }}"
-      #       else
-      #         echo "remotedir=${{ secrets.REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
-      #         echo "⚠️  Using fallback REMOTE_DEPLOY_DIR: ${{ secrets.REMOTE_DEPLOY_DIR }}"
-      #       fi
-      #     else
-      #       echo "🧪 Configuring for STAGING environment"
-      #       echo "host=${{ secrets.STAGING_HOST }}" >> $GITHUB_OUTPUT
-      #       echo "compose=deploy/docker-compose.staging.yml" >> $GITHUB_OUTPUT
-      #       echo "envfile=.env.staging" >> $GITHUB_OUTPUT
-      #       # Prefer STAGING_REMOTE_DEPLOY_DIR, fallback to REMOTE_DEPLOY_DIR
-      #       if [ -n "${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}" ]; then
-      #         echo "remotedir=${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
-      #         echo "✅ Using STAGING_REMOTE_DEPLOY_DIR: ${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}"
-      #       else
-      #         echo "remotedir=${{ secrets.REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
-      #         echo "⚠️  Using fallback REMOTE_DEPLOY_DIR: ${{ secrets.REMOTE_DEPLOY_DIR }}"
-      #       fi
-      #     fi
-
-      #     echo "📋 Final Configuration:"
-      #     echo "  Environment: $ENV"
-      #     echo "  Host: ${{ steps.host.outputs.host }}"
-      #     echo "  Compose File: deploy/docker-compose.$ENV.yml"
-      #     echo "  Env File: .env.$ENV"
-
       - name: Select server host, compose file, and remote dir
         id: host
         shell: bash
-        env:
-          STAGING_REMOTE_DEPLOY_DIR: ${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}
-          PROD_REMOTE_DEPLOY_DIR: ${{ secrets.PROD_REMOTE_DEPLOY_DIR }}
-          DEFAULT_REMOTE_DEPLOY_DIR: ${{ secrets.REMOTE_DEPLOY_DIR }}
-          STAGING_HOST: ${{ secrets.STAGING_HOST }}
-          PROD_HOST: ${{ secrets.PROD_HOST }}
         run: |
-          echo "🚀 Resolving deployment environment..."
+          echo "🚀 Starting deployment configuration..."
+          echo "GitHub Event: ${{ github.event_name }}"
+          echo "GitHub Ref: ${{ github.ref_name }}"
+          echo "GitHub Input Environment: ${{ github.event.inputs.environment }}"
 
           if [ -n "${{ github.event.inputs.environment }}" ]; then
             ENV="${{ github.event.inputs.environment }}"
+            echo "✅ Using manual input environment: $ENV"
           else
-            if [ "$GITHUB_REF_NAME" = "staging" ]; then
-              ENV="staging"
-            else
-              ENV="production"
-            fi
+            if [ "${GITHUB_REF_NAME}" = "staging" ]; then ENV="staging"; else ENV="production"; fi
+            echo "✅ Auto-detected environment from branch: $ENV"
           fi
-
-          echo "env=$ENV" >> $GITHUB_OUTPUT
+          echo "env=${ENV}" >> $GITHUB_OUTPUT
 
           if [ "$ENV" = "production" ]; then
-            echo "host=$PROD_HOST" >> $GITHUB_OUTPUT
+            echo "🏭 Configuring for PRODUCTION environment"
+            echo "host=${{ secrets.PROD_HOST }}" >> $GITHUB_OUTPUT
             echo "compose=deploy/docker-compose.prod.yml" >> $GITHUB_OUTPUT
             echo "envfile=.env.production" >> $GITHUB_OUTPUT
-
-            if [ -n "$PROD_REMOTE_DEPLOY_DIR" ]; then
-              REMOTE_DIR="$PROD_REMOTE_DEPLOY_DIR"
+            # Prefer PROD_REMOTE_DEPLOY_DIR, fallback to REMOTE_DEPLOY_DIR
+            if [ -n "${{ secrets.PROD_REMOTE_DEPLOY_DIR }}" ]; then
+              echo "remotedir=${{ secrets.PROD_REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+              echo "✅ Using PROD_REMOTE_DEPLOY_DIR: ${{ secrets.PROD_REMOTE_DEPLOY_DIR }}"
             else
-              REMOTE_DIR="$DEFAULT_REMOTE_DEPLOY_DIR"
+              echo "remotedir=${{ secrets.REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+              echo "⚠️  Using fallback REMOTE_DEPLOY_DIR: ${{ secrets.REMOTE_DEPLOY_DIR }}"
             fi
           else
-            echo "host=$STAGING_HOST" >> $GITHUB_OUTPUT
+            echo "🧪 Configuring for STAGING environment"
+            echo "host=${{ secrets.STAGING_HOST }}" >> $GITHUB_OUTPUT
             echo "compose=deploy/docker-compose.staging.yml" >> $GITHUB_OUTPUT
             echo "envfile=.env.staging" >> $GITHUB_OUTPUT
-
-            if [ -n "$STAGING_REMOTE_DEPLOY_DIR" ]; then
-              REMOTE_DIR="$STAGING_REMOTE_DEPLOY_DIR"
+            # Prefer STAGING_REMOTE_DEPLOY_DIR, fallback to REMOTE_DEPLOY_DIR
+            if [ -n "${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}" ]; then
+              echo "remotedir=${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+              echo "✅ Using STAGING_REMOTE_DEPLOY_DIR: ${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}"
             else
-              REMOTE_DIR="$DEFAULT_REMOTE_DEPLOY_DIR"
+              echo "remotedir=${{ secrets.REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+              echo "⚠️  Using fallback REMOTE_DEPLOY_DIR: ${{ secrets.REMOTE_DEPLOY_DIR }}"
             fi
           fi
 
-          echo "remotedir=$REMOTE_DIR" >> $GITHUB_OUTPUT
-
-          echo "✅ Final resolved values:"
-          echo "ENV=$ENV"
-          echo "REMOTE_DIR=$REMOTE_DIR"
-
-
-
-      - name: 🔍 Debug resolved remote directory
-        run: |
-          echo "ENV = ${{ steps.host.outputs.env }}"
-          echo "REMOTE DIR (raw) = '${{ steps.host.outputs.remotedir }}'"
+          echo "📋 Final Configuration:"
+          echo "  Environment: $ENV"
+          echo "  Host: ${{ steps.host.outputs.host }}"
+          echo "  Compose File: deploy/docker-compose.$ENV.yml"
+          echo "  Env File: .env.$ENV"
 
       - name: Archive repository for upload
         shell: bash
@@ -493,7 +434,6 @@ jobs:
           script: |
             echo "🏗️  Creating remote directory for STAGING deployment..."
             echo "Target directory: ${{ steps.host.outputs.remotedir }}"
-            pwd
             echo "Current user: $(whoami)"
             echo "Current directory: $(pwd)"
 
@@ -517,7 +457,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
           source: "repo.tar.gz,env.deploy"
-          target: "${{ steps.host.outputs.remotedir }}/"
+          target: "${{ steps.host.outputs.remotedir }}"
           strip_components: 0
         if: steps.host.outputs.env == 'staging'
 
