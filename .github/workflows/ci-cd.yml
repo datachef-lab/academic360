@@ -517,7 +517,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
           source: "repo.tar.gz,env.deploy"
-          target: "${{ steps.host.outputs.remotedir }}"
+          target: "${{ steps.host.outputs.remotedir }}/"
           strip_components: 0
         if: steps.host.outputs.env == 'staging'
 
