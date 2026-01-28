@@ -1,23 +1,22 @@
 import { Request, Response } from "express";
 import {
-  createFeeStudentMapping,
-  getAllFeeStudentMappings,
-  getFeeStudentMappingById,
-  getFeeStudentMappingsByStudentId,
-  updateFeeStudentMapping,
-  deleteFeeStudentMapping,
-} from "../services/fee-student-mapping.service";
-import { createFeeStudentMappingSchema } from "@repo/db/schemas";
+  createFeeStructureSlab,
+  getAllFeeStructureSlabs,
+  getFeeStructureSlabById,
+  updateFeeStructureSlab,
+  deleteFeeStructureSlab,
+} from "../services/fee-structure-slab.service.js";
+import { createFeeStructureSlabSchema } from "@repo/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 
-export async function createFeeStudentMappingHandler(
+export async function createFeeStructureSlabHandler(
   req: Request,
   res: Response,
 ) {
   try {
-    const parsed = createFeeStudentMappingSchema.parse(req.body);
-    const created = await createFeeStudentMapping(parsed);
+    const parsed = createFeeStructureSlabSchema.parse(req.body);
+    const created = await createFeeStructureSlab(parsed);
     if (!created)
       return res
         .status(500)
@@ -26,7 +25,7 @@ export async function createFeeStudentMappingHandler(
             500,
             "ERROR",
             null,
-            "Failed to create fee student mapping",
+            "Failed to create fee structure slab",
           ),
         );
 
@@ -37,7 +36,7 @@ export async function createFeeStudentMappingHandler(
           201,
           "SUCCESS",
           created,
-          "Fee student mapping created successfully",
+          "Fee structure slab created successfully",
         ),
       );
   } catch (error) {
@@ -45,12 +44,12 @@ export async function createFeeStudentMappingHandler(
   }
 }
 
-export async function getAllFeeStudentMappingsHandler(
+export async function getAllFeeStructureSlabsHandler(
   _req: Request,
   res: Response,
 ) {
   try {
-    const rows = await getAllFeeStudentMappings();
+    const rows = await getAllFeeStructureSlabs();
     return res
       .status(200)
       .json(
@@ -58,7 +57,7 @@ export async function getAllFeeStudentMappingsHandler(
           200,
           "SUCCESS",
           rows,
-          "Fee student mappings retrieved successfully",
+          "Fee structure slabs retrieved successfully",
         ),
       );
   } catch (error) {
@@ -66,7 +65,7 @@ export async function getAllFeeStudentMappingsHandler(
   }
 }
 
-export async function getFeeStudentMappingByIdHandler(
+export async function getFeeStructureSlabByIdHandler(
   req: Request,
   res: Response,
 ) {
@@ -77,7 +76,7 @@ export async function getFeeStudentMappingByIdHandler(
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const row = await getFeeStudentMappingById(id);
+    const row = await getFeeStructureSlabById(id);
     if (!row)
       return res
         .status(404)
@@ -86,7 +85,7 @@ export async function getFeeStudentMappingByIdHandler(
             404,
             "NOT_FOUND",
             null,
-            `Fee student mapping with ID ${id} not found`,
+            `Fee structure slab with ID ${id} not found`,
           ),
         );
 
@@ -97,7 +96,7 @@ export async function getFeeStudentMappingByIdHandler(
           200,
           "SUCCESS",
           row,
-          "Fee student mapping retrieved successfully",
+          "Fee structure slab retrieved successfully",
         ),
       );
   } catch (error) {
@@ -105,48 +104,7 @@ export async function getFeeStudentMappingByIdHandler(
   }
 }
 
-export async function getFeeStudentMappingsByStudentIdHandler(
-  req: Request,
-  res: Response,
-) {
-  try {
-    const studentId = parseInt(req.params.studentId as string, 10);
-    if (Number.isNaN(studentId))
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid student ID format" });
-
-    const rows = await getFeeStudentMappingsByStudentId(studentId);
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          rows,
-          "Fee student mappings retrieved successfully",
-        ),
-      );
-  } catch (error) {
-    return handleError(error, res);
-  }
-}
-
-function convertDates(obj: Record<string, any>) {
-  const dateFields = [
-    "waivedOffDate",
-    "transactionDate",
-    "createdAt",
-    "updatedAt",
-  ];
-  for (const f of dateFields) {
-    if (obj[f] && typeof obj[f] === "string") {
-      obj[f] = new Date(obj[f]);
-    }
-  }
-}
-
-export async function updateFeeStudentMappingHandler(
+export async function updateFeeStructureSlabHandler(
   req: Request,
   res: Response,
 ) {
@@ -157,13 +115,10 @@ export async function updateFeeStudentMappingHandler(
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    // Convert date strings to Date objects before validation
-    convertDates(req.body);
-
-    const partialSchema = createFeeStudentMappingSchema.partial();
+    const partialSchema = createFeeStructureSlabSchema.partial();
     const parsed = partialSchema.parse(req.body);
 
-    const updated = await updateFeeStudentMapping(id, parsed);
+    const updated = await updateFeeStructureSlab(id, parsed);
     if (!updated)
       return res
         .status(404)
@@ -172,7 +127,7 @@ export async function updateFeeStudentMappingHandler(
             404,
             "NOT_FOUND",
             null,
-            `Fee student mapping with ID ${id} not found`,
+            `Fee structure slab with ID ${id} not found`,
           ),
         );
 
@@ -183,7 +138,7 @@ export async function updateFeeStudentMappingHandler(
           200,
           "SUCCESS",
           updated,
-          "Fee student mapping updated successfully",
+          "Fee structure slab updated successfully",
         ),
       );
   } catch (error) {
@@ -191,7 +146,7 @@ export async function updateFeeStudentMappingHandler(
   }
 }
 
-export async function deleteFeeStudentMappingHandler(
+export async function deleteFeeStructureSlabHandler(
   req: Request,
   res: Response,
 ) {
@@ -202,7 +157,7 @@ export async function deleteFeeStudentMappingHandler(
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const deleted = await deleteFeeStudentMapping(id);
+    const deleted = await deleteFeeStructureSlab(id);
     if (!deleted)
       return res
         .status(404)
@@ -211,7 +166,7 @@ export async function deleteFeeStudentMappingHandler(
             404,
             "NOT_FOUND",
             null,
-            `Fee student mapping with ID ${id} not found`,
+            `Fee structure slab with ID ${id} not found`,
           ),
         );
 
@@ -222,7 +177,7 @@ export async function deleteFeeStudentMappingHandler(
           200,
           "DELETED",
           deleted,
-          "Fee student mapping deleted successfully",
+          "Fee structure slab deleted successfully",
         ),
       );
   } catch (error) {
