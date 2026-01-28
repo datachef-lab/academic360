@@ -83,6 +83,11 @@ jobs:
           echo "  Compose File: deploy/docker-compose.$ENV.yml"
           echo "  Env File: .env.$ENV"
 
+      - name: 🔍 Debug resolved remote directory
+        run: |
+          echo "ENV = ${{ steps.host.outputs.env }}"
+          echo "REMOTE DIR (raw) = '${{ steps.host.outputs.remotedir }}'"
+
       - name: Archive repository for upload
         shell: bash
         run: |
