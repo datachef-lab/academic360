@@ -415,7 +415,7 @@ export const getCuRegistrationDocumentUploadById = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
 
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid document ID"));
@@ -451,7 +451,7 @@ export const getCuRegistrationDocumentUploadsByRequestId = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const requestId = parseInt(req.params.requestId as string);
+    const requestId = parseInt(req.params.requestId);
 
     if (isNaN(requestId)) {
       res.status(400).json(new ApiError(400, "Invalid request ID"));
@@ -533,7 +533,7 @@ export const updateCuRegistrationDocumentUploadById = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
 
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid document ID"));
@@ -590,7 +590,7 @@ export const deleteCuRegistrationDocumentUploadById = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
 
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid document ID"));
@@ -643,7 +643,7 @@ export const deleteCuRegistrationDocumentUploadsByRequestId = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const requestId = parseInt(req.params.requestId as string);
+    const requestId = parseInt(req.params.requestId);
 
     if (isNaN(requestId)) {
       res.status(400).json(new ApiError(400, "Invalid request ID"));
@@ -702,7 +702,7 @@ export const getSignedUrlForDocument = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
     const expiresIn = parseInt(req.query.expiresIn as string) || 3600; // Default 1 hour
 
     if (isNaN(id)) {
@@ -816,7 +816,7 @@ export const getStudentFiles = async (
 
     // Document type validation removed - using new path service for CU registration documents
 
-    const files = await listStudentFiles(studentUid as string, documentType);
+    const files = await listStudentFiles(studentUid, documentType);
 
     res.status(200).json(
       new ApiResponse(
@@ -850,7 +850,7 @@ export const getStudentFolderStatistics = async (
       return;
     }
 
-    const stats = await getStudentFolderStats(studentUid as string);
+    const stats = await getStudentFolderStats(studentUid);
 
     res.status(200).json(
       new ApiResponse(
@@ -886,10 +886,7 @@ export const deleteAllStudentFiles = async (
 
     // Document type validation removed - using new path service for CU registration documents
 
-    const result = await deleteAllStudentFilesFromS3(
-      studentUid as string,
-      documentType,
-    );
+    const result = await deleteAllStudentFilesFromS3(studentUid, documentType);
 
     res.status(200).json(
       new ApiResponse(
