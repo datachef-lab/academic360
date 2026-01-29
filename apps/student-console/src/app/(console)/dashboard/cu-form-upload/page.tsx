@@ -335,7 +335,7 @@
 // }
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { FileText, CheckCircle2, UploadCloud, FileSearch2, ShieldCheck, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -346,6 +346,7 @@ export default function CUFormUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -554,7 +555,13 @@ export default function CUFormUploadPage() {
                     your device.
                   </p>
                   <label className="mt-3 inline-flex items-center justify-center">
-                    <input type="file" accept="application/pdf" className="hidden" onChange={handleFileChange} />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
                     <span className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 cursor-pointer">
                       Browse PDF
                     </span>
@@ -571,6 +578,7 @@ export default function CUFormUploadPage() {
                         onClick={() => {
                           setFile(null);
                           setPreviewUrl(null);
+                          if (fileInputRef.current) fileInputRef.current.value = "";
                         }}
                         className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-slate-500 hover:bg-slate-100 bg-white"
                       >
@@ -658,6 +666,7 @@ export default function CUFormUploadPage() {
                 setSubmitted(false);
                 setFile(null);
                 setPreviewUrl(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
               }}
               className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
             >
