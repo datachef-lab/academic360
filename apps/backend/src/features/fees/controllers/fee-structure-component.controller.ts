@@ -70,7 +70,7 @@ export async function getFeeStructureComponentByIdHandler(
   res: Response,
 ) {
   try {
-    const id = parseInt(req.params.id as string, 10);
+    const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
@@ -109,7 +109,7 @@ export async function updateFeeStructureComponentHandler(
   res: Response,
 ) {
   try {
-    const id = parseInt(req.params.id as string, 10);
+    const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
@@ -151,7 +151,7 @@ export async function deleteFeeStructureComponentHandler(
   res: Response,
 ) {
   try {
-    const id = parseInt(req.params.id as string, 10);
+    const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
