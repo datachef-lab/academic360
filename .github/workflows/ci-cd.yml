@@ -430,6 +430,7 @@ jobs:
           host: ${{ steps.host.outputs.host }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          request_pty: false
           script: |
             echo "🏗️  Creating remote directory for STAGING deployment..."
             echo "Target directory: ${{ steps.host.outputs.remotedir }}"
@@ -466,6 +467,7 @@ jobs:
           host: ${{ steps.host.outputs.host }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          request_pty: false
           script: |
             echo "📁 Verifying file transfer for STAGING..."
             echo "Checking files in: ${{ steps.host.outputs.remotedir }}"
