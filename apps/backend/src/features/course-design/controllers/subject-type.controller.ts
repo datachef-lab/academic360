@@ -55,7 +55,9 @@ export const getAllSubjectTypes = async (_req: Request, res: Response) => {
 
 export const getSubjectTypeById = async (req: Request, res: Response) => {
   try {
-    const subjectType = await getSubjectTypeByIdService(req.params.id);
+    const subjectType = await getSubjectTypeByIdService(
+      req.params.id as string,
+    );
     if (!subjectType) {
       res.status(404).json({ error: "Subject Type not found" });
       return;
@@ -71,7 +73,7 @@ export const getSubjectTypeById = async (req: Request, res: Response) => {
 export const updateSubjectType = async (req: Request, res: Response) => {
   try {
     const updatedSubjectType = await updateSubjectTypeService(
-      req.params.id,
+      req.params.id as string,
       req.body,
     );
     if (!updatedSubjectType) {
@@ -88,7 +90,7 @@ export const updateSubjectType = async (req: Request, res: Response) => {
 
 export const deleteSubjectType = async (req: Request, res: Response) => {
   try {
-    const result = await deleteSubjectTypeService(req.params.id);
+    const result = await deleteSubjectTypeService(req.params.id as string);
     if (!result) {
       res.status(404).json({ error: "Subject Type not found" });
       return;
