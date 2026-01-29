@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { useCollegeSettings } from "@/hooks/use-college-settings";
 
 // Force dynamic rendering to prevent prerendering issues
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export default function SignInPage() {
   const [otpExpiry, setOtpExpiry] = useState(0);
   const router = useRouter();
   const { login } = useAuth();
+  const { name: collegeName } = useCollegeSettings();
   const [mounted, setMounted] = useState(false);
   const [userPreview, setUserPreview] = useState<{ name: string; email?: string } | null>(null);
   const [lookupPending, setLookupPending] = useState(false);
@@ -50,8 +52,6 @@ export default function SignInPage() {
   const OTP_EXPIRY_KEY = "otp_expiry_timestamp";
   const RESEND_COOLDOWN_KEY = "resend_cooldown_timestamp";
   const OTP_UID_KEY = "otp_uid";
-
-  // No need for message listeners or sessionStorage - backend checks admin cookie automatically
 
   // Detect simulation mode (via URL parameter or iframe context)
   useEffect(() => {
@@ -670,7 +670,7 @@ export default function SignInPage() {
             </div>
             <div className="ml-3">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-                BESC <span className="text-indigo-600">Student</span>
+                {collegeName} <span className="text-indigo-600">Student</span>
               </h1>
               <p className="text-xs sm:text-sm font-medium text-gray-500">CONSOLE</p>
             </div>

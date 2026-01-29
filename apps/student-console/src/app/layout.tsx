@@ -28,12 +28,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Metadata is dynamically set via DynamicTitleUpdater component
+// No static metadata to ensure full dynamic title loading from database
 export const metadata = {
-  title: {
-    template: "%s | BESC Student Console",
-    default: "BESC Student Console",
-  },
-  description: "BESC Student Console Landing Page",
+  description: "Student Console Portal",
   applicationName: "Student Console",
 };
 

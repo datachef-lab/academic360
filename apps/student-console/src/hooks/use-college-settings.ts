@@ -15,7 +15,7 @@ export interface CollegeSettings {
  * Fetches college name and logo URL dynamically
  */
 export const useCollegeSettings = (): CollegeSettings => {
-  const [name, setName] = useState<string>("Student Console");
+  const [name, setName] = useState<string>("");
   const [logoUrl, setLogoUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,13 +35,12 @@ export const useCollegeSettings = (): CollegeSettings => {
           (s) =>
             s.name?.toLowerCase() === "college abbreviation" ||
             s.name?.toLowerCase() === "college-abbreviation" ||
-            s.name?.toLowerCase() === "collegeabbreviation" ||
             s.name?.toLowerCase() === "college_abbreviation",
         );
 
         if (collegeAbbrevSetting) {
           console.log("[useCollegeSettings] Found college abbreviation setting:", collegeAbbrevSetting);
-          setName(collegeAbbrevSetting.value || "Student Console");
+          setName(collegeAbbrevSetting.value || "");
         } else {
           console.warn(
             "[useCollegeSettings] College abbreviation setting not found. Available settings:",
