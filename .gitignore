@@ -14,8 +14,10 @@ node_modules/
 /.idea
 .pnp
 .pnp.js
+
+# TypeScript build cache
+**/*.tsbuildinfo
 .pnpm-store
-tsconfig.tsbuildinfo
 # Package manager files
 package-lock.json
 yarn.lock
