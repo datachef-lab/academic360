@@ -35,7 +35,7 @@ export const downloadCuRegistrationDocumentsController = async (
       return;
     }
 
-    const yearNum = parseInt(year);
+    const yearNum = parseInt(year as string);
     if (isNaN(yearNum) || yearNum < 2000 || yearNum > 3000) {
       res.status(400).json(new ApiError(400, "Invalid year format"));
       return;
@@ -56,7 +56,7 @@ export const downloadCuRegistrationDocumentsController = async (
     // Download and zip documents with socket progress
     const result = await downloadCuRegistrationDocumentsAsZip(
       yearNum,
-      regulationType,
+      regulationType as string,
       io,
       uploadSessionId,
       userId,
@@ -148,7 +148,7 @@ export const downloadCuRegistrationPdfsController = async (
       return;
     }
 
-    const yearNum = parseInt(year);
+    const yearNum = parseInt(year as string);
     if (isNaN(yearNum) || yearNum < 2000 || yearNum > 3000) {
       res.status(400).json(new ApiError(400, "Invalid year format"));
       return;
@@ -180,7 +180,7 @@ export const downloadCuRegistrationPdfsController = async (
     // Download and zip documents with socket progress
     const result = await downloadCuRegistrationDocumentsAsZip(
       yearNum,
-      regulationType,
+      regulationType as string,
       io,
       uploadSessionId,
       userId,
@@ -238,7 +238,7 @@ export const downloadDocumentsController = async (
       return;
     }
 
-    const yearNum = parseInt(year);
+    const yearNum = parseInt(year as string);
     if (isNaN(yearNum) || yearNum < 2000 || yearNum > 3000) {
       res.status(400).json(new ApiError(400, "Invalid year format"));
       return;
@@ -259,7 +259,7 @@ export const downloadDocumentsController = async (
     // Download and zip documents with socket progress
     const result = await downloadCuRegistrationDocumentsAsZip(
       yearNum,
-      regulationType,
+      regulationType as string,
       io,
       uploadSessionId,
       userId,
