@@ -54,7 +54,7 @@ export async function getAllFeeHeadsHandler(_req: Request, res: Response) {
 
 export async function getFeeHeadByIdHandler(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
@@ -85,7 +85,7 @@ export async function getFeeHeadByIdHandler(req: Request, res: Response) {
 
 export async function updateFeeHeadHandler(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
@@ -124,7 +124,7 @@ export async function updateFeeHeadHandler(req: Request, res: Response) {
 
 export async function deleteFeeHeadHandler(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
