@@ -72,7 +72,9 @@ export async function getBoardSubjectNameByIdHandler(
 ) {
   try {
     const { id } = req.params;
-    const boardSubjectName = await getBoardSubjectNameById(parseInt(id));
+    const boardSubjectName = await getBoardSubjectNameById(
+      parseInt(id as string),
+    );
 
     if (!boardSubjectName) {
       const response = new ApiResponse(
@@ -103,7 +105,10 @@ export async function updateBoardSubjectNameHandler(
   try {
     const { id } = req.params;
     const updateData = req.body;
-    const result = await updateBoardSubjectName(parseInt(id), updateData);
+    const result = await updateBoardSubjectName(
+      parseInt(id as string),
+      updateData,
+    );
     const response = new ApiResponse(
       200,
       "OK",
@@ -122,7 +127,7 @@ export async function deleteBoardSubjectNameHandler(
 ) {
   try {
     const { id } = req.params;
-    const result = await deleteBoardSubjectName(parseInt(id));
+    const result = await deleteBoardSubjectName(parseInt(id as string));
     const response = new ApiResponse(
       200,
       "OK",

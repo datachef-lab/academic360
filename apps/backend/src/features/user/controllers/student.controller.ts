@@ -202,7 +202,7 @@ export const getStudentByUid = async (
   try {
     const { uid } = req.params;
 
-    const foundStudent = await studentService.findByUid(uid);
+    const foundStudent = await studentService.findByUid(uid as string);
 
     if (!foundStudent) {
       res
