@@ -130,7 +130,7 @@ export const downloadSettingFileHandler = async (
         );
     }
 
-    const setting = await findByIdOrName(idOrName as string);
+    const setting = await findByIdOrName(idOrName);
 
     if (!setting) {
       return res
@@ -167,7 +167,7 @@ export const downloadSettingFileHandler = async (
 export async function getSettingFileController(req: Request, res: Response) {
   try {
     const { idOrName } = req.params;
-    const fileStreamData = await getSettingFileService(idOrName as string);
+    const fileStreamData = await getSettingFileService(idOrName);
 
     if (!fileStreamData) {
       res.status(404).json({ message: "Setting file not found" });

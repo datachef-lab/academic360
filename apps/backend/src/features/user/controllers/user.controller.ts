@@ -377,7 +377,7 @@ export const validateResetTokenController = async (
       return;
     }
 
-    const result = await validateResetToken(token as string);
+    const result = await validateResetToken(token);
 
     if (result.success) {
       res
