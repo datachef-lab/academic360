@@ -135,7 +135,7 @@ export const getCourseLevelById = async (req: Request, res: Response) => {
 export const updateCourseLevel = async (req: Request, res: Response) => {
   try {
     const updatedCourseLevel = await updateCourseLevelService(
-      req.params.id as string,
+      req.params.id,
       req.body,
     );
     if (!updatedCourseLevel) {
@@ -164,9 +164,7 @@ export const updateCourseLevel = async (req: Request, res: Response) => {
 
 export const deleteCourseLevel = async (req: Request, res: Response) => {
   try {
-    const deletedCourseLevel = await deleteCourseLevelService(
-      req.params.id as string,
-    );
+    const deletedCourseLevel = await deleteCourseLevelService(req.params.id);
     if (!deletedCourseLevel) {
       return res
         .status(404)

@@ -144,7 +144,7 @@ export const getCuRegistrationCorrectionRequestById = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
 
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid request ID"));
@@ -184,7 +184,7 @@ export const getCuRegistrationCorrectionRequestsByStudentId = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const studentId = parseInt(req.params.studentId as string);
+    const studentId = parseInt(req.params.studentId);
 
     if (isNaN(studentId)) {
       res.status(400).json(new ApiError(400, "Invalid student ID"));
@@ -222,7 +222,7 @@ export const getCuRegistrationCorrectionRequestsByStatus = async (
 
     // Validate status
     const validStatuses = ["PENDING", "APPROVED", "REJECTED"];
-    if (!validStatuses.includes(status as string)) {
+    if (!validStatuses.includes(status)) {
       res
         .status(400)
         .json(
@@ -248,7 +248,7 @@ export const getCuRegistrationCorrectionRequestsByStatus = async (
     }
 
     const result = await findCuRegistrationCorrectionRequestsByStatus(
-      status as string,
+      status,
       page,
       limit,
     );
@@ -278,7 +278,7 @@ export const updateCuRegistrationCorrectionRequestById = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
 
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid request ID"));
@@ -468,7 +468,7 @@ export const deleteCuRegistrationCorrectionRequestById = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
 
     if (isNaN(id)) {
       res.status(400).json(new ApiError(400, "Invalid request ID"));
@@ -663,7 +663,7 @@ export const updatePersonalInfoByAdmin = async (
 
     // Get the correction request
     const correctionRequest = await findCuRegistrationCorrectionRequestById(
-      parseInt(id as string),
+      parseInt(id),
     );
     if (!correctionRequest) {
       res.status(404).json(new ApiError(404, "Correction request not found"));
@@ -681,7 +681,7 @@ export const updatePersonalInfoByAdmin = async (
 
     // Update the correction request with admin changes
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
-      parseInt(id as string),
+      parseInt(id),
       {
         personalInfoDeclaration: true,
         genderCorrectionRequest: flags?.gender || false,
@@ -740,7 +740,7 @@ export const updateAddressInfoByAdmin = async (
 
     // Get the correction request
     const correctionRequest = await findCuRegistrationCorrectionRequestById(
-      parseInt(id as string),
+      parseInt(id),
     );
     if (!correctionRequest) {
       res.status(404).json(new ApiError(404, "Correction request not found"));
@@ -760,7 +760,7 @@ export const updateAddressInfoByAdmin = async (
 
     // Update the correction request with admin changes
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
-      parseInt(id as string),
+      parseInt(id),
       {
         addressInfoDeclaration: true,
         // Pass the payload to update address data
@@ -805,9 +805,8 @@ export const getCuRegistrationCorrectionRequestsByStudentUid = async (
       return;
     }
 
-    const requests = await findCuRegistrationCorrectionRequestsByStudentUid(
-      studentUid as string,
-    );
+    const requests =
+      await findCuRegistrationCorrectionRequestsByStudentUid(studentUid);
 
     res
       .status(200)
@@ -832,7 +831,7 @@ export const markPhysicalRegistrationDoneController = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const correctionRequestId = parseInt(id as string);
+    const correctionRequestId = parseInt(id);
     const user = req.user as UserDto;
 
     if (isNaN(correctionRequestId)) {
@@ -887,7 +886,7 @@ export const getCuRegistrationPdfByApplicationNumber = async (
 
     try {
       applicationNumber = admRegFormService.decodeApplicationNumber(
-        encodedApplicationNumber as string,
+        encodedApplicationNumber,
       );
     } catch (error) {
       res
