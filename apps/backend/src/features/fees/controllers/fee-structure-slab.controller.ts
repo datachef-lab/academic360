@@ -70,7 +70,7 @@ export async function getFeeStructureSlabByIdHandler(
   res: Response,
 ) {
   try {
-    const id = parseInt(req.params.id as string, 10);
+    const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
@@ -109,7 +109,7 @@ export async function updateFeeStructureSlabHandler(
   res: Response,
 ) {
   try {
-    const id = parseInt(req.params.id as string, 10);
+    const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
@@ -151,7 +151,7 @@ export async function deleteFeeStructureSlabHandler(
   res: Response,
 ) {
   try {
-    const id = parseInt(req.params.id as string, 10);
+    const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
