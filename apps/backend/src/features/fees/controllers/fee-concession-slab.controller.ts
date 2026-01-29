@@ -75,7 +75,7 @@ export async function getFeeConcessionSlabByIdHandler(
   res: Response,
 ) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
@@ -114,7 +114,7 @@ export async function updateFeeConcessionSlabHandler(
   res: Response,
 ) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
@@ -157,7 +157,7 @@ export async function deleteFeeConcessionSlabHandler(
   res: Response,
 ) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
