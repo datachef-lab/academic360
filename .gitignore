@@ -64,3 +64,4 @@ yarn-error.log*
 
 # dummy server
 db.json
+*.tsbuildinfo
