@@ -19,8 +19,7 @@ node_modules/
 
 # TypeScript build cache
 **/*.tsbuildinfo
-./packages/**/*.tsbuildinfo
-.pnpm-store
+
 # Package manager files
 package-lock.json
 yarn.lock
