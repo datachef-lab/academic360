@@ -52,7 +52,7 @@ export async function getAllBoardSubjectsHandler(req: Request, res: Response) {
 export async function getBoardSubjectByIdHandler(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const boardSubject = await getBoardSubjectById(parseInt(id as string));
+    const boardSubject = await getBoardSubjectById(parseInt(id));
 
     if (!boardSubject) {
       const response = new ApiResponse(
@@ -82,9 +82,7 @@ export async function getBoardSubjectsByBoardIdHandler(
 ) {
   try {
     const { boardId } = req.params;
-    const boardSubjects = await getBoardSubjectsByBoardId(
-      parseInt(boardId as string),
-    );
+    const boardSubjects = await getBoardSubjectsByBoardId(parseInt(boardId));
     const response = new ApiResponse(
       200,
       "OK",
@@ -101,7 +99,7 @@ export async function updateBoardSubjectHandler(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const updateData = req.body;
-    const result = await updateBoardSubject(parseInt(id as string), updateData);
+    const result = await updateBoardSubject(parseInt(id), updateData);
     const response = new ApiResponse(
       200,
       "OK",
@@ -117,7 +115,7 @@ export async function updateBoardSubjectHandler(req: Request, res: Response) {
 export async function deleteBoardSubjectHandler(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const result = await deleteBoardSubject(parseInt(id as string));
+    const result = await deleteBoardSubject(parseInt(id));
     const response = new ApiResponse(
       200,
       "OK",

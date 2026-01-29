@@ -196,7 +196,7 @@ export const updatePaperWithComponentsHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
     const result = await updatePaperWithComponents(id, req.body);
     res
       .status(200)

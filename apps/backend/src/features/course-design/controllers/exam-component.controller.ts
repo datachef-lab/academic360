@@ -50,9 +50,7 @@ export const getAllExamComponents = async (_req: Request, res: Response) => {
 
 export const getExamComponentById = async (req: Request, res: Response) => {
   try {
-    const examComponent = await getExamComponentByIdService(
-      req.params.id as string,
-    );
+    const examComponent = await getExamComponentByIdService(req.params.id);
     if (!examComponent) {
       return res
         .status(404)
@@ -76,7 +74,7 @@ export const getExamComponentById = async (req: Request, res: Response) => {
 export const updateExamComponent = async (req: Request, res: Response) => {
   try {
     const updatedExamComponent = await updateExamComponentService(
-      req.params.id as string,
+      req.params.id,
       req.body,
     );
     if (!updatedExamComponent) {
@@ -102,7 +100,7 @@ export const updateExamComponent = async (req: Request, res: Response) => {
 
 export const deleteExamComponent = async (req: Request, res: Response) => {
   try {
-    const result = await deleteExamComponentService(req.params.id as string);
+    const result = await deleteExamComponentService(req.params.id);
     if (!result) {
       res
         .status(404)
