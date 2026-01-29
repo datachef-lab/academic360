@@ -71,7 +71,7 @@ export const getHealthById = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
     if (isNaN(id)) {
       res
         .status(400)
@@ -108,7 +108,7 @@ export const getHealthByStudentId = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const studentId = parseInt(req.params.studentId as string);
+    const studentId = parseInt(req.params.studentId);
     if (isNaN(studentId)) {
       res.status(400).json({
         success: false,
@@ -148,7 +148,7 @@ export const updateHealthController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
     if (isNaN(id)) {
       res
         .status(400)
@@ -198,7 +198,7 @@ export const deleteHealth = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
     if (isNaN(id)) {
       res
         .status(400)
@@ -243,7 +243,7 @@ export const deleteHealthByStudentId = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const studentId = parseInt(req.params.studentId as string);
+    const studentId = parseInt(req.params.studentId);
     if (isNaN(studentId)) {
       res.status(400).json({
         success: false,
