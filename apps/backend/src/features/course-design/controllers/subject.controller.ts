@@ -112,7 +112,7 @@ export const getSubjectsPaginatedController = async (
 export const getSubjectByIdController = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const subjectId = parseInt(id);
+    const subjectId = parseInt(id as string);
 
     if (isNaN(subjectId)) {
       return res
@@ -174,7 +174,7 @@ export const getActiveSubjectsController = async (
 export const updateSubjectController = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const subjectId = parseInt(id);
+    const subjectId = parseInt(id as string);
 
     if (isNaN(subjectId)) {
       return res
@@ -223,7 +223,7 @@ export const updateSubjectController = async (req: Request, res: Response) => {
 export const deleteSubjectController = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const subjectId = parseInt(id);
+    const subjectId = parseInt(id as string);
 
     if (isNaN(subjectId)) {
       return res

@@ -40,7 +40,7 @@ export const getCuRegistrationPdfUrl = async (
         uid: studentModel.uid,
       })
       .from(studentModel)
-      .where(eq(studentModel.id, parseInt(studentId)))
+      .where(eq(studentModel.id, parseInt(studentId as string)))
       .limit(1);
 
     if (!student) {
@@ -67,7 +67,7 @@ export const getCuRegistrationPdfUrl = async (
         regulationTypeModel,
         eq(programCourseModel.regulationTypeId, regulationTypeModel.id),
       )
-      .where(eq(promotionModel.studentId, parseInt(studentId)))
+      .where(eq(promotionModel.studentId, parseInt(studentId as string)))
       .limit(1);
 
     if (!promotionData) {
@@ -82,9 +82,9 @@ export const getCuRegistrationPdfUrl = async (
 
     // Get PDF path configuration
     const pdfPathConfig = await getCuRegPdfPathDynamic(
-      parseInt(studentId),
+      parseInt(studentId as string),
       student.uid,
-      applicationNumber,
+      applicationNumber as string,
       {
         year,
         course: promotionData.regulationShortName || "CCF",
@@ -165,7 +165,7 @@ export const getCuRegistrationPdfUrlByRequestId = async (
       .where(
         eq(
           cuRegistrationCorrectionRequestModel.id,
-          parseInt(correctionRequestId),
+          parseInt(correctionRequestId as string),
         ),
       )
       .limit(1);
@@ -201,7 +201,7 @@ export const getCuRegistrationPdfUrlByRequestId = async (
         .where(
           eq(
             cuRegistrationCorrectionRequestModel.id,
-            parseInt(correctionRequestId),
+            parseInt(correctionRequestId as string),
           ),
         );
 
@@ -374,7 +374,7 @@ export const proxyCuRegistrationPdf = async (
       .where(
         eq(
           cuRegistrationCorrectionRequestModel.id,
-          parseInt(correctionRequestId),
+          parseInt(correctionRequestId as string),
         ),
       )
       .limit(1);
