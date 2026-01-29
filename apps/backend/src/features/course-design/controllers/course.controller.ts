@@ -85,7 +85,7 @@ export async function getCourseByIdHandler(
   res: Response,
 ): Promise<void> {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
     if (isNaN(id)) {
       res
         .status(400)
@@ -147,7 +147,7 @@ export async function updateCourseHandler(
   res: Response,
 ): Promise<void> {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
     if (isNaN(id)) {
       res
         .status(400)
@@ -195,7 +195,7 @@ export async function deleteCourseHandler(
   res: Response,
 ): Promise<void> {
   try {
-    const id = parseInt(req.params.id as string);
+    const id = parseInt(req.params.id);
     if (isNaN(id)) {
       res
         .status(400)
