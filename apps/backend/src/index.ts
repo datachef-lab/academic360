@@ -39,7 +39,7 @@ function checkRequiredEnvs() {
   );
   if (missing.length > 0) {
     console.error(
-      `\n[backend] - Missing required environment variables: -${missing.join(", ")}`,
+      `\n[backend] - Missing required environment variables: ${missing.join(", ")}`,
     );
     process.exit(1);
   }
