@@ -548,8 +548,12 @@ jobs:
             echo "📥 Cloning latest staging branch..."
             rm -rf academic360-app
             mkdir academic360-app
-            tar -xzf ../repo.tar.gz -C academic360-app
+
+            echo "📦 Extracting repository archive..."
+            tar -xzf repo.tar.gz -C academic360-app
+
             cd academic360-app
+
 
 
             # Copy environment file
