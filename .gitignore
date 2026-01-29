@@ -15,9 +15,7 @@ node_modules/
 .pnp
 .pnp.js
 
-# TypeScript build cache
-**/*.tsbuildinfo
-
+tsconfig.tsbuildinfo
 # Package manager files
 package-lock.json
 yarn.lock

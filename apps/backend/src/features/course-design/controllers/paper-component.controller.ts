@@ -34,9 +34,7 @@ export const getAllPaperComponents = async (_req: Request, res: Response) => {
 
 export const getPaperComponentById = async (req: Request, res: Response) => {
   try {
-    const paperComponent = await getPaperComponentByIdService(
-      req.params.id as string,
-    );
+    const paperComponent = await getPaperComponentByIdService(req.params.id);
     if (!paperComponent) {
       return res.status(404).json({ error: "Paper Component not found" });
     }
@@ -51,7 +49,7 @@ export const getPaperComponentById = async (req: Request, res: Response) => {
 export const updatePaperComponent = async (req: Request, res: Response) => {
   try {
     const updatedPaperComponent = await updatePaperComponentService(
-      req.params.id as string,
+      req.params.id,
       {
         ...req.body,
         paperId: req.body.paperId,
@@ -71,7 +69,7 @@ export const updatePaperComponent = async (req: Request, res: Response) => {
 
 export const deletePaperComponent = async (req: Request, res: Response) => {
   try {
-    const result = await deletePaperComponentService(req.params.id as string);
+    const result = await deletePaperComponentService(req.params.id);
     if (!result) {
       res.status(404).json({ error: "Paper Component not found" });
       return;

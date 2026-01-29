@@ -550,7 +550,7 @@ export const validateResetToken = async (
       return;
     }
 
-    const tokenData = passwordResetTokens.get(token as string);
+    const tokenData = passwordResetTokens.get(token);
 
     if (!tokenData) {
       res.status(400).json(new ApiError(400, "Invalid reset token"));
@@ -558,7 +558,7 @@ export const validateResetToken = async (
     }
 
     if (new Date() > tokenData.expiresAt) {
-      passwordResetTokens.delete(token as string);
+      passwordResetTokens.delete(token);
       res.status(400).json(new ApiError(400, "Reset token has expired"));
       return;
     }
