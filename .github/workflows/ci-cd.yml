@@ -483,6 +483,7 @@ jobs:
           host: ${{ steps.host.outputs.host }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          request_pty: false
           script: |
             echo "🏗️  Creating remote directory for PRODUCTION deployment..."
             echo "Target directory: ${{ steps.host.outputs.remotedir }}"
@@ -506,6 +507,7 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ steps.host.outputs.host }}
+          request_pty: false
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           source: "repo.tar.gz,env.deploy"
@@ -518,6 +520,7 @@ jobs:
         with:
           host: ${{ steps.host.outputs.host }}
           username: ${{ secrets.SSH_USER }}
+          request_pty: false
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
             echo "📁 Verifying file transfer for PRODUCTION..."
@@ -534,6 +537,7 @@ jobs:
           host: ${{ steps.host.outputs.host }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          request_pty: false
           command_timeout: 60m
           script: |
             set -e
