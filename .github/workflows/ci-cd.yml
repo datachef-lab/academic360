@@ -520,6 +520,7 @@ jobs:
         with:
           host: ${{ steps.host.outputs.host }}
           username: ${{ secrets.SSH_USER }}
+          request_pty: false
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
             echo "📁 Verifying file transfer for PRODUCTION..."
