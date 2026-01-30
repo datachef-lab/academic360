@@ -290,6 +290,10 @@ export const createFeeStructureByDto = async (
 
     const data = parse.data as CreateFeeStructureDto;
 
+    // TEMPORARILY DISABLED: Conflict-detection validation for fee-structure creation
+    // Reason: [Add reason here if needed] - Disabled on January 30, 2026
+    // TODO: Re-enable this validation by uncommenting the code below
+    /*
     // Validate uniqueness before creating
     const uniquenessCheck =
       await feeStructureService.checkUniqueFeeStructureAmounts(
@@ -323,6 +327,7 @@ export const createFeeStructureByDto = async (
       );
       return;
     }
+    */
 
     const created = await feeStructureService.createFeeStructureByDto(data);
 
@@ -392,6 +397,10 @@ export const updateFeeStructureByDto = async (
 
     const data = parse.data as CreateFeeStructureDto;
 
+    // TEMPORARILY DISABLED: Conflict-detection validation for fee-structure updation
+    // Reason: [Add reason here if needed] - Disabled on January 30, 2026
+    // TODO: Re-enable this validation by uncommenting the code below
+    /*
     // Validate uniqueness before updating (exclude current fee structure)
     const uniquenessCheck =
       await feeStructureService.checkUniqueFeeStructureAmounts(
@@ -425,6 +434,7 @@ export const updateFeeStructureByDto = async (
       );
       return;
     }
+    */
 
     const updated = await feeStructureService.updateFeeStructureByDto(id, data);
 

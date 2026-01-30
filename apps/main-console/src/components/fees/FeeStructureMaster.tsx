@@ -400,12 +400,19 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     if (isInitializing) {
       return;
     }
+    // TEMPORARILY DISABLED: Conflict-detection validation in UI
+    // Reason: [Add reason here if needed] - Disabled on January 30, 2026
+    // TODO: Re-enable this validation by uncommenting the code below
+    /*
     // Debounce validation to avoid too many API calls
     const timeoutId = setTimeout(() => {
       validateUniqueness(conflictsPage);
     }, 500);
 
     return () => clearTimeout(timeoutId);
+    */
+    // Clear any existing validation results since validation is disabled
+    setValidationResult(null);
   }, [validateUniqueness, conflictsPage, isInitializing]);
 
   const recalcSlabs = () => {
@@ -1806,7 +1813,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                       onClick={async () => {
                         const newPage = Math.max(1, conflictsPage - 1);
                         setConflictsPage(newPage);
-                        await validateUniqueness(newPage);
+                        // TEMPORARILY DISABLED: Conflict validation call in pagination
+                        // await validateUniqueness(newPage);
                       }}
                       disabled={conflictsPage === 1}
                     >
@@ -1821,7 +1829,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                       onClick={async () => {
                         const newPage = Math.min(validationResult.conflicts.totalPages, conflictsPage + 1);
                         setConflictsPage(newPage);
-                        await validateUniqueness(newPage);
+                        // TEMPORARILY DISABLED: Conflict validation call in pagination
+                        // await validateUniqueness(newPage);
                       }}
                       disabled={conflictsPage >= validationResult.conflicts.totalPages}
                     >
