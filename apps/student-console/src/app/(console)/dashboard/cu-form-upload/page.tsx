@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { FileText, CheckCircle2, UploadCloud, FileSearch2, ShieldCheck, X } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+import { FileText, CheckCircle2, UploadCloud, FileSearch2, ShieldCheck, X, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { uploadCuForm } from "@/services/cu-form-upload.service";
 
 export default function CUFormUploadPage() {
   const [submitted, setSubmitted] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -242,18 +244,36 @@ export default function CUFormUploadPage() {
             {/* Submit */}
             <section>
               <button
-                onClick={() => {
-                  setSubmitted(true);
-                  toast.success("Form uploaded successfully.");
+                onClick={async () => {
+                  if (!file) return;
+
+                  setIsUploading(true);
+                  try {
+                    await uploadCuForm(file);
+                    setSubmitted(true);
+                    toast.success("Form uploaded successfully.");
+                  } catch (error: any) {
+                    console.error("Upload failed:", error);
+                    toast.error(error.message || "Failed to upload form. Please try again.");
+                  } finally {
+                    setIsUploading(false);
+                  }
                 }}
-                disabled={!file}
-                className={`w-full py-2 rounded-md font-semibold text-sm ${
-                  file
+                disabled={!file || isUploading}
+                className={`w-full py-2 rounded-md font-semibold text-sm flex items-center justify-center gap-2 ${
+                  file && !isUploading
                     ? "bg-emerald-600 text-white hover:bg-emerald-700"
                     : "bg-slate-200 text-slate-500 cursor-not-allowed"
                 }`}
               >
-                Submit Semester I Examination Form
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Submit Semester I Examination Form"
+                )}
               </button>
             </section>
           </div>
@@ -284,6 +304,7 @@ export default function CUFormUploadPage() {
                 setSubmitted(false);
                 setFile(null);
                 setPreviewUrl(null);
+                setIsUploading(false);
                 if (fileInputRef.current) fileInputRef.current.value = "";
               }}
               className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 sm:py-3 text-sm sm:text-base font-semibold text-white hover:bg-slate-800 transition"

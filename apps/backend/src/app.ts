@@ -119,6 +119,7 @@ import {
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
 import bulkUploadRouter from "@/features/common/routes/bulkUpload.routes.js";
+import cuFormUploadRouter from "@/features/common/routes/cuFormUpload.routes.js";
 import {
   streamRouter,
   courseTypeRouter,
@@ -587,6 +588,7 @@ app.use(
 app.use("/api/subject-selection/dynamic-subjects", dynamicSubjectsRoutes);
 
 app.use("/api/bulk-upload", bulkUploadRouter);
+app.use("/api/cu-form-upload", cuFormUploadRouter);
 
 // Lightweight districts endpoint to support frontend dropdowns
 app.get("/api/districts", async (req: Request, res: Response) => {
