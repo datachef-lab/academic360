@@ -396,7 +396,7 @@ export default function SignInPage() {
         console.log("Error during UID lookup:", error);
         console.log("error**", error.response?.data);
         console.log("error status 1**", error.response?.data?.message);
-        setUsermsg(error.response?.data?.message || "Lookup failed");
+        setUsermsg(error.response?.data?.message || "Server error. Please try again after some time ");
         setUserPreview(null);
       } finally {
         setLookupPending(false);
