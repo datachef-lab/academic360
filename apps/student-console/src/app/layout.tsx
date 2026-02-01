@@ -7,6 +7,7 @@ import { AuthProvider } from "@/providers/auth-provider";
 import { setupDatabaseShutdownHandlers } from "@/lib/setup-db-handlers";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { Toaster } from "sonner";
+import { DynamicTitleUpdater } from "@/components/dynamic-title-updater";
 
 // Initialize database shutdown handlers in Node.js environment
 // This is wrapped in a try-catch because it will error in
@@ -27,12 +28,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Metadata is dynamically set via DynamicTitleUpdater component
+// No static metadata to ensure full dynamic title loading from database
 export const metadata = {
-  title: {
-    template: "%s | BESC Student Console",
-    default: "BESC Student Console",
-  },
-  description: "BESC Student Console Landing Page",
+  description: "Student Console Portal",
   applicationName: "Student Console",
 };
 
@@ -55,6 +54,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased w-screen h-screen no-scrollbar`}
         suppressHydrationWarning
       >
+        <DynamicTitleUpdater />
         <ToastProvider>
           <AuthProvider>{children}</AuthProvider>
         </ToastProvider>

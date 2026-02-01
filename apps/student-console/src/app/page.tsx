@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { useCollegeSettings } from "@/hooks/use-college-settings";
 
 // Force dynamic rendering to prevent prerendering issues
 export const dynamic = "force-dynamic";
@@ -39,8 +40,10 @@ export default function SignInPage() {
   const [otpExpiry, setOtpExpiry] = useState(0);
   const router = useRouter();
   const { login } = useAuth();
+  const { name: collegeName } = useCollegeSettings();
   const [mounted, setMounted] = useState(false);
-  const [userPreview, setUserPreview] = useState<{ name: string; email?: string } | null>(null);
+  const [usermsg, setUsermsg] = useState("");
+  const [userPreview, setUserPreview] = useState<{ name: string; email?: string; isActive?: boolean } | null>(null);
   const [lookupPending, setLookupPending] = useState(false);
 
   // Simulation mode state (detected via URL parameter)
@@ -50,8 +53,6 @@ export default function SignInPage() {
   const OTP_EXPIRY_KEY = "otp_expiry_timestamp";
   const RESEND_COOLDOWN_KEY = "resend_cooldown_timestamp";
   const OTP_UID_KEY = "otp_uid";
-
-  // No need for message listeners or sessionStorage - backend checks admin cookie automatically
 
   // Detect simulation mode (via URL parameter or iframe context)
   useEffect(() => {
@@ -381,7 +382,8 @@ export default function SignInPage() {
           const email = `${digits}@thebges.edu.in`;
           const resp = await lookupUser(email);
           if (resp.httpStatusCode === 200 && resp.payload?.name) {
-            setUserPreview({ name: resp.payload.name, email });
+            const payload: any = resp.payload;
+            setUserPreview({ name: resp.payload.name, email, isActive: payload.isActive });
           } else {
             setUserPreview(null);
           }
@@ -390,7 +392,11 @@ export default function SignInPage() {
           const first = resp.payload?.users?.[0];
           setUserPreview(first ? { name: first.name, email: `${digits}@thebges.edu.in` } : null);
         }
-      } catch {
+      } catch (error: any) {
+        console.log("Error during UID lookup:", error);
+        console.log("error**", error.response?.data);
+        console.log("error status 1**", error.response?.data?.message);
+        setUsermsg(error.response?.data?.message || "Server error. Please try again after some time ");
         setUserPreview(null);
       } finally {
         setLookupPending(false);
@@ -670,7 +676,7 @@ export default function SignInPage() {
             </div>
             <div className="ml-3">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-                BESC <span className="text-indigo-600">Student</span>
+                {collegeName} <span className="text-indigo-600">Student</span>
               </h1>
               <p className="text-xs sm:text-sm font-medium text-gray-500">CONSOLE</p>
             </div>
@@ -825,9 +831,7 @@ export default function SignInPage() {
                         </p>
                       </div>
                     ) : (
-                      <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">
-                        Waiting for you to enter UID
-                      </p>
+                      <p className="text-xs sm:text-sm text-red-600  text-center leading-none">{usermsg}</p>
                     )
                   ) : (
                     <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">
