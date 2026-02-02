@@ -515,7 +515,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.host.outputs.host }}
-          username: ${{ secrets.SSH_1USER }}
+          username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
             echo "📁 Verifying file transfer for PRODUCTION..."
@@ -548,12 +548,8 @@ jobs:
             echo "📥 Cloning latest staging branch..."
             rm -rf academic360-app
             mkdir academic360-app
-
-            echo "📦 Extracting repository archive..."
-            tar -xzf repo.tar.gz -C academic360-app
-
+            tar -xzf ../repo.tar.gz -C academic360-app
             cd academic360-app
-
 
 
             # Copy environment file
