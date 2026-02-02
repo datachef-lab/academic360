@@ -16,7 +16,6 @@ import { Users } from "lucide-react";
 export function ActiveUsersAvatars() {
   const { user } = useAuth();
 
-
   const { activeUsers, studentsOnlineCount, isConnected } = useActiveUsers({
     userId: user?.id?.toString(),
   });
@@ -49,7 +48,6 @@ export function ActiveUsersAvatars() {
 
   const otherActiveUsers = activeUsers.filter((activeUser) => activeUser.id !== user?.id);
 
-  if (!isConnected) {
   if (!isConnected) {
     return null;
   }
@@ -146,6 +144,7 @@ export function ActiveUsersAvatars() {
                  "
                 >
                   <Users className="h-4 w-4" />
+                  <span className="ml-1">Students </span>
 
                   <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold">
                     {studentsOnlineCount}
