@@ -1,20 +1,22 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { FileText, CheckCircle2, UploadCloud, FileSearch2, ShieldCheck, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 export default function CUFormUploadPage() {
+  // Start directly on the upload view
   const [submitted, setSubmitted] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile) setFile(selectedFile);
+    if (selectedFile) {
+      setFile(selectedFile);
+    }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -27,7 +29,10 @@ export default function CUFormUploadPage() {
       setFile(droppedFile);
       return;
     }
-    if (droppedFile) toast.error("Please upload a PDF file only.");
+
+    if (droppedFile) {
+      toast.error("Please upload a PDF file only.");
+    }
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -42,47 +47,47 @@ export default function CUFormUploadPage() {
     setIsDragOver(false);
   };
 
+  // 1 = upload, 2 = preview, 3 = submitted
   const progressStep = submitted ? 3 : file ? 2 : 1;
 
+  // Create and cleanup object URL for PDF preview
   useEffect(() => {
     if (!file) {
       setPreviewUrl(null);
       return;
     }
+
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
   }, [file]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-800 text-white py-8 px-4 mb-6 shadow-md relative overflow-hidden rounded-b-3xl">
+    <div className="min-h-screen  flex flex-col">
+      {/* Header – aligned with Exams page style */}
+      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-800 text-white py-8  mb-6 shadow-md relative overflow-hidden rounded-b-3xl">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <div className="absolute -right-16 -top-16 w-40 h-40 rounded-full bg-blue-400 blur-2xl" />
           <div className="absolute right-32 top-10 w-28 h-28 rounded-full bg-purple-400 blur-xl" />
           <div className="absolute left-10 bottom-4 w-40 h-40 rounded-full bg-indigo-300 blur-2xl" />
         </div>
-
-        <div className="relative max-w-5xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4">
+        <div className="relative max-w-5xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/20 flex items-center justify-center">
-              <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+              <FileText className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">
-                Exams
-              </p>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold leading-snug">
-                CU Semester I Examination Form Upload
-              </h1>
-              <p className="mt-1 text-xs sm:text-sm text-blue-100/90 max-w-xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">Exams</p>
+              <h1 className="text-2xl md:text-3xl font-semibold leading-snug">CU Semester I Examination Form Upload</h1>
+              <p className="mt-1 text-xs md:text-sm text-blue-100/90 max-w-xl">
                 Upload your Calcutta University Semester I examination form and verify every page before final
                 submission.
               </p>
             </div>
           </div>
-
           <div className="hidden md:flex items-center gap-2 text-xs text-blue-100/90">
             <FileText className="w-4 h-4" />
             <span>PDF only • 1 file • Max 2 MB</span>
@@ -90,11 +95,12 @@ export default function CUFormUploadPage() {
         </div>
       </div>
 
+      {/* Main content when not submitted */}
       {!submitted && (
-        <main className="flex-1 px-4">
-          <div className="max-w-5xl mx-auto border bg-slate-50 rounded-xl shadow-sm p-4 sm:p-6 space-y-6">
-            {/* Progress Steps (UNCHANGED STRUCTURE) */}
-            <div className="flex items-center w-full text-[10px] sm:text-[11px] text-slate-500 overflow-x-auto">
+        <main className="flex-1">
+          <div className="max-w-5xl mx-auto border bg-slate-50 rounded-xl shadow-sm p-6 space-y-6">
+            {/* Steps – inline, no container box */}
+            <div className="flex items-center w-full  text-[11px] text-slate-500">
               {[
                 { key: 1, label: "Upload", icon: UploadCloud },
                 { key: 2, label: "Preview", icon: FileSearch2 },
@@ -112,9 +118,9 @@ export default function CUFormUploadPage() {
 
                 return (
                   <>
-                    <div key={step.key} className="flex flex-col items-center gap-1 min-w-[60px]">
+                    <div key={step.key} className="flex flex-col items-center gap-1">
                       <div
-                        className={`flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full text-xs font-medium border-2 transition-all ${circleClasses}`}
+                        className={`flex items-center justify-center w-9 h-9 rounded-full text-xs font-medium border-2 transition-all ${circleClasses}`}
                       >
                         {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                       </div>
@@ -127,7 +133,7 @@ export default function CUFormUploadPage() {
                       </span>
                     </div>
                     {index < 2 && (
-                      <div className="flex-1 h-0.5 mx-2 sm:mx-3 bg-slate-200 relative overflow-hidden">
+                      <div className="flex-1 h-0.5 mx-3 bg-slate-200 relative overflow-hidden">
                         <div
                           className={`absolute inset-0 transition-all duration-300 ${
                             progressStep > step.key ? "bg-emerald-500 w-full" : "bg-transparent w-0"
@@ -141,9 +147,9 @@ export default function CUFormUploadPage() {
             </div>
 
             {/* Instructions */}
-            <section className="text-xs sm:text-sm text-slate-700">
+            <section className="space-y-2 text-xs md:text-sm  text-slate-700">
               <div className="rounded-lg border bg-white px-4 py-3 shadow-sm">
-                <h2 className="text-sm sm:text-base font-semibold text-slate-900 flex items-center gap-2">
+                <h2 className="text-sm md:text-base font-semibold text-slate-900 flex items-center gap-2">
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[11px] text-white">
                     i
                   </span>
@@ -158,7 +164,7 @@ export default function CUFormUploadPage() {
                     discrepancy, kindly fill out the Google Form provided below to notify us. It is advised to submit
                     the form using your institutional email ID only.
                     <a
-                      href="https://your-google-form-link-here"
+                      href="https://docs.google.com/forms/d/e/1FAIpQLScwVkcMABpAExw-6TZwtMfdKycygF9DzCJhX1GAkum3ajoP7w/viewform?pli=1"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="ml-4 text-blue-700 underline hover:text-blue-900 font-semibold text-xs  cursor-pointer"
@@ -171,21 +177,31 @@ export default function CUFormUploadPage() {
                     student of the college.
                   </li>
                 </ul>
+                <p className="pt-2 text-[11px] text-slate-600">
+                  For any issue with form fill-up, please contact{" "}
+                  <span className="font-semibold">System Control Room (Room No. 424, 4th Floor)</span> before the last
+                  date.
+                </p>
               </div>
             </section>
 
-            {/* Upload + Preview */}
-            <section className="space-y-3 text-sm text-slate-800 ">
-              <h3 className="font-semibold">Upload & Preview</h3>
-              <div className={`grid gap-4 ${file ? "md:grid-cols-2" : "grid-cols-1"}`}>
-                {/* Upload Box */}
+            {/* Upload + Preview row (preview only after upload) */}
+            <section className="space-y-3 text-sm text-slate-800">
+              <h3 className="font-semibold">Upload &amp; Preview</h3>
+              <p className="text-[11px] text-slate-500">PDF only • 1 file • Max 2 MB</p>
+
+              <div className={`grid gap-4 items-start ${file ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+                {/* Upload */}
                 <motion.div
                   layout
-                  className={`relative rounded-2xl border-2 border-dashed px-4 ${file ? "py-4" : "py-6"} text-center overflow-hidden ${
-                    file ? "h-64 sm:h-72 md:h-80 flex flex-col items-center justify-center" : ""
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className={`relative rounded-2xl border-2 border-dashed px-4 py-6 text-center overflow-hidden ${
+                    !file ? "mx-auto max-w-md" : ""
                   } ${
                     isDragOver
-                      ? "border-indigo-500 bg-indigo-50/80"
+                      ? "border-indigo-500 bg-indigo-50/80 shadow-[0_0_0_1px_rgba(79,70,229,0.15)]"
                       : "border-slate-300 bg-white hover:border-indigo-400 hover:bg-slate-50"
                   }`}
                   onDrop={handleDrop}
@@ -193,92 +209,108 @@ export default function CUFormUploadPage() {
                   onDragLeave={handleDragLeave}
                 >
                   <motion.div
-                    className={`mx-auto ${file ? "mb-4 h-14 w-14" : "mb-3 h-12 w-12"} inline-flex items-center justify-center rounded-full bg-indigo-50 text-indigo-600 shadow-sm`}
+                    className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 shadow-sm"
                     animate={isDragOver ? { scale: 1.05, y: -2 } : { scale: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 260, damping: 18 }}
                   >
-                    <UploadCloud className={file ? "w-6 h-6" : "w-5 h-5"} />
+                    <UploadCloud className="w-5 h-5" />
                   </motion.div>
-                  <p className={`${file ? "text-sm" : "text-xs"} text-slate-700`}>
+                  <p className="text-xs text-slate-700">
                     Drag and drop your PDF here, or <span className="font-semibold text-indigo-600">browse</span> from
                     your device.
                   </p>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="application/pdf"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`mt-3 inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-50 hover:bg-slate-100 cursor-pointer ${
-                      file ? "px-4 py-2 text-sm" : "px-3 py-1.5 text-xs"
-                    }`}
-                  >
-                    Browse PDF
-                  </button>
-
+                  <label className="mt-3 inline-flex items-center justify-center">
+                    <input type="file" accept="application/pdf" className="hidden" onChange={handleFileChange} />
+                    <span className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 cursor-pointer">
+                      Browse PDF
+                    </span>
+                  </label>
                   {file && (
-                    <div className="mt-4 flex justify-center items-center gap-3 text-sm text-emerald-700">
-                      <span className="truncate max-w-[260px]">{file.name}</span>
+                    <motion.div
+                      className="mt-4 flex items-center justify-center gap-2 text-[11px] text-emerald-700 font-medium"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <span className="truncate max-w-[220px]">Selected: {file.name}</span>
                       <button
+                        type="button"
                         onClick={() => {
                           setFile(null);
                           setPreviewUrl(null);
-                          if (fileInputRef.current) fileInputRef.current.value = "";
                         }}
-                        className="p-1 border rounded-full"
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-slate-500 hover:bg-slate-100 bg-white"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-3 h-3" />
                       </button>
-                    </div>
+                    </motion.div>
                   )}
                 </motion.div>
 
-                {/* Preview */}
+                {/* Preview to the right (only when file is present) */}
                 {file && previewUrl && (
-                  <div>
-                    {/* <h4 className="font-semibold mb-2">Preview</h4> */}
-                    <div className="rounded-md border bg-white h-64 sm:h-72 md:h-80 overflow-hidden">
-                      <object data={`${previewUrl}#toolbar=0`} type="application/pdf" className="w-full h-full" />
+                  <section className="space-y-2 text-sm text-slate-800">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold">Preview</h4>
+                      <span className="text-[11px] text-slate-500">
+                        Scroll inside the frame to check each page carefully.
+                      </span>
                     </div>
-                  </div>
+                    <div className="rounded-md border bg-white h-72 overflow-hidden">
+                      <object
+                        data={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                        type="application/pdf"
+                        className="w-full h-full"
+                      >
+                        <iframe title="PDF Preview" src={previewUrl} className="w-full h-full" />
+                        <p className="p-3 text-[11px] text-slate-600">
+                          Your browser cannot display the PDF preview.{" "}
+                          <a href={previewUrl} target="_blank" rel="noreferrer" className="underline font-medium">
+                            Open in a new tab
+                          </a>
+                          .
+                        </p>
+                      </object>
+                    </div>
+                  </section>
                 )}
               </div>
             </section>
 
             {/* Submit */}
-            <section>
+            <section className="pt-2 space-y-2">
               <button
                 onClick={() => {
                   setSubmitted(true);
-                  toast.success("Form uploaded successfully.");
+                  toast.success("Semester I CU Examination Form uploaded successfully.", {
+                    description: "You will receive confirmation once the form is verified by the college.",
+                  });
                 }}
                 disabled={!file}
-                className={`w-full py-2 rounded-md font-semibold text-sm ${
+                className={`w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${
                   file
                     ? "bg-emerald-600 text-white hover:bg-emerald-700"
                     : "bg-slate-200 text-slate-500 cursor-not-allowed"
                 }`}
               >
+                <CheckCircle2 className="w-5 h-5" />
                 Submit Semester I Examination Form
               </button>
+              <p className="text-[11px] text-slate-500">
+                Once submitted, changes cannot be made from the portal. For any corrections, please visit the college
+                office.
+              </p>
             </section>
           </div>
         </main>
       )}
 
-      {/* Success State */}
+      {/* Success state */}
       {submitted && (
-        <main className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
-          <div className="w-full max-w-md sm:max-w-lg rounded-lg border bg-white p-5 sm:p-7 text-center space-y-4 sm:space-y-5 shadow-sm">
-            <div className="inline-flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 mx-auto">
-              <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8" />
+        <main className="flex-1 flex items-center justify-center px-4 py-10">
+          <div className="w-full max-w-md rounded-lg border bg-white p-6 text-center space-y-4">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+              <CheckCircle2 className="w-7 h-7" />
             </div>
-
             <div>
               <h2 className="text-base sm:text-lg md:text-xl font-semibold text-slate-900">
                 Form uploaded successfully
@@ -288,16 +320,14 @@ export default function CUFormUploadPage() {
                 sent to your Institutional Email ID. Please check the same.
               </p>
             </div>
-
             <button
               type="button"
               onClick={() => {
                 setSubmitted(false);
                 setFile(null);
                 setPreviewUrl(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
               }}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 sm:py-3 text-sm sm:text-base font-semibold text-white hover:bg-slate-800 transition"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
             >
               Back to upload
             </button>
