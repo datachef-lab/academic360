@@ -153,7 +153,7 @@ export default function CUFormUploadPage() {
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[11px] text-white">
                     i
                   </span>
-                  Important Information:
+                  Before you upload
                 </h2>
                 <ul className="mt-3 list-disc pl-5 space-y-1.5">
                   <li>The form should be a single PDF file (max 2 MB).</li>
@@ -172,9 +172,8 @@ export default function CUFormUploadPage() {
                       Fill the Form
                     </a>
                   </li>
-                  <li className=" text-red-600 font-semibold">
-                    It is mandatory to complete the enrolment process along with the payment of fees to be a bonafide
-                    student of the college.
+                  <li className="text-[11px] md:text-xs text-red-600 font-semibold">
+                    Final submission cannot be edited from the portal. For corrections, contact the college office.
                   </li>
                 </ul>
                 <p className="pt-2 text-[11px] text-slate-600">
@@ -312,12 +311,10 @@ export default function CUFormUploadPage() {
               <CheckCircle2 className="w-7 h-7" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-slate-900">
-                Form uploaded successfully
-              </h2>
-              <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Your Semester I Calcutta University Examination Form has been submitted. A confirmation email has been
-                sent to your Institutional Email ID. Please check the same.
+              <h2 className="text-base md:text-lg font-semibold text-slate-900">Form uploaded successfully</h2>
+              <p className="mt-1 text-xs text-slate-600">
+                Your Semester I Calcutta University Examination Form has been submitted. You will receive further
+                communication on your registered contact details after verification.
               </p>
             </div>
             <button
