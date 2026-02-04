@@ -69,9 +69,20 @@ import { eq } from "drizzle-orm";
  * wrap errors in try/catch – controller handles errors.
  */
 export const createAddon = async (
-  data: AddOn,
+  data: Omit<
+    AddOn,
+    "id" | "createdAt" | "updatedAt" | "createdByUserId" | "updatedByUserId"
+  >,
+  userId: number,
 ): Promise<typeof addonModel.$inferSelect> => {
-  const [newAddon] = await db.insert(addonModel).values(data).returning();
+  const [newAddon] = await db
+    .insert(addonModel)
+    .values({
+      ...data,
+      createdByUserId: userId,
+      updatedByUserId: userId,
+    })
+    .returning();
   return newAddon;
 };
 
@@ -105,10 +116,15 @@ export const getAddonById = async (
 export const updateAddon = async (
   id: number,
   data: Partial<AddOn>,
+  userId: number,
 ): Promise<typeof addonModel.$inferSelect | null> => {
   const [updatedAddon] = await db
     .update(addonModel)
-    .set({ ...data, updatedAt: new Date() })
+    .set({
+      ...data,
+      updatedAt: new Date(),
+      updatedByUserId: userId,
+    })
     .where(eq(addonModel.id, id))
     .returning();
 

@@ -1,7 +1,11 @@
 import { Router } from "express";
 import * as feesStructureController from "../controllers/fees-structure.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = Router();
+
+// Apply authentication middleware to all routes
+router.use(verifyJWT);
 
 router.post("/", feesStructureController.createFeeStructure);
 router.post("/by-dto", feesStructureController.createFeeStructureByDto);

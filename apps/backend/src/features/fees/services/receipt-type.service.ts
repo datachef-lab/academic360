@@ -5,9 +5,20 @@ import { eq } from "drizzle-orm";
 type ReceiptTypeInsert = typeof receiptTypeModel.$inferInsert;
 
 export const createReceiptType = async (
-  data: Omit<ReceiptTypeInsert, "id" | "createdAt" | "updatedAt">,
+  data: Omit<
+    ReceiptTypeInsert,
+    "id" | "createdAt" | "updatedAt" | "createdByUserId" | "updatedByUserId"
+  >,
+  userId: number,
 ): Promise<ReceiptType | null> => {
-  const [created] = await db.insert(receiptTypeModel).values(data).returning();
+  const [created] = await db
+    .insert(receiptTypeModel)
+    .values({
+      ...data,
+      createdByUserId: userId,
+      updatedByUserId: userId,
+    })
+    .returning();
   return created || null;
 };
 
@@ -28,10 +39,15 @@ export const getReceiptTypeById = async (
 export const updateReceiptType = async (
   id: number,
   data: Partial<ReceiptType>,
+  userId: number,
 ): Promise<ReceiptType | null> => {
   const [updated] = await db
     .update(receiptTypeModel)
-    .set(data)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+      updatedByUserId: userId,
+    })
     .where(eq(receiptTypeModel.id, id))
     .returning();
   return updated || null;

@@ -26,6 +26,7 @@ import {
   getAllAddonsHandler,
   updateAddonHandler,
 } from "../controllers/addon.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = Router();
 
@@ -37,6 +38,9 @@ function asyncHandler(
     fn(req, res, next).catch(next);
   };
 }
+
+// Apply authentication middleware to all routes
+router.use(verifyJWT);
 
 router.get("/", asyncHandler(getAllAddonsHandler));
 

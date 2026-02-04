@@ -656,6 +656,10 @@ const FeesStructurePage: React.FC = () => {
             alert("Failed to save fee structure. Please try again.");
           }
         }}
+        onRefresh={async () => {
+          // Refresh the fees structures list
+          await fetchFeesStructuresPaginated(currentPage, pageSize, apiFilters);
+        }}
       />
 
       {/* Summary Modal - Reusing Preview Modal UI */}

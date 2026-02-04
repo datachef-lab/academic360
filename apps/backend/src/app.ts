@@ -81,10 +81,12 @@ import {
   subDepartmentRouter,
   feeHeadRouter,
   feeStructureComponentRouter,
+  feeCategoryRouter,
+  feeCategoryPromotionMappingRouter,
 } from "@/features/index.js";
 import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
-import studentFeesRouter from "@/features/fees/routes/student-fees.route.js";
+import feeStudentMappingRouter from "@/features/fees/routes/fee-student-mapping.route.js";
 import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js";
 import feeStructureConcessionSlabRouter from "@/features/fees/routes/fee-structure-concession-slab.route.js";
 
@@ -455,12 +457,17 @@ app.use(
   feeStructureConcessionSlabRouter,
 );
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
-app.use("/api/v1/fees/student-fees", studentFeesRouter);
+app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
 app.use("/api/v1/fees/receipt-types", receiptTypeRouter);
 app.use("/api/v1/fees/addons", addonRouter);
 app.use("/api/v1/fees/concession-slabs", feeConcessionSlabRouter);
 app.use("/api/v1/fees/heads", feeHeadRouter);
 app.use("/api/v1/fees/components", feeStructureComponentRouter);
+app.use("/api/v1/fees/categories", feeCategoryRouter);
+app.use(
+  "/api/v1/fees/category-promotion-mappings",
+  feeCategoryPromotionMappingRouter,
+);
 // app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
 app.use("/api/v1/fees", feesRouter);
 app.use("/api/v1/courses", courseRouter);
@@ -812,7 +819,7 @@ app.use("/api/v1/academics", academicYearRouter);
 
 // Register specific routes BEFORE generic routes to avoid route conflicts
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
-app.use("/api/v1/fees/student-fees", studentFeesRouter);
+app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
 app.use("/api/v1/fees/heads", feeHeadRouter);
 app.use("/api/v1/fees", feesRouter);
 

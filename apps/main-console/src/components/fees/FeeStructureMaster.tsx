@@ -11,7 +11,8 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Shift } from "@/types/academics/shift";
 import { FeesReceiptType } from "@/types/fees";
-import type { FeeHead, FeeConcessionSlab } from "@repo/db/schemas";
+import type { FeeConcessionSlab } from "@repo/db/schemas";
+import type { FeesHead } from "@/types/fees";
 import { Class } from "@/types/academics/class";
 import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
 import type { FeeStructureComponentT, FeeStructureConcessionSlabT } from "@repo/db/schemas";
@@ -22,9 +23,22 @@ import {
   getAllFeeConcessionSlabs,
   checkUniqueFeeStructureAmounts,
   type CheckUniqueAmountsResponse,
+  updateFeesStructure,
+  deleteFeesStructure,
 } from "@/services/fees-api";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { UserAvatar } from "@/hooks/UserAvatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 // UI state type that extends DTO with calculated amount for display
 type ConcessionSlabUI = {
@@ -60,6 +74,7 @@ interface FeeStructureMasterProps {
   classes: Class[];
   onSave?: (data: CreateFeeStructureDto) => void;
   feeStructure?: FeeStructureDto | null; // For edit mode
+  onRefresh?: () => void; // Callback to refresh the parent component
 }
 
 const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
@@ -69,6 +84,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   classes,
   onSave,
   feeStructure,
+  onRefresh,
 }) => {
   const { user } = useAuth();
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("");
@@ -87,7 +103,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [programCourses, setProgramCourses] = useState<Array<{ id?: number; name: string | null }>>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
-  const [feeHeads, setFeeHeads] = useState<FeeHead[]>([]);
+  const [feeHeads, setFeeHeads] = useState<FeesHead[]>([]);
   const [feeConcessionSlabs, setFeeConcessionSlabs] = useState<FeeConcessionSlab[]>([]);
 
   const [feeStructureRow, setFeeStructureRow] = useState<FeeStructureRow>({
@@ -104,6 +120,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   const [validationResult, setValidationResult] = useState<CheckUniqueAmountsResponse | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Helper function to check if a concession slab has conflicts
   const hasSlabConflict = (slabId: number): boolean => {
@@ -604,27 +623,27 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
 
     // Validate required fields
     if (!selectedAcademicYear) {
-      alert("Please select an Academic Year");
+      toast.error("Please select an Academic Year");
       return;
     }
     if (!selectedReceiptType) {
-      alert("Please select a Receipt Type");
+      toast.error("Please select a Receipt Type");
       return;
     }
     if (!selectedClass) {
-      alert("Please select a Class");
+      toast.error("Please select a Class");
       return;
     }
     if (feeStructureRow.programs.length === 0) {
-      alert("Please select at least one Program Course");
+      toast.error("Please select at least one Program Course");
       return;
     }
     if (feeStructureRow.shifts.length === 0) {
-      alert("Please select at least one Shift");
+      toast.error("Please select at least one Shift");
       return;
     }
     if (feeStructureRow.feeComponents.length === 0) {
-      alert("Please add at least one Fee Component");
+      toast.error("Please add at least one Fee Component");
       return;
     }
 
@@ -685,12 +704,60 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
 
     try {
       await onSave(createFeeStructureDto);
+      toast.success("Fee structure saved successfully");
       onClose();
     } catch (error) {
       console.error("Error saving fee structure:", error);
-      alert("Failed to save fee structure. Please try again.");
+      toast.error("Failed to save fee structure. Please try again.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!feeStructure?.id) {
+      toast.error("No fee structure selected");
+      return;
+    }
+
+    setIsPublishing(true);
+    try {
+      await updateFeesStructure(feeStructure.id, { isPublished: true });
+      toast.success("Fee structure published successfully");
+      onClose();
+      // Trigger a refresh
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error("Error publishing fee structure:", error);
+      toast.error("Failed to publish fee structure. Please try again.");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!feeStructure?.id) {
+      toast.error("No fee structure selected");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteFeesStructure(feeStructure.id);
+      toast.success("Fee structure deleted successfully");
+      setShowDeleteDialog(false);
+      onClose();
+      // Trigger a refresh
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error("Error deleting fee structure:", error);
+      toast.error("Failed to delete fee structure. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1537,21 +1604,48 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
             </div>
           </div>
 
-          <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
-            <Button variant="outline" onClick={onClose} disabled={saving}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={
-                saving ||
-                isAllocationExceeded ||
-                !isAllocationComplete ||
-                (validationResult !== null && !validationResult.isUnique)
-              }
-            >
-              {saving ? "Saving..." : "Save"}
-            </Button>
+          <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {feeStructure?.id && (
+                <>
+                  {!feeStructure.isPublished && (
+                    <Button
+                      variant="default"
+                      onClick={handlePublish}
+                      disabled={isPublishing || saving}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {isPublishing ? "Publishing..." : "Publish"}
+                    </Button>
+                  )}
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteDialog(true)}
+                    disabled={isDeleting || saving}
+                  >
+                    Delete
+                  </Button>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={onClose} disabled={saving || isPublishing || isDeleting}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={
+                  saving ||
+                  isPublishing ||
+                  isDeleting ||
+                  isAllocationExceeded ||
+                  !isAllocationComplete ||
+                  (validationResult !== null && !validationResult.isUnique)
+                }
+              >
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2168,6 +2262,26 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the fee structure
+              {feeStructure?.id && ` (ID: ${feeStructure.id})`} and all associated data including components, concession
+              slabs, and installments.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-red-600 hover:bg-red-700">
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

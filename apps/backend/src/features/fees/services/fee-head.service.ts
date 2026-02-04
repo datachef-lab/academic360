@@ -8,9 +8,20 @@ import { eq } from "drizzle-orm";
  */
 
 export const createFeeHead = async (
-  data: typeof createFeeHeadSchema._type,
+  data: Omit<
+    typeof createFeeHeadSchema._type,
+    "id" | "createdAt" | "updatedAt" | "createdByUserId" | "updatedByUserId"
+  >,
+  userId: number,
 ): Promise<typeof feeHeadModel.$inferSelect> => {
-  const [created] = await db.insert(feeHeadModel).values(data).returning();
+  const [created] = await db
+    .insert(feeHeadModel)
+    .values({
+      ...data,
+      createdByUserId: userId,
+      updatedByUserId: userId,
+    })
+    .returning();
   return created;
 };
 
@@ -34,10 +45,15 @@ export const getFeeHeadById = async (
 export const updateFeeHead = async (
   id: number,
   data: Partial<typeof createFeeHeadSchema._type>,
+  userId: number,
 ): Promise<typeof feeHeadModel.$inferSelect | null> => {
   const [updated] = await db
     .update(feeHeadModel)
-    .set({ ...data, updatedAt: new Date() })
+    .set({
+      ...data,
+      updatedAt: new Date(),
+      updatedByUserId: userId,
+    })
     .where(eq(feeHeadModel.id, id))
     .returning();
   return updated ?? null;

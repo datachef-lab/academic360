@@ -337,3 +337,9 @@ export const examOrderTypeEnum = pgEnum("exam_order_type", [
     "CU_REGISTRATION_NUMBER",
     "UID",
 ]);
+
+export const feeCategoryValidityTypeEnum = pgEnum("fee_category_type", [
+    "SEMESTER",
+    "ACADEMIC_YEAR",
+    "PROGRAM_COURSE",
+]);
