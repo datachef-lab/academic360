@@ -9,6 +9,7 @@ import {
 import { createFeeStructureSlabSchema } from "@repo/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
+import { z } from "zod";
 
 export async function createFeeStructureSlabHandler(
   req: Request,
