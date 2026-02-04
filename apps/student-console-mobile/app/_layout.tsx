@@ -9,9 +9,11 @@ import "../global.css";
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <CustomDrawerNavigation />
-    </ThemeProvider>
+    <GestureHandlerRootView className="flex-1">
+      <ThemeProvider>
+        <CustomDrawerNavigation />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -50,8 +52,8 @@ function CustomDrawerNavigation() {
             }}
           />
         </Drawer>
+        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} backgroundColor="transparent" />
       </GestureHandlerRootView>
-      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} backgroundColor="transparent" />
     </>
   );
 }

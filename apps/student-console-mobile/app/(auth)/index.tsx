@@ -10,6 +10,9 @@ export default function Index() {
       <Link href="/console/(tabs)" className="text-2xl" style={{ color: theme.text }}>
         Go to Console Screen!
       </Link>
+      <Link href="/onboarding" className="text-2xl" style={{ color: theme.text }}>
+        Go to onboarding!
+      </Link>
     </View>
   );
 }
