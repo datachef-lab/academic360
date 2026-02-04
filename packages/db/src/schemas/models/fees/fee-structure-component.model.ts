@@ -17,8 +17,8 @@ export const feeStructureComponentModel = pgTable("fee_structure_components", {
     feeHeadPercentage: doublePrecision().notNull().default(0),
     sequence: integer(),
     remarks: varchar({ length: 500 }),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
+    updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const createFeeStructureComponentSchema = createInsertSchema(feeStructureComponentModel);

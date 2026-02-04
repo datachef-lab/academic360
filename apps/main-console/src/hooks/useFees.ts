@@ -41,6 +41,13 @@ import {
   deleteFeeConcessionSlab,
   NewFeeConcessionSlab,
 
+  // Fee Categories
+  getAllFeeCategories,
+  createFeeCategory,
+  updateFeeCategory,
+  deleteFeeCategory,
+  NewFeeCategory,
+
   // Student Fees Mapping
   getAllStudentFeesMappings,
   createStudentFeesMapping,
@@ -55,11 +62,11 @@ import {
   FeesSlab,
   FeesReceiptType,
   AddOn,
-  StudentFeesMapping,
   FeesSlabMapping,
   CreateFeesStructureDto,
 } from "@/types/fees";
-import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
+import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
+import { CreateFeeStructureDto, FeeStructureDto, FeeCategoryDto } from "@repo/db/dtos/fees";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Course } from "@/types/course-design";
 import {
@@ -583,7 +590,7 @@ export const useAddons = () => {
 // ==================== STUDENT FEES MAPPING HOOKS ====================
 
 export const useStudentFeesMappings = () => {
-  const [studentFeesMappings, setStudentFeesMappings] = useState<StudentFeesMapping[]>([]);
+  const [studentFeesMappings, setStudentFeesMappings] = useState<FeeStudentMappingDto[]>([]);
   const [loading, setLoading] = useState(true);
   const { showError } = useError();
 
@@ -600,7 +607,7 @@ export const useStudentFeesMappings = () => {
   }, [showError]);
 
   const addStudentFeesMapping = useCallback(
-    async (newStudentFeesMapping: StudentFeesMapping) => {
+    async (newStudentFeesMapping: Partial<FeeStudentMappingDto>) => {
       try {
         const response = await createStudentFeesMapping(newStudentFeesMapping);
         await fetchStudentFeesMappings();
@@ -614,7 +621,7 @@ export const useStudentFeesMappings = () => {
   );
 
   const updateStudentFeesMappingById = useCallback(
-    async (id: number, studentFeesMapping: Partial<StudentFeesMapping>) => {
+    async (id: number, studentFeesMapping: Partial<FeeStudentMappingDto>) => {
       try {
         const response = await updateStudentFeesMapping(id, studentFeesMapping);
         await fetchStudentFeesMappings();
@@ -798,5 +805,89 @@ export const useFeeConcessionSlabs = () => {
     addFeeConcessionSlab,
     updateFeeConcessionSlabById,
     deleteFeeConcessionSlabById,
+  };
+};
+
+// ==================== FEE CATEGORIES HOOKS ====================
+
+export const useFeeCategories = () => {
+  const [feeCategories, setFeeCategories] = useState<FeeCategoryDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { showError } = useError();
+
+  const fetchFeeCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getAllFeeCategories();
+      if (response.payload) {
+        setFeeCategories(response.payload);
+      } else {
+        setFeeCategories([]);
+      }
+    } catch (error) {
+      console.error("Error fetching fee categories:", error);
+      showError({ message: "Failed to fetch fee categories" });
+      setFeeCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [showError]);
+
+  const addFeeCategory = useCallback(
+    async (newCategory: NewFeeCategory) => {
+      try {
+        const response = await createFeeCategory(newCategory);
+        await fetchFeeCategories();
+        return response.payload;
+      } catch (error) {
+        console.error("Error creating fee category:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to create fee category" });
+        return null;
+      }
+    },
+    [fetchFeeCategories, showError],
+  );
+
+  const updateFeeCategoryById = useCallback(
+    async (id: number, category: Partial<NewFeeCategory>) => {
+      try {
+        const response = await updateFeeCategory(id, category);
+        await fetchFeeCategories();
+        return response.payload;
+      } catch (error) {
+        console.error("Error updating fee category:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to update fee category" });
+        return null;
+      }
+    },
+    [fetchFeeCategories, showError],
+  );
+
+  const deleteFeeCategoryById = useCallback(
+    async (id: number) => {
+      try {
+        await deleteFeeCategory(id);
+        await fetchFeeCategories();
+        return true;
+      } catch (error) {
+        console.error("Error deleting fee category:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to delete fee category" });
+        return false;
+      }
+    },
+    [fetchFeeCategories, showError],
+  );
+
+  useEffect(() => {
+    fetchFeeCategories();
+  }, [fetchFeeCategories]);
+
+  return {
+    feeCategories,
+    loading,
+    fetchFeeCategories,
+    addFeeCategory,
+    updateFeeCategoryById,
+    deleteFeeCategoryById,
   };
 };

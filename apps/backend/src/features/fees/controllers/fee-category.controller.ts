@@ -1,16 +1,16 @@
 import { Request, Response } from "express";
 import {
-  createFeeHead,
-  getAllFeeHeads,
-  getFeeHeadById,
-  updateFeeHead,
-  deleteFeeHead,
-} from "../services/fee-head.service";
-import { createFeeHeadSchema } from "@repo/db/schemas";
+  createFeeCategory,
+  getAllFeeCategories,
+  getFeeCategoryById,
+  updateFeeCategory,
+  deleteFeeCategory,
+} from "../services/fee-category.service";
+import { createFeeCategorySchema } from "@repo/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 
-export async function createFeeHeadHandler(req: Request, res: Response) {
+export async function createFeeCategoryHandler(req: Request, res: Response) {
   try {
     const userId = (req.user as any)?.id;
     if (!userId) {
@@ -27,7 +27,7 @@ export async function createFeeHeadHandler(req: Request, res: Response) {
     }
 
     // Validate input - exclude auto-generated fields and user ID fields
-    const schemaWithoutAutoFields = createFeeHeadSchema.omit({
+    const schemaWithoutAutoFields = createFeeCategorySchema.omit({
       id: true,
       createdAt: true,
       updatedAt: true,
@@ -35,11 +35,13 @@ export async function createFeeHeadHandler(req: Request, res: Response) {
       updatedByUserId: true,
     });
     const parsed = schemaWithoutAutoFields.parse(req.body);
-    const created = await createFeeHead(parsed, userId);
+    const created = await createFeeCategory(parsed, userId);
     if (!created)
       return res
         .status(500)
-        .json(new ApiResponse(500, "ERROR", null, "Failed to create fee head"));
+        .json(
+          new ApiResponse(500, "ERROR", null, "Failed to create fee category"),
+        );
 
     return res
       .status(201)
@@ -48,7 +50,7 @@ export async function createFeeHeadHandler(req: Request, res: Response) {
           201,
           "SUCCESS",
           created,
-          "Fee head created successfully",
+          "Fee category created successfully",
         ),
       );
   } catch (error) {
@@ -56,9 +58,9 @@ export async function createFeeHeadHandler(req: Request, res: Response) {
   }
 }
 
-export async function getAllFeeHeadsHandler(_req: Request, res: Response) {
+export async function getAllFeeCategoriesHandler(_req: Request, res: Response) {
   try {
-    const rows = await getAllFeeHeads();
+    const rows = await getAllFeeCategories();
     return res
       .status(200)
       .json(
@@ -66,7 +68,7 @@ export async function getAllFeeHeadsHandler(_req: Request, res: Response) {
           200,
           "SUCCESS",
           rows,
-          "Fee heads retrieved successfully",
+          "Fee categories retrieved successfully",
         ),
       );
   } catch (error) {
@@ -74,7 +76,7 @@ export async function getAllFeeHeadsHandler(_req: Request, res: Response) {
   }
 }
 
-export async function getFeeHeadByIdHandler(req: Request, res: Response) {
+export async function getFeeCategoryByIdHandler(req: Request, res: Response) {
   try {
     const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
@@ -82,7 +84,7 @@ export async function getFeeHeadByIdHandler(req: Request, res: Response) {
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const row = await getFeeHeadById(id);
+    const row = await getFeeCategoryById(id);
     if (!row)
       return res
         .status(404)
@@ -91,31 +93,27 @@ export async function getFeeHeadByIdHandler(req: Request, res: Response) {
             404,
             "NOT_FOUND",
             null,
-            `Fee head with ID ${id} not found`,
+            `Fee category with ID ${id} not found`,
           ),
         );
 
     return res
       .status(200)
       .json(
-        new ApiResponse(200, "SUCCESS", row, "Fee head retrieved successfully"),
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          row,
+          "Fee category retrieved successfully",
+        ),
       );
   } catch (error) {
     return handleError(error, res);
   }
 }
 
-export async function updateFeeHeadHandler(req: Request, res: Response) {
+export async function updateFeeCategoryHandler(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params.id as string, 10);
-    if (Number.isNaN(id))
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid ID format" });
-
-    const partialSchema = createFeeHeadSchema.partial();
-    const parsed = partialSchema.parse(req.body);
-
     const userId = (req.user as any)?.id;
     if (!userId) {
       return res
@@ -130,7 +128,16 @@ export async function updateFeeHeadHandler(req: Request, res: Response) {
         );
     }
 
-    const updated = await updateFeeHead(id, parsed, userId);
+    const id = parseInt(req.params.id as string, 10);
+    if (Number.isNaN(id))
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid ID format" });
+
+    const partialSchema = createFeeCategorySchema.partial();
+    const parsed = partialSchema.parse(req.body);
+
+    const updated = await updateFeeCategory(id, parsed, userId);
     if (!updated)
       return res
         .status(404)
@@ -139,7 +146,7 @@ export async function updateFeeHeadHandler(req: Request, res: Response) {
             404,
             "NOT_FOUND",
             null,
-            `Fee head with ID ${id} not found`,
+            `Fee category with ID ${id} not found`,
           ),
         );
 
@@ -150,7 +157,7 @@ export async function updateFeeHeadHandler(req: Request, res: Response) {
           200,
           "SUCCESS",
           updated,
-          "Fee head updated successfully",
+          "Fee category updated successfully",
         ),
       );
   } catch (error) {
@@ -158,7 +165,7 @@ export async function updateFeeHeadHandler(req: Request, res: Response) {
   }
 }
 
-export async function deleteFeeHeadHandler(req: Request, res: Response) {
+export async function deleteFeeCategoryHandler(req: Request, res: Response) {
   try {
     const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
@@ -166,7 +173,7 @@ export async function deleteFeeHeadHandler(req: Request, res: Response) {
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const deleted = await deleteFeeHead(id);
+    const deleted = await deleteFeeCategory(id);
     if (!deleted)
       return res
         .status(404)
@@ -175,7 +182,7 @@ export async function deleteFeeHeadHandler(req: Request, res: Response) {
             404,
             "NOT_FOUND",
             null,
-            `Fee head with ID ${id} not found`,
+            `Fee category with ID ${id} not found`,
           ),
         );
 
@@ -186,7 +193,7 @@ export async function deleteFeeHeadHandler(req: Request, res: Response) {
           200,
           "DELETED",
           deleted,
-          "Fee head deleted successfully",
+          "Fee category deleted successfully",
         ),
       );
   } catch (error) {

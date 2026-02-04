@@ -519,6 +519,27 @@
       "when": 1768388765242,
       "tag": "0073_slippery_sharon_carter",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1770190359941,
+      "tag": "0074_spotty_lyja",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1770191094948,
+      "tag": "0075_odd_toad",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1770192615753,
+      "tag": "0076_condemned_gambit",
+      "breakpoints": true
     }
   ]
 }

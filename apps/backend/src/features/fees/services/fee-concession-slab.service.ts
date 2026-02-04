@@ -11,11 +11,23 @@ import { eq } from "drizzle-orm";
  * Validation is performed in controllers via zod schemas.
  */
 export const createFeeConcessionSlab = async (
-  data: FeeConcessionSlab,
+  data: Omit<
+    FeeConcessionSlab,
+    "id" | "createdAt" | "updatedAt" | "createdByUserId" | "updatedByUserId"
+  >,
+  userId: number,
 ): Promise<typeof feeConcessionSlabModel.$inferSelect> => {
   const [created] = await db
     .insert(feeConcessionSlabModel)
-    .values(data)
+    .values({
+      name: data.name,
+      description: data.description,
+      defaultConcessionRate: data.defaultConcessionRate ?? 0,
+      sequence: data.sequence ?? null,
+      legacyFeeSlabId: data.legacyFeeSlabId ?? null,
+      createdByUserId: userId,
+      updatedByUserId: userId,
+    })
     .returning();
   return created;
 };
@@ -41,10 +53,15 @@ export const getFeeConcessionSlabById = async (
 export const updateFeeConcessionSlab = async (
   id: number,
   data: Partial<FeeConcessionSlab>,
+  userId: number,
 ): Promise<typeof feeConcessionSlabModel.$inferSelect | null> => {
   const [updated] = await db
     .update(feeConcessionSlabModel)
-    .set({ ...data, updatedAt: new Date() })
+    .set({
+      ...data,
+      updatedAt: new Date(),
+      updatedByUserId: userId,
+    })
     .where(eq(feeConcessionSlabModel.id, id))
     .returning();
 

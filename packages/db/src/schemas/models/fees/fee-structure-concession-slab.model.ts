@@ -13,8 +13,8 @@ export const feeStructureConcessionSlabModel = pgTable("fee_structure_concession
         .references(() => feeConcessionSlabModel.id)
         .notNull(),
     concessionRate: doublePrecision().notNull().default(0),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
+    updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const createFeeStructureConcessionSlabSchema = createInsertSchema(feeStructureConcessionSlabModel);
