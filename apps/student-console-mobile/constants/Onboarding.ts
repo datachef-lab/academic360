@@ -12,8 +12,7 @@ export const onboardingSlides: OnboardingSlide[] = [
     id: 1,
     title: "Welcome to \n BESC Console",
     subtitle: "Your academic companion",
-    description:
-      "Access everything related to your college life — classes, exams, fees, library, and services — all in one place.",
+    description: "Your college essentials — classes, exams, fees, library, and services — all in one convenient app.",
     illustration: "onboarding-campus",
     cta: "Next",
   },
@@ -35,11 +34,11 @@ export const onboardingSlides: OnboardingSlide[] = [
   },
   {
     id: 4,
-    title: "Services & Support Made Easy",
-    subtitle: "Requests • Library • Certificates",
+    title: "Ready to Get Started?",
+    subtitle: "Login to access your dashboard",
     description:
-      "Apply for certificates, track service requests, manage library dues, and get college support anytime.",
-    illustration: "onboarding-services",
+      "Sign in with your credentials to access your personalized dashboard, track your progress, and manage your academic journey.",
+    illustration: "onboarding-login",
     cta: "Get Started",
   },
 ];
