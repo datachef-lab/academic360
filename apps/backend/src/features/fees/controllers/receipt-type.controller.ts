@@ -14,8 +14,31 @@ export const createReceiptType = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const parse = createReceiptTypeSchema.safeParse(
-      req.body as z.input<typeof createReceiptTypeSchema>,
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            "UNAUTHORIZED",
+            null,
+            "User authentication required",
+          ),
+        );
+      return;
+    }
+
+    // Validate input - exclude auto-generated fields and user ID fields
+    const schemaWithoutAutoFields = createReceiptTypeSchema.omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true,
+      createdByUserId: true,
+      updatedByUserId: true,
+    });
+    const parse = schemaWithoutAutoFields.safeParse(
+      req.body as z.input<typeof schemaWithoutAutoFields>,
     );
     if (!parse.success) {
       res
@@ -30,11 +53,12 @@ export const createReceiptType = async (
         );
       return;
     }
+
     const body = parse.data as Omit<
       ReceiptType,
-      "id" | "createdAt" | "updatedAt"
+      "id" | "createdAt" | "updatedAt" | "createdByUserId" | "updatedByUserId"
     >;
-    const created = await receiptTypeService.createReceiptType(body);
+    const created = await receiptTypeService.createReceiptType(body, userId);
     if (!created) {
       res
         .status(400)
@@ -126,8 +150,27 @@ export const updateReceiptType = async (
         );
       return;
     }
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            "UNAUTHORIZED",
+            null,
+            "User authentication required",
+          ),
+        );
+      return;
+    }
+
     const body = parse.data as Partial<ReceiptType>;
-    const updated = await receiptTypeService.updateReceiptType(id, body);
+    const updated = await receiptTypeService.updateReceiptType(
+      id,
+      body,
+      userId,
+    );
     if (!updated) {
       res
         .status(404)

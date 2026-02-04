@@ -6,11 +6,16 @@ import {
   FeesReceiptType,
   AddOn,
   FeesComponent,
-  StudentFeesMapping,
   FeesSlabMapping,
   CreateFeesStructureDto,
 } from "@/types/fees";
-import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
+import {
+  CreateFeeStructureDto,
+  FeeStructureDto,
+  FeeCategoryDto,
+  FeeCategoryPromotionMappingDto,
+} from "@repo/db/dtos/fees";
+import { FeeStudentMappingDto } from "@repo/db/dtos/fees/index";
 import { PaginatedResponse } from "@/types/pagination";
 import { AcademicYear } from "@/types/academics/academic-year";
 import type { FeeConcessionSlabT } from "@/schemas";
@@ -608,40 +613,84 @@ export interface NewStudentFeesMapping {
 }
 
 // Get all student fees mappings
-export async function getAllStudentFeesMappings(): Promise<ApiResponse<StudentFeesMapping[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/student-fees-mappings`);
+export async function getAllStudentFeesMappings(): Promise<ApiResponse<FeeStudentMappingDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/student-mappings`);
   return response.data;
 }
 
 // Get a single student fees mapping
-export async function getStudentFeesMapping(studentFeesMappingId: number): Promise<ApiResponse<StudentFeesMapping>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/student-fees-mappings/${studentFeesMappingId}`);
+export async function getStudentFeesMapping(studentFeesMappingId: number): Promise<ApiResponse<FeeStudentMappingDto>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/student-mappings/${studentFeesMappingId}`);
   return response.data;
 }
 
 // Create a new student fees mapping
 export async function createStudentFeesMapping(
-  newStudentFeesMapping: NewStudentFeesMapping,
-): Promise<ApiResponse<StudentFeesMapping>> {
-  const response = await axiosInstance.post(`${BASE_PATH}/student-fees-mappings`, newStudentFeesMapping);
+  newStudentFeesMapping: Partial<FeeStudentMappingDto>,
+): Promise<ApiResponse<FeeStudentMappingDto>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/student-mappings`, newStudentFeesMapping);
   return response.data;
 }
 
 // Update a student fees mapping
 export async function updateStudentFeesMapping(
   studentFeesMappingId: number,
-  studentFeesMapping: Partial<NewStudentFeesMapping>,
-): Promise<ApiResponse<StudentFeesMapping>> {
-  const response = await axiosInstance.put(
-    `${BASE_PATH}/student-fees-mappings/${studentFeesMappingId}`,
-    studentFeesMapping,
-  );
+  studentFeesMapping: Partial<FeeStudentMappingDto>,
+): Promise<ApiResponse<FeeStudentMappingDto>> {
+  const response = await axiosInstance.put(`${BASE_PATH}/student-mappings/${studentFeesMappingId}`, studentFeesMapping);
   return response.data;
 }
 
 // Delete a student fees mapping
 export async function deleteStudentFeesMapping(studentFeesMappingId: number): Promise<ApiResponse<void>> {
-  const response = await axiosInstance.delete(`${BASE_PATH}/student-fees-mappings/${studentFeesMappingId}`);
+  const response = await axiosInstance.delete(`${BASE_PATH}/student-mappings/${studentFeesMappingId}`);
+  return response.data;
+}
+
+// Get fee student mappings by student ID
+export async function getFeeStudentMappingsByStudentId(
+  studentId: number,
+): Promise<ApiResponse<FeeStudentMappingDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/student-mappings/student/${studentId}`);
+  return response.data;
+}
+
+// ==================== FEE CATEGORIES APIs ====================
+
+export interface NewFeeCategory {
+  feeConcessionSlabId: number;
+  name: string;
+  description: string;
+  priority: number;
+  validityType: "SEMESTER" | "ACADEMIC_YEAR" | "PROGRAM_COURSE";
+  isCarryForwarded: boolean;
+}
+
+export async function getAllFeeCategories(): Promise<ApiResponse<FeeCategoryDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/categories`);
+  return response.data;
+}
+
+export async function getFeeCategory(id: number): Promise<ApiResponse<FeeCategoryDto>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/categories/${id}`);
+  return response.data;
+}
+
+export async function createFeeCategory(newCategory: NewFeeCategory): Promise<ApiResponse<FeeCategoryDto>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/categories`, newCategory);
+  return response.data;
+}
+
+export async function updateFeeCategory(
+  id: number,
+  category: Partial<NewFeeCategory>,
+): Promise<ApiResponse<FeeCategoryDto>> {
+  const response = await axiosInstance.put(`${BASE_PATH}/categories/${id}`, category);
+  return response.data;
+}
+
+export async function deleteFeeCategory(id: number): Promise<ApiResponse<void>> {
+  const response = await axiosInstance.delete(`${BASE_PATH}/categories/${id}`);
   return response.data;
 }
 
@@ -684,6 +733,123 @@ export const checkSlabsExistForAcademicYear = async (academicYearId: number): Pr
   const response = await axiosInstance.get(`/api/v1/fees/slabs/check-exist/${academicYearId}`);
   return response.data;
 };
+
+// ==================== FEE CATEGORY PROMOTION MAPPING APIs ====================
+
+export interface NewFeeCategoryPromotionMapping {
+  feeCategoryId: number;
+  promotionId: number;
+}
+
+export interface FeeCategoryPromotionFilterRequest {
+  academicYearId?: number;
+  programCourseId?: number;
+  classId?: number;
+  shiftId?: number;
+  religionId?: number;
+  categoryId?: number;
+  community?: string;
+  feeCategoryId: number;
+}
+
+export interface FilteredFeeCategoryPromotionMapping {
+  promotionId: number;
+  studentId: number;
+  feeCategoryId: number;
+  exists: boolean;
+}
+
+export async function getAllFeeCategoryPromotionMappings(): Promise<ApiResponse<FeeCategoryPromotionMappingDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/category-promotion-mappings`);
+  return response.data;
+}
+
+export async function getFeeCategoryPromotionMapping(id: number): Promise<ApiResponse<FeeCategoryPromotionMappingDto>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/category-promotion-mappings/${id}`);
+  return response.data;
+}
+
+export async function getFeeCategoryPromotionMappingsByFeeCategoryId(
+  feeCategoryId: number,
+): Promise<ApiResponse<FeeCategoryPromotionMappingDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/category-promotion-mappings/fee-category/${feeCategoryId}`);
+  return response.data;
+}
+
+export async function getFeeCategoryPromotionMappingsByPromotionId(
+  promotionId: number,
+): Promise<ApiResponse<FeeCategoryPromotionMappingDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/category-promotion-mappings/promotion/${promotionId}`);
+  return response.data;
+}
+
+export async function createFeeCategoryPromotionMapping(
+  newMapping: NewFeeCategoryPromotionMapping,
+): Promise<ApiResponse<FeeCategoryPromotionMappingDto>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/category-promotion-mappings`, newMapping);
+  return response.data;
+}
+
+export async function updateFeeCategoryPromotionMapping(
+  id: number,
+  mapping: Partial<NewFeeCategoryPromotionMapping>,
+): Promise<ApiResponse<FeeCategoryPromotionMappingDto>> {
+  const response = await axiosInstance.put(`${BASE_PATH}/category-promotion-mappings/${id}`, mapping);
+  return response.data;
+}
+
+export async function deleteFeeCategoryPromotionMapping(id: number): Promise<ApiResponse<void>> {
+  const response = await axiosInstance.delete(`${BASE_PATH}/category-promotion-mappings/${id}`);
+  return response.data;
+}
+
+export async function getFilteredFeeCategoryPromotionMappings(
+  filters: FeeCategoryPromotionFilterRequest,
+): Promise<ApiResponse<FilteredFeeCategoryPromotionMapping[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/category-promotion-mappings/filtered`, { params: filters });
+  return response.data;
+}
+
+export interface BulkUploadResult {
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+  };
+  errors: Array<{
+    row: number;
+    data: {
+      UID: string;
+      Semester: string;
+      "Fee Category Name": string;
+    };
+    error: string;
+  }>;
+  success: Array<{
+    row: number;
+    data: {
+      UID: string;
+      Semester: string;
+      "Fee Category Name": string;
+    };
+    mappingId: number;
+  }>;
+}
+
+export async function bulkUploadFeeCategoryPromotionMappings(file: File): Promise<ApiResponse<BulkUploadResult>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await axiosInstance.post<ApiResponse<BulkUploadResult>>(
+    `${BASE_PATH}/category-promotion-mappings/bulk-upload`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+  return response.data;
+}
 
 export const getFeesStructures = async (
   page: number = 1,

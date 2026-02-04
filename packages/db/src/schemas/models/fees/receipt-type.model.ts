@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { addonModel } from "@/schemas/models/fees";
+import { userModel } from "../user";
 
 export const receiptTypeModel = pgTable("receipt_types", {
     id: serial().primaryKey(),
@@ -17,8 +18,14 @@ export const receiptTypeModel = pgTable("receipt_types", {
     chkOnline: varchar({ length: 255 }),
     chkOnSequence: varchar({ length: 255 }),
     isActive: boolean().default(true),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
+    updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
+    createdByUserId: integer("created_by_user_id_fk")
+        .references(() => userModel.id)
+        .notNull(),
+    updatedByUserId: integer("updated_by_user_id_fk")
+        .references(() => userModel.id)
+        .notNull(),
 });
 
 export const createReceiptTypeSchema = createInsertSchema(receiptTypeModel);

@@ -15,8 +15,8 @@ export const feeStructureInstallmentModel = pgTable("fee_structure_installments"
     endDate: timestamp(),
     onlineStartDate: timestamp(),
     onlineEndDate: timestamp(),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
+    updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const createFeeStructureInstallmentSchema = createInsertSchema(feeStructureInstallmentModel);

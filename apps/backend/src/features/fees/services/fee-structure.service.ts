@@ -14,13 +14,18 @@ import {
   receiptTypeModel,
   feeHeadModel,
   feeConcessionSlabModel,
+  feeStudentMappingModel,
+  feeCategoryPromotionMappingModel,
+  feeCategoryModel,
 } from "@repo/db/schemas/models/fees";
 import {
   academicYearModel,
   classModel,
   shiftModel,
+  sessionModel,
 } from "@repo/db/schemas/models/academics";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
+import { promotionModel } from "@repo/db/schemas/models/batches";
 import {
   and,
   eq,
@@ -40,8 +45,298 @@ import * as programCourseService from "@/features/course-design/services/program
 import * as receiptTypeService from "./receipt-type.service.js";
 import * as feeHeadService from "./fee-head.service.js";
 import * as feeConcessionSlabService from "./fee-concession-slab.service.js";
+import { studentModel, userModel } from "@repo/db/index.js";
 
 type FeeStructureInsert = typeof feeStructureModel.$inferInsert;
+
+/**
+ * Ensures default fee-category-promotion-mapping and fee-student-mapping
+ * entries exist for all active students matching the given fee structure.
+ *
+ * Business rules:
+ * - Find all promotions (active students) for:
+ *   - same academic year (via session -> academicYear)
+ *   - same class, program course, shift as the fee structure
+ * - For each promotion:
+ *   - Ensure a fee-category-promotion-mapping exists for:
+ *     - promotionId
+ *     - fee category with name "General"
+ *   - If not present, create it (using the provided userId).
+ *   - Ensure a fee-student-mapping exists for:
+ *     - studentId from promotion
+ *     - this feeStructureId
+ *     - the mapping created/found above
+ *   - If not present, create it.
+ *
+ * This function is idempotent for a given fee structure and set of promotions.
+ */
+async function ensureDefaultFeeStudentMappingsForFeeStructure(
+  feeStructure: typeof feeStructureModel.$inferSelect,
+  userId: number,
+): Promise<void> {
+  if (
+    !feeStructure.academicYearId ||
+    !feeStructure.classId ||
+    !feeStructure.programCourseId ||
+    !feeStructure.shiftId
+  ) {
+    return;
+  }
+
+  // Find "General" fee category
+  const [generalFeeCategory] = await db
+    .select()
+    .from(feeCategoryModel)
+    .where(eq(feeCategoryModel.name, "General"));
+
+  if (!generalFeeCategory) {
+    console.warn(
+      "ensureDefaultFeeStudentMappingsForFeeStructure: 'General' fee category not found. Skipping default mappings.",
+    );
+    return;
+  }
+
+  // Find promotions (active students) matching this fee structure context
+  const promotions = await db
+    .select({
+      id: promotionModel.id,
+      studentId: promotionModel.studentId,
+    })
+    .from(promotionModel)
+    .innerJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .where(
+      and(
+        eq(sessionModel.academicYearId, feeStructure.academicYearId),
+        eq(promotionModel.classId, feeStructure.classId),
+        eq(promotionModel.programCourseId, feeStructure.programCourseId),
+        eq(promotionModel.shiftId, feeStructure.shiftId),
+        eq(userModel.isActive, true),
+      ),
+    );
+
+  if (!promotions.length || promotions.length === 0) {
+    return;
+  }
+
+  for (const promotion of promotions) {
+    // 1. Ensure fee-category-promotion-mapping exists for (promotion)
+    const [existingMapping] = await db
+      .select()
+      .from(feeCategoryPromotionMappingModel)
+      .where(
+        and(eq(feeCategoryPromotionMappingModel.promotionId, promotion.id)),
+      );
+
+    let feeCategoryPromotionMappingId: number;
+
+    if (existingMapping) {
+      feeCategoryPromotionMappingId = existingMapping.id!;
+    } else {
+      const [createdMapping] = await db
+        .insert(feeCategoryPromotionMappingModel)
+        .values({
+          feeCategoryId: generalFeeCategory.id,
+          promotionId: promotion.id,
+          createdByUserId: userId,
+          updatedByUserId: userId,
+        })
+        .returning();
+
+      if (!createdMapping) {
+        // If for some reason insert failed, skip this promotion
+        continue;
+      }
+
+      feeCategoryPromotionMappingId = createdMapping.id!;
+    }
+
+    // 2. Ensure fee-student-mapping exists for this student + fee structure + mapping
+    const [existingFeeStudentMapping] = await db
+      .select()
+      .from(feeStudentMappingModel)
+      .where(
+        and(
+          eq(feeStudentMappingModel.studentId, promotion.studentId),
+          eq(feeStudentMappingModel.feeStructureId, feeStructure.id!),
+          eq(
+            feeStudentMappingModel.feeCategoryPromotionMappingId,
+            feeCategoryPromotionMappingId,
+          ),
+        ),
+      );
+
+    if (existingFeeStudentMapping) {
+      // Update existing mapping with new feeCategoryPromotionMappingId and totalPayable
+      const [feeCategoryPromotionMapping] = await db
+        .select()
+        .from(feeCategoryPromotionMappingModel)
+        .where(
+          eq(
+            feeCategoryPromotionMappingModel.id,
+            feeCategoryPromotionMappingId,
+          ),
+        );
+
+      if (feeCategoryPromotionMapping) {
+        const totalPayable = await calculateTotalPayableForFeeStudentMapping(
+          feeStructure.id!,
+          feeCategoryPromotionMapping.feeCategoryId,
+        );
+
+        await db
+          .update(feeStudentMappingModel)
+          .set({
+            feeCategoryPromotionMappingId,
+            totalPayable,
+            updatedAt: new Date(),
+          })
+          .where(eq(feeStudentMappingModel.id, existingFeeStudentMapping.id!));
+      }
+      continue;
+    }
+
+    // Get fee category for the mapping to calculate totalPayable
+    const [feeCategoryPromotionMapping] = await db
+      .select()
+      .from(feeCategoryPromotionMappingModel)
+      .where(
+        eq(feeCategoryPromotionMappingModel.id, feeCategoryPromotionMappingId),
+      );
+
+    let totalPayable = 0;
+    if (feeCategoryPromotionMapping) {
+      totalPayable = await calculateTotalPayableForFeeStudentMapping(
+        feeStructure.id!,
+        feeCategoryPromotionMapping.feeCategoryId,
+      );
+    }
+
+    await db.insert(feeStudentMappingModel).values({
+      studentId: promotion.studentId,
+      feeStructureId: feeStructure.id!,
+      feeCategoryPromotionMappingId,
+      totalPayable,
+      // Other fields use their database defaults (e.g. type, totals)
+    });
+  }
+}
+
+/**
+ * Calculate total payable amount for fee-student-mapping based on:
+ * - Fee structure base amount
+ * - Fee category's concession slab
+ * - Fee structure concession slab's concession rate
+ */
+export async function calculateTotalPayableForFeeStudentMapping(
+  feeStructureId: number,
+  feeCategoryId: number,
+): Promise<number> {
+  // Get fee structure with components
+  const [feeStructure] = await db
+    .select()
+    .from(feeStructureModel)
+    .where(eq(feeStructureModel.id, feeStructureId));
+
+  if (!feeStructure || !feeStructure.baseAmount) {
+    return 0;
+  }
+
+  // Get fee structure components
+  const feeStructureComponents = await db
+    .select()
+    .from(feeStructureComponentModel)
+    .where(eq(feeStructureComponentModel.feeStructureId, feeStructureId));
+
+  // Get fee category to get feeConcessionSlabId
+  const [feeCategory] = await db
+    .select()
+    .from(feeCategoryModel)
+    .where(eq(feeCategoryModel.id, feeCategoryId));
+
+  if (!feeCategory || !feeCategory.feeConcessionSlabId) {
+    // If no concession slab, calculate from components to account for rounding
+    if (feeStructureComponents.length > 0) {
+      const totalFromComponents = feeStructureComponents.reduce(
+        (sum, component) => {
+          const componentAmount = Math.round(
+            (feeStructure.baseAmount * (component.feeHeadPercentage || 0)) /
+              100,
+          );
+          return sum + componentAmount;
+        },
+        0,
+      );
+      return totalFromComponents;
+    }
+    return Math.round(feeStructure.baseAmount);
+  }
+
+  // Get fee structure concession slab for this fee structure and concession slab
+  const [feeStructureConcessionSlab] = await db
+    .select()
+    .from(feeStructureConcessionSlabModel)
+    .where(
+      and(
+        eq(feeStructureConcessionSlabModel.feeStructureId, feeStructureId),
+        eq(
+          feeStructureConcessionSlabModel.feeConcessionSlabId,
+          feeCategory.feeConcessionSlabId,
+        ),
+      ),
+    );
+
+  if (
+    !feeStructureConcessionSlab ||
+    feeStructureConcessionSlab.concessionRate === undefined
+  ) {
+    // If no concession slab mapping found, calculate from components
+    if (feeStructureComponents.length > 0) {
+      const totalFromComponents = feeStructureComponents.reduce(
+        (sum, component) => {
+          const componentAmount = Math.round(
+            (feeStructure.baseAmount * (component.feeHeadPercentage || 0)) /
+              100,
+          );
+          return sum + componentAmount;
+        },
+        0,
+      );
+      return totalFromComponents;
+    }
+    return Math.round(feeStructure.baseAmount);
+  }
+
+  const concessionRate = feeStructureConcessionSlab.concessionRate || 0;
+
+  // Calculate total payable from components to account for rounding
+  // This matches the frontend calculation in the summary modal
+  if (feeStructureComponents.length > 0) {
+    const totalFromComponents = feeStructureComponents.reduce(
+      (sum, component) => {
+        // Calculate component amount (rounded)
+        const componentAmount = Math.round(
+          (feeStructure.baseAmount * (component.feeHeadPercentage || 0)) / 100,
+        );
+        // Apply concession (rounded)
+        const concessionAmount = Math.round(
+          (componentAmount * concessionRate) / 100,
+        );
+        const totalAfterConcession = componentAmount - concessionAmount;
+        return sum + totalAfterConcession;
+      },
+      0,
+    );
+    return totalFromComponents;
+  }
+
+  // Fallback: Calculate total payable: baseAmount - (baseAmount * concessionRate / 100)
+  const concessionAmount = (feeStructure.baseAmount * concessionRate) / 100;
+  const totalPayable = feeStructure.baseAmount - concessionAmount;
+
+  return Math.round(totalPayable);
+}
 
 /**
  * Converts a FeeStructure model to FeeStructureDto
@@ -165,9 +460,21 @@ async function modelToDto(
 
 export const createFeeStructure = async (
   data: Omit<FeeStructureInsert, "id" | "createdAt" | "updatedAt">,
+  userId: number,
 ): Promise<FeeStructureDto | null> => {
-  const [created] = await db.insert(feeStructureModel).values(data).returning();
+  const [created] = await db
+    .insert(feeStructureModel)
+    .values({
+      ...data,
+      createdByUserId: userId,
+      updatedByUserId: userId,
+    })
+    .returning();
   if (!created) return null;
+
+  // After creating fee structure, ensure default fee-student-mappings
+  await ensureDefaultFeeStudentMappingsForFeeStructure(created, userId);
+
   return await modelToDto(created);
 };
 
@@ -248,13 +555,17 @@ export const getAllFeeStructures = async (
 
 export async function createFeeStructureByDto(
   givenDto: CreateFeeStructureDto,
+  userId: number,
 ): Promise<FeeStructureDto[]> {
   const createdStructures: FeeStructureDto[] = [];
 
   for (let i = 0; i < givenDto.programCourseIds.length; i++) {
     for (let j = 0; j < givenDto.shiftIds.length; j++) {
       // Step 1: - Create fee structure for each combination of programCourseId and shiftId
-      const feeStructuredataToInsert: FeeStructure = {
+      const feeStructuredataToInsert: Omit<
+        FeeStructure,
+        "id" | "createdAt" | "updatedAt"
+      > = {
         academicYearId: givenDto.academicYearId,
         classId: givenDto.classId,
         receiptTypeId: givenDto.receiptTypeId,
@@ -270,6 +581,9 @@ export async function createFeeStructureByDto(
         advanceForProgramCourseId:
           givenDto.advanceForProgramCourseIds?.[i] || null,
         advanceForClassId: null, // advanceForClassIds not in DTO, set to null
+        isPublished: false,
+        createdByUserId: userId,
+        updatedByUserId: userId,
       };
       const [existingFeeStructure] = await db
         .select()
@@ -301,7 +615,11 @@ export async function createFeeStructureByDto(
       // Create new fee structure
       const [newFeesStructure] = await db
         .insert(feeStructureModel)
-        .values(feeStructuredataToInsert)
+        .values({
+          ...feeStructuredataToInsert,
+          createdByUserId: userId,
+          updatedByUserId: userId,
+        })
         .returning();
 
       if (!newFeesStructure) continue;
@@ -337,6 +655,12 @@ export async function createFeeStructureByDto(
         }
       }
 
+      // Step 4.5: Ensure default fee-student-mappings for this new fee structure
+      await ensureDefaultFeeStudentMappingsForFeeStructure(
+        newFeesStructure,
+        userId,
+      );
+
       // Convert to DTO and add to results
       const dto = await modelToDto(newFeesStructure);
       if (dto) {
@@ -354,6 +678,7 @@ export async function createFeeStructureByDto(
 export async function updateFeeStructureByDto(
   feeStructureId: number,
   givenDto: CreateFeeStructureDto,
+  userId: number,
 ): Promise<FeeStructureDto | null> {
   // Step 1: Check if fee structure exists
   const [existingFeeStructure] = await db
@@ -386,7 +711,10 @@ export async function updateFeeStructureByDto(
 
   const [updatedFeeStructure] = await db
     .update(feeStructureModel)
-    .set(feeStructureDataToUpdate)
+    .set({
+      ...feeStructureDataToUpdate,
+      updatedByUserId: userId,
+    })
     .where(eq(feeStructureModel.id, feeStructureId))
     .returning();
 
@@ -449,6 +777,12 @@ export async function updateFeeStructureByDto(
     }
   }
 
+  // After updating, ensure default fee-student-mappings exist
+  await ensureDefaultFeeStudentMappingsForFeeStructure(
+    updatedFeeStructure,
+    userId,
+  );
+
   // Convert to DTO and return
   return await modelToDto(updatedFeeStructure);
 }
@@ -468,25 +802,71 @@ export const getFeeStructureById = async (
 export const updateFeeStructure = async (
   id: number,
   data: Partial<FeeStructure>,
+  userId: number,
 ): Promise<FeeStructureDto | null> => {
   const [updated] = await db
     .update(feeStructureModel)
-    .set(data)
+    .set({
+      ...data,
+      updatedByUserId: userId,
+    })
     .where(eq(feeStructureModel.id, id))
     .returning();
   if (!updated) return null;
+
+  // After updating, ensure default fee-student-mappings exist
+  await ensureDefaultFeeStudentMappingsForFeeStructure(updated, userId);
+
   return await modelToDto(updated);
 };
 
 export const deleteFeeStructure = async (
   id: number,
 ): Promise<FeeStructureDto | null> => {
-  const [deleted] = await db
-    .delete(feeStructureModel)
-    .where(eq(feeStructureModel.id, id))
-    .returning();
-  if (!deleted) return null;
-  return await modelToDto(deleted);
+  // First, get the fee structure to return it later
+  const [existingFeeStructure] = await db
+    .select()
+    .from(feeStructureModel)
+    .where(eq(feeStructureModel.id, id));
+
+  if (!existingFeeStructure) {
+    return null;
+  }
+
+  // Convert to DTO before deletion (to return it)
+  const feeStructureDto = await modelToDto(existingFeeStructure);
+  if (!feeStructureDto) {
+    return null;
+  }
+
+  // Delete nested data in a transaction to ensure atomicity
+  await db.transaction(async (tx) => {
+    // Delete nested data in the correct order (respecting foreign key constraints)
+    // 1. Delete fee_student_mappings first (references feeStructureId and feeStructureInstallmentId)
+    await tx
+      .delete(feeStudentMappingModel)
+      .where(eq(feeStudentMappingModel.feeStructureId, id));
+
+    // 2. Delete fee_structure_components
+    await tx
+      .delete(feeStructureComponentModel)
+      .where(eq(feeStructureComponentModel.feeStructureId, id));
+
+    // 3. Delete fee_structure_installments (must be deleted after fee_student_mappings since they reference it)
+    await tx
+      .delete(feeStructureInstallmentModel)
+      .where(eq(feeStructureInstallmentModel.feeStructureId, id));
+
+    // 4. Delete fee_structure_concession_slabs
+    await tx
+      .delete(feeStructureConcessionSlabModel)
+      .where(eq(feeStructureConcessionSlabModel.feeStructureId, id));
+
+    // 5. Finally, delete the fee structure itself
+    await tx.delete(feeStructureModel).where(eq(feeStructureModel.id, id));
+  });
+
+  return feeStructureDto;
 };
 
 // export const getFeesStructureById = async (
