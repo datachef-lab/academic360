@@ -94,12 +94,12 @@ export default function CURegistrationPage() {
   const hasAutoNavigatedRef = React.useRef(false);
 
   // Navigate user back as Registration process is closed
-  useEffect(() => {
-    const isNestedIframe = window.self !== window.top;
-    if (!isNestedIframe) {
-      router.replace("/dashboard");
-    }
-  }, []);
+  // useEffect(() => {
+  //   const isNestedIframe = window.self !== window.top;
+  //   if (!isNestedIframe) {
+  //     router.replace("/dashboard");
+  //   }
+  // }, []);
 
   // Debug activeTab changes
   useEffect(() => {

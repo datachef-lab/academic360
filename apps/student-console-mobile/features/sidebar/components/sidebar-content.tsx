@@ -10,6 +10,7 @@ import SidebarFooter from "./sidebar-footer";
 import SidebarHeader from "./sidebar-header";
 import SidebarItem from "./sidebar-item";
 import UserInfo from "./user-info";
+import { useAuth } from "@/providers/auth-provider";
 
 export default function SidebarContent(props: DrawerContentComponentProps) {
   const pathname = usePathname();
@@ -42,7 +43,7 @@ export default function SidebarContent(props: DrawerContentComponentProps) {
           <UserInfo />
         </View>
         {sidebarItems.map((item) => (
-          <SidebarItem item={item} props={props} />
+          <SidebarItem key={item.label} item={item} props={props} />
         ))}
         <SidebarFooter />
       </DrawerContentScrollView>

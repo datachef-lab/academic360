@@ -28,6 +28,14 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const theme = colorScheme === "dark" ? Colors.dark : Colors.light;
 
+  if (__DEV__) {
+    console.log("[ThemeProvider] theme:", {
+      colorScheme,
+      "theme.background": theme.background,
+      "theme.background === 'white'": theme.background === "white",
+    });
+  }
+
   return (
     <ThemeContext.Provider value={{ theme, colorScheme, setColorScheme, toggleTheme }}>
       {children}

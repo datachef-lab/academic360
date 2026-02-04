@@ -151,29 +151,24 @@ export const login = async (
       process.env.REFRESH_TOKEN_EXPIRY! as StringValue,
     );
 
-    console.log("Creating secure cookie with refresh token");
-    // Create secure cookie with refresh token
-    res.cookie("jwt", refreshToken, {
-      httpOnly: true, // Accessible only by the web server
-      secure: true, // Required when SameSite=None; ensures HTTPS
-      sameSite: "none", // Allow cross-site cookie for frontend on different origin
+    // Use student_jwt cookie for student console (matches refresh endpoint)
+    const cookieName = isStudentConsole ? "student_jwt" : "jwt";
+    const isProduction = process.env.NODE_ENV === "production";
+    res.cookie(cookieName, refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 
-    // Log cookies before sending response
-    console.log("Cookies set in response:", res.getHeaders()["set-cookie"]);
+    // For student console (incl. mobile native), return refreshToken in body so it can be stored
+    const payload = isStudentConsole
+      ? { accessToken, refreshToken, user: userWithPayload }
+      : { accessToken, user: userWithPayload };
 
-    console.log("Sending response");
     res
       .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          { accessToken, user: userWithPayload },
-          "Login successful",
-        ),
-      );
+      .json(new ApiResponse(200, "SUCCESS", payload, "Login successful"));
   } catch (error) {
     handleError(error, res, next);
   }
@@ -205,11 +200,11 @@ export const postGoogleLogin = async (
       process.env.REFRESH_TOKEN_EXPIRY! as StringValue,
     );
 
-    // Create secure cookie with refresh token
+    const isProduction = process.env.NODE_ENV === "production";
     res.cookie("jwt", refreshToken, {
-      httpOnly: true, // Accessible only by the web server
-      secure: true, // Required when SameSite=None; ensures HTTPS
-      sameSite: "none", // Allow cross-site cookie for frontend on different origin
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 
@@ -225,13 +220,19 @@ export const refresh = async (
   next: NextFunction,
 ) => {
   try {
-    // Check if request is from student console
     const isStudentConsole = isStudentConsoleRequest(req);
-
-    // Use appropriate cookie based on console type
     const cookieName = isStudentConsole ? "student_jwt" : "jwt";
-    const refreshToken = req.cookies[cookieName];
 
+    // Cookie (web) or X-Refresh-Token header (mobile native / web cross-origin)
+    let refreshToken = req.cookies[cookieName];
+    const fromCookie = !!refreshToken;
+    const headerToken = req.get("X-Refresh-Token");
+    if (!refreshToken && headerToken) refreshToken = headerToken;
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        `[AUTH refresh] token from: ${refreshToken ? (fromCookie ? "cookie" : "header") : "NONE"}`,
+      );
+    }
     if (!refreshToken) {
       res.status(401).json(new ApiError(401, "Unauthorized"));
       return;
@@ -906,11 +907,11 @@ export const adminBypassOtpLogin = async (
 
     console.log("[ADMIN BYPASS OTP] Tokens generated successfully for:", email);
 
-    // Set student refresh token with different cookie name to avoid conflict with admin session
+    const isProduction = process.env.NODE_ENV === "production";
     res.cookie("student_jwt", refreshToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 

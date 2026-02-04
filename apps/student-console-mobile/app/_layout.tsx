@@ -1,8 +1,11 @@
 import { SidebarContent } from "@/features/sidebar";
 import { useTheme } from "@/hooks/use-theme";
+import { AuthProvider } from "@/providers/auth-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import Drawer from "expo-router/drawer";
-import { StatusBar } from "expo-status-bar";
+import { StatusBar, setStatusBarStyle } from "expo-status-bar";
+import React, { useLayoutEffect } from "react";
+import { InteractionManager, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import "../global.css";
@@ -10,9 +13,11 @@ import "../global.css";
 export default function RootLayout() {
   return (
     <GestureHandlerRootView className="flex-1">
-      <ThemeProvider>
-        <CustomDrawerNavigation />
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <CustomDrawerNavigation />
+        </ThemeProvider>
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 }
@@ -20,8 +25,23 @@ export default function RootLayout() {
 function CustomDrawerNavigation() {
   const { theme, colorScheme } = useTheme();
 
+  // Force status bar style when theme changes - derive from actual background for reliability
+  const statusBarStyle = theme.background === "white" ? "dark" : "light";
+
+  useLayoutEffect(() => {
+    setStatusBarStyle(statusBarStyle, false);
+    // Android with edge-to-edge can have timing issues; re-apply after interactions
+    if (Platform.OS === "android") {
+      const id = InteractionManager.runAfterInteractions(() => {
+        setStatusBarStyle(statusBarStyle, false);
+      });
+      return () => id.cancel();
+    }
+  }, [statusBarStyle]);
+
   return (
     <>
+      <StatusBar key={statusBarStyle} style={statusBarStyle} backgroundColor={theme.background} translucent={false} />
       <GestureHandlerRootView className="flex-1">
         <Drawer
           screenOptions={{
@@ -52,7 +72,6 @@ function CustomDrawerNavigation() {
             }}
           />
         </Drawer>
-        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} backgroundColor="transparent" />
       </GestureHandlerRootView>
     </>
   );

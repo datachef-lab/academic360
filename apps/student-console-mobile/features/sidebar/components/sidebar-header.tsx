@@ -1,10 +1,13 @@
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/providers/auth-provider";
 import { Copy } from "lucide-react-native";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
 export default function SidebarHeader() {
   const { theme } = useTheme();
+  const { user } = useAuth();
+
   return (
     <View className="flex-row items-center gap-3 p-2  " style={{ borderColor: theme.border, borderBottomWidth: 1 }}>
       <Image
@@ -18,7 +21,7 @@ export default function SidebarHeader() {
           BESC Console
         </Text>
         <View className="flex-row gap-3 items-center">
-          <Text style={{ color: theme.text }}>0804250001</Text>
+          <Text style={{ color: theme.text }}>{user?.payload?.uid}</Text>
           <TouchableOpacity>
             <Copy size={15} color={theme.text} />
           </TouchableOpacity>
