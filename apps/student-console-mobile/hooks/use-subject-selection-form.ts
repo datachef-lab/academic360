@@ -114,12 +114,6 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
   const [restrictedCategories, setRestrictedCategories] = useState<Record<string, boolean>>({});
   const [earlierMinorSelections, setEarlierMinorSelections] = useState<string[]>([]);
   const [minorMismatch, setMinorMismatch] = useState(false);
-  const [visibleCategories, setVisibleCategories] = useState<{
-    minor?: boolean;
-    idc?: boolean;
-    aec?: boolean;
-    cvac?: boolean;
-  }>({});
 
   const getLabel = (p: PaperDto) => p?.subject?.name || "";
   const getSemesterRoman = (p: PaperDto) => extractSemesterRoman(p?.class?.name);
@@ -319,30 +313,6 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
     const currentSorted = [...current].sort();
     setMinorMismatch(JSON.stringify(prev) !== JSON.stringify(currentSorted));
   }, [minor1, minor2, earlierMinorSelections]);
-
-  useEffect(() => {
-    setVisibleCategories({
-      minor:
-        hasActualOptions(admissionMinor1Subjects) ||
-        hasActualOptions(admissionMinor2Subjects) ||
-        hasActualOptions(admissionMinor3Subjects),
-      idc:
-        hasActualOptions(availableIdcSem1Subjects) ||
-        hasActualOptions(availableIdcSem2Subjects) ||
-        hasActualOptions(availableIdcSem3Subjects),
-      aec: hasActualOptions(availableAecSubjects),
-      cvac: hasActualOptions(availableCvacOptions),
-    });
-  }, [
-    admissionMinor1Subjects,
-    admissionMinor2Subjects,
-    admissionMinor3Subjects,
-    availableIdcSem1Subjects,
-    availableIdcSem2Subjects,
-    availableIdcSem3Subjects,
-    availableAecSubjects,
-    availableCvacOptions,
-  ]);
 
   const getFilteredIdcOptions = useCallback(
     (sourceList: string[], currentIdcValue: string) => {
@@ -699,50 +669,18 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
     }
   }, [minor2, minor1, autoMinor1, admissionMinor1Subjects, getFilteredByCategory]);
 
-  useEffect(() => {
-    if (minor1 && autoMinor1 && minor1 !== autoMinor1) {
-      const programCourseName =
-        (student as any)?.currentPromotion?.programCourse?.name || (student as any)?.programCourse?.course?.name || "";
-      const isBcomProgram = programCourseName.toLowerCase().replace(/[.\s]/g, "").includes("bcom");
-      const semesterContext = isBcomProgram ? ["III"] : ["III", "IV"];
-      const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", semesterContext);
-      if (options.includes(autoMinor1)) {
-        setMinor2(autoMinor1);
-      }
-    }
-  }, [minor1, autoMinor1, minor2, admissionMinor2Subjects, student, getFilteredByCategory]);
-
-  useEffect(() => {
-    if (minor2 && autoMinor1 && minor2 !== autoMinor1) {
-      const options = getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]);
-      if (options.includes(autoMinor1)) {
-        setMinor1(autoMinor1);
-      }
-    }
-  }, [minor2, autoMinor1, minor1, admissionMinor1Subjects, getFilteredByCategory]);
-
   const getDynamicLabel = useCallback(
     (subjectTypeCode: string, semester?: string): string => {
-      const programCourseName =
-        (student as any)?.currentPromotion?.programCourse?.name || (student as any)?.programCourse?.course?.name || "";
-      const isBcomProgram = programCourseName.toLowerCase().replace(/[.\s]/g, "").includes("bcom");
-
       const meta = subjectSelectionMetas.find((m) => {
         if (m.subjectType.code !== subjectTypeCode) return false;
         if (!semester) return true;
         return m.forClasses.some((c: any) => extractSemesterRoman(c.class?.name) === semester);
       });
-      if (meta?.label) {
-        if (subjectTypeCode === "MN" && semester === "III" && isBcomProgram) {
-          return "Minor III (Semester III)";
-        }
-        return meta.label;
-      }
+      if (meta?.label) return meta.label;
       switch (subjectTypeCode) {
         case "MN":
           if (semester === "I" || semester === "II") return "Minor I (Semester I & II)";
-          if (semester === "III" || semester === "IV")
-            return isBcomProgram ? "Minor III (Semester III)" : "Minor II (Semester III & IV)";
+          if (semester === "III" || semester === "IV") return "Minor II (Semester III & IV)";
           return "Minor Subject";
         case "IDC":
           if (semester === "I") return "IDC 1 (Semester I)";
@@ -757,7 +695,7 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
           return "Subject";
       }
     },
-    [subjectSelectionMetas, student],
+    [subjectSelectionMetas],
   );
 
   const convertToSelectOptions = useCallback(
@@ -770,29 +708,6 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
       return [{ value: "", label: selectLabel }, ...options];
     },
     [],
-  );
-
-  const handleFieldChange = useCallback(
-    (setter: (v: string) => void, value: string, fieldType: string) => {
-      setter(value);
-      if (errors.length > 0 && value) {
-        const fieldErrorMap: Record<string, string> = {
-          minor1: "Minor I subject is required",
-          minor2: "Minor II subject is required",
-          minor3: "Minor subject is required",
-          idc1: "IDC 1 subject is required",
-          idc2: "IDC 2 subject is required",
-          idc3: "IDC 3 subject is required",
-          aec3: "AEC 3 subject is required",
-          cvac4: "CVAC 4 subject is required",
-        };
-        const errorToRemove = fieldErrorMap[fieldType];
-        if (errorToRemove) {
-          setErrors((prev) => prev.filter((e) => e !== errorToRemove));
-        }
-      }
-    },
-    [errors.length],
   );
 
   return {
@@ -847,7 +762,5 @@ export function useSubjectSelectionForm(student: StudentDto | null | undefined) 
     handleSave,
     getDynamicLabel,
     convertToSelectOptions,
-    visibleCategories,
-    handleFieldChange,
   };
 }

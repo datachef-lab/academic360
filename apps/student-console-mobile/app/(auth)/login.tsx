@@ -1,7 +1,6 @@
 import { heroImage } from "@/constants/Images";
 import { useTheme } from "@/hooks/use-theme";
 import { checkOtpStatus, lookupUser, sendOtpRequest, verifyOtpAndLogin } from "@/lib/auth-service";
-import { getOnboardingCompleted } from "@/lib/onboarding-storage";
 import { useAuth } from "@/providers/auth-provider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
@@ -79,21 +78,6 @@ export default function LoginScreen() {
 
   const clearOtpStorage = useCallback(async () => {
     await AsyncStorage.multiRemove([OTP_EXPIRY_KEY, OTP_UID_KEY]);
-  }, []);
-
-  // Guard: redirect to onboarding if not completed (login is only reachable after onboarding)
-  useEffect(() => {
-    let cancelled = false;
-    const checkOnboarding = async () => {
-      const completed = await getOnboardingCompleted();
-      if (!cancelled && !completed) {
-        router.replace("/");
-      }
-    };
-    void checkOnboarding();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   // On mount: try to refresh token; if we have valid auth, redirect to console
