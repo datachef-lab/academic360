@@ -85,7 +85,6 @@ function CustomDrawerNavigation() {
             }}
           />
         </Drawer>
-        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} backgroundColor="transparent" />
       </GestureHandlerRootView>
     </>
   );
