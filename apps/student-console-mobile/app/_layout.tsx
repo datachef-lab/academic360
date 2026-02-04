@@ -7,11 +7,10 @@ import { StatusBar, setStatusBarStyle } from "expo-status-bar";
 import React, { useLayoutEffect } from "react";
 import { InteractionManager, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-// import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import "../global.css";
 
 export default function RootLayout() {
-  // AsyncStorage.clear();
   return (
     <GestureHandlerRootView className="flex-1">
       <AuthProvider>
@@ -26,13 +25,8 @@ export default function RootLayout() {
 function CustomDrawerNavigation() {
   const { theme, colorScheme } = useTheme();
 
-  // Force status bar style when theme changes - dark icons on light bg, light icons on dark bg
-  const isLightTheme =
-    colorScheme === "light" ||
-    theme.background === "white" ||
-    theme.background === "#fff" ||
-    theme.background === "#ffffff";
-  const statusBarStyle = isLightTheme ? "dark" : "light";
+  // Force status bar style when theme changes - derive from actual background for reliability
+  const statusBarStyle = theme.background === "white" ? "dark" : "light";
 
   useLayoutEffect(() => {
     setStatusBarStyle(statusBarStyle, false);
@@ -59,13 +53,6 @@ function CustomDrawerNavigation() {
           }}
           drawerContent={SidebarContent}
         >
-          <Drawer.Screen
-            name="(root)"
-            options={{
-              drawerLabel: "Onboarding",
-              drawerItemStyle: { display: "none" },
-            }}
-          />
           <Drawer.Screen
             name="(auth)"
             options={{

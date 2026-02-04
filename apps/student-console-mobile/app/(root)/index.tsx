@@ -19,13 +19,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { LinearGradient } from "expo-linear-gradient";
-import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// Dark black-like background for onboarding
-const ONBOARDING_BG_TOP = "#0a0a0a";
-const ONBOARDING_BG_BOTTOM = "#15141A";
 
 // Animation constants - synchronized timing
 const ANIMATION_DURATION = 400;
@@ -111,12 +105,13 @@ export default function OnboardingScreen() {
 
   const data = onboardingSlides[slideIndex];
   const IconComponent = iconMap[data.illustration] || Sparkles;
-  const isDark = true; // Onboarding always uses dark branded background
+  const isDark = colorScheme === "dark";
 
-  // Theme-based colors (onboarding uses dark branded bg for consistency on mobile)
+  // Theme-based colors
   const accentColor = isDark ? "#CEF202" : "#007AFF";
-  const textColor = "#FFFFFF";
-  const textSecondaryColor = "rgba(255,255,255,0.6)";
+  const bgColor = isDark ? "#15141A" : "#FFFFFF";
+  const textColor = isDark ? "#FFFFFF" : "#000000";
+  const textSecondaryColor = isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)";
 
   // Icon scale animation on slide change
   useEffect(() => {
@@ -193,196 +188,191 @@ export default function OnboardingScreen() {
   // Don't render onboarding content while checking storage (avoids flash)
   if (isCheckingOnboarding) {
     return (
-      <LinearGradient colors={[ONBOARDING_BG_TOP, ONBOARDING_BG_BOTTOM]} className="flex-1">
-        <SafeAreaView edges={["top", "bottom"]} className="flex-1">
-          <View className="flex-1" />
-        </SafeAreaView>
-      </LinearGradient>
+      <SafeAreaView edges={["top", "bottom"]} className="flex-1" style={{ backgroundColor: bgColor }}>
+        <View className="flex-1" />
+      </SafeAreaView>
     );
   }
 
   return (
-    <LinearGradient colors={[ONBOARDING_BG_TOP, ONBOARDING_BG_BOTTOM]} className="flex-1">
-      <StatusBar style="light" />
-      <SafeAreaView edges={["top", "bottom"]} className="flex-1">
-        <View className="flex-1">
-          {/* Pagination Dots - Single progress indicator */}
-          <View className="flex-row gap-2 justify-center mt-4 mb-6">
-            {onboardingSlides.map((_slide, idx) => (
-              <AnimatedDot key={idx} isActive={slideIndex === idx} accentColor={accentColor} isDark={isDark} />
-            ))}
-          </View>
+    <SafeAreaView edges={["top", "bottom"]} className="flex-1" style={{ backgroundColor: bgColor }}>
+      <View className="flex-1">
+        {/* Pagination Dots - Single progress indicator */}
+        <View className="flex-row gap-2 justify-center mt-4 mb-6">
+          {onboardingSlides.map((_slide, idx) => (
+            <AnimatedDot key={idx} isActive={slideIndex === idx} accentColor={accentColor} isDark={isDark} />
+          ))}
+        </View>
 
-          {/* Gesture Detector for Swipe */}
-          <GestureDetector gesture={swipes}>
-            <View className="flex-1">
-              {/* Icon/Illustration Section - Fixed height to prevent shifting */}
-              <View className="items-center justify-center px-8" style={{ minHeight: 240, maxHeight: 280 }}>
+        {/* Gesture Detector for Swipe */}
+        <GestureDetector gesture={swipes}>
+          <View className="flex-1">
+            {/* Icon/Illustration Section - Fixed height to prevent shifting */}
+            <View className="items-center justify-center px-8" style={{ minHeight: 240, maxHeight: 280 }}>
+              <Animated.View
+                key={`icon-wrapper-${slideIndex}`}
+                entering={
+                  direction === "right"
+                    ? SlideInRight.duration(ANIMATION_DURATION).delay(ANIMATION_DELAY).springify()
+                    : SlideInLeft.duration(ANIMATION_DURATION).delay(ANIMATION_DELAY).springify()
+                }
+                exiting={
+                  direction === "right"
+                    ? SlideOutLeft.duration(ANIMATION_DURATION * 0.75)
+                    : SlideOutRight.duration(ANIMATION_DURATION * 0.75)
+                }
+                className="items-center justify-center"
+                style={{ width: 192, height: 192 }}
+              >
                 <Animated.View
-                  key={`icon-wrapper-${slideIndex}`}
+                  style={[
+                    iconScaleStyle,
+                    {
+                      width: 192,
+                      height: 192,
+                      borderRadius: 96,
+                      backgroundColor: isDark ? `${accentColor}25` : `${accentColor}15`,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      // Shadow for native platforms
+                      ...(Platform.OS !== "web" && {
+                        shadowColor: accentColor,
+                        shadowOffset: { width: 0, height: 0 },
+                        shadowOpacity: isDark ? 0.5 : 0.3,
+                        shadowRadius: isDark ? 30 : 20,
+                        elevation: 10,
+                      }),
+                    },
+                  ]}
+                >
+                  <IconComponent size={120} color={accentColor} strokeWidth={isDark ? 1.5 : 2} />
+                </Animated.View>
+              </Animated.View>
+            </View>
+
+            {/* Content Section - Consistent spacing with fixed layout */}
+            <View className="flex-1 px-2 justify-between pb-6">
+              {/* Text Content - Fixed wrapper to prevent shifting */}
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  minHeight: 200,
+                }}
+              >
+                <Animated.View
+                  key={`content-${slideIndex}`}
                   entering={
                     direction === "right"
-                      ? SlideInRight.duration(ANIMATION_DURATION).delay(ANIMATION_DELAY).springify()
-                      : SlideInLeft.duration(ANIMATION_DURATION).delay(ANIMATION_DELAY).springify()
+                      ? SlideInRight.duration(ANIMATION_DURATION)
+                          .delay(ANIMATION_DELAY * 1.5)
+                          .springify()
+                      : SlideInLeft.duration(ANIMATION_DURATION)
+                          .delay(ANIMATION_DELAY * 1.5)
+                          .springify()
                   }
                   exiting={
                     direction === "right"
                       ? SlideOutLeft.duration(ANIMATION_DURATION * 0.75)
                       : SlideOutRight.duration(ANIMATION_DURATION * 0.75)
                   }
-                  className="items-center justify-center"
-                  style={{ width: 192, height: 192 }}
                 >
-                  <Animated.View
-                    style={[
-                      iconScaleStyle,
-                      {
-                        width: 192,
-                        height: 192,
-                        borderRadius: 96,
-                        backgroundColor: isDark ? `${accentColor}25` : `${accentColor}15`,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        // Shadow for native platforms
-                        ...(Platform.OS !== "web" && {
-                          shadowColor: accentColor,
-                          shadowOffset: { width: 0, height: 0 },
-                          shadowOpacity: isDark ? 0.5 : 0.3,
-                          shadowRadius: isDark ? 30 : 20,
-                          elevation: 10,
-                        }),
-                      },
-                    ]}
-                  >
-                    <IconComponent size={120} color={accentColor} strokeWidth={isDark ? 1.5 : 2} />
+                  <Animated.View style={contentOpacityStyle}>
+                    {/* Title - Large and Prominent */}
+                    <Animated.Text
+                      key={`title-${slideIndex}`}
+                      entering={FadeIn.delay(ANIMATION_DELAY * 2).duration(ANIMATION_DURATION)}
+                      style={{
+                        color: textColor,
+                        fontSize: 36,
+                        fontWeight: "800",
+                        // lineHeight: 56,
+                        marginBottom: 24,
+                        textAlign: "center",
+                        // paddingHorizontal: 16,
+                      }}
+                    >
+                      {data.title}
+                    </Animated.Text>
+
+                    {/* Description */}
+                    <Animated.Text
+                      key={`description-${slideIndex}`}
+                      entering={FadeIn.delay(ANIMATION_DELAY * 2.5).duration(ANIMATION_DURATION)}
+                      style={{
+                        color: textSecondaryColor,
+                        fontSize: 16,
+                        lineHeight: 24,
+                        textAlign: "center",
+                        paddingHorizontal: 8,
+                      }}
+                    >
+                      {data.description}
+                    </Animated.Text>
                   </Animated.View>
                 </Animated.View>
               </View>
 
-              {/* Content Section - Consistent spacing with fixed layout */}
-              <View className="flex-1 px-2 justify-between pb-6">
-                {/* Text Content - Fixed wrapper to prevent shifting */}
-                <View
-                  style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    minHeight: 200,
-                  }}
-                >
-                  <Animated.View
-                    key={`content-${slideIndex}`}
-                    entering={
-                      direction === "right"
-                        ? SlideInRight.duration(ANIMATION_DURATION)
-                            .delay(ANIMATION_DELAY * 1.5)
-                            .springify()
-                        : SlideInLeft.duration(ANIMATION_DURATION)
-                            .delay(ANIMATION_DELAY * 1.5)
-                            .springify()
-                    }
-                    exiting={
-                      direction === "right"
-                        ? SlideOutLeft.duration(ANIMATION_DURATION * 0.75)
-                        : SlideOutRight.duration(ANIMATION_DURATION * 0.75)
-                    }
-                  >
-                    <Animated.View style={contentOpacityStyle}>
-                      {/* Title - Large and Prominent */}
-                      <Animated.Text
-                        key={`title-${slideIndex}`}
-                        entering={FadeIn.delay(ANIMATION_DELAY * 2).duration(ANIMATION_DURATION)}
-                        style={{
-                          color: textColor,
-                          fontSize: 36,
-                          fontWeight: "800",
-                          // lineHeight: 56,
-                          marginBottom: 24,
-                          textAlign: "center",
-                          // paddingHorizontal: 16,
-                        }}
-                      >
-                        {data.title}
-                      </Animated.Text>
-
-                      {/* Description */}
-                      <Animated.Text
-                        key={`description-${slideIndex}`}
-                        entering={FadeIn.delay(ANIMATION_DELAY * 2.5).duration(ANIMATION_DURATION)}
-                        style={{
-                          color: textSecondaryColor,
-                          fontSize: 16,
-                          lineHeight: 24,
-                          textAlign: "center",
-                          paddingHorizontal: 8,
-                        }}
-                      >
-                        {data.description}
-                      </Animated.Text>
-                    </Animated.View>
-                  </Animated.View>
-                </View>
-
-                {/* Button Section - Fixed at bottom with consistent spacing */}
+              {/* Button Section - Fixed at bottom with consistent spacing */}
+              <Animated.View
+                key={`buttons-wrapper-${slideIndex}`}
+                entering={FadeIn.delay(ANIMATION_DELAY * 3).duration(ANIMATION_DURATION)}
+              >
                 <Animated.View
-                  key={`buttons-wrapper-${slideIndex}`}
-                  entering={FadeIn.delay(ANIMATION_DELAY * 3).duration(ANIMATION_DURATION)}
+                  style={[
+                    {
+                      marginTop: 40,
+                      paddingTop: 0,
+                    },
+                    contentOpacityStyle,
+                  ]}
                 >
-                  <Animated.View
-                    style={[
-                      {
-                        marginTop: 40,
-                        paddingTop: 0,
-                      },
-                      contentOpacityStyle,
-                    ]}
-                  >
-                    {/* Skip and Next/Continue Buttons in same row */}
-                    <View className="flex-row gap-3 items-center">
-                      {/* Skip Button */}
-                      <Pressable
-                        onPress={handleEndOnboarding}
-                        className="flex-1 py-4 rounded-2xl active:opacity-70"
-                        style={{
-                          backgroundColor: "transparent",
-                          borderWidth: 1,
-                          borderColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)",
-                        }}
-                      >
-                        <Text style={{ color: textSecondaryColor }} className="text-center text-lg font-semibold">
-                          Skip
-                        </Text>
-                      </Pressable>
+                  {/* Skip and Next/Continue Buttons in same row */}
+                  <View className="flex-row gap-3 items-center">
+                    {/* Skip Button */}
+                    <Pressable
+                      onPress={handleEndOnboarding}
+                      className="flex-1 py-4 rounded-2xl active:opacity-70"
+                      style={{
+                        backgroundColor: "transparent",
+                        borderWidth: 1,
+                        borderColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)",
+                      }}
+                    >
+                      <Text style={{ color: textSecondaryColor }} className="text-center text-lg font-semibold">
+                        Skip
+                      </Text>
+                    </Pressable>
 
-                      {/* CTA Button */}
-                      <Pressable
-                        onPress={handleOnContinue}
-                        className="flex-1 py-4 rounded-2xl active:opacity-90"
+                    {/* CTA Button */}
+                    <Pressable
+                      onPress={handleOnContinue}
+                      className="flex-1 py-4 rounded-2xl active:opacity-90"
+                      style={{
+                        backgroundColor: isLastSlide
+                          ? accentColor
+                          : isDark
+                            ? "rgba(255,255,255,0.1)"
+                            : "rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <Text
                         style={{
-                          backgroundColor: isLastSlide
-                            ? accentColor
-                            : isDark
-                              ? "rgba(255,255,255,0.1)"
-                              : "rgba(0,0,0,0.05)",
+                          color: isLastSlide ? (isDark ? "#15141A" : "#FFFFFF") : textColor,
                         }}
+                        className="text-center text-lg font-bold"
                       >
-                        <Text
-                          style={{
-                            color: isLastSlide ? (isDark ? "#15141A" : "#FFFFFF") : textColor,
-                          }}
-                          className="text-center text-lg font-bold"
-                        >
-                          {data.cta || (isLastSlide ? "Get Started" : "Continue")}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </Animated.View>
+                        {data.cta || (isLastSlide ? "Get Started" : "Continue")}
+                      </Text>
+                    </Pressable>
+                  </View>
                 </Animated.View>
-              </View>
+              </Animated.View>
             </View>
-          </GestureDetector>
-        </View>
-      </SafeAreaView>
-    </LinearGradient>
+          </View>
+        </GestureDetector>
+      </View>
+    </SafeAreaView>
   );
 }
 
