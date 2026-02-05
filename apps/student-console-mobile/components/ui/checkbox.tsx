@@ -14,6 +14,7 @@ export function Checkbox({ checked, onCheckedChange, label, disabled = false }: 
   const { theme, colorScheme } = useTheme();
   const isDark = colorScheme === "dark";
   const accent = isDark ? "#6366f1" : "#4f46e5";
+  const uncheckedBorder = isDark ? "rgba(255,255,255,0.5)" : theme.border;
 
   return (
     <Pressable
@@ -24,8 +25,9 @@ export function Checkbox({ checked, onCheckedChange, label, disabled = false }: 
       <View
         className="w-5 h-5 rounded border items-center justify-center"
         style={{
-          borderColor: checked ? accent : theme.border,
+          borderColor: checked ? accent : uncheckedBorder,
           backgroundColor: checked ? accent : "transparent",
+          borderWidth: 2,
         }}
       >
         {checked && <Check size={14} color="#ffffff" strokeWidth={3} />}
