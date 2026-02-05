@@ -1,4 +1,7 @@
 {
+  "cli": {
+    "packageManager": "pnpm"
+  },
   "build": {
     "stage": {
       "distribution": "internal",
