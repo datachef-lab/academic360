@@ -26,5 +26,6 @@ config.resolver.nodeModulesPaths = [
 
 // 👇 Fix for pnpm symlinks
 config.resolver.disableHierarchicalLookup = true;
+config.resolver.unstable_enableSymlinks = true;
 
 module.exports = withNativeWind(config, { input: "./global.css" });
