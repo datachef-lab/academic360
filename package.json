@@ -15,7 +15,9 @@
   },
   "pnpm": {
     "overrides": {
-      "drizzle-orm": "0.44.5"
+      "drizzle-orm": "0.44.5",
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
     },
     "patchedDependencies": {
       "expo-status-bar@3.0.9": "patches/expo-status-bar@3.0.9.patch"
