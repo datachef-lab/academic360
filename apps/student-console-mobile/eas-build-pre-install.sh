@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Enable Corepack to use pnpm
+# Just verify what EAS has already set up
 corepack enable
-corepack prepare pnpm@10.28.0 --activate
-
-# Verify pnpm is available
 pnpm --version
