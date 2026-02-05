@@ -182,12 +182,12 @@ export default function CURegistrationPage() {
     return aadhaar;
   };
 
-  //   useEffect(() => {
-  //     if (process.env.NEXT_PUBLIC_APP_ENV === "production") {
-  //       router.replace("/dashboard"); // Use replace instead of push to avoid adding to history
-  //       return;
-  //     }
-  //   }, [router]);
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_APP_ENV === "production") {
+      router.replace("/dashboard"); // Use replace instead of push to avoid adding to history
+      return;
+    }
+  }, [router]);
 
   //   // Early return to prevent rendering in production
   //   if (process.env.NEXT_PUBLIC_APP_ENV === "production") {
