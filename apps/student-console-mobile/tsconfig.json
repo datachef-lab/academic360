@@ -1,5 +1,5 @@
 {
-  "extends": "./node_modules/expo/tsconfig.base.json",
+  "extends": "../../node_modules/expo/tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
     "skipLibCheck": true,
@@ -12,6 +12,6 @@
       "@repo/utils/*": ["../../packages/utils/src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts"],
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts", "types/**/*.d.ts"],
   "exclude": ["node_modules"]
 }

@@ -9,7 +9,10 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "eas-build-pre-install": "corepack enable && corepack prepare pnpm@10.28.0 --activate && pnpm install --no-frozen-lockfile || true"
+    "eas-build-pre-install": "corepack enable && corepack prepare pnpm@10.28.0 --activate && pnpm install --no-frozen-lockfile || true",
+    "build:android": "./scripts/build-android.sh",
+    "build:android:dev": "./scripts/build-android.sh development",
+    "build:android:stage": "./scripts/build-android.sh stage"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -18,8 +21,8 @@
     "@react-navigation/drawer": "^7.7.13",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
-    "@repo/db": "workspace:*",
-    "@repo/utils": "workspace:*",
+    "@repo/db": "file:../../packages/db",
+    "@repo/utils": "file:../../packages/utils",
     "axios": "^1.7.9",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",

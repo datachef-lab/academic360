@@ -1,9 +1,20 @@
 "use client";
 
-import { API_BASE_URL } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 import type { Socket } from "socket.io-client";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+
+// Lazy import API_BASE_URL to avoid top-level evaluation issues
+const getApiBaseUrl = () => {
+  try {
+    // Dynamic import to avoid issues if API_BASE_URL fails to resolve
+    const apiModule = require("@/lib/api");
+    return apiModule.API_BASE_URL || "http://localhost:8080";
+  } catch (e) {
+    console.error("[ExamSocket] Failed to get API_BASE_URL:", e);
+    return "http://localhost:8080";
+  }
+};
 
 type ExamSocketRefreshCallback = () => void;
 
@@ -69,6 +80,7 @@ export function ExamSocketProvider({ children }: { children: React.ReactNode }) 
     const loadSocket = async () => {
       try {
         const socketModule = await import("socket.io-client");
+        const API_BASE_URL = getApiBaseUrl();
         let parsed: URL;
         try {
           parsed = new URL(API_BASE_URL);

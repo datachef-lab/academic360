@@ -86,21 +86,40 @@ export default function OnboardingScreen() {
 
   // Redirect: if authenticated -> /console; if onboarding done -> login
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady) {
+      console.log("[Onboarding] Waiting for auth to be ready...");
+      return;
+    }
 
     const checkAndRedirect = async () => {
-      const completed = await getOnboardingCompleted();
-      setIsCheckingOnboarding(false);
+      try {
+        console.log("[Onboarding] Checking onboarding status...");
+        const completed = await getOnboardingCompleted();
+        setIsCheckingOnboarding(false);
 
-      // If user is already logged in, go to console
-      if (accessToken && user?.type === "STUDENT") {
-        router.replace("/console");
-        return;
-      }
+        // If user is already logged in, go to console
+        if (accessToken && user?.type === "STUDENT") {
+          console.log("[Onboarding] User authenticated, navigating to /console");
+          try {
+            router.replace("/console");
+          } catch (error) {
+            console.error("[Onboarding] Navigation error to /console:", error);
+          }
+          return;
+        }
 
-      // If onboarding completed, go to login
-      if (completed) {
-        router.replace("/(auth)/login");
+        // If onboarding completed, go to login
+        if (completed) {
+          console.log("[Onboarding] Onboarding completed, navigating to login");
+          try {
+            router.replace("/(auth)/login");
+          } catch (error) {
+            console.error("[Onboarding] Navigation error to login:", error);
+          }
+        }
+      } catch (error) {
+        console.error("[Onboarding] Error in checkAndRedirect:", error);
+        setIsCheckingOnboarding(false);
       }
     };
 

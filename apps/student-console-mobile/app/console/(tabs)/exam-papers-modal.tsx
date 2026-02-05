@@ -5,7 +5,7 @@ import { API_BASE_URL } from "@/lib/api";
 import { fetchExamCandidates } from "@/services/exam-api";
 import { Download } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Alert, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString("en-IN", {
@@ -284,3 +284,6 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
     </Modal>
   );
 }
+
+// Default export for Expo Router (even though this is a component, not a route)
+export default ExamPapersModal;

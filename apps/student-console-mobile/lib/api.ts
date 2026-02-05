@@ -1,25 +1,36 @@
 import axios, { AxiosHeaders } from "axios";
-import Constants from "expo-constants";
 
 // EAS builds: process.env.EXPO_PUBLIC_API_URL is set from eas.json env
 // Local dev: Can use .env files or Constants
 const getApiBaseUrl = () => {
-  // Priority 1: process.env (works in EAS builds and local with .env)
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
+  try {
+    // Priority 1: process.env (works in EAS builds and local with .env)
+    if (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) {
+      return process.env.EXPO_PUBLIC_API_URL;
+    }
+
+    // Priority 2: Constants.expoConfig.extra (app.json) - wrapped in try-catch
+    try {
+      const Constants = require("expo-constants").default;
+      if (Constants?.expoConfig?.extra?.EXPO_PUBLIC_API_URL) {
+        return Constants.expoConfig.extra.EXPO_PUBLIC_API_URL as string;
+      }
+    } catch (e) {
+      // Constants might not be available in all contexts
+    }
+
+    // Fallback
+    return "http://localhost:8080";
+  } catch (e) {
+    console.error("[API] Error getting API_BASE_URL:", e);
+    return "http://localhost:8080";
   }
-  // Priority 2: Constants.expoConfig.extra (app.json)
-  if (Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL) {
-    return Constants.expoConfig.extra.EXPO_PUBLIC_API_URL as string;
-  }
-  // Fallback
-  return "http://localhost:8080";
 };
 
 export const API_BASE_URL = getApiBaseUrl();
 
 // Log in dev to help debug
-if (__DEV__) {
+if (typeof __DEV__ !== "undefined" && __DEV__) {
   console.log("[API] API_BASE_URL:", API_BASE_URL);
 }
 

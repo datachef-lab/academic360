@@ -100,24 +100,29 @@ export default function LoginScreen() {
   useEffect(() => {
     let cancelled = false;
     const checkAuth = async () => {
-      // First check in-memory state
-      if (accessToken && user?.type === "STUDENT") {
-        router.replace("/console");
-        return;
-      }
-      // Try refresh (e.g. stored token from previous session)
-      const result = await tryRefresh();
-      if (!cancelled && result.token && result.user?.type === "STUDENT") {
-        router.replace("/console");
+      try {
+        // First check in-memory state
+        if (accessToken && user?.type === "STUDENT") {
+          if (!cancelled) router.replace("/console");
+          return;
+        }
+        // Try refresh (e.g. stored token from previous session)
+        const result = await tryRefresh();
+        if (!cancelled && result.token && result.user?.type === "STUDENT") {
+          router.replace("/console");
+        }
+      } catch (error) {
+        console.error("[Login] Auth check error:", error);
+      } finally {
+        if (!cancelled) setIsCheckingAuth(false);
       }
     };
-    void checkAuth().finally(() => {
-      if (!cancelled) setIsCheckingAuth(false);
-    });
+    void checkAuth();
     return () => {
       cancelled = true;
     };
-  }, [accessToken, user, tryRefresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount to avoid loops
 
   // Restore OTP state on mount
   useEffect(() => {

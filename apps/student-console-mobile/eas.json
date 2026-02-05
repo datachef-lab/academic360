@@ -1,5 +1,22 @@
 {
+  "cli": {
+    "appVersionSource": "remote"
+  },
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "node": "20.19.4",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EAS_ENABLE_COREPACK": "1",
+        "EAS_NO_FROZEN_LOCKFILE": "1",
+        "EXPO_PUBLIC_API_URL": "http://192.168.31.146:8080",
+        "EXPO_PUBLIC_STUDENT_IMAGE_URL": "https://74.207.233.48:8443/hrclIRP/studentimages"
+      }
+    },
     "stage": {
       "distribution": "internal",
       "channel": "stage",
