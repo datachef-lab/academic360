@@ -2,7 +2,6 @@ import { useTheme } from "@/hooks/use-theme";
 import { usePathname, useRouter } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import { useColorScheme } from "react-native";
 
 const SEGMENT_LABELS: Record<string, string> = {
   console: "Home",
@@ -38,7 +37,6 @@ export function Breadcrumb() {
   const { theme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
-  const colorScheme = useColorScheme();
 
   const segments = pathname
     .split("/")
@@ -80,10 +78,11 @@ export function Breadcrumb() {
           {i > 0 && (
             <Text
               style={{
-                color: colorScheme === "dark" ? "rgba(255,255,255,0.85)" : "#374151",
+                color: theme.text,
                 fontSize: 14,
                 marginHorizontal: 4,
                 fontWeight: "600",
+                opacity: 0.8,
               }}
             >
               ›

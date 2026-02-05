@@ -1,12 +1,12 @@
 import axios, { AxiosHeaders } from "axios";
 import Constants from "expo-constants";
 
-const API_BASE_URL =
+export const API_BASE_URL =
   Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ?? process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

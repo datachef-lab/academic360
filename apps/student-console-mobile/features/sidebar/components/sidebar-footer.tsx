@@ -1,11 +1,24 @@
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/providers/auth-provider";
 import Constants from "expo-constants";
 import { LogOutIcon } from "lucide-react-native";
-import React from "react";
-import { Pressable, Text, View } from "react-native";
+import React, { useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 export default function SidebarFooter() {
   const { theme, colorScheme } = useTheme();
+  const { logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   const year = new Date().getFullYear();
   const version = Constants.expoConfig?.version ?? "1.0.0";
@@ -21,21 +34,19 @@ export default function SidebarFooter() {
       }}
     >
       {/* Logout */}
-      <Pressable
-        onPress={() => {
-          // TODO: handle logout
-          console.log("Logout pressed");
-        }}
-        className="flex-row items-center gap-3 mb-3"
-      >
-        <LogOutIcon size={18} color={colorScheme === "dark" ? "#ff6b6b" : "#d32f2f"} />
+      <Pressable onPress={handleLogout} disabled={loggingOut} className="flex-row items-center gap-3 mb-3">
+        {loggingOut ? (
+          <ActivityIndicator size="small" color={colorScheme === "dark" ? "#ff6b6b" : "#d32f2f"} />
+        ) : (
+          <LogOutIcon size={18} color={colorScheme === "dark" ? "#ff6b6b" : "#d32f2f"} />
+        )}
         <Text
           style={{
             color: colorScheme === "dark" ? "#ff6b6b" : "#d32f2f",
             fontWeight: "600",
           }}
         >
-          Logout
+          {loggingOut ? "Logging out..." : "Logout"}
         </Text>
       </Pressable>
 
