@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SidebarContent } from "@/features/sidebar";
 import { useTheme } from "@/hooks/use-theme";
 import { AuthProvider } from "@/providers/auth-provider";
@@ -13,13 +14,15 @@ import "../global.css";
 export default function RootLayout() {
   // AsyncStorage.clear();
   return (
-    <GestureHandlerRootView className="flex-1">
-      <AuthProvider>
-        <ThemeProvider>
-          <CustomDrawerNavigation />
-        </ThemeProvider>
-      </AuthProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView className="flex-1">
+        <AuthProvider>
+          <ThemeProvider>
+            <CustomDrawerNavigation />
+          </ThemeProvider>
+        </AuthProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 

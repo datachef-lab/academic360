@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Header } from "@/components/ui/header";
 import { useTheme } from "@/hooks/use-theme";
@@ -43,23 +44,25 @@ export default function ConsoleLayout() {
   const { theme } = useTheme();
 
   return (
-    <ExamSocketProvider>
-      <SafeAreaView edges={["top"]} style={{ backgroundColor: theme.background }} className="h-full flex-1">
-        <WebStatusBar theme={theme} />
-        <Header />
-        <Breadcrumb />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            // Configure right-to-left slide animation
-            animation: "slide_from_right",
-          }}
-        >
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="exams/[id]" />
-          {/* <Stack.Screen name="console" /> */}
-        </Stack>
-      </SafeAreaView>
-    </ExamSocketProvider>
+    <ErrorBoundary>
+      <ExamSocketProvider>
+        <SafeAreaView edges={["top"]} style={{ backgroundColor: theme.background }} className="h-full flex-1">
+          <WebStatusBar theme={theme} />
+          <Header />
+          <Breadcrumb />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              // Configure right-to-left slide animation
+              animation: "slide_from_right",
+            }}
+          >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="exams/[id]" />
+            {/* <Stack.Screen name="console" /> */}
+          </Stack>
+        </SafeAreaView>
+      </ExamSocketProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,8 +1,27 @@
 import axios, { AxiosHeaders } from "axios";
 import Constants from "expo-constants";
 
-export const API_BASE_URL =
-  Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ?? process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
+// EAS builds: process.env.EXPO_PUBLIC_API_URL is set from eas.json env
+// Local dev: Can use .env files or Constants
+const getApiBaseUrl = () => {
+  // Priority 1: process.env (works in EAS builds and local with .env)
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  // Priority 2: Constants.expoConfig.extra (app.json)
+  if (Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL) {
+    return Constants.expoConfig.extra.EXPO_PUBLIC_API_URL as string;
+  }
+  // Fallback
+  return "http://localhost:8080";
+};
+
+export const API_BASE_URL = getApiBaseUrl();
+
+// Log in dev to help debug
+if (__DEV__) {
+  console.log("[API] API_BASE_URL:", API_BASE_URL);
+}
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
