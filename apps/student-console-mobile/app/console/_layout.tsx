@@ -1,6 +1,7 @@
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Header } from "@/components/ui/header";
 import { useTheme } from "@/hooks/use-theme";
+import { ExamSocketProvider } from "@/providers/exam-socket-provider";
 import { Stack } from "expo-router";
 import React, { useState, useEffect } from "react";
 import { Platform, Text, View } from "react-native";
@@ -16,14 +17,9 @@ function WebStatusBar({ theme }: { theme: { background: string; text: string } }
     return () => clearInterval(id);
   }, []);
   if (Platform.OS !== "web") return null;
-  const isDark = theme.background !== "white";
-  if (__DEV__) {
-    console.log("[WebStatusBar] render:", {
-      "theme.background": theme.background,
-      isDark,
-      "text color": isDark ? "white" : "black",
-    });
-  }
+  const isDark = theme.background !== "white" && theme.background !== "#fff";
+  const textColor = theme.text;
+  const mutedColor = isDark ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.7)";
   return (
     <View
       style={{
@@ -33,10 +29,12 @@ function WebStatusBar({ theme }: { theme: { background: string; text: string } }
         alignItems: "center",
         justifyContent: "space-between",
         paddingHorizontal: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
       }}
     >
-      <Text style={{ color: isDark ? "#fff" : "#000", fontSize: 12, fontWeight: "600" }}>{time}</Text>
-      <Text style={{ color: isDark ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.8)", fontSize: 11 }}>100%</Text>
+      <Text style={{ color: textColor, fontSize: 12, fontWeight: "600" }}>{time}</Text>
+      <Text style={{ color: mutedColor, fontSize: 11 }}>100%</Text>
     </View>
   );
 }
@@ -45,19 +43,23 @@ export default function ConsoleLayout() {
   const { theme } = useTheme();
 
   return (
-    <SafeAreaView edges={["top"]} style={{ backgroundColor: theme.background }} className="h-full flex-1">
-      <Header />
-      <Breadcrumb />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          // Configure right-to-left slide animation
-          animation: "slide_from_right",
-        }}
-      >
-        <Stack.Screen name="(tabs)" />
-        {/* <Stack.Screen name="console" /> */}
-      </Stack>
-    </SafeAreaView>
+    <ExamSocketProvider>
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: theme.background }} className="h-full flex-1">
+        <WebStatusBar theme={theme} />
+        <Header />
+        <Breadcrumb />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            // Configure right-to-left slide animation
+            animation: "slide_from_right",
+          }}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="exams/[id]" />
+          {/* <Stack.Screen name="console" /> */}
+        </Stack>
+      </SafeAreaView>
+    </ExamSocketProvider>
   );
 }

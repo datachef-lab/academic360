@@ -1,6 +1,7 @@
 import type { StudentDto } from "@repo/db/dtos/user";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/providers/auth-provider";
+import { useProfile } from "@/hooks/use-profile";
 import { useCuRegistrationForm } from "@/hooks/use-cu-registration-form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -10,8 +11,9 @@ import { fetchStudentSubjectSelections } from "@/services/subject-selection";
 import { BookOpen, FileText, GraduationCap, Home, Upload, User } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { getCuRegistrationDocumentSignedUrl } from "@/services/cu-registration-documents";
 import type { DocumentKey } from "@/hooks/use-cu-registration-form";
 
 function IntroSectionCard({
@@ -75,6 +77,31 @@ const DOCUMENT_LABELS: Record<DocumentKey, string> = {
   migrationCertificate: "Migration Certificate",
 };
 
+const DOCUMENT_IDS: Record<DocumentKey, number> = {
+  classXIIMarksheet: 1,
+  aadhaarCard: 2,
+  apaarIdCard: 3,
+  fatherPhotoId: 4,
+  motherPhotoId: 5,
+  ewsCertificate: 10,
+  migrationCertificate: 11,
+};
+
+const DOCUMENT_ID_TO_LABEL: Record<number, string> = {
+  1: "Class XII Marksheet",
+  2: "Aadhaar Card",
+  3: "APAAR ID Card",
+  4: "Father's Photo ID",
+  5: "Mother's Photo ID",
+  10: "EWS Certificate",
+  11: "Migration Certificate",
+};
+
+function formatFileSize(bytes: number): string {
+  const sizeMB = bytes / (1024 * 1024);
+  return `${sizeMB.toFixed(2)} MB`;
+}
+
 function formatAadhaar(value: string) {
   const digits = value.replace(/\D/g, "");
   if (digits.length <= 4) return digits;
@@ -93,11 +120,14 @@ function formatApaarId(value: string) {
 export default function CuRegistrationScreen() {
   const { theme, colorScheme } = useTheme();
   const { user } = useAuth();
+  const { profileInfo } = useProfile();
   const student = user?.payload as StudentDto | undefined;
 
   const [activeTab, setActiveTab] = useState<TabId>("introductory");
   const [isCheckingSubjectSelection, setIsCheckingSubjectSelection] = useState(true);
   const [isSubjectSelectionCompleted, setIsSubjectSelectionCompleted] = useState(false);
+  const [addressErrors, setAddressErrors] = useState<string[]>([]);
+  const hasAutoNavigatedRef = useRef(false);
 
   const form = useCuRegistrationForm(student);
 
@@ -109,6 +139,17 @@ export default function CuRegistrationScreen() {
       .toUpperCase()
       .startsWith("BBA");
   }, [student?.programCourse?.name, student?.currentPromotion?.programCourse?.name]);
+
+  const isBcomProgram = React.useMemo(() => {
+    const programName = student?.programCourse?.name || student?.currentPromotion?.programCourse?.name || "";
+    return programName
+      .normalize("NFKD")
+      .replace(/[^A-Za-z]/g, "")
+      .toUpperCase()
+      .startsWith("BCOM");
+  }, [student?.programCourse?.name, student?.currentPromotion?.programCourse?.name]);
+
+  const isMdcProgramForDisplay = isBcomProgram || isBBAProgram;
 
   const checkSubjectSelection = useCallback(async () => {
     if (!student?.id) return;
@@ -140,6 +181,183 @@ export default function CuRegistrationScreen() {
       form.loadSubjects();
     }
   }, [isSubjectSelectionCompleted, activeTab, student?.id]);
+
+  const instructionsConfirmedState = form.instructionsConfirmed || !!form.correctionRequest?.introductoryDeclaration;
+  const personalDeclaredState = form.personalDeclared || !!form.correctionRequest?.personalInfoDeclaration;
+  const addressDeclaredState = form.addressDeclared || !!form.correctionRequest?.addressInfoDeclaration;
+  const subjectsDeclaredState = form.subjectsDeclared || !!form.correctionRequest?.subjectsDeclaration;
+
+  const isPersonalTabValid = useCallback(() => {
+    const apaarIdDigits = form.personalInfo.apaarId.replace(/\D/g, "");
+    return personalDeclaredState && form.personalInfo.apaarId.trim() !== "" && apaarIdDigits.length === 12;
+  }, [personalDeclaredState, form.personalInfo.apaarId]);
+
+  const validateAddressFields = useCallback(() => {
+    const errors: string[] = [];
+    const { residentialAddress: res, mailingAddress: mail } = form;
+    if (!res.addressLine.trim()) errors.push("Residential Address Line");
+    if (!res.city.trim()) errors.push("Residential City");
+    if (!res.district.trim()) errors.push("Residential District");
+    if (!res.policeStation.trim()) errors.push("Residential Police Station");
+    if (!res.postOffice.trim()) errors.push("Residential Post Office");
+    if (!res.pinCode.trim()) errors.push("Residential PIN Code");
+    if (!mail.addressLine.trim()) errors.push("Mailing Address Line");
+    if (!mail.city.trim()) errors.push("Mailing City");
+    if (!mail.district.trim()) errors.push("Mailing District");
+    if (!mail.policeStation.trim()) errors.push("Mailing Police Station");
+    if (!mail.postOffice.trim()) errors.push("Mailing Post Office");
+    if (!mail.pinCode.trim()) errors.push("Mailing PIN Code");
+    setAddressErrors(errors);
+    return errors.length === 0;
+  }, [form.residentialAddress, form.mailingAddress]);
+
+  const isAddressTabValid = useCallback(
+    () => addressDeclaredState && addressErrors.length === 0,
+    [addressDeclaredState, addressErrors.length],
+  );
+
+  const getRequiredDocuments = useCallback((): DocumentKey[] => {
+    const required: DocumentKey[] = ["classXIIMarksheet", "apaarIdCard"];
+    const family = profileInfo?.studentFamily as {
+      members?: { type?: string; name?: string; title?: string }[];
+    } | null;
+    const father = family?.members?.find((m) => m?.type === "FATHER");
+    const mother = family?.members?.find((m) => m?.type === "MOTHER");
+    if (father?.name?.trim() && father?.title !== "LATE") required.push("fatherPhotoId");
+    if (mother?.name?.trim() && mother?.title !== "LATE") required.push("motherPhotoId");
+    if (
+      form.personalInfo.nationality === "Indian" &&
+      form.personalInfo.aadhaarNumber &&
+      form.personalInfo.aadhaarNumber.replace(/\D/g, "").length >= 12
+    ) {
+      required.push("aadhaarCard");
+    }
+    if (form.personalInfo.ews === "Yes") required.push("ewsCertificate");
+    const migratoryBoards = ["CBSE", "ICSE", "WBCHSE", "NIOS"];
+    const boardCode = (profileInfo?.academicInfo as { board?: { code?: string } } | null)?.board?.code;
+    if (boardCode && !migratoryBoards.includes(boardCode)) required.push("migrationCertificate");
+    return required;
+  }, [profileInfo, form.personalInfo.nationality, form.personalInfo.aadhaarNumber, form.personalInfo.ews]);
+
+  const getMissingDocuments = useCallback((): DocumentKey[] => {
+    const required = getRequiredDocuments();
+    return required.filter((key) => {
+      const hasLocal = !!form.documents[key];
+      const docId = DOCUMENT_IDS[key];
+      const hasUploaded = Array.isArray(form.uploadedDocuments)
+        ? (form.uploadedDocuments as { document?: { id?: number }; documentId?: number }[]).some(
+            (d) => (d.document?.id ?? d.documentId) === docId,
+          )
+        : false;
+      return !hasLocal && !hasUploaded;
+    });
+  }, [getRequiredDocuments, form.documents, form.uploadedDocuments]);
+
+  const getVisibleDocumentKeys = useCallback((): DocumentKey[] => {
+    const keys: DocumentKey[] = ["classXIIMarksheet", "apaarIdCard"];
+    if (form.personalInfo.nationality === "Indian") keys.push("aadhaarCard");
+    const family = profileInfo?.studentFamily as {
+      members?: { type?: string; name?: string; title?: string }[];
+    } | null;
+    const father = family?.members?.find((m) => m?.type === "FATHER");
+    const mother = family?.members?.find((m) => m?.type === "MOTHER");
+    if (father?.name?.trim() && father?.title !== "LATE") keys.push("fatherPhotoId");
+    if (mother?.name?.trim() && mother?.title !== "LATE") keys.push("motherPhotoId");
+    if (form.personalInfo.ews === "Yes") keys.push("ewsCertificate");
+    const migratoryBoards = ["CBSE", "ICSE", "WBCHSE", "NIOS"];
+    const boardCode = (profileInfo?.academicInfo as { board?: { code?: string } } | null)?.board?.code;
+    if (boardCode && !migratoryBoards.includes(boardCode)) keys.push("migrationCertificate");
+    return keys;
+  }, [profileInfo, form.personalInfo.nationality, form.personalInfo.ews]);
+
+  const isDocumentsTabValid = useCallback(
+    () => form.documentsConfirmed && getMissingDocuments().length === 0,
+    [form.documentsConfirmed, getRequiredDocuments, form.documents, form.uploadedDocuments],
+  );
+
+  const canReviewConfirm = useCallback(
+    () =>
+      isPersonalTabValid() &&
+      isAddressTabValid() &&
+      subjectsDeclaredState &&
+      isDocumentsTabValid() &&
+      form.documentsConfirmed,
+    [isPersonalTabValid, isAddressTabValid, subjectsDeclaredState, isDocumentsTabValid, form.documentsConfirmed],
+  );
+
+  useEffect(() => {
+    validateAddressFields();
+  }, [form.residentialAddress, form.mailingAddress, validateAddressFields]);
+
+  const canNavigateToTab = useCallback(
+    (tabId: TabId): boolean => {
+      if (!form.isFormEditable) return true;
+      const tabOrder: TabId[] = ["introductory", "personal-info", "address", "subjects", "documents"];
+      const currentIdx = tabOrder.indexOf(activeTab);
+      const targetIdx = tabOrder.indexOf(tabId);
+      if (targetIdx <= currentIdx) return true;
+      switch (tabId) {
+        case "introductory":
+          return true;
+        case "personal-info":
+          return instructionsConfirmedState;
+        case "address":
+          return instructionsConfirmedState && personalDeclaredState;
+        case "subjects":
+          return instructionsConfirmedState && personalDeclaredState && addressDeclaredState;
+        case "documents":
+          return instructionsConfirmedState && personalDeclaredState && addressDeclaredState && subjectsDeclaredState;
+        default:
+          return false;
+      }
+    },
+    [
+      activeTab,
+      form.isFormEditable,
+      instructionsConfirmedState,
+      personalDeclaredState,
+      addressDeclaredState,
+      subjectsDeclaredState,
+    ],
+  );
+
+  useEffect(() => {
+    if (!instructionsConfirmedState && activeTab !== "introductory") {
+      setActiveTab("introductory");
+    }
+  }, [instructionsConfirmedState, activeTab]);
+
+  // Auto-navigate on load to first incomplete tab (like web)
+  useEffect(() => {
+    if (!form.correctionRequest || form.correctionRequest?.onlineRegistrationDone) return;
+    if (hasAutoNavigatedRef.current) return;
+
+    const i = !!form.correctionRequest?.introductoryDeclaration;
+    const p = !!form.correctionRequest?.personalInfoDeclaration;
+    const a = !!form.correctionRequest?.addressInfoDeclaration;
+    const s = !!form.correctionRequest?.subjectsDeclaration;
+
+    let nextTab: TabId = "introductory";
+    if (i && !p) nextTab = "personal-info";
+    else if (i && p && !a) nextTab = "address";
+    else if (i && p && a && !s) nextTab = "subjects";
+    else if (i && p && a && s) nextTab = "documents";
+
+    if (activeTab !== nextTab) {
+      setActiveTab(nextTab);
+      hasAutoNavigatedRef.current = true;
+    }
+  }, [form.correctionRequest, activeTab]);
+
+  const handleTabPress = useCallback(
+    (tabId: TabId) => {
+      if (canNavigateToTab(tabId)) {
+        hasAutoNavigatedRef.current = true;
+        setActiveTab(tabId);
+      }
+    },
+    [canNavigateToTab],
+  );
 
   const handleSubjectSelectionRedirect = () => router.push("/console/academics/subject-selection");
 
@@ -268,36 +486,38 @@ export default function CuRegistrationScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={{ maxHeight: 44, flexGrow: 0, flexShrink: 0 }}
         contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingBottom: 10,
-          gap: 6,
           flexDirection: "row",
-          alignItems: "center",
+          paddingHorizontal: 12,
+          paddingBottom: 8,
+          gap: 6,
+          marginBottom: 6,
         }}
-        style={{ marginBottom: 8 }}
       >
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          const canNavigate = canNavigateToTab(tab.id);
           return (
             <Pressable
               key={tab.id}
-              onPress={() => setActiveTab(tab.id)}
+              onPress={() => handleTabPress(tab.id)}
+              disabled={!canNavigate}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                alignSelf: "flex-start",
                 paddingHorizontal: 8,
-                paddingVertical: 5,
+                paddingVertical: 6,
                 borderRadius: 6,
                 backgroundColor: isActive ? accent : tabBg,
                 borderWidth: 1,
                 borderColor: isActive ? accent : tabBorder,
+                opacity: canNavigate ? 1 : 0.5,
               }}
             >
               <Icon size={14} color={isActive ? "#fff" : theme.text} />
-              <Text style={{ color: isActive ? "#fff" : theme.text, fontSize: 11, fontWeight: "500", marginLeft: 4 }}>
+              <Text style={{ color: isActive ? "#fff" : theme.text, fontSize: 11, fontWeight: "500", marginLeft: 3 }}>
                 {tab.label}
               </Text>
             </Pressable>
@@ -413,7 +633,14 @@ export default function CuRegistrationScreen() {
               >
                 <Checkbox
                   checked={form.instructionsConfirmed}
-                  onCheckedChange={(c) => form.handleInstructionsConfirm(!!c)}
+                  onCheckedChange={async (c) => {
+                    try {
+                      await form.handleInstructionsConfirm(!!c);
+                      if (c) setTimeout(() => setActiveTab("personal-info"), 600);
+                    } catch {
+                      /* error handled by form */
+                    }
+                  }}
                   label="I have read and understood the above instructions and confirm that I am ready to proceed with my Admission & Registration Data Submission."
                 />
               </View>
@@ -487,13 +714,40 @@ export default function CuRegistrationScreen() {
                 keyboardType="number-pad"
                 maxLength={15}
                 editable={form.isFieldEditable}
-                style={{ marginBottom: 16 }}
+                style={{ marginBottom: 12 }}
               />
+              {form.personalInfo.apaarId.trim() === "" && (
+                <Text style={{ color: "#eab308", fontSize: 13, marginBottom: 12 }}>
+                  ⚠️ You must enter your APAAR ID to proceed to the next page.
+                </Text>
+              )}
               {form.isFieldEditable && (
                 <Pressable
-                  onPress={() => form.handleSubmitPersonal()}
+                  onPress={async () => {
+                    const apaarIdDigits = form.personalInfo.apaarId.replace(/\D/g, "");
+                    if (form.personalInfo.apaarId.trim() === "" || apaarIdDigits.length !== 12) {
+                      Alert.alert("Validation", "Please enter a valid 12-digit APAAR (ABC) ID to proceed.");
+                      return;
+                    }
+                    try {
+                      await form.handleSubmitPersonal();
+                      setTimeout(() => setActiveTab("address"), 600);
+                    } catch {
+                      /* error handled by form */
+                    }
+                  }}
+                  disabled={
+                    form.personalInfo.apaarId.trim() === "" ||
+                    form.personalInfo.apaarId.replace(/\D/g, "").length !== 12
+                  }
                   className="py-3 rounded-xl items-center"
-                  style={{ backgroundColor: accent }}
+                  style={{
+                    backgroundColor:
+                      form.personalInfo.apaarId.trim() === "" ||
+                      form.personalInfo.apaarId.replace(/\D/g, "").length !== 12
+                        ? "rgba(79,70,229,0.5)"
+                        : accent,
+                  }}
                 >
                   <Text className="text-white font-semibold">Save Personal Info</Text>
                 </Pressable>
@@ -538,6 +792,20 @@ export default function CuRegistrationScreen() {
                 />
               </View>
               <Input
+                label="Police Station"
+                value={form.residentialAddress.policeStation}
+                onChangeText={(v) => form.setResidentialAddress({ ...form.residentialAddress, policeStation: v })}
+                editable={form.isFieldEditable}
+                style={{ marginBottom: 12 }}
+              />
+              <Input
+                label="Post Office"
+                value={form.residentialAddress.postOffice}
+                onChangeText={(v) => form.setResidentialAddress({ ...form.residentialAddress, postOffice: v })}
+                editable={form.isFieldEditable}
+                style={{ marginBottom: 12 }}
+              />
+              <Input
                 label="PIN Code"
                 value={form.residentialAddress.pinCode}
                 onChangeText={(v) => form.setResidentialAddress({ ...form.residentialAddress, pinCode: v })}
@@ -580,17 +848,57 @@ export default function CuRegistrationScreen() {
                 />
               </View>
               <Input
+                label="Police Station"
+                value={form.mailingAddress.policeStation}
+                onChangeText={(v) => form.setMailingAddress({ ...form.mailingAddress, policeStation: v })}
+                editable={form.isFieldEditable}
+                style={{ marginBottom: 12 }}
+              />
+              <Input
+                label="Post Office"
+                value={form.mailingAddress.postOffice}
+                onChangeText={(v) => form.setMailingAddress({ ...form.mailingAddress, postOffice: v })}
+                editable={form.isFieldEditable}
+                style={{ marginBottom: 12 }}
+              />
+              <Input
                 label="PIN Code"
                 value={form.mailingAddress.pinCode}
                 onChangeText={(v) => form.setMailingAddress({ ...form.mailingAddress, pinCode: v })}
                 keyboardType="number-pad"
                 maxLength={6}
                 editable={form.isFieldEditable}
-                style={{ marginBottom: 16 }}
+                style={{ marginBottom: 12 }}
               />
+              {addressErrors.length > 0 && (
+                <View
+                  style={{
+                    marginBottom: 12,
+                    padding: 10,
+                    borderRadius: 8,
+                    backgroundColor: isDark ? "rgba(239,68,68,0.2)" : "#fef2f2",
+                  }}
+                >
+                  <Text style={{ color: "#dc2626", fontSize: 13, fontWeight: "500", marginBottom: 4 }}>
+                    Please fill:
+                  </Text>
+                  <Text style={{ color: "#dc2626", fontSize: 12 }}>{addressErrors.join(", ")}</Text>
+                </View>
+              )}
               {form.isFieldEditable && (
                 <Pressable
-                  onPress={() => form.handleSubmitAddress()}
+                  onPress={async () => {
+                    if (!validateAddressFields()) {
+                      Alert.alert("Validation", `Please fill all required fields: ${addressErrors.join(", ")}`);
+                      return;
+                    }
+                    try {
+                      await form.handleSubmitAddress();
+                      setTimeout(() => setActiveTab("subjects"), 600);
+                    } catch {
+                      /* error handled by form */
+                    }
+                  }}
                   className="py-3 rounded-xl items-center"
                   style={{ backgroundColor: accent }}
                 >
@@ -606,28 +914,193 @@ export default function CuRegistrationScreen() {
           {/* Subjects */}
           {activeTab === "subjects" && (
             <View>
-              <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
-                Subjects Overview
-              </Text>
+              <View
+                style={{
+                  backgroundColor: isDark ? "rgba(147,51,234,0.2)" : "#f5f3ff",
+                  borderWidth: 1,
+                  borderColor: isDark ? "rgba(147,51,234,0.4)" : "#e9e5ff",
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 16,
+                }}
+              >
+                <Text
+                  style={{ color: isDark ? "#c4b5fd" : "#5b21b6", fontSize: 14, fontWeight: "600", marginBottom: 8 }}
+                >
+                  Academic Details - Important Notes
+                </Text>
+                <Text style={{ color: theme.text, fontSize: 12, lineHeight: 18, opacity: 0.9 }}>
+                  • The subjects displayed include the mandatory subjects you must study from Semesters I to IV, along
+                  with the subjects you selected during the Subject Selection process.
+                </Text>
+                <Text style={{ color: theme.text, fontSize: 12, lineHeight: 18, opacity: 0.9, marginTop: 4 }}>
+                  • Please Note: Any request for changing the order of the previously selected subjects will be at the
+                  sole discretion of the college.
+                </Text>
+                {isBBAProgram && (
+                  <Text style={{ color: theme.text, fontSize: 12, lineHeight: 18, opacity: 0.9, marginTop: 4 }}>
+                    • BBA Students: All subjects displayed are mandatory and cannot be changed.
+                  </Text>
+                )}
+              </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
+              >
+                <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600" }}>
+                  3.1 Subjects Overview (Semesters 1-4)
+                </Text>
+                {!isBBAProgram && form.isFieldEditable && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={{ color: theme.text, fontSize: 12, opacity: 0.8 }}>Request correction</Text>
+                    <Switch
+                      checked={form.correctionFlags.subjects}
+                      onCheckedChange={() => form.handleCorrectionToggle("subjects")}
+                      disabled={!form.isFieldEditable}
+                    />
+                  </View>
+                )}
+              </View>
               {form.subjectsLoading ? (
                 <ActivityIndicator size="small" color={accent} style={{ marginVertical: 24 }} />
               ) : (
                 <>
-                  {Object.entries(form.subjectsData).map(([category, sems]) => (
-                    <View key={category} style={{ marginBottom: 12 }}>
-                      <Text style={{ color: theme.text, fontWeight: "600", fontSize: 14 }}>{category}</Text>
-                      {Object.entries(sems as Record<string, string[]>).map(([sem, subjects]) =>
-                        subjects.length > 0 ? (
-                          <Text key={sem} style={{ color: theme.text, opacity: 0.9, fontSize: 13, marginTop: 4 }}>
-                            {sem}: {subjects.join(", ")}
-                          </Text>
-                        ) : null,
-                      )}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ marginBottom: 16 }}>
+                    <View style={{ minWidth: 600 }}>
+                      {/* Table header */}
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          borderWidth: 1,
+                          borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
+                          borderBottomWidth: 0,
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 100,
+                            paddingVertical: 10,
+                            paddingHorizontal: 8,
+                            backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6",
+                            borderRightWidth: 1,
+                            borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
+                          }}
+                        >
+                          <Text style={{ color: theme.text, fontSize: 12, fontWeight: "600" }}>Category</Text>
+                        </View>
+                        {["Semester I", "Semester II", "Semester III", "Semester IV"].map((label) => (
+                          <View
+                            key={label}
+                            style={{
+                              width: 125,
+                              paddingVertical: 10,
+                              paddingHorizontal: 6,
+                              backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6",
+                              borderRightWidth: 1,
+                              borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
+                            }}
+                          >
+                            <Text style={{ color: theme.text, fontSize: 12, fontWeight: "600", textAlign: "center" }}>
+                              {label}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                      {/* Table body - matches web: combine mandatory + student subjects, Minor sem4 fallback */}
+                      {Object.entries(form.subjectsData)
+                        .filter(([cat]) => cat !== "SEC")
+                        .map(([category, sems]) => {
+                          const categoryLabel = category === "IDC" && isMdcProgramForDisplay ? "MDC" : category;
+                          return (
+                            <View
+                              key={category}
+                              style={{
+                                flexDirection: "row",
+                                borderWidth: 1,
+                                borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
+                                borderTopWidth: 0,
+                              }}
+                            >
+                              <View
+                                style={{
+                                  width: 100,
+                                  paddingVertical: 8,
+                                  paddingHorizontal: 8,
+                                  backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "#f9fafb",
+                                  borderRightWidth: 1,
+                                  borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
+                                }}
+                              >
+                                <Text style={{ color: theme.text, fontSize: 12, fontWeight: "500" }}>
+                                  {categoryLabel}
+                                </Text>
+                              </View>
+                              {(["sem1", "sem2", "sem3", "sem4"] as const).map((semKey) => {
+                                const rawMandatory = (form.mandatorySubjects ?? {})[category]?.[semKey];
+                                const mandatoryList: string[] = Array.isArray(rawMandatory) ? rawMandatory : [];
+                                const studentList =
+                                  ((sems as Record<string, string[]>)[semKey] as string[] | undefined) || [];
+                                let allSubjects: string[] = [...mandatoryList];
+                                studentList.forEach((s) => {
+                                  if (!mandatoryList.includes(s)) allSubjects.push(s);
+                                });
+                                if (category === "Minor" && semKey === "sem4" && allSubjects.length === 0) {
+                                  const rawSem3 = (form.mandatorySubjects ?? {})[category]?.sem3;
+                                  const sem3Mandatory: string[] = Array.isArray(rawSem3) ? rawSem3 : [];
+                                  const rawSem3Student = (sems as Record<string, string[]>).sem3;
+                                  const sem3Student: string[] = Array.isArray(rawSem3Student) ? rawSem3Student : [];
+                                  sem3Mandatory.forEach((s) => allSubjects.push(s));
+                                  sem3Student.forEach((s) => {
+                                    if (!sem3Mandatory.includes(s)) allSubjects.push(s);
+                                  });
+                                }
+                                const text = allSubjects.length > 0 ? allSubjects.join(", ") : "Not Applicable";
+                                return (
+                                  <View
+                                    key={semKey}
+                                    style={{
+                                      width: 125,
+                                      paddingVertical: 8,
+                                      paddingHorizontal: 6,
+                                      borderRightWidth: 1,
+                                      borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        color: theme.text,
+                                        fontSize: 11,
+                                        opacity: allSubjects.length > 0 ? 0.95 : 0.6,
+                                        fontStyle: allSubjects.length > 0 ? "normal" : "italic",
+                                      }}
+                                      numberOfLines={4}
+                                    >
+                                      {text}
+                                    </Text>
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          );
+                        })}
                     </View>
-                  ))}
+                  </ScrollView>
                   <Checkbox
                     checked={form.subjectsDeclared}
-                    onCheckedChange={(c: boolean) => c && form.handleSubmitSubjects()}
+                    onCheckedChange={async (c: boolean) => {
+                      if (c) {
+                        try {
+                          await form.handleSubmitSubjects();
+                          setTimeout(() => setActiveTab("documents"), 600);
+                        } catch {
+                          /* error handled by form */
+                        }
+                      }
+                    }}
                     label="I confirm the subjects listed above."
                   />
                   {form.subjectsDeclared && (
@@ -638,57 +1111,331 @@ export default function CuRegistrationScreen() {
             </View>
           )}
 
-          {/* Documents */}
+          {/* Documents - matches web: notes, uploaded table, conditional cards, thumbnail, file size */}
           {activeTab === "documents" && (
             <View>
-              <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
-                Document Uploads
-              </Text>
-              <Text style={{ color: theme.text, opacity: 0.8, fontSize: 13, marginBottom: 16 }}>
-                Upload JPEG/PNG files, max 1MB each.
-              </Text>
-              {(Object.keys(DOCUMENT_LABELS) as DocumentKey[]).map((key) => (
-                <View key={key} style={{ marginBottom: 16 }}>
-                  <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
-                    {DOCUMENT_LABELS[key]}
-                  </Text>
-                  <View className="flex-row items-center gap-2">
-                    <Pressable
-                      onPress={() => pickDocument(key)}
-                      disabled={!form.isFormEditable || form.uploadingDoc === key}
-                      className="flex-row items-center px-4 py-2 rounded-lg"
-                      style={{ backgroundColor: form.documents[key] ? "#22c55e" : accent }}
-                    >
-                      {form.uploadingDoc === key ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : (
-                        <Upload size={18} color="#fff" />
-                      )}
-                      <Text style={{ color: "#fff", fontSize: 13, marginLeft: 6 }}>
-                        {form.documents[key] ? "Change" : "Select"}
+              {/* Document Upload Notes */}
+              <View
+                style={{
+                  marginBottom: 20,
+                  padding: 16,
+                  borderRadius: 12,
+                  backgroundColor: isDark ? "rgba(234,88,12,0.15)" : "#fff7ed",
+                  borderWidth: 1,
+                  borderColor: isDark ? "rgba(234,88,12,0.35)" : "#fed7aa",
+                }}
+              >
+                <Text
+                  style={{ color: isDark ? "#fdba74" : "#9a3412", fontSize: 16, fontWeight: "600", marginBottom: 12 }}
+                >
+                  Document Upload - Important Notes
+                </Text>
+                <View style={{ gap: 6 }}>
+                  {[
+                    "Upload only scanned originals — photocopies or screenshots will not be accepted.",
+                    "Each file must be in .jpg / .jpeg format and under 1 MB.",
+                    "Ensure all text, seals, and photographs are clearly visible.",
+                    "Upload Photo ID proof of parents (if applicable), issued by the Government.",
+                    "EWS Certificate must be issued only by the Government of West Bengal.",
+                    "To change a document, select a new file and upload again before confirming.",
+                  ].map((item, i) => (
+                    <View key={i} className="flex-row items-start">
+                      <Text style={{ color: isDark ? "#fdba74" : "#c2410c", marginRight: 8, fontSize: 14 }}>•</Text>
+                      <Text
+                        style={{
+                          color: isDark ? "rgba(253,186,116,0.95)" : "#9a3412",
+                          fontSize: 13,
+                          lineHeight: 20,
+                          flex: 1,
+                        }}
+                      >
+                        {item}
                       </Text>
-                    </Pressable>
-                    {form.documents[key] && (
-                      <>
-                        <Text numberOfLines={1} style={{ color: theme.text, fontSize: 12, flex: 1 }}>
-                          {form.documents[key]?.name || "Selected"}
-                        </Text>
-                        <Pressable
-                          onPress={() => form.handleDocumentUpload(key)}
-                          disabled={form.uploadingDoc !== null}
-                          className="px-3 py-2 rounded-lg"
-                          style={{ backgroundColor: "#22c55e" }}
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
+                4.1 Document Uploads
+              </Text>
+
+              {/* Uploaded Documents Table */}
+              {Array.isArray(form.uploadedDocuments) && form.uploadedDocuments.length > 0 && (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ color: theme.text, fontSize: 14, fontWeight: "600", marginBottom: 10 }}>
+                    Uploaded Documents
+                  </Text>
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderColor: isDark ? "rgba(255,255,255,0.15)" : "#d1d5db",
+                      borderRadius: 8,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {(
+                      form.uploadedDocuments as {
+                        id?: number;
+                        documentId?: number;
+                        document?: { name?: string };
+                        fileName?: string;
+                        fileSize?: number;
+                        fileType?: string;
+                      }[]
+                    ).map((doc, index) => {
+                      const documentType =
+                        doc.document?.name || DOCUMENT_ID_TO_LABEL[doc.documentId ?? 0] || `Document ${doc.documentId}`;
+                      const fileSizeStr = doc.fileSize ? formatFileSize(doc.fileSize) : "—";
+                      return (
+                        <View
+                          key={doc.id ?? index}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            paddingVertical: 10,
+                            paddingHorizontal: 12,
+                            borderBottomWidth: index < form.uploadedDocuments!.length - 1 ? 1 : 0,
+                            borderColor: isDark ? "rgba(255,255,255,0.1)" : "#e5e7eb",
+                          }}
                         >
-                          <Text className="text-white text-sm font-medium">Upload</Text>
-                        </Pressable>
-                      </>
-                    )}
+                          <View
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 4,
+                              overflow: "hidden",
+                              backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6",
+                              marginRight: 10,
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                          >
+                            {doc.fileType?.startsWith("image/") ? (
+                              <Text style={{ color: theme.text, fontSize: 10, opacity: 0.7 }}>IMG</Text>
+                            ) : (
+                              <Text style={{ color: isDark ? "#f87171" : "#dc2626", fontSize: 10 }}>PDF</Text>
+                            )}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: theme.text, fontSize: 12, fontWeight: "500" }} numberOfLines={1}>
+                              {documentType}
+                            </Text>
+                            <Text style={{ color: theme.text, fontSize: 11, opacity: 0.8 }} numberOfLines={1}>
+                              {doc.fileName || "—"}
+                            </Text>
+                          </View>
+                          <Text style={{ color: theme.text, fontSize: 11, opacity: 0.8, marginRight: 8 }}>
+                            {fileSizeStr}
+                          </Text>
+                          <Pressable
+                            onPress={async () => {
+                              try {
+                                const url = doc.id ? await getCuRegistrationDocumentSignedUrl(doc.id) : null;
+                                if (url) await Linking.openURL(url);
+                              } catch {}
+                            }}
+                            style={{
+                              paddingVertical: 4,
+                              paddingHorizontal: 8,
+                              borderRadius: 6,
+                              borderWidth: 1,
+                              borderColor: accent,
+                            }}
+                          >
+                            <Text style={{ color: accent, fontSize: 11, fontWeight: "500" }}>Open</Text>
+                          </Pressable>
+                          <View
+                            style={{
+                              marginLeft: 8,
+                              paddingVertical: 2,
+                              paddingHorizontal: 6,
+                              borderRadius: 4,
+                              backgroundColor: isDark ? "rgba(34,197,94,0.2)" : "#dcfce7",
+                            }}
+                          >
+                            <Text style={{ color: "#22c55e", fontSize: 10, fontWeight: "500" }}>Uploaded</Text>
+                          </View>
+                        </View>
+                      );
+                    })}
                   </View>
                 </View>
-              ))}
+              )}
+
+              {/* Upload sections - only when form editable */}
+              {form.isFormEditable && (
+                <View style={{ gap: 12 }}>
+                  {getVisibleDocumentKeys().map((key) => {
+                    const docId = DOCUMENT_IDS[key];
+                    const uploaded = Array.isArray(form.uploadedDocuments)
+                      ? (form.uploadedDocuments as { documentId?: number; document?: { id?: number } }[]).find(
+                          (d) => (d.document?.id ?? d.documentId) === docId,
+                        )
+                      : null;
+                    const isRequired = getRequiredDocuments().includes(key);
+                    const localFile = form.documents[key];
+                    const docLabel =
+                      key === "fatherPhotoId"
+                        ? "Father's Government-issued Photo ID"
+                        : key === "motherPhotoId"
+                          ? "Mother's Government-issued Photo ID"
+                          : key === "apaarIdCard"
+                            ? "APAAR (ABC) ID Card"
+                            : DOCUMENT_LABELS[key];
+
+                    return (
+                      <View
+                        key={key}
+                        style={{
+                          padding: 16,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderStyle: "dashed",
+                          borderColor: isDark ? "rgba(255,255,255,0.2)" : "#d1d5db",
+                          backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#ffffff",
+                        }}
+                      >
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: 12,
+                          }}
+                        >
+                          <Text style={{ color: theme.text, fontSize: 14, fontWeight: "600", flex: 1 }}>
+                            {docLabel}
+                          </Text>
+                          {isRequired && (
+                            <View
+                              style={{
+                                paddingVertical: 2,
+                                paddingHorizontal: 6,
+                                borderRadius: 4,
+                                borderWidth: 1,
+                                borderColor: "#dc2626",
+                              }}
+                            >
+                              <Text style={{ color: "#dc2626", fontSize: 11, fontWeight: "500" }}>Required</Text>
+                            </View>
+                          )}
+                        </View>
+                        {(key === "fatherPhotoId" || key === "motherPhotoId") && (
+                          <Text style={{ color: theme.text, fontSize: 12, opacity: 0.8, marginBottom: 8 }}>
+                            Aadhar/ Voter/ PAN Card/ Passport/ Driving License
+                          </Text>
+                        )}
+                        <Text style={{ color: theme.text, fontSize: 11, opacity: 0.7, marginBottom: 8 }}>
+                          Max 1MB • JPEG / JPG / PNG
+                        </Text>
+                        <View className="flex-row items-center gap-2 flex-wrap">
+                          <Pressable
+                            onPress={() => pickDocument(key)}
+                            disabled={form.uploadingDoc === key}
+                            className="flex-row items-center px-4 py-2 rounded-lg"
+                            style={{ backgroundColor: localFile ? "#22c55e" : accent }}
+                          >
+                            {form.uploadingDoc === key ? (
+                              <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                              <Upload size={18} color="#fff" />
+                            )}
+                            <Text style={{ color: "#fff", fontSize: 13, marginLeft: 6 }}>
+                              {localFile ? "Change" : "Select"}
+                            </Text>
+                          </Pressable>
+                          {localFile && (
+                            <>
+                              <Pressable
+                                onPress={() => form.handleDocumentUpload(key)}
+                                disabled={form.uploadingDoc !== null}
+                                className="px-4 py-2 rounded-lg"
+                                style={{ backgroundColor: "#22c55e" }}
+                              >
+                                <Text className="text-white text-sm font-medium">Upload</Text>
+                              </Pressable>
+                            </>
+                          )}
+                        </View>
+                        {(localFile || uploaded) && (
+                          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 12, gap: 10 }}>
+                            {localFile?.uri ? (
+                              <Image
+                                source={{ uri: localFile.uri }}
+                                style={{ width: 40, height: 40, borderRadius: 6 }}
+                                resizeMode="cover"
+                              />
+                            ) : uploaded ? (
+                              <View
+                                style={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: 6,
+                                  backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "#f3f4f6",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <Text style={{ color: "#22c55e", fontSize: 12 }}>✓</Text>
+                              </View>
+                            ) : null}
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: theme.text, fontSize: 12 }} numberOfLines={1}>
+                                {localFile?.name || (uploaded as { fileName?: string })?.fileName || "File"}
+                              </Text>
+                              {localFile?.fileSize != null && (
+                                <Text style={{ color: theme.text, fontSize: 11, opacity: 0.7 }}>
+                                  {formatFileSize(localFile.fileSize)}
+                                </Text>
+                              )}
+                              {uploaded && (uploaded as { fileSize?: number }).fileSize && (
+                                <Text style={{ color: theme.text, fontSize: 11, opacity: 0.7 }}>
+                                  {formatFileSize((uploaded as { fileSize: number }).fileSize)}
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+
+              {getMissingDocuments().length > 0 && (
+                <View
+                  style={{
+                    marginTop: 16,
+                    marginBottom: 12,
+                    padding: 12,
+                    borderRadius: 8,
+                    backgroundColor: isDark ? "rgba(234,179,8,0.2)" : "#fef9c3",
+                  }}
+                >
+                  <Text style={{ color: "#ca8a04", fontSize: 13, fontWeight: "500" }}>
+                    Missing required documents:{" "}
+                    {getMissingDocuments()
+                      .map((k) => DOCUMENT_LABELS[k])
+                      .join(", ")}
+                  </Text>
+                </View>
+              )}
               <Checkbox
                 checked={form.documentsConfirmed}
-                onCheckedChange={(c) => form.handleDocumentsDeclaration(!!c)}
+                onCheckedChange={async (c) => {
+                  if (c) {
+                    const missing = getMissingDocuments();
+                    if (missing.length > 0) {
+                      Alert.alert(
+                        "Missing Documents",
+                        `Please upload all required documents before confirming. Missing: ${missing.map((k) => DOCUMENT_LABELS[k]).join(", ")}`,
+                      );
+                      return;
+                    }
+                  }
+                  await form.handleDocumentsDeclaration(!!c);
+                }}
                 label="I confirm all required documents are uploaded."
               />
               {form.documentsConfirmed && (
@@ -698,42 +1445,40 @@ export default function CuRegistrationScreen() {
           )}
         </View>
 
-        {/* Review & Submit - show when all declared */}
-        {form.instructionsConfirmed &&
-          form.personalDeclared &&
-          form.addressDeclared &&
-          form.subjectsDeclared &&
-          form.documentsConfirmed && (
-            <View
-              className="mt-6 rounded-xl p-6"
-              style={{ backgroundColor: tabBg, borderWidth: 1, borderColor: tabBorder }}
+        {/* Review & Submit - show when canReviewConfirm passes */}
+        {canReviewConfirm() && (
+          <View
+            className="mt-6 rounded-xl p-6"
+            style={{ backgroundColor: tabBg, borderWidth: 1, borderColor: tabBorder }}
+          >
+            <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
+              Review & Submit
+            </Text>
+            <Text style={{ color: theme.text, opacity: 0.8, fontSize: 14, marginBottom: 16 }}>
+              Please review all information before final submission. You will not be able to make changes after
+              submitting.
+            </Text>
+            <Checkbox
+              checked={form.finalDeclaration}
+              onCheckedChange={form.handleFinalDeclarationChange}
+              label="I confirm all information is correct and ready to submit."
+            />
+            <Pressable
+              onPress={() => form.handleFinalSubmit()}
+              disabled={form.submitting || !form.finalDeclaration}
+              className="py-3 rounded-xl items-center"
+              style={{
+                backgroundColor: form.submitting || !form.finalDeclaration ? "rgba(79,70,229,0.5)" : accent,
+              }}
             >
-              <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
-                Review & Submit
-              </Text>
-              <Text style={{ color: theme.text, opacity: 0.8, fontSize: 14, marginBottom: 16 }}>
-                Please review all information before final submission. You will not be able to make changes after
-                submitting.
-              </Text>
-              <Checkbox
-                checked={form.finalDeclaration}
-                onCheckedChange={form.handleFinalDeclarationChange}
-                label="I confirm all information is correct and ready to submit."
-              />
-              <Pressable
-                onPress={() => form.handleFinalSubmit()}
-                disabled={form.submitting || !form.finalDeclaration}
-                className="py-3 rounded-xl items-center"
-                style={{ backgroundColor: form.submitting ? "rgba(79,70,229,0.5)" : accent }}
-              >
-                {form.submitting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text className="text-white font-semibold">Submit Adm. Reg</Text>
-                )}
-              </Pressable>
-            </View>
-          )}
+              {form.submitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text className="text-white font-semibold">Submit Adm. Reg</Text>
+              )}
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
     </View>
   );

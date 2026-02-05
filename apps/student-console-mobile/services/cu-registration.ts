@@ -35,14 +35,11 @@ export interface CreateCuCorrectionPayload {
 }
 
 export async function getStudentCuCorrectionRequests(studentId: number): Promise<CuRegistrationCorrectionRequestDto[]> {
-  const res = await axiosInstance.get<
-    ApiResponse<CuRegistrationCorrectionRequestDto[] | { content: CuRegistrationCorrectionRequestDto[] }>
-  >(BASE, { params: { studentId } });
-  const p = res.data.payload as unknown;
-  const result = (
-    Array.isArray(p) ? p : (p as { content?: CuRegistrationCorrectionRequestDto[] })?.content || []
-  ) as CuRegistrationCorrectionRequestDto[];
-  return result;
+  const res = await axiosInstance.get<ApiResponse<CuRegistrationCorrectionRequestDto[]>>(
+    `${BASE}/student/${studentId}`,
+  );
+  const p = res.data.payload;
+  return Array.isArray(p) ? p : [];
 }
 
 export async function getCuCorrectionRequestById(id: number): Promise<CuRegistrationCorrectionRequestDto> {
