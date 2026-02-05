@@ -1,0 +1,45 @@
+{
+  "cli": {
+    "version": ">= 16.28.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "node": "20.19.4",
+      "env": {
+        "EAS_ENABLE_COREPACK": "1"
+      }
+    },
+    "stage": {
+      "distribution": "internal",
+      "channel": "stage",
+      "node": "20.19.4",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://stage.academic360.app/backend",
+        "EXPO_PUBLIC_STUDENT_IMAGE_URL": "https://74.207.233.48:8443/hrclIRP/studentimages",
+        "EAS_ENABLE_COREPACK": "1"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview"
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production",
+      "node": "20.19.4",
+      "env": {
+        "EAS_ENABLE_COREPACK": "1"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
