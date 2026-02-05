@@ -10,7 +10,7 @@ export type OnboardingSlide = {
 export const onboardingSlides: OnboardingSlide[] = [
   {
     id: 1,
-    title: "Welcome to \n BESC Console",
+    title: "Welcome to \n BESC Console.",
     subtitle: "Your academic companion",
     description: "Your college essentials — classes, exams, fees, library, and services — all in one convenient app.",
     illustration: "onboarding-campus",
