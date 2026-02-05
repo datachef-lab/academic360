@@ -2,7 +2,6 @@
   "name": "student-console-mobile",
   "main": "expo-router/entry",
   "version": "1.0.0",
-  "packageManager": "pnpm@10.28.0",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -10,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "eas-build-pre-install": "corepack enable"
+    "eas-build-pre-install": "corepack enable && corepack prepare pnpm@10.28.0 --activate && pnpm install --no-frozen-lockfile || true"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
