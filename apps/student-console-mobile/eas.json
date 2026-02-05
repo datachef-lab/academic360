@@ -12,6 +12,7 @@
       },
       "env": {
         "EAS_ENABLE_COREPACK": "1",
+        "EAS_NO_FROZEN_LOCKFILE": "1",
         "EXPO_PUBLIC_API_URL": "https://stage.academic360.app/backend",
         "EXPO_PUBLIC_STUDENT_IMAGE_URL": "https://74.207.233.48:8443/hrclIRP/studentimages"
       }
