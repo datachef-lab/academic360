@@ -166,7 +166,8 @@ export async function deleteFeeHeadHandler(req: Request, res: Response) {
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const deleted = await deleteFeeHead(id);
+    const userId = (req.user as any)?.id;
+    const deleted = await deleteFeeHead(id, userId);
     if (!deleted)
       return res
         .status(404)

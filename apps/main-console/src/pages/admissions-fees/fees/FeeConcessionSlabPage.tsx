@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { Percent, Edit, Trash2, Download, Upload, PlusCircle } from "lucide-react";
+import { Percent, Edit, Trash2, Download, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -15,18 +14,16 @@ import {
 import { Label } from "@/components/ui/label";
 import { useFeeConcessionSlabs } from "@/hooks/useFees";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
-import { FeeConcessionSlabT } from "@/schemas";
+import { FeeSlabT } from "@/schemas";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 const FeeConcessionSlabPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingItem, setDeletingItem] = useState<FeeConcessionSlabT | null>(null);
-  const [editingItem, setEditingItem] = useState<FeeConcessionSlabT | null>(null);
+  const [deletingItem, setDeletingItem] = useState<FeeSlabT | null>(null);
+  const [editingItem, setEditingItem] = useState<FeeSlabT | null>(null);
   const [searchText, setSearchText] = useState("");
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
-  const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [form, setForm] = useState<{
     name: string;
     description: string;
@@ -49,85 +46,10 @@ const FeeConcessionSlabPage: React.FC = () => {
       return (
         slab.name?.toLowerCase().includes(searchLower) ||
         slab.description?.toLowerCase().includes(searchLower) ||
-        slab.defaultConcessionRate?.toString().includes(searchText) ||
+        slab.defaultRate?.toString().includes(searchText) ||
         slab.sequence?.toString().includes(searchText)
       );
     }) || [];
-
-  const handleDownloadTemplate = () => {
-    const templateData = [
-      ["Slab Name", "Description", "Default Concession Rate (%)", "Sequence"],
-      ["Example Slab", "Example description", "10", "1"],
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(templateData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, "fee_concession_slabs_template.xlsx");
-    toast.success("Template downloaded successfully");
-  };
-
-  const handleBulkUpload = async () => {
-    if (!bulkFile) {
-      toast.warning("Please select a file to upload");
-      return;
-    }
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
-          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-            toast.error("The uploaded file does not contain any sheets");
-            return;
-          }
-          const sheetName = workbook.SheetNames[0];
-          if (!sheetName || typeof sheetName !== "string") {
-            toast.error("The uploaded file does not contain any sheets");
-            return;
-          }
-          const worksheet = workbook.Sheets[sheetName];
-          if (!worksheet) {
-            toast.error("Failed to read worksheet from the uploaded file");
-            return;
-          }
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-          // Process and upload data
-          let successCount = 0;
-          let errorCount = 0;
-
-          for (const row of jsonData as Record<string, unknown>[]) {
-            try {
-              await addFeeConcessionSlab({
-                name: String(row["Slab Name"] || ""),
-                description: String(row["Description"] || ""),
-                defaultConcessionRate: parseFloat(String(row["Default Concession Rate (%)"] || "0")),
-                sequence: row["Sequence"] ? parseInt(String(row["Sequence"])) : undefined,
-              } as FeeConcessionSlabT);
-              successCount++;
-            } catch (error) {
-              errorCount++;
-              console.error("Error uploading row:", error);
-            }
-          }
-
-          toast.success(`Bulk upload completed: ${successCount} successful, ${errorCount} failed`);
-          setIsBulkUploadOpen(false);
-          setBulkFile(null);
-        } catch (error) {
-          console.error("Error processing file:", error);
-          toast.error("Failed to process file. Please check the format.");
-        }
-      };
-      reader.readAsArrayBuffer(bulkFile);
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      toast.error("Failed to upload file");
-    }
-  };
 
   const handleDownloadAll = () => {
     if (!concessionSlabs || concessionSlabs.length === 0) {
@@ -141,15 +63,15 @@ const FeeConcessionSlabPage: React.FC = () => {
         s.id || "",
         s.name || "",
         s.description || "",
-        s.defaultConcessionRate || 0,
+        s.defaultRate || 0,
         s.sequence || "",
       ]),
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Fee Concession Slabs");
-    XLSX.writeFile(wb, `fee_concession_slabs_${new Date().toISOString().split("T")[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Fee Slabs");
+    XLSX.writeFile(wb, `fee_slabs_${new Date().toISOString().split("T")[0]}.xlsx`);
     toast.success("Data downloaded successfully");
   };
 
@@ -185,35 +107,37 @@ const FeeConcessionSlabPage: React.FC = () => {
     }
 
     try {
+      // Only include sequence if it's provided (not undefined/null)
+      const payload: any = {
+        name: trimmedName,
+        description: trimmedDescription || null,
+        defaultConcessionRate: form.defaultConcessionRate,
+      };
+
+      // Only add sequence if it's actually provided
+      if (form.sequence !== undefined && form.sequence !== null) {
+        payload.sequence = form.sequence;
+      }
+
       if (editingItem) {
-        const result = await updateFeeConcessionSlabById(editingItem.id!, {
-          name: trimmedName,
-          description: trimmedDescription || "",
-          defaultConcessionRate: form.defaultConcessionRate,
-          sequence: form.sequence ?? 0,
-        });
+        const result = await updateFeeConcessionSlabById(editingItem.id!, payload);
         if (!result) {
-          toast.error("Failed to update fee concession slab. Please try again.");
+          toast.error("Failed to update fee slab. Please try again.");
           return;
         }
-        toast.success("Fee concession slab updated successfully");
+        toast.success("Fee slab updated successfully");
       } else {
-        const result = await addFeeConcessionSlab({
-          name: trimmedName,
-          description: trimmedDescription || "",
-          defaultConcessionRate: form.defaultConcessionRate,
-          sequence: form.sequence ?? 0,
-        } as FeeConcessionSlabT);
+        const result = await addFeeConcessionSlab(payload as FeeSlabT);
         if (!result) {
-          toast.error("Failed to create fee concession slab. Please try again.");
+          toast.error("Failed to create fee slab. Please try again.");
           return;
         }
-        toast.success("Fee concession slab created successfully");
+        toast.success("Fee slab created successfully");
       }
       handleClose();
     } catch (error) {
       console.error("Error saving fee concession slab:", error);
-      toast.error("Failed to save fee concession slab. Please try again.");
+      toast.error("Failed to save fee slab. Please try again.");
     }
   };
 
@@ -228,12 +152,12 @@ const FeeConcessionSlabPage: React.FC = () => {
     });
   };
 
-  const handleEdit = (slab: FeeConcessionSlabT) => {
+  const handleEdit = (slab: FeeSlabT) => {
     setEditingItem(slab);
     setForm({
       name: slab.name,
       description: slab.description || "",
-      defaultConcessionRate: slab.defaultConcessionRate ?? 0,
+      defaultConcessionRate: slab.defaultRate ?? 0,
       sequence: slab.sequence ?? undefined,
     });
     setShowModal(true);
@@ -250,7 +174,7 @@ const FeeConcessionSlabPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDeleteClick = (slab: FeeConcessionSlabT) => {
+  const handleDeleteClick = (slab: FeeSlabT) => {
     setDeletingItem(slab);
     setShowDeleteModal(true);
   };
@@ -261,14 +185,14 @@ const FeeConcessionSlabPage: React.FC = () => {
     try {
       const result = await deleteFeeConcessionSlabById(deletingItem.id!);
       if (!result) {
-        toast.error("Failed to delete fee concession slab. Please try again.");
+        toast.error("Failed to delete fee slab. Please try again.");
         throw new Error("Delete failed");
       }
-      toast.success("Fee concession slab deleted successfully");
+      toast.success("Fee slab deleted successfully");
       setDeletingItem(null);
     } catch (error) {
       console.error("Error deleting fee concession slab:", error);
-      toast.error("Failed to delete fee concession slab. Please try again.");
+      toast.error("Failed to delete fee slab. Please try again.");
       throw error; // Re-throw to prevent modal from closing
     }
   };
@@ -281,14 +205,14 @@ const FeeConcessionSlabPage: React.FC = () => {
             <div>
               <CardTitle className="flex items-center">
                 <Percent className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
-                Fee Concession Slabs
+                Fee Slabs
               </CardTitle>
-              <div className="text-muted-foreground">Manage fee concession slabs</div>
+              <div className="text-muted-foreground">Manage fee slabs</div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-center h-64">
-              <div className="text-lg">Loading concession slabs...</div>
+              <div className="text-lg">Loading fee slabs...</div>
             </div>
           </CardContent>
         </Card>
@@ -303,39 +227,12 @@ const FeeConcessionSlabPage: React.FC = () => {
           <div>
             <CardTitle className="flex items-center">
               <Percent className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
-              Fee Concession Slabs
+              Fee Slabs
             </CardTitle>
-            <div className="text-muted-foreground">Manage fee concession slabs</div>
+            <div className="text-muted-foreground">Manage fee slabs</div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Upload className="mr-2 h-4 w-4" /> Bulk Upload
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Bulk Upload Fee Concession Slabs</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col gap-4">
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
-                  />
-                  <Button onClick={handleBulkUpload} disabled={!bulkFile}>
-                    Upload
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button variant="outline" onClick={handleDownloadTemplate}>
-              <Download className="mr-2 h-4 w-4" /> Download Template
-            </Button>
-
             <AlertDialog open={showModal} onOpenChange={setShowModal}>
               <AlertDialogTrigger asChild>
                 <Button
@@ -348,9 +245,7 @@ const FeeConcessionSlabPage: React.FC = () => {
               </AlertDialogTrigger>
               <AlertDialogContent className="sm:max-w-[800px]">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {editingItem ? "Edit Fee Concession Slab" : "Add New Fee Concession Slab"}
-                  </AlertDialogTitle>
+                  <AlertDialogTitle>{editingItem ? "Edit Fee Slab" : "Add New Fee Slab"}</AlertDialogTitle>
                 </AlertDialogHeader>
                 <div className="py-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -454,11 +349,11 @@ const FeeConcessionSlabPage: React.FC = () => {
           </div>
 
           <div className="relative" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
+            <div className="overflow-y-auto h-full">
+              <Table className="border rounded-md" style={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60 }}>ID</TableHead>
+                    <TableHead style={{ width: 60, whiteSpace: "nowrap" }}>Sr. No.</TableHead>
                     <TableHead style={{ width: 200 }}>Slab Name</TableHead>
                     <TableHead style={{ width: 250 }}>Description</TableHead>
                     <TableHead style={{ width: 150 }}>Default Rate (%)</TableHead>
@@ -470,16 +365,16 @@ const FeeConcessionSlabPage: React.FC = () => {
                   {filteredConcessionSlabs.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center">
-                        No fee concession slabs found.
+                        No fee slabs found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredConcessionSlabs.map((row) => (
+                    filteredConcessionSlabs.map((row, index) => (
                       <TableRow key={row.id} className="group">
-                        <TableCell style={{ width: 60 }}>{row.id}</TableCell>
+                        <TableCell style={{ width: 60 }}>{index + 1}</TableCell>
                         <TableCell style={{ width: 200 }}>{row.name}</TableCell>
                         <TableCell style={{ width: 250 }}>{row.description || "-"}</TableCell>
-                        <TableCell style={{ width: 150 }}>{row.defaultConcessionRate ?? 0}%</TableCell>
+                        <TableCell style={{ width: 150 }}>{row.defaultRate ?? 0}%</TableCell>
                         <TableCell style={{ width: 100 }}>{row.sequence ?? "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
                           <div className="flex space-x-2">
@@ -515,7 +410,7 @@ const FeeConcessionSlabPage: React.FC = () => {
             setDeletingItem(null);
           }
         }}
-        title="Delete Fee Concession Slab"
+        title="Delete Fee Slab"
         itemName={deletingItem?.name || ""}
         onConfirm={handleDeleteConfirm}
       />

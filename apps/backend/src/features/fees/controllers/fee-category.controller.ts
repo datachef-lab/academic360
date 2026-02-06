@@ -5,7 +5,7 @@ import {
   getFeeCategoryById,
   updateFeeCategory,
   deleteFeeCategory,
-} from "../services/fee-category.service";
+} from "../services/fee-category.service.js";
 import { createFeeCategorySchema } from "@repo/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
@@ -173,7 +173,8 @@ export async function deleteFeeCategoryHandler(req: Request, res: Response) {
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const deleted = await deleteFeeCategory(id);
+    const userId = (req.user as any)?.id;
+    const deleted = await deleteFeeCategory(id, userId);
     if (!deleted)
       return res
         .status(404)

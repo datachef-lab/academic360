@@ -1,20 +1,17 @@
 import { Request, Response } from "express";
 import {
-  createFeeConcessionSlab,
-  getAllFeeConcessionSlabs,
-  getFeeConcessionSlabById,
-  updateFeeConcessionSlab,
-  deleteFeeConcessionSlab,
-} from "../services/fee-concession-slab.service";
-import { createFeeConcessionSlabSchema } from "@repo/db/schemas";
+  createFeeSlab,
+  getAllFeeSlabs,
+  getFeeSlabById,
+  updateFeeSlab,
+  deleteFeeSlab,
+} from "../services/fee-slab.service.js";
+import { createFeeSlabSchema } from "@repo/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 import { z } from "zod";
 
-export async function createFeeConcessionSlabHandler(
-  req: Request,
-  res: Response,
-) {
+export async function createFeeSlabHandler(req: Request, res: Response) {
   try {
     const userId = (req.user as any)?.id;
     if (!userId) {
@@ -36,8 +33,8 @@ export async function createFeeConcessionSlabHandler(
     // Validate input - create a schema that only includes fields from frontend
     const createSchema = z.object({
       name: z.string().min(1, "Name is required").max(255),
-      description: z.string().max(500), // Allow empty string, just validate max length
-      defaultConcessionRate: z.number().min(0).max(100).default(0),
+      description: z.string().max(500).nullable().optional(), // Allow null, undefined, or empty string
+      defaultRate: z.number().min(0).max(100).default(0),
       sequence: z.number().int().nullable().optional(),
       legacyFeeSlabId: z.number().int().nullable().optional(),
     });
@@ -69,22 +66,15 @@ export async function createFeeConcessionSlabHandler(
     }
 
     try {
-      const created = await createFeeConcessionSlab(parsed, userId);
+      const created = await createFeeSlab(parsed, userId);
       console.log("Created slab:", created);
 
       if (!created) {
-        console.error(
-          "Failed to create fee concession slab - service returned null",
-        );
+        console.error("Failed to create fee slab - service returned null");
         return res
           .status(500)
           .json(
-            new ApiResponse(
-              500,
-              "ERROR",
-              null,
-              "Failed to create fee concession slab",
-            ),
+            new ApiResponse(500, "ERROR", null, "Failed to create fee slab"),
           );
       }
 
@@ -95,11 +85,11 @@ export async function createFeeConcessionSlabHandler(
             201,
             "SUCCESS",
             created,
-            "Fee concession slab created successfully",
+            "Fee slab created successfully",
           ),
         );
     } catch (dbError: any) {
-      console.error("Database error creating fee concession slab:", dbError);
+      console.error("Database error creating fee slab:", dbError);
       console.error("Error code:", dbError?.code);
       console.error("Error message:", dbError?.message);
       console.error("Error stack:", dbError?.stack);
@@ -107,7 +97,7 @@ export async function createFeeConcessionSlabHandler(
       throw dbError;
     }
   } catch (error: any) {
-    console.error("Error creating fee concession slab:", error);
+    console.error("Error creating fee slab:", error);
     console.error("Error type:", error?.constructor?.name);
     console.error("Error stack:", error?.stack);
     // Zod validation error yields a 400
@@ -116,12 +106,9 @@ export async function createFeeConcessionSlabHandler(
   }
 }
 
-export async function getAllFeeConcessionSlabsHandler(
-  _req: Request,
-  res: Response,
-) {
+export async function getAllFeeSlabsHandler(_req: Request, res: Response) {
   try {
-    const slabs = await getAllFeeConcessionSlabs();
+    const slabs = await getAllFeeSlabs();
     return res
       .status(200)
       .json(
@@ -129,7 +116,7 @@ export async function getAllFeeConcessionSlabsHandler(
           200,
           "SUCCESS",
           slabs,
-          "Fee concession slabs retrieved successfully",
+          "Fee slabs retrieved successfully",
         ),
       );
   } catch (error) {
@@ -137,10 +124,7 @@ export async function getAllFeeConcessionSlabsHandler(
   }
 }
 
-export async function getFeeConcessionSlabByIdHandler(
-  req: Request,
-  res: Response,
-) {
+export async function getFeeSlabByIdHandler(req: Request, res: Response) {
   try {
     const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
@@ -148,7 +132,7 @@ export async function getFeeConcessionSlabByIdHandler(
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const slab = await getFeeConcessionSlabById(id);
+    const slab = await getFeeSlabById(id);
     if (!slab)
       return res
         .status(404)
@@ -157,7 +141,7 @@ export async function getFeeConcessionSlabByIdHandler(
             404,
             "NOT_FOUND",
             null,
-            `Fee concession slab with ID ${id} not found`,
+            `Fee slab with ID ${id} not found`,
           ),
         );
 
@@ -168,7 +152,7 @@ export async function getFeeConcessionSlabByIdHandler(
           200,
           "SUCCESS",
           slab,
-          "Fee concession slab retrieved successfully",
+          "Fee slab retrieved successfully",
         ),
       );
   } catch (error) {
@@ -176,10 +160,7 @@ export async function getFeeConcessionSlabByIdHandler(
   }
 }
 
-export async function updateFeeConcessionSlabHandler(
-  req: Request,
-  res: Response,
-) {
+export async function updateFeeSlabHandler(req: Request, res: Response) {
   try {
     const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
@@ -188,7 +169,7 @@ export async function updateFeeConcessionSlabHandler(
         .json({ success: false, message: "Invalid ID format" });
 
     // Validate partial payload
-    const partialSchema = createFeeConcessionSlabSchema.partial();
+    const partialSchema = createFeeSlabSchema.partial();
     const parsed = partialSchema.parse(req.body);
 
     const userId = (req.user as any)?.id;
@@ -205,7 +186,7 @@ export async function updateFeeConcessionSlabHandler(
         );
     }
 
-    const updated = await updateFeeConcessionSlab(id, parsed, userId);
+    const updated = await updateFeeSlab(id, parsed, userId);
     if (!updated)
       return res
         .status(404)
@@ -214,7 +195,7 @@ export async function updateFeeConcessionSlabHandler(
             404,
             "NOT_FOUND",
             null,
-            `Fee concession slab with ID ${id} not found`,
+            `Fee slab with ID ${id} not found`,
           ),
         );
 
@@ -225,7 +206,7 @@ export async function updateFeeConcessionSlabHandler(
           200,
           "SUCCESS",
           updated,
-          "Fee concession slab updated successfully",
+          "Fee slab updated successfully",
         ),
       );
   } catch (error) {
@@ -233,10 +214,7 @@ export async function updateFeeConcessionSlabHandler(
   }
 }
 
-export async function deleteFeeConcessionSlabHandler(
-  req: Request,
-  res: Response,
-) {
+export async function deleteFeeSlabHandler(req: Request, res: Response) {
   try {
     const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
@@ -244,7 +222,8 @@ export async function deleteFeeConcessionSlabHandler(
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const deleted = await deleteFeeConcessionSlab(id);
+    const userId = (req.user as any)?.id;
+    const deleted = await deleteFeeSlab(id, userId);
     if (!deleted)
       return res
         .status(404)
@@ -253,7 +232,7 @@ export async function deleteFeeConcessionSlabHandler(
             404,
             "NOT_FOUND",
             null,
-            `Fee concession slab with ID ${id} not found`,
+            `Fee slab with ID ${id} not found`,
           ),
         );
 
@@ -264,7 +243,7 @@ export async function deleteFeeConcessionSlabHandler(
           200,
           "DELETED",
           deleted,
-          "Fee concession slab deleted successfully",
+          "Fee slab deleted successfully",
         ),
       );
   } catch (error) {

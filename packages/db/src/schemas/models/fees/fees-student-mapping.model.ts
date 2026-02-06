@@ -3,9 +3,11 @@ import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { studentModel, userModel } from "@/schemas/models/user";
-import { feeConcessionSlabModel, feeStructureInstallmentModel, feeStructureModel } from "@/schemas/models/fees";
+import { feeStructureInstallmentModel, feeStructureModel } from "@/schemas/models/fees";
 import { paymentModeEnum, paymentStatusEnum, studentFeesMappingEnum } from "@/schemas/enums";
-import { feeCategoryPromotionMappingModel } from "./fee-category-promotion-mapping.model";
+
+import { feeSlabModel } from "./fee-slab.model";
+import { feeGroupPromotionMappingModel } from "./fee-group-promotion-mapping.model";
 
 export const feeStudentMappingModel = pgTable("fee_student_mappings", {
     id: serial().primaryKey(),
@@ -15,14 +17,14 @@ export const feeStudentMappingModel = pgTable("fee_student_mappings", {
     feeStructureId: integer("fee_structure_id_fk")
         .references(() => feeStructureModel.id)
         .notNull(),
-    feeCategoryPromotionMappingId: integer("fee_category_promotion_mapping_id_fk")
-        .references(() => feeCategoryPromotionMappingModel.id)
+    feeGroupPromotionMappingId: integer("fee_group_promotion_mapping_id_fk")
+        .references(() => feeGroupPromotionMappingModel.id)
         .notNull(),
     type: studentFeesMappingEnum().notNull().default("FULL"),
     feeStructureInstallmentId: integer("fee_structure_installment_id_fk")
         .references(() => feeStructureInstallmentModel.id),
-    feeConcessionSlabId: integer("fee_concession_slab_id_fk")
-        .references(() => feeConcessionSlabModel.id),
+    feeSlabId: integer("fee_slab_id_fk")
+        .references(() => feeSlabModel.id),
     isWaivedOff: boolean().notNull().default(false),
     waivedOffAmount: integer().notNull().default(0),
     waivedOffReason: varchar({ length: 500 }),

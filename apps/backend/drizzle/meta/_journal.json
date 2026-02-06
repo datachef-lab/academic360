@@ -540,6 +540,20 @@
       "when": 1770192615753,
       "tag": "0076_condemned_gambit",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1770363346759,
+      "tag": "0077_fair_stone_men",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1770365626854,
+      "tag": "0078_lyrical_kree",
+      "breakpoints": true
     }
   ]
 }

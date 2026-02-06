@@ -1,13 +1,17 @@
-import { AcademicYearT, ClassT, FeeCategoryPromotionMappingT, FeeCategoryT, FeeConcessionSlabT, FeeHeadT, FeeStructureComponentT, FeeStructureConcessionSlabT, FeeStructureInstallmentT, FeeStructureT, FeeStudentMappingT, ReceiptTypeT, Shift } from "@/schemas";
+import { AcademicYearT, ClassT, FeeCategoryT,  FeeHeadT, FeeStructureComponentT, FeeStructureInstallmentT, FeeStructureT, FeeStudentMappingT, ReceiptTypeT, Shift } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
 import { PromotionDto, UserDto } from "../user";
+import { FeeStructureSlabT } from "@/schemas/models/fees/fee-structure-slab.model";
+import { FeeSlabT } from "@/schemas/models/fees/fee-slab.model";
+import { FeeGroupT } from "@/schemas/models/fees/fee-group.model";
+import { FeeGroupPromotionMappingT } from "@/schemas/models/fees/fee-group-promotion-mapping.model";
 
 export interface FeeStructureComponentDto extends Omit<FeeStructureComponentT, "feeHeadId"> {
     feeHead: FeeHeadT | null;
 }
 
-export interface FeeStructureConcessionSlabDto extends Omit<FeeStructureConcessionSlabT, "feeConcessionSlabId"> {
-    feeConcessionSlab: FeeConcessionSlabT;
+export interface FeeStructureSlabDto extends Omit<FeeStructureSlabT, "feeSlabId"> {
+    feeSlab: FeeSlabT;
 }
 
 export interface FeeStructureDto extends Omit<FeeStructureT,
@@ -28,7 +32,7 @@ export interface FeeStructureDto extends Omit<FeeStructureT,
     advanceForClass: ClassT | null;
     components: FeeStructureComponentDto[];
     installments: FeeStructureInstallmentT[];
-    feeStructureConcessionSlabs: FeeStructureConcessionSlabDto[];
+    feeStructureSlabs: FeeStructureSlabDto[];
 }
 
 export interface CreateFeeStructureDto extends Omit<FeeStructureT, "programCourseId" | "shiftId" | "createdByUserId" | "updatedByUserId" | "id" | "createdAt" | "updatedAt"> {
@@ -36,27 +40,32 @@ export interface CreateFeeStructureDto extends Omit<FeeStructureT, "programCours
     programCourseIds: number[];
     advanceForProgramCourseIds: number[];
     shiftIds: number[];
-    feeStructureConcessionSlabs: FeeStructureConcessionSlabT[];
+    feeStructureSlabs: FeeStructureSlabT[];
     installments: FeeStructureInstallmentT[];
 }
 
-export interface FeeCategoryDto extends Omit<FeeCategoryT, "feeConcessionSlabId"> {
-    feeConcessionSlab: FeeConcessionSlabT;
+export interface FeeCategoryDto extends Omit<FeeCategoryT, never> {
+    // FeeCategory has no foreign keys, so no DTO transformation needed
 }
 
-export interface FeeCategoryPromotionMappingDto extends Omit<FeeCategoryPromotionMappingT, "feeCategoryId" | "promotionId"> {
-    feeCategory: FeeCategoryDto;
+export interface FeeGroupDto extends Omit<FeeGroupT, "feeCategoryId" | "feeSlabId"> {
+    feeCategory: FeeCategoryT;
+    feeSlab: FeeSlabT;
+}
+
+export interface FeeGroupPromotionMappingDto extends Omit<FeeGroupPromotionMappingT, "feeGroupId" | "promotionId"> {
+    feeGroup: FeeGroupDto;
     promotion: PromotionDto;
 }
 
 export interface FeeStudentMappingDto extends Omit<FeeStudentMappingT, 
     "feeStructureId" 
-    | "feeCategoryPromotionMappingId" 
+    | "feeGroupPromotionMappingId" 
     | "feeStructureInstallmentId"
     | "waivedOffByUserId"
 > {
     feeStructure: FeeStructureDto;
-    feeCategoryPromotionMappings: FeeCategoryPromotionMappingDto[];
+    feeGroupPromotionMappings: FeeGroupPromotionMappingDto[];
     feeStructureInstallment: FeeStructureInstallmentT | null;
     waivedOffByUser: UserDto | null;
 }
