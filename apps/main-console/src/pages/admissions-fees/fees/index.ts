@@ -11,7 +11,8 @@ import StudentFees from "./StudentFeesPage";
 import FeesMasterLayout from "./FeesMasterLayout";
 import FeesHomePage from "./FeesHomePage";
 import FeesReportsPage from "./FeesReportsPage";
-import FeeCategoryPromotionMappingPage from "./FeeCategoryPromotionMappingPage";
+import FeeGroupPromotionMappingPage from "./FeeCategoryPromotionMappingPage";
+import FeeGroupsPage from "./FeeGroupsPage";
 
 export {
   AcademicYearPage,
@@ -27,5 +28,6 @@ export {
   FeesMasterLayout,
   FeesHomePage,
   FeesReportsPage,
-  FeeCategoryPromotionMappingPage,
+  FeeGroupPromotionMappingPage,
+  FeeGroupsPage,
 };

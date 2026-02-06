@@ -1,6 +1,8 @@
 import { db } from "@/db/index.js";
 import { receiptTypeModel, ReceiptType } from "@repo/db/schemas/models/fees";
 import { eq } from "drizzle-orm";
+import { socketService } from "@/services/socketService.js";
+import * as userService from "@/features/user/services/user.service.js";
 
 type ReceiptTypeInsert = typeof receiptTypeModel.$inferInsert;
 
@@ -50,15 +52,81 @@ export const updateReceiptType = async (
     })
     .where(eq(receiptTypeModel.id, id))
     .returning();
+
+  // Emit socket event for receipt type update
+  const io = socketService.getIO();
+  if (io && updated) {
+    // Get user name for notification
+    const user = await userService.findById(userId);
+    const userName = user?.name || "Unknown User";
+
+    io.emit("receipt_type_updated", {
+      receiptTypeId: updated.id,
+      type: "update",
+      message: "A receipt type has been updated",
+      timestamp: new Date().toISOString(),
+    });
+
+    // Emit notification to all staff/admin users
+    io.emit("notification", {
+      id: `receipt_type_updated_${updated.id}_${Date.now()}`,
+      type: "update",
+      userId: userId.toString(),
+      userName,
+      message: `updated receipt type: ${updated.name}`,
+      createdAt: new Date(),
+      read: false,
+      meta: { receiptTypeId: updated.id, type: "update" },
+    });
+  }
+
   return updated || null;
 };
 
 export const deleteReceiptType = async (
   id: number,
+  userId?: number,
 ): Promise<ReceiptType | null> => {
+  // Get the receipt type before deletion for socket event
+  const [existing] = await db
+    .select()
+    .from(receiptTypeModel)
+    .where(eq(receiptTypeModel.id, id));
+
   const [deleted] = await db
     .delete(receiptTypeModel)
     .where(eq(receiptTypeModel.id, id))
     .returning();
+
+  // Emit socket event for receipt type deletion
+  const io = socketService.getIO();
+  if (io && deleted) {
+    // Get user name for notification if userId provided
+    let userName = "Unknown User";
+    if (userId) {
+      const user = await userService.findById(userId);
+      userName = user?.name || "Unknown User";
+    }
+
+    io.emit("receipt_type_deleted", {
+      receiptTypeId: id,
+      type: "deletion",
+      message: "A receipt type has been deleted",
+      timestamp: new Date().toISOString(),
+    });
+
+    // Emit notification to all staff/admin users
+    io.emit("notification", {
+      id: `receipt_type_deleted_${id}_${Date.now()}`,
+      type: "update",
+      userId: userId?.toString(),
+      userName,
+      message: `deleted receipt type: ${existing?.name || `ID: ${id}`}`,
+      createdAt: new Date(),
+      read: false,
+      meta: { receiptTypeId: id, type: "deletion" },
+    });
+  }
+
   return deleted || null;
 };

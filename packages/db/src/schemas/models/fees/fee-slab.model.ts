@@ -3,12 +3,12 @@ import { createInsertSchema } from "drizzle-zod";
 import { doublePrecision, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { userModel } from "../user";
 
-export const feeConcessionSlabModel = pgTable("fee_concession_slabs", {
+export const feeSlabModel = pgTable("fee_slabs", {
     id: serial().primaryKey(),
     legacyFeeSlabId: integer(),
     name: varchar({ length: 255 }).notNull(),
-    description: varchar({ length: 500 }).notNull(),
-    defaultConcessionRate: doublePrecision().default(0),
+    description: varchar({ length: 500 }),
+    defaultRate: doublePrecision().default(0),
     sequence: integer(),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
@@ -20,8 +20,8 @@ export const feeConcessionSlabModel = pgTable("fee_concession_slabs", {
         .notNull(),
 });
 
-export const createFeeConcessionSlabSchema = createInsertSchema(feeConcessionSlabModel);
+export const createFeeSlabSchema = createInsertSchema(feeSlabModel);
 
-export type FeeConcessionSlab = z.infer<typeof createFeeConcessionSlabSchema>;
+export type FeeSlab = z.infer<typeof createFeeSlabSchema>;
 
-export type FeeConcessionSlabT = typeof createFeeConcessionSlabSchema._type;
+export type FeeSlabT = typeof createFeeSlabSchema._type;

@@ -15,8 +15,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useFeesSlabs } from "@/hooks/useFees";
 import { FeesSlab as FeesSlabType } from "@/types/fees";
+import { useSocket } from "@/hooks/useSocket";
+import { useAuth } from "@/features/auth/providers/auth-provider";
+// import { toast } from "sonner";
 
 const FeesSlabPage: React.FC = () => {
+  const { user } = useAuth();
+  const { socket, isConnected } = useSocket({
+    userId: user?.id?.toString(),
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<FeesSlabType | null>(null);
   const [form, setForm] = useState<{ name: string; description: string; sequence: number }>({
@@ -29,13 +36,40 @@ const FeesSlabPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filteredData, setFilteredData] = useState<FeesSlabType[]>([]);
 
-  const { 
-    feesSlabs, 
-    loading, 
-    addFeesSlab, 
-    updateFeesSlabById, 
-    deleteFeesSlabById 
-  } = useFeesSlabs();
+  const { feesSlabs, loading, addFeesSlab, updateFeesSlabById, deleteFeesSlabById } = useFeesSlabs();
+
+  // Listen for fee slab socket events (only for staff/admin)
+  useEffect(() => {
+    if (!socket || !isConnected || (user?.type !== "ADMIN" && user?.type !== "STAFF")) return;
+
+    const handleFeeSlabCreated = (data: { feeSlabId: number; type: string; message: string }) => {
+      console.log("[Fees Slab Page] Fee slab created:", data);
+      // Silently refresh UI without showing toast
+      window.location.reload(); // Refetch data
+    };
+
+    const handleFeeSlabUpdated = (data: { feeSlabId: number; type: string; message: string }) => {
+      console.log("[Fees Slab Page] Fee slab updated:", data);
+      // Silently refresh UI without showing toast
+      window.location.reload(); // Refetch data
+    };
+
+    const handleFeeSlabDeleted = (data: { feeSlabId: number; type: string; message: string }) => {
+      console.log("[Fees Slab Page] Fee slab deleted:", data);
+      // Silently refresh UI without showing toast
+      window.location.reload(); // Refetch data
+    };
+
+    socket.on("fee_slab_created", handleFeeSlabCreated);
+    socket.on("fee_slab_updated", handleFeeSlabUpdated);
+    socket.on("fee_slab_deleted", handleFeeSlabDeleted);
+
+    return () => {
+      socket.off("fee_slab_created", handleFeeSlabCreated);
+      socket.off("fee_slab_updated", handleFeeSlabUpdated);
+      socket.off("fee_slab_deleted", handleFeeSlabDeleted);
+    };
+  }, [socket, isConnected, user?.type]);
 
   useEffect(() => {
     let updated = feesSlabs;
@@ -206,22 +240,14 @@ const FeesSlabPage: React.FC = () => {
                 <TableRow key={row.id} className="hover:bg-gray-50">
                   <TableCell className="text-center font-medium">{idx + 1}</TableCell>
                   <TableCell className="text-center">{row.name}</TableCell>
-                  <TableCell className="text-center">{row.description || '-'}</TableCell>
+                  <TableCell className="text-center">{row.description || "-"}</TableCell>
                   <TableCell className="text-center">{row.sequence}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(row)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(row)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(row.id!)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(row.id!)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -290,9 +316,7 @@ const FeesSlabPage: React.FC = () => {
             <Button variant="secondary" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit}>
-              {editingItem ? "Update" : "Save"}
-            </Button>
+            <Button onClick={handleSubmit}>{editingItem ? "Update" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,30 +1,9 @@
 import { db } from "@/db";
-import {
-  feeCategoryModel,
-  createFeeCategorySchema,
-  feeConcessionSlabModel,
-} from "@repo/db/schemas";
+import { feeCategoryModel, createFeeCategorySchema } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 import { FeeCategoryDto } from "@repo/db/dtos/fees";
-
-/**
- * Converts a FeeCategory model to FeeCategoryDto
- */
-async function modelToDto(
-  model: typeof feeCategoryModel.$inferSelect | null,
-): Promise<FeeCategoryDto | null> {
-  if (!model) return null;
-
-  const [feeConcessionSlab] = await db
-    .select()
-    .from(feeConcessionSlabModel)
-    .where(eq(feeConcessionSlabModel.id, model.feeConcessionSlabId));
-
-  return {
-    ...model,
-    feeConcessionSlab: feeConcessionSlab!,
-  };
-}
+import { socketService } from "@/services/socketService.js";
+import * as userService from "@/features/user/services/user.service.js";
 
 /**
  * Services should accept validated DTOs (controller validates via zod) and
@@ -46,14 +25,41 @@ export const createFeeCategory = async (
     })
     .returning();
 
-  const dto = await modelToDto(created);
-  return dto!;
+  const dto = created as FeeCategoryDto;
+
+  // Emit socket event for fee category creation
+  const io = socketService.getIO();
+  if (io && dto) {
+    // Get user name for notification
+    const user = await userService.findById(userId);
+    const userName = user?.name || "Unknown User";
+
+    io.emit("fee_category_created", {
+      feeCategoryId: dto.id,
+      type: "creation",
+      message: "A new fee category has been created",
+      timestamp: new Date().toISOString(),
+    });
+
+    // Emit notification to all staff/admin users
+    io.emit("notification", {
+      id: `fee_category_created_${dto.id}_${Date.now()}`,
+      type: "info",
+      userId: userId.toString(),
+      userName,
+      message: `created a new fee category: ${dto.name}`,
+      createdAt: new Date(),
+      read: false,
+      meta: { feeCategoryId: dto.id, type: "creation" },
+    });
+  }
+
+  return dto;
 };
 
 export const getAllFeeCategories = async (): Promise<FeeCategoryDto[]> => {
   const rows = await db.select().from(feeCategoryModel);
-  const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
-  return dtos.filter((dto): dto is FeeCategoryDto => dto !== null);
+  return rows as FeeCategoryDto[];
 };
 
 export const getFeeCategoryById = async (
@@ -64,7 +70,7 @@ export const getFeeCategoryById = async (
     .from(feeCategoryModel)
     .where(eq(feeCategoryModel.id, id));
 
-  return await modelToDto(row ?? null);
+  return (row ?? null) as FeeCategoryDto | null;
 };
 
 export const updateFeeCategory = async (
@@ -82,16 +88,55 @@ export const updateFeeCategory = async (
     .where(eq(feeCategoryModel.id, id))
     .returning();
 
-  return await modelToDto(updated ?? null);
+  return (updated ?? null) as FeeCategoryDto | null;
 };
 
 export const deleteFeeCategory = async (
   id: number,
+  userId?: number,
 ): Promise<FeeCategoryDto | null> => {
+  // Get the category before deletion for socket event
+  const [existing] = await db
+    .select()
+    .from(feeCategoryModel)
+    .where(eq(feeCategoryModel.id, id));
+
   const [deleted] = await db
     .delete(feeCategoryModel)
     .where(eq(feeCategoryModel.id, id))
     .returning();
 
-  return await modelToDto(deleted ?? null);
+  const dto = (deleted ?? null) as FeeCategoryDto | null;
+
+  // Emit socket event for fee category deletion
+  const io = socketService.getIO();
+  if (io && dto) {
+    // Get user name for notification if userId provided
+    let userName = "Unknown User";
+    if (userId) {
+      const user = await userService.findById(userId);
+      userName = user?.name || "Unknown User";
+    }
+
+    io.emit("fee_category_deleted", {
+      feeCategoryId: id,
+      type: "deletion",
+      message: "A fee category has been deleted",
+      timestamp: new Date().toISOString(),
+    });
+
+    // Emit notification to all staff/admin users
+    io.emit("notification", {
+      id: `fee_category_deleted_${id}_${Date.now()}`,
+      type: "update",
+      userId: userId ? userId.toString() : undefined,
+      userName,
+      message: `deleted fee category: ${existing?.name || `ID: ${id}`}`,
+      createdAt: new Date(),
+      read: false,
+      meta: { feeCategoryId: id, type: "deletion" },
+    });
+  }
+
+  return dto;
 };
