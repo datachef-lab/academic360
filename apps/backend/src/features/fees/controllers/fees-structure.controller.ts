@@ -295,7 +295,8 @@ export const deleteFeeStructure = async (
         .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
       return;
     }
-    const deleted = await feeStructureService.deleteFeeStructure(id);
+    const userId = (req.user as any)?.id;
+    const deleted = await feeStructureService.deleteFeeStructure(id, userId);
     if (!deleted) {
       res
         .status(404)
@@ -332,7 +333,7 @@ export const createFeeStructureByDto = async (
         programCourseIds: z.array(z.number()),
         shiftIds: z.array(z.number()),
         components: z.array(z.any()),
-        feeStructureConcessionSlabs: z.array(z.any()),
+        feeStructureSlabs: z.array(z.any()),
         installments: z.array(z.any()).optional(),
         advanceForProgramCourseIds: z.array(z.number()).optional(),
         closingDate: z.string().nullable().optional(),
@@ -368,10 +369,10 @@ export const createFeeStructureByDto = async (
         data.programCourseIds,
         data.shiftIds,
         data.baseAmount,
-        data.feeStructureConcessionSlabs
+        data.feeStructureSlabs
           .filter((slab) => slab.concessionRate !== undefined)
           .map((slab) => ({
-            feeConcessionSlabId: slab.feeConcessionSlabId,
+            feeSlabId: slab.feeSlabId,
             concessionRate: slab.concessionRate ?? 0,
           })),
         undefined, // No excludeFeeStructureId for new creation
@@ -461,7 +462,7 @@ export const updateFeeStructureByDto = async (
         programCourseIds: z.array(z.number()),
         shiftIds: z.array(z.number()),
         components: z.array(z.any()),
-        feeStructureConcessionSlabs: z.array(z.any()),
+        feeStructureSlabs: z.array(z.any()),
         installments: z.array(z.any()).optional(),
         advanceForProgramCourseIds: z.array(z.number()).optional(),
         closingDate: z.string().nullable().optional(),
@@ -497,10 +498,10 @@ export const updateFeeStructureByDto = async (
         data.programCourseIds,
         data.shiftIds,
         data.baseAmount,
-        data.feeStructureConcessionSlabs
+        data.feeStructureSlabs
           .filter((slab) => slab.concessionRate !== undefined)
           .map((slab) => ({
-            feeConcessionSlabId: slab.feeConcessionSlabId,
+            feeSlabId: slab.feeSlabId,
             concessionRate: slab.concessionRate ?? 0,
           })),
         id, // Exclude current fee structure from conflict check
@@ -765,9 +766,9 @@ export const checkUniqueFeeStructureAmounts = async (
         programCourseIds: z.array(z.number()),
         shiftIds: z.array(z.number()),
         baseAmount: z.number(),
-        feeStructureConcessionSlabs: z.array(
+        feeStructureSlabs: z.array(
           z.object({
-            feeConcessionSlabId: z.number(),
+            feeSlabId: z.number(),
             concessionRate: z.number(),
           }),
         ),
@@ -797,7 +798,7 @@ export const checkUniqueFeeStructureAmounts = async (
       programCourseIds,
       shiftIds,
       baseAmount,
-      feeStructureConcessionSlabs,
+      feeStructureSlabs,
       excludeFeeStructureId,
       page,
       pageSize,
@@ -809,7 +810,7 @@ export const checkUniqueFeeStructureAmounts = async (
       programCourseIds,
       shiftIds,
       baseAmount,
-      feeStructureConcessionSlabs,
+      feeStructureSlabs,
       excludeFeeStructureId,
       page,
       pageSize,

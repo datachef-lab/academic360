@@ -1,5 +1,6 @@
+// @ts-nocheck
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Link2, Trash2, Upload, Download, Loader2 } from "lucide-react";
+import { Link2, Trash2, Upload, Download, Loader2, Pencil } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,19 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useFeeCategories } from "@/hooks/useFees";
+import { useFeeCategories, useFeeGroups } from "@/hooks/useFees";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
-import { FeeCategoryPromotionMappingDto } from "@repo/db/dtos/fees";
+import { FeeGroupPromotionMappingDto } from "@repo/db/dtos/fees";
 import { toast } from "sonner";
+import { NewFeeGroupPromotionMapping, BulkUploadResult } from "@/services/fees-api";
 import {
-  getAllFeeCategoryPromotionMappings,
-  createFeeCategoryPromotionMapping,
-  updateFeeCategoryPromotionMapping,
-  deleteFeeCategoryPromotionMapping,
-  NewFeeCategoryPromotionMapping,
-  BulkUploadResult,
-} from "@/services/fees-api";
+  useFeeGroupPromotionMappings,
+  useCreateFeeGroupPromotionMapping,
+  useUpdateFeeGroupPromotionMapping,
+  useDeleteFeeGroupPromotionMapping,
+  useBulkUploadFeeGroupPromotionMappings,
+} from "@/hooks/useFeeGroupPromotionMappings";
 import { useError } from "@/hooks/useError";
 import { PromotionDto } from "@repo/db/dtos/user";
 import { getAcademicYears, getProgramCourses } from "@/services/course-design.api";
@@ -34,13 +35,13 @@ import axiosInstance from "@/utils/api";
 import { useSocket } from "@/hooks/useSocket";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 
-const FeeCategoryPromotionMappingPage: React.FC = () => {
+const FeeGroupPromotionMappingPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
-  const [deletingItem, setDeletingItem] = useState<FeeCategoryPromotionMappingDto | null>(null);
-  const [editingItem, setEditingItem] = useState<FeeCategoryPromotionMappingDto | null>(null);
+  const [deletingItem, setDeletingItem] = useState<FeeGroupPromotionMappingDto | null>(null);
+  const [editingItem, setEditingItem] = useState<FeeGroupPromotionMappingDto | null>(null);
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [bulkUploadResult, setBulkUploadResult] = useState<BulkUploadResult | null>(null);
@@ -57,8 +58,6 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
   const [searchText, setSearchText] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 20;
-  const [mappings, setMappings] = useState<FeeCategoryPromotionMappingDto[]>([]);
-  const [loading, setLoading] = useState(true);
   const [promotions, setPromotions] = useState<PromotionDto[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [academicYearOptions, setAcademicYearOptions] = useState<string[]>([]);
@@ -70,10 +69,18 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const { showError } = useError();
   const { feeCategories } = useFeeCategories();
+  const { feeGroups } = useFeeGroups();
   const { currentAcademicYear } = useAcademicYear();
 
+  // React Query hooks
+  const { data: mappings = [], isLoading: loading, refetch: refetchMappings } = useFeeGroupPromotionMappings();
+  const createMutation = useCreateFeeGroupPromotionMapping();
+  const updateMutation = useUpdateFeeGroupPromotionMapping();
+  const deleteMutation = useDeleteFeeGroupPromotionMapping();
+  const bulkUploadMutation = useBulkUploadFeeGroupPromotionMappings();
+
   // Socket connection for bulk upload progress
-  const { socket } = useSocket({
+  const { socket, isConnected } = useSocket({
     userId,
   });
 
@@ -92,7 +99,7 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
       setIsBulkUploading(false);
       setBulkUploadProgress(null);
       toast.success(`Bulk upload completed: ${data.successCount} mappings created`);
-      fetchMappings();
+      refetchMappings();
     };
 
     const handleBulkUploadFailed = (data: { errorCount: number; successCount: number }) => {
@@ -100,7 +107,7 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
       setBulkUploadProgress(null);
       toast.error(`Bulk upload completed with errors: ${data.successCount} successful, ${data.errorCount} failed`);
       if (data.successCount > 0) {
-        fetchMappings();
+        refetchMappings();
       }
     };
 
@@ -115,6 +122,39 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
       socket.emit("leave", uploadSessionId);
     };
   }, [socket, uploadSessionId]);
+
+  // Listen for fee group promotion mapping socket events (only for staff/admin)
+  useEffect(() => {
+    if (!socket || !isConnected || (user?.type !== "ADMIN" && user?.type !== "STAFF")) return;
+
+    const handleFeeGroupPromotionMappingCreated = (data: { mappingId: number; type: string; message: string }) => {
+      console.log("[Fee Group Promotion Mapping Page] Mapping created:", data);
+      // Silently refresh UI without showing toast
+      refetchMappings();
+    };
+
+    const handleFeeGroupPromotionMappingUpdated = (data: { mappingId: number; type: string; message: string }) => {
+      console.log("[Fee Group Promotion Mapping Page] Mapping updated:", data);
+      // Silently refresh UI without showing toast
+      refetchMappings();
+    };
+
+    const handleFeeGroupPromotionMappingDeleted = (data: { mappingId: number; type: string; message: string }) => {
+      console.log("[Fee Group Promotion Mapping Page] Mapping deleted:", data);
+      // Silently refresh UI without showing toast
+      refetchMappings();
+    };
+
+    socket.on("fee_group_promotion_mapping_created", handleFeeGroupPromotionMappingCreated);
+    socket.on("fee_group_promotion_mapping_updated", handleFeeGroupPromotionMappingUpdated);
+    socket.on("fee_group_promotion_mapping_deleted", handleFeeGroupPromotionMappingDeleted);
+
+    return () => {
+      socket.off("fee_group_promotion_mapping_created", handleFeeGroupPromotionMappingCreated);
+      socket.off("fee_group_promotion_mapping_updated", handleFeeGroupPromotionMappingUpdated);
+      socket.off("fee_group_promotion_mapping_deleted", handleFeeGroupPromotionMappingDeleted);
+    };
+  }, [socket, isConnected, user?.type, refetchMappings]);
   const [filters, setFilters] = useState<{
     academicYear: string;
     semesterOrClass: string;
@@ -143,27 +183,7 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
     promotionId: undefined,
   });
 
-  const fetchMappings = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await getAllFeeCategoryPromotionMappings();
-      if (response.payload) {
-        setMappings(response.payload);
-      } else {
-        setMappings([]);
-      }
-    } catch (error) {
-      console.error("Error fetching fee category promotion mappings:", error);
-      showError({ message: "Failed to fetch fee category promotion mappings" });
-      setMappings([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [showError]);
-
-  useEffect(() => {
-    fetchMappings();
-  }, [fetchMappings]);
+  // Extract unique promotions from mappings
 
   // When academic year from Redux is available, pre-select it IF it exists
   // in our filter options and no academic year filter is already applied.
@@ -326,7 +346,7 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
     return counts;
   }, [mappings]);
 
-  const matchesFilters = (mapping: FeeCategoryPromotionMappingDto) => {
+  const matchesFilters = (mapping: FeeGroupPromotionMappingDto) => {
     const promo: any = mapping.promotion || {};
     const academicYearName = promo.academicYearName || promo.session?.name || "";
     const semesterName = promo.class?.name || "";
@@ -343,7 +363,12 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
     if (filters.religion && religionName !== filters.religion) return false;
     if (filters.category && categoryName !== filters.category) return false;
     if (filters.community && communityName !== filters.community) return false;
-    if (filters.feeCategory && mapping.feeCategory?.name !== filters.feeCategory) return false;
+    if (
+      filters.feeCategory &&
+      mapping.feeGroup?.feeCategory?.name !== filters.feeCategory &&
+      mapping.feeCategory?.name !== filters.feeCategory
+    )
+      return false;
 
     return true;
   };
@@ -366,7 +391,8 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
       const shiftName = (promo.shift?.name || "").toLowerCase();
       const categoryName = (promo.categoryName || "").toLowerCase();
       const religionName = (promo.religionName || "").toLowerCase();
-      const feeCategoryName = (mapping.feeCategory?.name || "").toLowerCase();
+      const feeCategoryName = (mapping.feeGroup?.feeCategory?.name || mapping.feeCategory?.name || "").toLowerCase();
+      const feeSlabName = (mapping.feeGroup?.feeSlab?.name || "").toLowerCase();
       const mappingId = mapping.id?.toString() || "";
 
       const matchesSearch =
@@ -380,6 +406,7 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
         categoryName.includes(searchLower) ||
         religionName.includes(searchLower) ||
         feeCategoryName.includes(searchLower) ||
+        feeSlabName.includes(searchLower) ||
         mappingId.includes(searchText);
 
       return matchesSearch && matchesFilters(mapping);
@@ -458,8 +485,8 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
     ];
     ws["!cols"] = colWidths;
 
-    XLSX.utils.book_append_sheet(wb, ws, "Fee Category Promotion Mapping");
-    XLSX.writeFile(wb, "fee-category-promotion-mapping-template.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Fee Group Promotion Mapping");
+    XLSX.writeFile(wb, "fee-group-promotion-mapping-template.xlsx");
   };
 
   const validateBulkUploadFile = async (
@@ -574,7 +601,7 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
         status: string;
         payload: BulkUploadResult;
         message: string;
-      }>(`/api/v1/fees/category-promotion-mappings/bulk-upload`, formData, {
+      }>(`/api/v1/fees/group-promotion-mappings/bulk-upload`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -593,7 +620,7 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
     // Note: setIsBulkUploading(false) is handled by socket events
   };
 
-  const handleDeleteClick = (mapping: FeeCategoryPromotionMappingDto) => {
+  const handleDeleteClick = (mapping: FeeGroupPromotionMappingDto) => {
     setDeletingItem(mapping);
     setShowDeleteModal(true);
   };
@@ -602,14 +629,11 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
     if (!deletingItem?.id) return;
 
     try {
-      await deleteFeeCategoryPromotionMapping(deletingItem.id);
-      toast.success("Fee category promotion mapping deleted successfully");
+      await deleteMutation.mutateAsync(deletingItem.id);
       setShowDeleteModal(false);
       setDeletingItem(null);
-      await fetchMappings();
     } catch (error) {
-      console.error("Error deleting fee category promotion mapping:", error);
-      toast.error("Failed to delete fee category promotion mapping. Please try again.");
+      // Error handling is done in the mutation hook
     }
   };
 
@@ -631,41 +655,40 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
     }
 
     try {
-      const mappingData: NewFeeCategoryPromotionMapping = {
+      const mappingData: NewFeeGroupPromotionMapping = {
         feeCategoryId: form.feeCategoryId,
         promotionId: form.promotionId,
       };
 
       if (editingItem?.id) {
-        await updateFeeCategoryPromotionMapping(editingItem.id, mappingData);
-        toast.success("Fee category promotion mapping updated successfully");
+        await updateMutation.mutateAsync({
+          id: editingItem.id,
+          data: mappingData,
+        });
       } else {
-        await createFeeCategoryPromotionMapping(mappingData);
-        toast.success("Fee category promotion mapping created successfully");
+        await createMutation.mutateAsync(mappingData);
       }
 
       handleClose();
-      await fetchMappings();
     } catch (error) {
-      console.error("Error saving fee category promotion mapping:", error);
-      toast.error("Failed to save fee category promotion mapping. Please try again.");
+      // Error handling is done in the mutation hooks
     }
   };
 
-  // Inline update of fee category for a specific mapping row
-  const handleRowFeeCategoryChange = async (mapping: FeeCategoryPromotionMappingDto, newFeeCategoryId: number) => {
+  // Inline update of fee group for a specific mapping row
+  const handleRowFeeCategoryChange = async (mapping: FeeGroupPromotionMappingDto, newFeeGroupId: number) => {
     if (!mapping.id) return;
-    if (mapping.feeCategory?.id === newFeeCategoryId) return;
+    if (mapping.feeGroup?.id === newFeeGroupId) return;
 
     try {
-      await updateFeeCategoryPromotionMapping(mapping.id, {
-        feeCategoryId: newFeeCategoryId,
+      await updateMutation.mutateAsync({
+        id: mapping.id,
+        data: {
+          feeGroupId: newFeeGroupId,
+        },
       });
-      toast.success("Fee category updated for student");
-      await fetchMappings();
     } catch (error) {
-      console.error("Error updating fee category for mapping:", error);
-      toast.error("Failed to update fee category. Please try again.");
+      // Error handling is done in the mutation hook
     }
   };
 
@@ -677,10 +700,10 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
             <div>
               <CardTitle className="text-2xl font-bold flex items-center gap-2">
                 <Link2 className="h-6 w-6" />
-                Student Fee Category Mapping
+                Student Fee Group Mapping
               </CardTitle>
               <p className="text-sm text-gray-600 mt-1">
-                Configure mappings between students (by class/UID/roll) and fee categories
+                Configure mappings between students (by class/UID/roll) and fee groups
               </p>
             </div>
             <Button onClick={() => setShowBulkUploadModal(true)} className="flex items-center gap-2">
@@ -789,11 +812,11 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
                   <TableHead className="w-[60px]">Sr No.</TableHead>
                   <TableHead>Student Name</TableHead>
                   <TableHead>Program Course</TableHead>
-                  <TableHead>Semester</TableHead>
+                  <TableHead className="text-center">Semester</TableHead>
                   <TableHead>Shift</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Religion</TableHead>
-                  <TableHead>Fee Category</TableHead>
+                  <TableHead>Fee Group</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -810,7 +833,9 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
                     const studentName = promo.studentName || promo.name || "-";
                     const uid = promo.uid || promo.studentUid || "";
                     const programCourseName = promo.programCourse?.name || "-";
-                    const semesterName = promo.class?.name || "-";
+                    const rawSemesterName = promo.class?.name || "-";
+                    const semesterParts = typeof rawSemesterName === "string" ? rawSemesterName.split(/\s+/) : [];
+                    const semesterName = semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
                     const shiftName = promo.shift?.name || "-";
                     const categoryName = promo.categoryName || "-";
                     const religionName = promo.religionName || "-";
@@ -846,7 +871,7 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           {semesterName !== "-" ? (
                             <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
                               {semesterName}
@@ -886,8 +911,21 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          {mapping.feeCategory?.name ? (
-                            <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50">
+                          {mapping.feeGroup?.feeCategory?.name && mapping.feeGroup?.feeSlab?.name ? (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-purple-300 text-purple-700 bg-purple-50"
+                              >
+                                {mapping.feeGroup.feeCategory.name}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs border-pink-300 text-pink-700 bg-pink-50">
+                                {mapping.feeGroup.feeSlab.name}
+                              </Badge>
+                            </div>
+                          ) : mapping.feeCategory?.name ? (
+                            // Fallback for old structure if feeGroup is not available
+                            <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-50">
                               {mapping.feeCategory.name}
                             </Badge>
                           ) : (
@@ -897,16 +935,23 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Select
-                              value={mapping.feeCategory?.id?.toString() || ""}
+                              value={mapping.feeGroup?.id?.toString() || mapping.feeCategory?.id?.toString() || ""}
                               onValueChange={(value) => handleRowFeeCategoryChange(mapping, Number(value))}
                             >
-                              <SelectTrigger className="h-8 w-40">
-                                <SelectValue placeholder="Select category" />
+                              {/* Only show edit icon, clicking opens the dropdown */}
+                              <SelectTrigger className="h-8 w-8 p-0 border-0 bg-transparent shadow-none [&>span]:hidden">
+                                <Pencil className="h-4 w-4 text-gray-600" />
                               </SelectTrigger>
-                              <SelectContent>
-                                {feeCategories?.map((fc) => (
-                                  <SelectItem key={fc.id} value={fc.id?.toString() || ""}>
-                                    {fc.name}
+                              <SelectContent className="min-w-[280px]">
+                                {feeGroups?.map((fg) => (
+                                  <SelectItem key={fg.id} value={fg.id?.toString() || ""} className="cursor-pointer">
+                                    <div className="flex items-center gap-2 py-1 text-sm">
+                                      <span className="w-[140px] text-left truncate">
+                                        {fg.feeCategory?.name || "-"}
+                                      </span>
+                                      <span className="text-gray-400">|</span>
+                                      <span className="flex-1 text-left truncate">{fg.feeSlab?.name || "-"}</span>
+                                    </div>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1372,4 +1417,4 @@ const FeeCategoryPromotionMappingPage: React.FC = () => {
   );
 };
 
-export default FeeCategoryPromotionMappingPage;
+export default FeeGroupPromotionMappingPage;

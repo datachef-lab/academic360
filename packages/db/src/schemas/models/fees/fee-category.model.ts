@@ -1,20 +1,14 @@
-import { feeCategoryValidityTypeEnum } from "@/schemas/enums";
-import { boolean, integer, pgTable, serial, timestamp, unique, varchar } from "drizzle-orm/pg-core";
-import { feeConcessionSlabModel } from "./fee-concession-slab.model";
-import { createInsertSchema } from "drizzle-zod";
+
+import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+
 import z from "zod";
+import { createInsertSchema } from "drizzle-zod";
 import { userModel } from "../user";
 
 export const feeCategoryModel = pgTable("fee_categories", {
     id: serial().primaryKey(),
-    feeConcessionSlabId: integer("fee_concession_slab_id_fk")
-        .references(() => feeConcessionSlabModel.id)
-        .notNull(),
-    name: varchar({ length: 255 }).notNull(),
-    description: varchar({ length: 500 }).notNull(),
-    priority: integer().notNull().unique(),
-    validityType: feeCategoryValidityTypeEnum().notNull().default("SEMESTER"),
-    isCarryForwarded: boolean().notNull().default(false),
+    name: varchar({ length: 255 }).notNull().unique(),
+    description: varchar({ length: 500 }),
     createdAt: timestamp({withTimezone: true})
         .notNull()
         .defaultNow(),
@@ -28,10 +22,7 @@ export const feeCategoryModel = pgTable("fee_categories", {
     updatedByUserId: integer("updated_by_user_id_fk")
         .references(() => userModel.id)
         .notNull(),
-}, (table) => ({
-    uniqueFeeCategoryConstraint: unique()
-        .on(table.feeConcessionSlabId, table.name, table.validityType),
-}));
+});
 
 export const createFeeCategorySchema = createInsertSchema(feeCategoryModel);
 

@@ -1,10 +1,9 @@
-import React, { useState } from "react";
-import { Layers, Edit, Trash2, Download, Upload, PlusCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Layers, Edit, Trash2, Download, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -19,15 +18,19 @@ import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationM
 import { toast } from "sonner";
 import { NewFeesHead } from "@/services/fees-api";
 import * as XLSX from "xlsx";
+import { useSocket } from "@/hooks/useSocket";
+import { useAuth } from "@/features/auth/providers/auth-provider";
 
 const FeeHeadsPage: React.FC = () => {
+  const { user } = useAuth();
+  const { socket, isConnected } = useSocket({
+    userId: user?.id?.toString(),
+  });
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingItem, setEditingItem] = useState<FeesHead | null>(null);
   const [deletingItem, setDeletingItem] = useState<FeesHead | null>(null);
   const [searchText, setSearchText] = useState("");
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
-  const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [form, setForm] = useState<{
     name: string;
     defaultPercentage: number;
@@ -42,6 +45,39 @@ const FeeHeadsPage: React.FC = () => {
 
   const { feesHeads, loading, addFeesHead, updateFeesHeadById, deleteFeesHeadById } = useFeesHeads();
 
+  // Listen for fee head socket events (only for staff/admin)
+  useEffect(() => {
+    if (!socket || !isConnected || (user?.type !== "ADMIN" && user?.type !== "STAFF")) return;
+
+    const handleFeeHeadCreated = (data: { feeHeadId: number; type: string; message: string }) => {
+      console.log("[Fee Heads Page] Fee head created:", data);
+      // Silently refresh UI without showing toast
+      window.location.reload(); // Refetch data
+    };
+
+    const handleFeeHeadUpdated = (data: { feeHeadId: number; type: string; message: string }) => {
+      console.log("[Fee Heads Page] Fee head updated:", data);
+      // Silently refresh UI without showing toast
+      window.location.reload(); // Refetch data
+    };
+
+    const handleFeeHeadDeleted = (data: { feeHeadId: number; type: string; message: string }) => {
+      console.log("[Fee Heads Page] Fee head deleted:", data);
+      // Silently refresh UI without showing toast
+      window.location.reload(); // Refetch data
+    };
+
+    socket.on("fee_head_created", handleFeeHeadCreated);
+    socket.on("fee_head_updated", handleFeeHeadUpdated);
+    socket.on("fee_head_deleted", handleFeeHeadDeleted);
+
+    return () => {
+      socket.off("fee_head_created", handleFeeHeadCreated);
+      socket.off("fee_head_updated", handleFeeHeadUpdated);
+      socket.off("fee_head_deleted", handleFeeHeadDeleted);
+    };
+  }, [socket, isConnected, user?.type]);
+
   // Filter fee heads based on search text
   const filteredFeesHeads =
     feesHeads?.filter((head) => {
@@ -53,81 +89,6 @@ const FeeHeadsPage: React.FC = () => {
         head.defaultPercentage?.toString().includes(searchText)
       );
     }) || [];
-
-  const handleDownloadTemplate = () => {
-    const templateData = [
-      ["Head Name", "Default Percentage (%)", "Sequence", "Remarks"],
-      ["Example Head", "0", "1", "Example remarks"],
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(templateData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, "fee_heads_template.xlsx");
-    toast.success("Template downloaded successfully");
-  };
-
-  const handleBulkUpload = async () => {
-    if (!bulkFile) {
-      toast.warning("Please select a file to upload");
-      return;
-    }
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
-          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-            toast.error("The uploaded file does not contain any sheets");
-            return;
-          }
-          const sheetName = workbook.SheetNames[0];
-          if (!sheetName || typeof sheetName !== "string") {
-            toast.error("The uploaded file does not contain any sheets");
-            return;
-          }
-          const worksheet = workbook.Sheets[sheetName];
-          if (!worksheet) {
-            toast.error("Failed to read worksheet from the uploaded file");
-            return;
-          }
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-          // Process and upload data
-          let successCount = 0;
-          let errorCount = 0;
-
-          for (const row of jsonData as any[]) {
-            try {
-              await addFeesHead({
-                name: row["Head Name"] || "",
-                defaultPercentage: row["Default Percentage (%)"] ? parseFloat(row["Default Percentage (%)"]) : 0,
-                sequence: row["Sequence"] ? parseInt(row["Sequence"]) : undefined,
-                remarks: row["Remarks"] || null,
-              } as NewFeesHead);
-              successCount++;
-            } catch (error) {
-              errorCount++;
-              console.error("Error uploading row:", error);
-            }
-          }
-
-          toast.success(`Bulk upload completed: ${successCount} successful, ${errorCount} failed`);
-          setIsBulkUploadOpen(false);
-          setBulkFile(null);
-        } catch (error) {
-          console.error("Error processing file:", error);
-          toast.error("Failed to process file. Please check the format.");
-        }
-      };
-      reader.readAsArrayBuffer(bulkFile);
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      toast.error("Failed to upload file");
-    }
-  };
 
   const handleDownloadAll = () => {
     if (!feesHeads || feesHeads.length === 0) {
@@ -288,33 +249,6 @@ const FeeHeadsPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Upload className="mr-2 h-4 w-4" /> Bulk Upload
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Bulk Upload Fee Heads</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col gap-4">
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
-                  />
-                  <Button onClick={handleBulkUpload} disabled={!bulkFile}>
-                    Upload
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button variant="outline" onClick={handleDownloadTemplate}>
-              <Download className="mr-2 h-4 w-4" /> Download Template
-            </Button>
-
             <AlertDialog open={showModal} onOpenChange={setShowModal}>
               <AlertDialogTrigger asChild>
                 <Button
@@ -421,11 +355,11 @@ const FeeHeadsPage: React.FC = () => {
           </div>
 
           <div className="relative" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
+            <div className="overflow-y-auto h-full">
+              <Table className="border rounded-md" style={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60 }}>ID</TableHead>
+                    <TableHead style={{ width: 60, whiteSpace: "nowrap" }}>Sr. No.</TableHead>
                     <TableHead style={{ width: 250 }}>Head Name</TableHead>
                     <TableHead style={{ width: 150 }}>Default %</TableHead>
                     <TableHead style={{ width: 120 }}>Sequence</TableHead>
@@ -441,9 +375,9 @@ const FeeHeadsPage: React.FC = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredFeesHeads.map((row) => (
+                    filteredFeesHeads.map((row, index) => (
                       <TableRow key={row.id} className="group">
-                        <TableCell style={{ width: 60 }}>{row.id}</TableCell>
+                        <TableCell style={{ width: 60 }}>{index + 1}</TableCell>
                         <TableCell style={{ width: 250 }}>{row.name}</TableCell>
                         <TableCell style={{ width: 150 }}>{(row as any).defaultPercentage ?? 0}%</TableCell>
                         <TableCell style={{ width: 120 }}>{row.sequence || "-"}</TableCell>

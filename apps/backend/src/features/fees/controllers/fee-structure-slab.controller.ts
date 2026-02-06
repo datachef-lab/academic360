@@ -1,18 +1,18 @@
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import * as feeStructureConcessionSlabService from "../services/fee-structure-concession-slab.service.js";
-import { createFeeStructureConcessionSlabSchema } from "@repo/db/schemas/models/fees";
+import * as feeStructureSlabService from "../services/fee-structure-slab.service.js";
+import { createFeeStructureSlabSchema } from "@repo/db/schemas/models/fees";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 
-export const createFeeStructureConcessionSlab = async (
+export const createFeeStructureSlab = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const parse = createFeeStructureConcessionSlabSchema.safeParse(
-      req.body as z.input<typeof createFeeStructureConcessionSlabSchema>,
+    const parse = createFeeStructureSlabSchema.safeParse(
+      req.body as z.input<typeof createFeeStructureSlabSchema>,
     );
     if (!parse.success) {
       res
@@ -29,13 +29,10 @@ export const createFeeStructureConcessionSlab = async (
     }
 
     const body = parse.data as Omit<
-      z.infer<typeof createFeeStructureConcessionSlabSchema>,
+      z.infer<typeof createFeeStructureSlabSchema>,
       "id" | "createdAt" | "updatedAt"
     >;
-    const created =
-      await feeStructureConcessionSlabService.createFeeStructureConcessionSlab(
-        body,
-      );
+    const created = await feeStructureSlabService.createFeeStructureSlab(body);
 
     if (!created) {
       res
@@ -45,7 +42,7 @@ export const createFeeStructureConcessionSlab = async (
             400,
             "ERROR",
             null,
-            "Failed to create fee structure concession slab",
+            "Failed to create fee structure slab",
           ),
         );
       return;
@@ -58,7 +55,7 @@ export const createFeeStructureConcessionSlab = async (
           201,
           "CREATED",
           created,
-          "Fee structure concession slab created successfully",
+          "Fee structure slab created successfully",
         ),
       );
   } catch (error) {
@@ -66,31 +63,25 @@ export const createFeeStructureConcessionSlab = async (
   }
 };
 
-export const getAllFeeStructureConcessionSlabs = async (
+export const getAllFeeStructureSlabs = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const all =
-      await feeStructureConcessionSlabService.getAllFeeStructureConcessionSlabs();
+    const all = await feeStructureSlabService.getAllFeeStructureSlabs();
 
     res
       .status(200)
       .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          all,
-          "Fetched fee structure concession slabs",
-        ),
+        new ApiResponse(200, "SUCCESS", all, "Fetched fee structure slabs"),
       );
   } catch (error) {
     handleError(error, res, next);
   }
 };
 
-export const getFeeStructureConcessionSlabById = async (
+export const getFeeStructureSlabById = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -104,10 +95,7 @@ export const getFeeStructureConcessionSlabById = async (
       return;
     }
 
-    const found =
-      await feeStructureConcessionSlabService.getFeeStructureConcessionSlabById(
-        id,
-      );
+    const found = await feeStructureSlabService.getFeeStructureSlabById(id);
 
     if (!found) {
       res
@@ -117,7 +105,7 @@ export const getFeeStructureConcessionSlabById = async (
             404,
             "NOT_FOUND",
             null,
-            "Fee structure concession slab not found",
+            "Fee structure slab not found",
           ),
         );
       return;
@@ -126,19 +114,14 @@ export const getFeeStructureConcessionSlabById = async (
     res
       .status(200)
       .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          found,
-          "Fetched fee structure concession slab",
-        ),
+        new ApiResponse(200, "SUCCESS", found, "Fetched fee structure slab"),
       );
   } catch (error) {
     handleError(error, res, next);
   }
 };
 
-export const updateFeeStructureConcessionSlab = async (
+export const updateFeeStructureSlab = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -152,7 +135,7 @@ export const updateFeeStructureConcessionSlab = async (
       return;
     }
 
-    const partialSchema = createFeeStructureConcessionSlabSchema.partial();
+    const partialSchema = createFeeStructureSlabSchema.partial();
     const parse = partialSchema.safeParse(
       req.body as z.input<typeof partialSchema>,
     );
@@ -171,13 +154,12 @@ export const updateFeeStructureConcessionSlab = async (
     }
 
     const body = parse.data as Partial<
-      z.infer<typeof createFeeStructureConcessionSlabSchema>
+      z.infer<typeof createFeeStructureSlabSchema>
     >;
-    const updated =
-      await feeStructureConcessionSlabService.updateFeeStructureConcessionSlab(
-        id,
-        body,
-      );
+    const updated = await feeStructureSlabService.updateFeeStructureSlab(
+      id,
+      body,
+    );
 
     if (!updated) {
       res
@@ -187,7 +169,7 @@ export const updateFeeStructureConcessionSlab = async (
             404,
             "NOT_FOUND",
             null,
-            "Fee structure concession slab not found or update failed",
+            "Fee structure slab not found or update failed",
           ),
         );
       return;
@@ -196,19 +178,14 @@ export const updateFeeStructureConcessionSlab = async (
     res
       .status(200)
       .json(
-        new ApiResponse(
-          200,
-          "UPDATED",
-          updated,
-          "Fee structure concession slab updated",
-        ),
+        new ApiResponse(200, "UPDATED", updated, "Fee structure slab updated"),
       );
   } catch (error) {
     handleError(error, res, next);
   }
 };
 
-export const deleteFeeStructureConcessionSlab = async (
+export const deleteFeeStructureSlab = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -222,10 +199,7 @@ export const deleteFeeStructureConcessionSlab = async (
       return;
     }
 
-    const deleted =
-      await feeStructureConcessionSlabService.deleteFeeStructureConcessionSlab(
-        id,
-      );
+    const deleted = await feeStructureSlabService.deleteFeeStructureSlab(id);
 
     if (!deleted) {
       res
@@ -235,7 +209,7 @@ export const deleteFeeStructureConcessionSlab = async (
             404,
             "NOT_FOUND",
             null,
-            "Fee structure concession slab not found or delete failed",
+            "Fee structure slab not found or delete failed",
           ),
         );
       return;
@@ -244,12 +218,7 @@ export const deleteFeeStructureConcessionSlab = async (
     res
       .status(200)
       .json(
-        new ApiResponse(
-          200,
-          "DELETED",
-          deleted,
-          "Fee structure concession slab deleted",
-        ),
+        new ApiResponse(200, "DELETED", deleted, "Fee structure slab deleted"),
       );
   } catch (error) {
     handleError(error, res, next);

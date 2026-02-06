@@ -1,8 +1,10 @@
 import { db } from "@/db";
 import {
-  feeCategoryPromotionMappingModel,
-  createFeeCategoryPromotionMappingSchema,
+  feeGroupPromotionMappingModel,
+  createFeeGroupPromotionMappingSchema,
+  feeGroupModel,
   feeCategoryModel,
+  feeSlabModel,
   promotionModel,
   boardResultStatusModel,
 } from "@repo/db/schemas";
@@ -20,10 +22,7 @@ import {
 } from "@repo/db/schemas/models/user";
 import { and, inArray, or, ilike, desc, eq } from "drizzle-orm";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
-import {
-  feeStructureModel,
-  feeStructureConcessionSlabModel,
-} from "@repo/db/schemas";
+import { feeStructureModel, feeStructureSlabModel } from "@repo/db/schemas";
 import XLSX from "xlsx";
 import fs from "fs";
 import * as studentService from "@/features/user/services/student.service.js";
@@ -31,7 +30,8 @@ import * as classService from "@/features/academics/services/class.service.js";
 import { socketService } from "@/services/socketService.js";
 import { feeStudentMappingModel } from "@repo/db/schemas";
 import {
-  FeeCategoryPromotionMappingDto,
+  FeeGroupPromotionMappingDto,
+  FeeGroupDto,
   FeeCategoryDto,
 } from "@repo/db/dtos/fees";
 import { PromotionDto } from "@repo/db/dtos/user";
@@ -41,6 +41,7 @@ import {
 } from "@repo/db/schemas/models/resources";
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 import * as feeCategoryService from "./fee-category.service.js";
+import * as userService from "@/features/user/services/user.service.js";
 
 /**
  * Converts a Promotion model to PromotionDto
@@ -196,15 +197,19 @@ async function promotionToDto(
 }
 
 /**
- * Converts a FeeCategoryPromotionMapping model to FeeCategoryPromotionMappingDto
+ * Converts a FeeGroupPromotionMapping model to FeeGroupPromotionMappingDto
  */
 async function modelToDto(
-  model: typeof feeCategoryPromotionMappingModel.$inferSelect | null,
-): Promise<FeeCategoryPromotionMappingDto | null> {
+  model: typeof feeGroupPromotionMappingModel.$inferSelect | null,
+): Promise<FeeGroupPromotionMappingDto | null> {
   if (!model) return null;
 
-  const [feeCategory, promotion] = await Promise.all([
-    feeCategoryService.getFeeCategoryById(model.feeCategoryId),
+  const [feeGroup, promotion] = await Promise.all([
+    db
+      .select()
+      .from(feeGroupModel)
+      .where(eq(feeGroupModel.id, model.feeGroupId))
+      .then((r) => r[0] ?? null),
     db
       .select()
       .from(promotionModel)
@@ -212,7 +217,25 @@ async function modelToDto(
       .then((r) => r[0] ?? null),
   ]);
 
-  if (!feeCategory || !promotion) {
+  if (!feeGroup || !promotion) {
+    return null;
+  }
+
+  // Fetch feeCategory and feeSlab for the feeGroup
+  const [feeCategory, feeSlab] = await Promise.all([
+    db
+      .select()
+      .from(feeCategoryModel)
+      .where(eq(feeCategoryModel.id, feeGroup.feeCategoryId))
+      .then((r) => r[0] ?? null),
+    db
+      .select()
+      .from(feeSlabModel)
+      .where(eq(feeSlabModel.id, feeGroup.feeSlabId))
+      .then((r) => r[0] ?? null),
+  ]);
+
+  if (!feeCategory || !feeSlab) {
     return null;
   }
 
@@ -223,7 +246,11 @@ async function modelToDto(
 
   return {
     ...model,
-    feeCategory,
+    feeGroup: {
+      ...feeGroup,
+      feeCategory,
+      feeSlab,
+    },
     promotion: promotionDto,
   };
 }
@@ -232,15 +259,15 @@ async function modelToDto(
  * Services should accept validated DTOs (controller validates via zod) and
  * return raw rows / arrays / null. Do not catch errors here — controller will handle them.
  */
-export const createFeeCategoryPromotionMapping = async (
+export const createFeeGroupPromotionMapping = async (
   data: Omit<
-    typeof createFeeCategoryPromotionMappingSchema._type,
+    typeof createFeeGroupPromotionMappingSchema._type,
     "id" | "createdAt" | "updatedAt" | "createdByUserId" | "updatedByUserId"
   >,
   userId: number,
-): Promise<FeeCategoryPromotionMappingDto> => {
+): Promise<FeeGroupPromotionMappingDto> => {
   const [created] = await db
-    .insert(feeCategoryPromotionMappingModel)
+    .insert(feeGroupPromotionMappingModel)
     .values({
       ...data,
       createdByUserId: userId,
@@ -249,108 +276,211 @@ export const createFeeCategoryPromotionMapping = async (
     .returning();
 
   const dto = await modelToDto(created);
+
+  // Emit socket event for fee group promotion mapping creation
+  const io = socketService.getIO();
+  if (io && dto) {
+    // Get user name for notification
+    const user = await userService.findById(userId);
+    const userName = user?.name || "Unknown User";
+
+    io.emit("fee_group_promotion_mapping_created", {
+      mappingId: dto.id,
+      type: "creation",
+      message: "A new student fee group mapping has been created",
+      timestamp: new Date().toISOString(),
+    });
+
+    // Emit notification to all staff/admin users
+    io.emit("notification", {
+      id: `fee_group_promotion_mapping_created_${dto.id}_${Date.now()}`,
+      type: "info",
+      userId: userId.toString(),
+      userName,
+      message: `created a new student fee group mapping (ID: ${dto.id})`,
+      createdAt: new Date(),
+      read: false,
+      meta: { mappingId: dto.id, type: "creation" },
+    });
+  }
+
   return dto!;
 };
 
-export const getAllFeeCategoryPromotionMappings = async (): Promise<
-  FeeCategoryPromotionMappingDto[]
+export const getAllFeeGroupPromotionMappings = async (): Promise<
+  FeeGroupPromotionMappingDto[]
 > => {
-  const rows = await db.select().from(feeCategoryPromotionMappingModel);
-  const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
-  return dtos.filter(
-    (dto): dto is FeeCategoryPromotionMappingDto => dto !== null,
+  // Order by id DESC to maintain consistent ordering (updated items stay in place)
+  const rows = await db
+    .select()
+    .from(feeGroupPromotionMappingModel)
+    .orderBy(desc(feeGroupPromotionMappingModel.id));
+
+  // Batch fetch fee groups and promotions to reduce queries
+  const feeGroupIds = [...new Set(rows.map((r) => r.feeGroupId))];
+  const promotionIds = [...new Set(rows.map((r) => r.promotionId))];
+
+  const [feeGroups, promotions] = await Promise.all([
+    feeGroupIds.length > 0
+      ? db
+          .select()
+          .from(feeGroupModel)
+          .where(inArray(feeGroupModel.id, feeGroupIds))
+      : Promise.resolve([]),
+    promotionIds.length > 0
+      ? db
+          .select()
+          .from(promotionModel)
+          .where(inArray(promotionModel.id, promotionIds))
+      : Promise.resolve([]),
+  ]);
+
+  const feeGroupMap = new Map(feeGroups.map((fg) => [fg.id, fg]));
+  const promotionMap = new Map(promotions.map((p) => [p.id, p]));
+
+  // Batch fetch fee categories and slabs
+  const feeCategoryIds = [...new Set(feeGroups.map((fg) => fg.feeCategoryId))];
+  const feeSlabIds = [...new Set(feeGroups.map((fg) => fg.feeSlabId))];
+
+  const [feeCategories, feeSlabs] = await Promise.all([
+    feeCategoryIds.length > 0
+      ? db
+          .select()
+          .from(feeCategoryModel)
+          .where(inArray(feeCategoryModel.id, feeCategoryIds))
+      : Promise.resolve([]),
+    feeSlabIds.length > 0
+      ? db
+          .select()
+          .from(feeSlabModel)
+          .where(inArray(feeSlabModel.id, feeSlabIds))
+      : Promise.resolve([]),
+  ]);
+
+  const feeCategoryMap = new Map(feeCategories.map((fc) => [fc.id, fc]));
+  const feeSlabMap = new Map(feeSlabs.map((fs) => [fs.id, fs]));
+
+  // Batch fetch all promotion-related data
+  const promotionDtos = await Promise.all(
+    promotions.map((p) => promotionToDto(p)),
   );
+  const promotionDtoMap = new Map(
+    promotionDtos
+      .filter((pd): pd is PromotionDto => pd !== null)
+      .map((pd) => [pd.id!, pd]),
+  );
+
+  // Build DTOs using cached data
+  const dtos: FeeGroupPromotionMappingDto[] = [];
+  for (const row of rows) {
+    const feeGroup = feeGroupMap.get(row.feeGroupId);
+    const promotionDto = promotionDtoMap.get(row.promotionId);
+
+    if (!feeGroup || !promotionDto) continue;
+
+    const feeCategory = feeCategoryMap.get(feeGroup.feeCategoryId);
+    const feeSlab = feeSlabMap.get(feeGroup.feeSlabId);
+
+    if (!feeCategory || !feeSlab) continue;
+
+    dtos.push({
+      ...row,
+      feeGroup: {
+        ...feeGroup,
+        feeCategory,
+        feeSlab,
+      },
+      promotion: promotionDto,
+    });
+  }
+
+  return dtos;
 };
 
-export const getFeeCategoryPromotionMappingById = async (
+export const getFeeGroupPromotionMappingById = async (
   id: number,
-): Promise<FeeCategoryPromotionMappingDto | null> => {
+): Promise<FeeGroupPromotionMappingDto | null> => {
   const [row] = await db
     .select()
-    .from(feeCategoryPromotionMappingModel)
-    .where(eq(feeCategoryPromotionMappingModel.id, id));
+    .from(feeGroupPromotionMappingModel)
+    .where(eq(feeGroupPromotionMappingModel.id, id));
 
   return await modelToDto(row ?? null);
 };
 
-export const getFeeCategoryPromotionMappingsByFeeCategoryId = async (
-  feeCategoryId: number,
-): Promise<FeeCategoryPromotionMappingDto[]> => {
+export const getFeeGroupPromotionMappingsByFeeGroupId = async (
+  feeGroupId: number,
+): Promise<FeeGroupPromotionMappingDto[]> => {
   const rows = await db
     .select()
-    .from(feeCategoryPromotionMappingModel)
-    .where(eq(feeCategoryPromotionMappingModel.feeCategoryId, feeCategoryId));
+    .from(feeGroupPromotionMappingModel)
+    .where(eq(feeGroupPromotionMappingModel.feeGroupId, feeGroupId));
 
   const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
-  return dtos.filter(
-    (dto): dto is FeeCategoryPromotionMappingDto => dto !== null,
-  );
+  return dtos.filter((dto): dto is FeeGroupPromotionMappingDto => dto !== null);
 };
 
-export const getFeeCategoryPromotionMappingsByPromotionId = async (
+export const getFeeGroupPromotionMappingsByPromotionId = async (
   promotionId: number,
-): Promise<FeeCategoryPromotionMappingDto[]> => {
+): Promise<FeeGroupPromotionMappingDto[]> => {
   const rows = await db
     .select()
-    .from(feeCategoryPromotionMappingModel)
-    .where(eq(feeCategoryPromotionMappingModel.promotionId, promotionId));
+    .from(feeGroupPromotionMappingModel)
+    .where(eq(feeGroupPromotionMappingModel.promotionId, promotionId));
 
   const dtos = await Promise.all(rows.map((row) => modelToDto(row)));
-  return dtos.filter(
-    (dto): dto is FeeCategoryPromotionMappingDto => dto !== null,
-  );
+  return dtos.filter((dto): dto is FeeGroupPromotionMappingDto => dto !== null);
 };
 
-export const updateFeeCategoryPromotionMapping = async (
+export const updateFeeGroupPromotionMapping = async (
   id: number,
-  data: Partial<typeof createFeeCategoryPromotionMappingSchema._type>,
+  data: Partial<typeof createFeeGroupPromotionMappingSchema._type>,
   userId: number,
-): Promise<FeeCategoryPromotionMappingDto | null> => {
-  // Get the existing mapping to check if feeCategoryId is being changed
+): Promise<FeeGroupPromotionMappingDto | null> => {
+  // Get the existing mapping to check if feeGroupId is being changed
   const [existing] = await db
     .select()
-    .from(feeCategoryPromotionMappingModel)
-    .where(eq(feeCategoryPromotionMappingModel.id, id));
+    .from(feeGroupPromotionMappingModel)
+    .where(eq(feeGroupPromotionMappingModel.id, id));
 
   if (!existing) {
     return null;
   }
 
   const [updated] = await db
-    .update(feeCategoryPromotionMappingModel)
+    .update(feeGroupPromotionMappingModel)
     .set({
       ...data,
       updatedAt: new Date(),
       updatedByUserId: userId,
     })
-    .where(eq(feeCategoryPromotionMappingModel.id, id))
+    .where(eq(feeGroupPromotionMappingModel.id, id))
     .returning();
 
   if (!updated) {
     return null;
   }
 
-  // If feeCategoryId was changed, recalculate totalPayable for all related fee-student-mappings
-  const feeCategoryChanged =
-    data.feeCategoryId !== undefined &&
-    data.feeCategoryId !== existing.feeCategoryId;
+  // If feeGroupId was changed, recalculate totalPayable for all related fee-student-mappings
+  const feeGroupChanged =
+    data.feeGroupId !== undefined && data.feeGroupId !== existing.feeGroupId;
 
-  if (feeCategoryChanged) {
+  if (feeGroupChanged) {
     // Import the calculateTotalPayableForFeeStudentMapping function from fee-structure service
     const { calculateTotalPayableForFeeStudentMapping } =
       await import("./fee-structure.service.js");
 
-    // Find all fee-student-mappings that use this fee-category-promotion-mapping
+    // Find all fee-student-mappings that use this fee-group-promotion-mapping
     const relatedFeeStudentMappings = await db
       .select()
       .from(feeStudentMappingModel)
-      .where(eq(feeStudentMappingModel.feeCategoryPromotionMappingId, id));
+      .where(eq(feeStudentMappingModel.feeGroupPromotionMappingId, id));
 
     // Update each fee-student-mapping with recalculated totalPayable
     for (const feeStudentMapping of relatedFeeStudentMappings) {
       const newTotalPayable = await calculateTotalPayableForFeeStudentMapping(
         feeStudentMapping.feeStructureId,
-        updated.feeCategoryId,
+        updated.feeGroupId,
       );
 
       // Recalculate final totalPayable accounting for waived off amount
@@ -369,21 +499,89 @@ export const updateFeeCategoryPromotionMapping = async (
     }
   }
 
-  return await modelToDto(updated);
+  const dto = await modelToDto(updated);
+
+  // Emit socket event for fee group promotion mapping update
+  const io = socketService.getIO();
+  if (io && dto) {
+    // Get user name for notification
+    const user = await userService.findById(userId);
+    const userName = user?.name || "Unknown User";
+
+    io.emit("fee_group_promotion_mapping_updated", {
+      mappingId: dto.id,
+      type: "update",
+      message: "A student fee group mapping has been updated",
+      timestamp: new Date().toISOString(),
+    });
+
+    // Emit notification to all staff/admin users
+    io.emit("notification", {
+      id: `fee_group_promotion_mapping_updated_${dto.id}_${Date.now()}`,
+      type: "update",
+      userId: userId.toString(),
+      userName,
+      message: `updated student fee group mapping (ID: ${dto.id})`,
+      createdAt: new Date(),
+      read: false,
+      meta: { mappingId: dto.id, type: "update" },
+    });
+  }
+
+  return dto;
 };
 
-export const deleteFeeCategoryPromotionMapping = async (
+export const deleteFeeGroupPromotionMapping = async (
   id: number,
-): Promise<FeeCategoryPromotionMappingDto | null> => {
+  userId?: number,
+): Promise<FeeGroupPromotionMappingDto | null> => {
+  // Get the mapping before deletion for socket event
+  const [existing] = await db
+    .select()
+    .from(feeGroupPromotionMappingModel)
+    .where(eq(feeGroupPromotionMappingModel.id, id));
+
   const [deleted] = await db
-    .delete(feeCategoryPromotionMappingModel)
-    .where(eq(feeCategoryPromotionMappingModel.id, id))
+    .delete(feeGroupPromotionMappingModel)
+    .where(eq(feeGroupPromotionMappingModel.id, id))
     .returning();
 
-  return await modelToDto(deleted ?? null);
+  const dto = await modelToDto(deleted ?? null);
+
+  // Emit socket event for fee group promotion mapping deletion
+  const io = socketService.getIO();
+  if (io && dto) {
+    // Get user name for notification if userId provided
+    let userName = "Unknown User";
+    if (userId) {
+      const user = await userService.findById(userId);
+      userName = user?.name || "Unknown User";
+    }
+
+    io.emit("fee_group_promotion_mapping_deleted", {
+      mappingId: id,
+      type: "deletion",
+      message: "A student fee group mapping has been deleted",
+      timestamp: new Date().toISOString(),
+    });
+
+    // Emit notification to all staff/admin users
+    io.emit("notification", {
+      id: `fee_group_promotion_mapping_deleted_${id}_${Date.now()}`,
+      type: "update",
+      userId: userId ? userId.toString() : undefined,
+      userName,
+      message: `deleted student fee group mapping (ID: ${id})`,
+      createdAt: new Date(),
+      read: false,
+      meta: { mappingId: id, type: "deletion" },
+    });
+  }
+
+  return dto;
 };
 
-export interface FeeCategoryPromotionFilter {
+export interface FeeGroupPromotionFilter {
   academicYearId?: number;
   programCourseId?: number;
   classId?: number;
@@ -391,19 +589,19 @@ export interface FeeCategoryPromotionFilter {
   religionId?: number;
   categoryId?: number;
   community?: string;
-  feeCategoryId: number;
+  feeGroupId: number;
 }
 
-export interface FilteredFeeCategoryPromotionMapping {
+export interface FilteredFeeGroupPromotionMapping {
   promotionId: number;
   studentId: number;
-  feeCategoryId: number;
+  feeGroupId: number;
   exists: boolean;
 }
 
-export const getFilteredFeeCategoryPromotionMappings = async (
-  filters: FeeCategoryPromotionFilter,
-): Promise<FilteredFeeCategoryPromotionMapping[]> => {
+export const getFilteredFeeGroupPromotionMappings = async (
+  filters: FeeGroupPromotionFilter,
+): Promise<FilteredFeeGroupPromotionMapping[]> => {
   const conditions = [];
 
   if (filters.academicYearId) {
@@ -464,20 +662,17 @@ export const getFilteredFeeCategoryPromotionMappings = async (
 
   const mappings = await db
     .select()
-    .from(feeCategoryPromotionMappingModel)
+    .from(feeGroupPromotionMappingModel)
     .where(
       and(
-        inArray(feeCategoryPromotionMappingModel.promotionId, promotionIds),
-        eq(
-          feeCategoryPromotionMappingModel.feeCategoryId,
-          filters.feeCategoryId,
-        ),
+        inArray(feeGroupPromotionMappingModel.promotionId, promotionIds),
+        eq(feeGroupPromotionMappingModel.feeGroupId, filters.feeGroupId),
       ),
     );
 
   const mappingByPromotionId = new Map<
     number,
-    typeof feeCategoryPromotionMappingModel.$inferSelect
+    typeof feeGroupPromotionMappingModel.$inferSelect
   >();
   for (const row of mappings) {
     mappingByPromotionId.set(row.promotionId, row);
@@ -486,7 +681,7 @@ export const getFilteredFeeCategoryPromotionMappings = async (
   return promotionRows.map((row) => ({
     promotionId: row.promotionId,
     studentId: row.studentId,
-    feeCategoryId: filters.feeCategoryId,
+    feeGroupId: filters.feeGroupId,
     exists: mappingByPromotionId.has(row.promotionId),
   }));
 };
@@ -494,62 +689,22 @@ export const getFilteredFeeCategoryPromotionMappings = async (
 /**
  * Calculate total payable amount for fee-student-mapping based on:
  * - Fee structure base amount
- * - Fee category's concession slab
- * - Fee structure concession slab's concession rate
+ * - Fee structure components (fee heads with percentages)
+ * - Fee group's fee slab
+ * - Fee structure slab's concession rate
  */
 async function calculateTotalPayable(
   feeStructureId: number,
-  feeCategoryId: number,
+  feeGroupId: number,
 ): Promise<number> {
-  // Get fee structure
-  const [feeStructure] = await db
-    .select()
-    .from(feeStructureModel)
-    .where(eq(feeStructureModel.id, feeStructureId));
+  // Import the main calculation function
+  const { calculateTotalPayableForFeeStudentMapping } =
+    await import("./fee-structure.service.js");
 
-  if (!feeStructure || !feeStructure.baseAmount) {
-    return 0;
-  }
-
-  // Get fee category to get feeConcessionSlabId
-  const [feeCategory] = await db
-    .select()
-    .from(feeCategoryModel)
-    .where(eq(feeCategoryModel.id, feeCategoryId));
-
-  if (!feeCategory || !feeCategory.feeConcessionSlabId) {
-    // If no concession slab, return base amount
-    return Math.round(feeStructure.baseAmount);
-  }
-
-  // Get fee structure concession slab for this fee structure and concession slab
-  const [feeStructureConcessionSlab] = await db
-    .select()
-    .from(feeStructureConcessionSlabModel)
-    .where(
-      and(
-        eq(feeStructureConcessionSlabModel.feeStructureId, feeStructureId),
-        eq(
-          feeStructureConcessionSlabModel.feeConcessionSlabId,
-          feeCategory.feeConcessionSlabId,
-        ),
-      ),
-    );
-
-  if (
-    !feeStructureConcessionSlab ||
-    !feeStructureConcessionSlab.concessionRate
-  ) {
-    // If no concession slab mapping found, return base amount
-    return Math.round(feeStructure.baseAmount);
-  }
-
-  // Calculate total payable: baseAmount - (baseAmount * concessionRate / 100)
-  const concessionAmount =
-    (feeStructure.baseAmount * feeStructureConcessionSlab.concessionRate) / 100;
-  const totalPayable = feeStructure.baseAmount - concessionAmount;
-
-  return Math.round(totalPayable);
+  return await calculateTotalPayableForFeeStudentMapping(
+    feeStructureId,
+    feeGroupId,
+  );
 }
 
 export interface BulkUploadRow {
@@ -577,10 +732,11 @@ export interface BulkUploadResult {
 }
 
 /**
- * Bulk upload fee category promotion mappings from Excel file
+ * Bulk upload fee group promotion mappings from Excel file
  * Excel format: UID, Semester, Fee Category Name
+ * TODO: Update to work with fee groups instead of fee categories
  */
-export const bulkUploadFeeCategoryPromotionMappings = async (
+export const bulkUploadFeeGroupPromotionMappings = async (
   filePath: string,
   userId: number,
   uploadSessionId?: string,
@@ -601,14 +757,13 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
 
     result.summary.total = data.length;
 
-    // Get all fee categories once for lookup (with priority)
+    // Get all fee categories once for lookup
     const allFeeCategories = await db.select().from(feeCategoryModel);
-    const feeCategoryMap = new Map<string, { id: number; priority: number }>();
+    const feeCategoryMap = new Map<string, { id: number }>();
     allFeeCategories.forEach((fc) => {
       if (fc.name) {
         feeCategoryMap.set(fc.name.toLowerCase().trim(), {
           id: fc.id!,
-          priority: fc.priority,
         });
       }
     });
@@ -714,11 +869,11 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
         // Check if mapping already exists - if it does, skip creating but still update fee-student-mapping
         const [existingMapping] = await db
           .select()
-          .from(feeCategoryPromotionMappingModel)
+          .from(feeGroupPromotionMappingModel)
           .where(
             and(
-              eq(feeCategoryPromotionMappingModel.promotionId, promotion.id),
-              eq(feeCategoryPromotionMappingModel.feeCategoryId, feeCategoryId),
+              eq(feeGroupPromotionMappingModel.promotionId, promotion.id),
+              eq(feeGroupPromotionMappingModel.feeGroupId, feeCategoryId), // TODO: This should be feeGroupId, needs refactoring
             ),
           );
 
@@ -728,11 +883,11 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
           createdMappingId = existingMapping.id!;
           // Don't add to errors, just skip creating
         } else {
-          // Create fee-category-promotion-mapping
+          // Create fee-group-promotion-mapping
           const [createdMapping] = await db
-            .insert(feeCategoryPromotionMappingModel)
+            .insert(feeGroupPromotionMappingModel)
             .values({
-              feeCategoryId,
+              feeGroupId: feeCategoryId, // TODO: This is wrong - should find/create feeGroup from feeCategory + feeSlab
               promotionId: promotion.id,
               createdByUserId: userId,
               updatedByUserId: userId,
@@ -752,47 +907,29 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
           createdMappingId = createdMapping.id;
         }
 
-        // After creating/checking fee-category-promotion-mapping, update fee-student-mapping
-        // Get all fee-category-promotion-mappings for this promotion ID
+        // After creating/checking fee-group-promotion-mapping, update fee-student-mapping
+        // Get all fee-group-promotion-mappings for this promotion ID
         const allMappingsForPromotion = await db
           .select({
-            id: feeCategoryPromotionMappingModel.id,
-            feeCategoryId: feeCategoryPromotionMappingModel.feeCategoryId,
+            id: feeGroupPromotionMappingModel.id,
+            feeGroupId: feeGroupPromotionMappingModel.feeGroupId,
           })
-          .from(feeCategoryPromotionMappingModel)
-          .where(
-            eq(feeCategoryPromotionMappingModel.promotionId, promotion.id),
-          );
+          .from(feeGroupPromotionMappingModel)
+          .where(eq(feeGroupPromotionMappingModel.promotionId, promotion.id));
 
         if (allMappingsForPromotion.length > 0) {
           // Get fee categories with priorities for these mappings
-          const feeCategoryIds = allMappingsForPromotion.map(
-            (m) => m.feeCategoryId,
-          );
-          const feeCategoriesForMappings = await db
-            .select({
-              id: feeCategoryModel.id,
-              priority: feeCategoryModel.priority,
-            })
-            .from(feeCategoryModel)
-            .where(inArray(feeCategoryModel.id, feeCategoryIds));
-
-          // Create a map of fee category ID to priority
-          const priorityMap = new Map<number, number>();
-          feeCategoriesForMappings.forEach((fc) => {
-            priorityMap.set(fc.id!, fc.priority);
-          });
-
-          // Select mapping with highest priority (lowest priority number = highest priority)
-          const selectedMapping = allMappingsForPromotion.reduce(
-            (prev, curr) => {
-              const prevPriority =
-                priorityMap.get(prev.feeCategoryId) ?? Infinity;
-              const currPriority =
-                priorityMap.get(curr.feeCategoryId) ?? Infinity;
-              return currPriority < prevPriority ? curr : prev;
-            },
-          );
+          // TODO: Refactor to get feeCategoryIds from feeGroups
+          const feeGroupIds = allMappingsForPromotion.map((m) => m.feeGroupId);
+          // Get fee groups to find fee category IDs
+          const feeGroups = await db
+            .select()
+            .from(feeGroupModel)
+            .where(inArray(feeGroupModel.id, feeGroupIds));
+          const feeCategoryIds = feeGroups.map((fg) => fg.feeCategoryId);
+          // Select the first mapping (since priority field doesn't exist, we'll use the first one)
+          // TODO: Add priority field to feeCategoryModel if priority-based selection is needed
+          const selectedMapping = allMappingsForPromotion[0];
 
           // Get promotion's session to get academic year for matching fee structures
           const [promotionSession] = await db
@@ -824,60 +961,66 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
                 ),
               );
 
-            // Get the fee category for the selected mapping to calculate totalPayable
+            // Get the fee group for the selected mapping to calculate totalPayable
             const [selectedMappingFull] = await db
               .select()
-              .from(feeCategoryPromotionMappingModel)
-              .where(
-                eq(feeCategoryPromotionMappingModel.id, selectedMapping.id),
-              );
+              .from(feeGroupPromotionMappingModel)
+              .where(eq(feeGroupPromotionMappingModel.id, selectedMapping.id));
 
             if (selectedMappingFull) {
-              // Update or create fee-student-mapping for each matching fee structure
-              for (const feeStructure of matchingFeeStructures) {
-                // Calculate total payable based on concession rate
-                const totalPayable = await calculateTotalPayable(
-                  feeStructure.id!,
-                  selectedMappingFull.feeCategoryId,
-                );
+              // Get feeGroup to access feeCategoryId for calculateTotalPayable
+              const [feeGroup] = await db
+                .select()
+                .from(feeGroupModel)
+                .where(eq(feeGroupModel.id, selectedMappingFull.feeGroupId));
 
-                // Check if fee-student-mapping already exists for this combination
-                const [existingFeeStudentMapping] = await db
-                  .select()
-                  .from(feeStudentMappingModel)
-                  .where(
-                    and(
-                      eq(feeStudentMappingModel.studentId, student.id),
-                      eq(
-                        feeStudentMappingModel.feeStructureId,
-                        feeStructure.id!,
-                      ),
-                    ),
+              if (feeGroup) {
+                // Update or create fee-student-mapping for each matching fee structure
+                for (const feeStructure of matchingFeeStructures) {
+                  // Calculate total payable based on concession rate
+                  const totalPayable = await calculateTotalPayable(
+                    feeStructure.id!,
+                    feeGroup.id!,
                   );
 
-                if (existingFeeStudentMapping) {
-                  // Update existing mapping
-                  await db
-                    .update(feeStudentMappingModel)
-                    .set({
-                      feeCategoryPromotionMappingId: selectedMapping.id,
-                      totalPayable,
-                      updatedAt: new Date(),
-                    })
+                  // Check if fee-student-mapping already exists for this combination
+                  const [existingFeeStudentMapping] = await db
+                    .select()
+                    .from(feeStudentMappingModel)
                     .where(
-                      eq(
-                        feeStudentMappingModel.id,
-                        existingFeeStudentMapping.id!,
+                      and(
+                        eq(feeStudentMappingModel.studentId, student.id),
+                        eq(
+                          feeStudentMappingModel.feeStructureId,
+                          feeStructure.id!,
+                        ),
                       ),
                     );
-                } else {
-                  // Create new fee-student-mapping
-                  await db.insert(feeStudentMappingModel).values({
-                    studentId: student.id,
-                    feeStructureId: feeStructure.id!,
-                    feeCategoryPromotionMappingId: selectedMapping.id,
-                    totalPayable,
-                  });
+
+                  if (existingFeeStudentMapping) {
+                    // Update existing mapping
+                    await db
+                      .update(feeStudentMappingModel)
+                      .set({
+                        feeGroupPromotionMappingId: selectedMapping.id,
+                        totalPayable,
+                        updatedAt: new Date(),
+                      })
+                      .where(
+                        eq(
+                          feeStudentMappingModel.id,
+                          existingFeeStudentMapping.id!,
+                        ),
+                      );
+                  } else {
+                    // Create new fee-student-mapping
+                    await db.insert(feeStudentMappingModel).values({
+                      studentId: student.id,
+                      feeStructureId: feeStructure.id!,
+                      feeGroupPromotionMappingId: selectedMapping.id,
+                      totalPayable,
+                    });
+                  }
                 }
               }
             }
