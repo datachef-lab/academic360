@@ -147,17 +147,28 @@ export default function CUFormUploadPage() {
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[11px] text-white">
                     i
                   </span>
-                  Before you upload
+                  Important Information:
                 </h2>
                 <ul className="mt-3 list-disc pl-5 space-y-1.5">
                   <li>The form should be a single PDF file (max 2 MB).</li>
                   <li>All fields such as subjects, signature and photograph must be clearly visible.</li>
+                  <li>Exam form must be downloaded from the Calcutta University website.</li>
                   <li>
-                    Ensure the form is downloaded from the official Calcutta University website and matches your course
-                    &amp; semester.
+                    Please verify that all details mentioned in your examination form are correct. In case of any
+                    discrepancy, kindly fill out the Google Form provided below to notify us. It is advised to submit
+                    the form using your institutional email ID only.
+                    <a
+                      href="https://your-google-form-link-here"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-4 text-blue-700 underline hover:text-blue-900 font-semibold text-xs  cursor-pointer"
+                    >
+                      Fill the Form
+                    </a>
                   </li>
-                  <li className="text-[11px] md:text-xs text-red-600 font-semibold">
-                    Final submission cannot be edited from the portal. For corrections, contact the college office.
+                  <li className=" text-red-600 font-semibold">
+                    It is mandatory to complete the enrolment process along with the payment of fees to be a bonafide
+                    student of the college.
                   </li>
                 </ul>
               </div>
@@ -273,8 +284,8 @@ export default function CUFormUploadPage() {
                 Form uploaded successfully
               </h2>
               <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Your Semester I Calcutta University Examination Form has been submitted. You will receive further
-                communication on your registered contact details after verification.
+                Your Semester I Calcutta University Examination Form has been submitted. A confirmation email has been
+                sent to your Institutional Email ID. Please check the same.
               </p>
             </div>
 
