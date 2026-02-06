@@ -92,11 +92,20 @@ export default {
           "0%,70%,100%": { opacity: "1" },
           "20%,50%": { opacity: "0" },
         },
+        "spinner-fzua35": {
+          "0%, 10%, 20%, 30%, 50%, 60%, 70%, 80%, 90%, 100%": {
+            transform: "rotate(calc(var(--rotation) * 1deg)) translate(0, calc(var(--translation) * 1%))",
+          },
+          "50%": {
+            transform: "rotate(calc(var(--rotation) * 1deg)) translate(0, calc(var(--translation) * 1.5%))",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "caret-blink": "caret-blink 1.25s ease-out infinite",
+        "spinner-fzua35": "spinner-fzua35 1s calc(var(--delay) * 1s) infinite ease",
       },
     },
   },
