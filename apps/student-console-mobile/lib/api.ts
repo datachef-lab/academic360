@@ -1,25 +1,29 @@
 import axios, { AxiosHeaders } from "axios";
 
-// EAS builds: process.env.EXPO_PUBLIC_API_URL is set from eas.json env
-// Local dev: Can use .env files or Constants
-const getApiBaseUrl = () => {
+// API URL resolution order:
+// 1. Constants.expoConfig.extra (from app.config.js - baked in at build time)
+// 2. process.env.EXPO_PUBLIC_API_URL (EAS build / .env)
+// 3. Fallback localhost
+export const getApiBaseUrl = () => {
   try {
-    // Priority 1: process.env (works in EAS builds and local with .env)
-    if (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) {
-      return process.env.EXPO_PUBLIC_API_URL;
-    }
-
-    // Priority 2: Constants.expoConfig.extra (app.json) - wrapped in try-catch
+    // Priority 1: Constants.extra (injected by app.config.js at build time - most reliable)
     try {
       const Constants = require("expo-constants").default;
-      if (Constants?.expoConfig?.extra?.EXPO_PUBLIC_API_URL) {
-        return Constants.expoConfig.extra.EXPO_PUBLIC_API_URL as string;
+      const fromExtra = Constants?.expoConfig?.extra?.EXPO_PUBLIC_API_URL;
+      if (fromExtra && typeof fromExtra === "string" && fromExtra !== "http://localhost:8080") {
+        return fromExtra;
       }
-    } catch (e) {
+    } catch {
       // Constants might not be available in all contexts
     }
 
-    // Fallback
+    // Priority 2: process.env (EAS builds set this from eas.json env)
+    if (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_API_URL) {
+      const url = process.env.EXPO_PUBLIC_API_URL;
+      if (url && url !== "http://localhost:8080") return url;
+    }
+
+    // Fallback (avoid localhost in production - causes "network error" on device)
     return "http://localhost:8080";
   } catch (e) {
     console.error("[API] Error getting API_BASE_URL:", e);
@@ -29,10 +33,8 @@ const getApiBaseUrl = () => {
 
 export const API_BASE_URL = getApiBaseUrl();
 
-// Log in dev to help debug
-if (typeof __DEV__ !== "undefined" && __DEV__) {
-  console.log("[API] API_BASE_URL:", API_BASE_URL);
-}
+// Always log resolved URL to help debug env loading (especially in production builds)
+console.log("[API] API_BASE_URL resolved:", API_BASE_URL);
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,

@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getApiBaseUrl } from "@/lib/api";
 
 // Web student console theme colors (indigo gradient, purple accent)
 const WEB_BG_TOP = "#1e1b4b"; // indigo-950
@@ -468,6 +469,7 @@ export default function LoginScreen() {
 
               {/* Form */}
               <View className="gap-4">
+                <Text>{getApiBaseUrl()}</Text>
                 {otpSent ? (
                   <>
                     {/* OTP Input - 6 separate digit boxes */}
