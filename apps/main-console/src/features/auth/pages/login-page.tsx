@@ -279,106 +279,49 @@ const LoginPage = () => {
     return (
       <div className="h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-6">
-          <div className="spinner">
-            <div></div>
-            <div></div>
-            <div></div>
-            <div></div>
-            <div></div>
-            <div></div>
-            <div></div>
-            <div></div>
-            <div></div>
-            <div></div>
+          <div className="relative w-[60px] h-[60px]">
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "36", "--translation": "150", "--delay": "0.1" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "72", "--translation": "150", "--delay": "0.2" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "108", "--translation": "150", "--delay": "0.3" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "144", "--translation": "150", "--delay": "0.4" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "180", "--translation": "150", "--delay": "0.5" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "216", "--translation": "150", "--delay": "0.6" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "252", "--translation": "150", "--delay": "0.7" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "288", "--translation": "150", "--delay": "0.8" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "324", "--translation": "150", "--delay": "0.9" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "360", "--translation": "150", "--delay": "1" } as React.CSSProperties}
+            ></div>
           </div>
         </div>
-        <style>{`
-          .spinner {
-            position: relative;
-            width: 60px;
-            height: 60px;
-          }
-
-          .spinner div {
-            position: absolute;
-            width: 50%;
-            height: 150%;
-            background: #722bab;
-            transform: rotate(calc(var(--rotation) * 1deg)) translate(0, calc(var(--translation) * 1%));
-            animation: spinner-fzua35 1s calc(var(--delay) * 1s) infinite ease;
-            border-radius: 2px;
-          }
-
-          .spinner div:nth-child(1) {
-            --delay: 0.1;
-            --rotation: 36;
-            --translation: 150;
-          }
-
-          .spinner div:nth-child(2) {
-            --delay: 0.2;
-            --rotation: 72;
-            --translation: 150;
-          }
-
-          .spinner div:nth-child(3) {
-            --delay: 0.3;
-            --rotation: 108;
-            --translation: 150;
-          }
-
-          .spinner div:nth-child(4) {
-            --delay: 0.4;
-            --rotation: 144;
-            --translation: 150;
-          }
-
-          .spinner div:nth-child(5) {
-            --delay: 0.5;
-            --rotation: 180;
-            --translation: 150;
-          }
-
-          .spinner div:nth-child(6) {
-            --delay: 0.6;
-            --rotation: 216;
-            --translation: 150;
-          }
-
-          .spinner div:nth-child(7) {
-            --delay: 0.7;
-            --rotation: 252;
-            --translation: 150;
-          }
-
-          .spinner div:nth-child(8) {
-            --delay: 0.8;
-            --rotation: 288;
-            --translation: 150;
-          }
-
-          .spinner div:nth-child(9) {
-            --delay: 0.9;
-            --rotation: 324;
-            --translation: 150;
-          }
-
-          .spinner div:nth-child(10) {
-            --delay: 1;
-            --rotation: 360;
-            --translation: 150;
-          }
-
-          @keyframes spinner-fzua35 {
-            0%, 10%, 20%, 30%, 50%, 60%, 70%, 80%, 90%, 100% {
-              transform: rotate(calc(var(--rotation) * 1deg)) translate(0, calc(var(--translation) * 1%));
-            }
-
-            50% {
-              transform: rotate(calc(var(--rotation) * 1deg)) translate(0, calc(var(--translation) * 1.5%));
-            }
-          }
-        `}</style>
       </div>
     );
   }
