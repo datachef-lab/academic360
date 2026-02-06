@@ -42,9 +42,10 @@ class SocketService {
   private notificationListeners: NotificationCallback[] = [];
   private connected = false;
   private userName: string | null = null;
+  private userId: string | null = null;
   private connectListeners: ConnectionCallback[] = [];
   private disconnectListeners: ConnectionCallback[] = [];
-  private pendingAuth: { userName: string } | null = null;
+  private pendingAuth: { userName: string; userId?: string } | null = null;
 
   // Connect to the socket server
   connect() {
@@ -95,11 +96,12 @@ class SocketService {
     this.disconnectListeners = this.disconnectListeners.filter((cb) => cb !== onDisconnect);
   }
 
-  // Authenticate the socket with user name
-  authenticate(userName: string) {
-    // Store the auth info
-    this.userName = userName;
-    this.pendingAuth = { userName };
+  // Authenticate the socket with user ID (which is passed as userName parameter for backward compatibility)
+  authenticate(userId: string) {
+    // Store the auth info - userId is passed as the parameter
+    this.userId = userId;
+    this.userName = userId; // Keep for backward compatibility
+    this.pendingAuth = { userName: userId, userId };
 
     // If we're already connected, send the auth immediately
     if (this.socket && this.connected) {
@@ -133,6 +135,7 @@ class SocketService {
       this.socket = null;
       this.connected = false;
       this.userName = null;
+      this.userId = null;
 
       console.log("[SocketService] Disconnected from server");
     } catch (error) {
@@ -173,12 +176,27 @@ class SocketService {
 
   private handleNotification = (notification: RawNotification) => {
     console.log("[SocketService] Received notification:", notification);
+    console.log("[SocketService] Current userId:", this.userId);
+    console.log("[SocketService] Notification userId:", notification.userId);
 
     // Ensure the notification has the correct type structure
     const typedNotification: Notification = {
       ...notification,
       createdAt: notification.createdAt ? new Date(notification.createdAt) : new Date(),
     };
+
+    // Filter out notifications initiated by the current user
+    // Don't show toast if this notification was created by the current user
+    // Compare as strings to handle any type mismatches
+    if (notification.userId && this.userId && String(notification.userId).trim() === String(this.userId).trim()) {
+      console.log("[SocketService] Filtering out self-initiated notification", {
+        notificationUserId: notification.userId,
+        currentUserId: this.userId,
+      });
+      // Still call listeners for UI updates, but don't show toast
+      this.notificationListeners.forEach((callback) => callback(typedNotification));
+      return;
+    }
 
     // Create a formatted message with the user's name in bold if available
     const formattedMessage = notification.userName
@@ -194,7 +212,7 @@ class SocketService {
       minute: "2-digit",
     });
 
-    // Show toast notification with enhanced styling
+    // Show toast notification with enhanced styling (only for other users' actions)
     toast(React.createElement("div", { dangerouslySetInnerHTML: { __html: formattedMessage } }), {
       description: timeString,
       icon,
@@ -247,6 +265,11 @@ class SocketService {
   // Get the current user's name
   getUserName(): string | null {
     return this.userName;
+  }
+
+  // Get the current user's ID
+  getUserId(): string | null {
+    return this.userId;
   }
 }
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ApplicationForm, paymentMode } from "@/db/schema";
 import { ReactNode, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";

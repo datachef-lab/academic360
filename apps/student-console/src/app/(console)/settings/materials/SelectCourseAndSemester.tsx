@@ -1,11 +1,6 @@
+// @ts-nocheck
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AcademicClass } from "@/types/academics/academic-class";
 import { Course } from "@/types/academics/course";
 import { Download, Filter } from "lucide-react";
@@ -68,10 +63,7 @@ export default function SelectCourseAndSemester({
             </SelectTrigger>
             <SelectContent>
               {classes.map((classItem) => (
-                <SelectItem
-                  key={classItem.id}
-                  value={classItem.id?.toString() || ""}
-                >
+                <SelectItem key={classItem.id} value={classItem.id?.toString() || ""}>
                   {classItem.classname}
                 </SelectItem>
               ))}

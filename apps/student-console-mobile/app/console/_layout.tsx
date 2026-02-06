@@ -1,56 +1,65 @@
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Header } from "@/components/ui/header";
 import { useTheme } from "@/hooks/use-theme";
+import { ExamSocketProvider } from "@/providers/exam-socket-provider";
 import { Stack } from "expo-router";
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Platform, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+function WebStatusBar({ theme }: { theme: { background: string; text: string } }) {
+  const [time, setTime] = useState(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
+  useEffect(() => {
+    const id = setInterval(
+      () => setTime(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })),
+      1000,
+    );
+    return () => clearInterval(id);
+  }, []);
+  if (Platform.OS !== "web") return null;
+  const isDark = theme.background !== "white" && theme.background !== "#fff";
+  const textColor = theme.text;
+  const mutedColor = isDark ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.7)";
+  return (
+    <View
+      style={{
+        height: 24,
+        backgroundColor: theme.background,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
+      }}
+    >
+      <Text style={{ color: textColor, fontSize: 12, fontWeight: "600" }}>{time}</Text>
+      <Text style={{ color: mutedColor, fontSize: 11 }}>100%</Text>
+    </View>
+  );
+}
+
 export default function ConsoleLayout() {
-  const { theme, colorScheme } = useTheme();
+  const { theme } = useTheme();
 
   return (
-    <SafeAreaView edges={["top"]} style={{ backgroundColor: theme.background }} className="h-full flex-1">
-      <Header />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        {/* <Stack.Screen name="console" /> */}
-      </Stack>
-      {/* <GestureHandlerRootView className="flex-1">
-        <Drawer
+    <ExamSocketProvider>
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: theme.background }} className="h-full flex-1">
+        <WebStatusBar theme={theme} />
+        <Header />
+        <Breadcrumb />
+        <Stack
           screenOptions={{
             headerShown: false,
-            drawerContentStyle: {
-              padding: 0,
-              margin: 0,
-            },
-            drawerStyle: {
-              backgroundColor: theme.background,
-              // borderWidth: 1,
-              // borderColor: "white",
-              padding: 0,
-              margin: 0,
-            },
-            drawerActiveTintColor: colorScheme == "dark" ? "white" : "#007aff",
+            // Configure right-to-left slide animation
+            animation: "slide_from_right",
           }}
-          drawerContent={SidebarContent}
         >
-          <Drawer.Screen
-            name="(tabs)"
-            options={{
-              drawerLabel: "Home",
-              drawerIcon: () => (
-                <House color={colorScheme == "dark" ? "white" : "#007aff"} />
-              ),
-              drawerItemStyle: {
-                display: "none",
-              },
-            }}
-          />
-        </Drawer>
-      </GestureHandlerRootView>
-      <StatusBar
-        style={colorScheme === "dark" ? "light" : "dark"}
-        backgroundColor="transparent"
-      /> */}
-    </SafeAreaView>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="exams/[id]" />
+          {/* <Stack.Screen name="console" /> */}
+        </Stack>
+      </SafeAreaView>
+    </ExamSocketProvider>
   );
 }

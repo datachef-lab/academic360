@@ -224,27 +224,32 @@ export const verifyOtpAndLogin = async (
     const cookieName = isStudentConsole ? "student_jwt" : "jwt";
 
     // Create secure cookie with refresh token
+    // secure: false in dev so cookie works over HTTP (localhost)
+    const isProduction = process.env.NODE_ENV === "production";
     res.cookie(cookieName, refreshToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 
     console.log(`🍪 Refresh token cookie set (${cookieName})`);
 
-    res.status(200).json(
-      new ApiResponse(
-        200,
-        "SUCCESS",
-        {
-          accessToken,
-          user: userWithPayload,
-          message: "OTP verified and login successful",
-        },
-        "Login successful with OTP verification",
-      ),
-    );
+    // For student console (incl. mobile native), return refreshToken in body so it can be stored
+    const payload = isStudentConsole
+      ? { accessToken, refreshToken, user: userWithPayload }
+      : { accessToken, user: userWithPayload };
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          payload,
+          "Login successful with OTP verification",
+        ),
+      );
   } catch (error) {
     console.error("❌ Error verifying OTP:", error);
     handleError(error, res, next);

@@ -42,7 +42,8 @@ export default function SignInPage() {
   const { login } = useAuth();
   const { name: collegeName } = useCollegeSettings();
   const [mounted, setMounted] = useState(false);
-  const [userPreview, setUserPreview] = useState<{ name: string; email?: string } | null>(null);
+  const [usermsg, setUsermsg] = useState("");
+  const [userPreview, setUserPreview] = useState<{ name: string; email?: string; isActive?: boolean } | null>(null);
   const [lookupPending, setLookupPending] = useState(false);
 
   // Simulation mode state (detected via URL parameter)
@@ -381,7 +382,8 @@ export default function SignInPage() {
           const email = `${digits}@thebges.edu.in`;
           const resp = await lookupUser(email);
           if (resp.httpStatusCode === 200 && resp.payload?.name) {
-            setUserPreview({ name: resp.payload.name, email });
+            const payload: any = resp.payload;
+            setUserPreview({ name: resp.payload.name, email, isActive: payload.isActive });
           } else {
             setUserPreview(null);
           }
@@ -390,7 +392,11 @@ export default function SignInPage() {
           const first = resp.payload?.users?.[0];
           setUserPreview(first ? { name: first.name, email: `${digits}@thebges.edu.in` } : null);
         }
-      } catch {
+      } catch (error: any) {
+        console.log("Error during UID lookup:", error);
+        console.log("error**", error.response?.data);
+        console.log("error status 1**", error.response?.data?.message);
+        setUsermsg(error.response?.data?.message || "Server error. Please try again after some time ");
         setUserPreview(null);
       } finally {
         setLookupPending(false);
@@ -825,9 +831,7 @@ export default function SignInPage() {
                         </p>
                       </div>
                     ) : (
-                      <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">
-                        Waiting for you to enter UID
-                      </p>
+                      <p className="text-xs sm:text-sm text-red-600  text-center leading-none">{usermsg}</p>
                     )
                   ) : (
                     <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">

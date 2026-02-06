@@ -13,12 +13,13 @@ import {
   CreateFeeStructureDto,
   FeeStructureDto,
   FeeCategoryDto,
-  FeeCategoryPromotionMappingDto,
+  FeeGroupPromotionMappingDto,
+  FeeGroupDto,
 } from "@repo/db/dtos/fees";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees/index";
 import { PaginatedResponse } from "@/types/pagination";
 import { AcademicYear } from "@/types/academics/academic-year";
-import type { FeeConcessionSlabT } from "@/schemas";
+import type { FeeSlabT } from "@/schemas";
 
 const BASE_PATH = "/api/v1/fees";
 
@@ -120,8 +121,8 @@ export interface CheckUniqueAmountsRequest {
   programCourseIds: number[];
   shiftIds: number[];
   baseAmount: number;
-  feeStructureConcessionSlabs: Array<{
-    feeConcessionSlabId: number;
+  feeStructureSlabs: Array<{
+    feeSlabId: number;
     concessionRate: number;
   }>;
   excludeFeeStructureId?: number;
@@ -273,10 +274,25 @@ export interface NewFeesSlab {
 }
 
 // Get all fees slabs
-export async function getAllFeesSlabs(): Promise<FeesSlab[]> {
+export async function getAllFeesSlabs(): Promise<ApiResponse<FeesSlab[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/slabs`);
-  console.log("fees slabs:", response.data);
-  return response.data;
+
+  // Backend returns ApiResponse with { httpStatusCode, httpStatus, payload, message }
+  if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
+    return {
+      httpStatusCode: response.data.httpStatusCode || 200,
+      httpStatus: response.data.httpStatus,
+      message: response.data.message || "",
+      payload: response.data.payload || [],
+    };
+  }
+  // Return error response
+  return {
+    httpStatusCode: response.status || 500,
+    httpStatus: "ERROR",
+    message: response.data?.message || "Failed to fetch fees slabs",
+    payload: [],
+  };
 }
 
 // Get a single fees slab
@@ -447,19 +463,20 @@ export async function deleteAddon(addonId: number): Promise<ApiResponse<void>> {
   throw new Error(response.data?.message || "Failed to delete Addon");
 }
 
-// ==================== FEE CONCESSION SLABS APIs ====================
+// ==================== FEE CONCESSION SLABS APIs (Legacy - now uses FeeSlab) ====================
 
 export interface NewFeeConcessionSlab {
   name: string;
-  description: string;
-  defaultConcessionRate: number;
-  sequence: number;
+  description?: string | null;
+  defaultConcessionRate?: number; // Frontend uses this name for UI clarity
+  defaultRate?: number; // Backend expects this name
+  sequence?: number | null;
   legacyFeeSlabId?: number | null;
 }
 
-// Get all fee concession slabs
-export async function getAllFeeConcessionSlabs(): Promise<ApiResponse<FeeConcessionSlabT[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/concession-slabs`);
+// Get all fee concession slabs (legacy - uses /slabs endpoint)
+export async function getAllFeeConcessionSlabs(): Promise<ApiResponse<FeeSlabT[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/slabs`);
 
   // Backend returns ApiResponse with { httpStatusCode, httpStatus, payload, message }
   if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
@@ -479,9 +496,9 @@ export async function getAllFeeConcessionSlabs(): Promise<ApiResponse<FeeConcess
   };
 }
 
-// Get a single fee concession slab
-export async function getFeeConcessionSlab(slabId: number): Promise<ApiResponse<FeeConcessionSlabT>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/concession-slabs/${slabId}`);
+// Get a single fee concession slab (legacy - uses /slabs endpoint)
+export async function getFeeConcessionSlab(slabId: number): Promise<ApiResponse<FeeSlabT>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/slabs/${slabId}`);
 
   // Backend returns ApiResponse format
   if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
@@ -495,9 +512,22 @@ export async function getFeeConcessionSlab(slabId: number): Promise<ApiResponse<
   throw new Error(response.data?.message || "Failed to fetch fee concession slab");
 }
 
-// Create a new fee concession slab
-export async function createFeeConcessionSlab(newSlab: NewFeeConcessionSlab): Promise<ApiResponse<FeeConcessionSlabT>> {
-  const response = await axiosInstance.post(`${BASE_PATH}/concession-slabs`, newSlab);
+// Create a new fee concession slab (legacy - uses /slabs endpoint)
+export async function createFeeConcessionSlab(newSlab: NewFeeConcessionSlab): Promise<ApiResponse<FeeSlabT>> {
+  // Map defaultConcessionRate to defaultRate for backend compatibility
+  const payload: any = {
+    name: newSlab.name,
+    description: newSlab.description,
+    defaultRate: newSlab.defaultRate ?? newSlab.defaultConcessionRate ?? 0,
+    legacyFeeSlabId: newSlab.legacyFeeSlabId ?? null,
+  };
+
+  // Only include sequence if it's provided (not undefined/null)
+  if (newSlab.sequence !== undefined && newSlab.sequence !== null) {
+    payload.sequence = newSlab.sequence;
+  }
+
+  const response = await axiosInstance.post(`${BASE_PATH}/slabs`, payload);
 
   // Backend returns ApiResponse format
   if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
@@ -511,12 +541,27 @@ export async function createFeeConcessionSlab(newSlab: NewFeeConcessionSlab): Pr
   throw new Error(response.data?.message || "Failed to create fee concession slab");
 }
 
-// Update a fee concession slab
+// Update a fee concession slab (legacy - uses /slabs endpoint)
 export async function updateFeeConcessionSlab(
   slabId: number,
   slab: Partial<NewFeeConcessionSlab>,
-): Promise<ApiResponse<FeeConcessionSlabT>> {
-  const response = await axiosInstance.put(`${BASE_PATH}/concession-slabs/${slabId}`, slab);
+): Promise<ApiResponse<FeeSlabT>> {
+  // Map defaultConcessionRate to defaultRate if present
+  const payload: any = {};
+  if (slab.name !== undefined) payload.name = slab.name;
+  if (slab.description !== undefined) payload.description = slab.description;
+  if (slab.defaultRate !== undefined) {
+    payload.defaultRate = slab.defaultRate;
+  } else if (slab.defaultConcessionRate !== undefined) {
+    payload.defaultRate = slab.defaultConcessionRate;
+  }
+  // Only include sequence if it's provided (not undefined/null)
+  if (slab.sequence !== undefined && slab.sequence !== null) {
+    payload.sequence = slab.sequence;
+  }
+  if (slab.legacyFeeSlabId !== undefined) payload.legacyFeeSlabId = slab.legacyFeeSlabId ?? null;
+
+  const response = await axiosInstance.put(`${BASE_PATH}/slabs/${slabId}`, payload);
 
   // Backend returns ApiResponse format
   if (response.data && response.data.httpStatus && response.data.httpStatus === "SUCCESS") {
@@ -530,9 +575,9 @@ export async function updateFeeConcessionSlab(
   throw new Error(response.data?.message || "Failed to update fee concession slab");
 }
 
-// Delete a fee concession slab
+// Delete a fee concession slab (legacy - uses /slabs endpoint)
 export async function deleteFeeConcessionSlab(slabId: number): Promise<ApiResponse<void>> {
-  const response = await axiosInstance.delete(`${BASE_PATH}/concession-slabs/${slabId}`);
+  const response = await axiosInstance.delete(`${BASE_PATH}/slabs/${slabId}`);
 
   // Backend returns ApiResponse format
   if (
@@ -658,12 +703,8 @@ export async function getFeeStudentMappingsByStudentId(
 // ==================== FEE CATEGORIES APIs ====================
 
 export interface NewFeeCategory {
-  feeConcessionSlabId: number;
   name: string;
-  description: string;
-  priority: number;
-  validityType: "SEMESTER" | "ACADEMIC_YEAR" | "PROGRAM_COURSE";
-  isCarryForwarded: boolean;
+  description?: string | null;
 }
 
 export async function getAllFeeCategories(): Promise<ApiResponse<FeeCategoryDto[]>> {
@@ -691,6 +732,41 @@ export async function updateFeeCategory(
 
 export async function deleteFeeCategory(id: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/categories/${id}`);
+  return response.data;
+}
+
+// ==================== FEE GROUPS APIs ====================
+
+export interface NewFeeGroup {
+  feeCategoryId: number;
+  feeSlabId: number;
+  description?: string | null;
+  validityType: "SEMESTER" | "ACADEMIC_YEAR" | "PROGRAM_COURSE";
+  isCarryForwarded: boolean;
+}
+
+export async function getAllFeeGroups(): Promise<ApiResponse<FeeGroupDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/groups`);
+  return response.data;
+}
+
+export async function getFeeGroup(id: number): Promise<ApiResponse<FeeGroupDto>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/groups/${id}`);
+  return response.data;
+}
+
+export async function createFeeGroup(newGroup: NewFeeGroup): Promise<ApiResponse<FeeGroupDto>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/groups`, newGroup);
+  return response.data;
+}
+
+export async function updateFeeGroup(id: number, group: Partial<NewFeeGroup>): Promise<ApiResponse<FeeGroupDto>> {
+  const response = await axiosInstance.put(`${BASE_PATH}/groups/${id}`, group);
+  return response.data;
+}
+
+export async function deleteFeeGroup(id: number): Promise<ApiResponse<void>> {
+  const response = await axiosInstance.delete(`${BASE_PATH}/groups/${id}`);
   return response.data;
 }
 
@@ -734,14 +810,15 @@ export const checkSlabsExistForAcademicYear = async (academicYearId: number): Pr
   return response.data;
 };
 
-// ==================== FEE CATEGORY PROMOTION MAPPING APIs ====================
+// ==================== FEE GROUP PROMOTION MAPPING APIs ====================
 
-export interface NewFeeCategoryPromotionMapping {
-  feeCategoryId: number;
+export interface NewFeeGroupPromotionMapping {
+  feeCategoryId?: number;
+  feeGroupId?: number;
   promotionId: number;
 }
 
-export interface FeeCategoryPromotionFilterRequest {
+export interface FeeGroupPromotionFilterRequest {
   academicYearId?: number;
   programCourseId?: number;
   classId?: number;
@@ -749,64 +826,64 @@ export interface FeeCategoryPromotionFilterRequest {
   religionId?: number;
   categoryId?: number;
   community?: string;
-  feeCategoryId: number;
+  feeGroupId: number;
 }
 
-export interface FilteredFeeCategoryPromotionMapping {
+export interface FilteredFeeGroupPromotionMapping {
   promotionId: number;
   studentId: number;
-  feeCategoryId: number;
+  feeGroupId: number;
   exists: boolean;
 }
 
-export async function getAllFeeCategoryPromotionMappings(): Promise<ApiResponse<FeeCategoryPromotionMappingDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/category-promotion-mappings`);
+export async function getAllFeeGroupPromotionMappings(): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings`);
   return response.data;
 }
 
-export async function getFeeCategoryPromotionMapping(id: number): Promise<ApiResponse<FeeCategoryPromotionMappingDto>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/category-promotion-mappings/${id}`);
+export async function getFeeGroupPromotionMapping(id: number): Promise<ApiResponse<FeeGroupPromotionMappingDto>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings/${id}`);
   return response.data;
 }
 
-export async function getFeeCategoryPromotionMappingsByFeeCategoryId(
-  feeCategoryId: number,
-): Promise<ApiResponse<FeeCategoryPromotionMappingDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/category-promotion-mappings/fee-category/${feeCategoryId}`);
+export async function getFeeGroupPromotionMappingsByFeeGroupId(
+  feeGroupId: number,
+): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings/fee-group/${feeGroupId}`);
   return response.data;
 }
 
-export async function getFeeCategoryPromotionMappingsByPromotionId(
+export async function getFeeGroupPromotionMappingsByPromotionId(
   promotionId: number,
-): Promise<ApiResponse<FeeCategoryPromotionMappingDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/category-promotion-mappings/promotion/${promotionId}`);
+): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings/promotion/${promotionId}`);
   return response.data;
 }
 
-export async function createFeeCategoryPromotionMapping(
-  newMapping: NewFeeCategoryPromotionMapping,
-): Promise<ApiResponse<FeeCategoryPromotionMappingDto>> {
-  const response = await axiosInstance.post(`${BASE_PATH}/category-promotion-mappings`, newMapping);
+export async function createFeeGroupPromotionMapping(
+  newMapping: NewFeeGroupPromotionMapping,
+): Promise<ApiResponse<FeeGroupPromotionMappingDto>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/group-promotion-mappings`, newMapping);
   return response.data;
 }
 
-export async function updateFeeCategoryPromotionMapping(
+export async function updateFeeGroupPromotionMapping(
   id: number,
-  mapping: Partial<NewFeeCategoryPromotionMapping>,
-): Promise<ApiResponse<FeeCategoryPromotionMappingDto>> {
-  const response = await axiosInstance.put(`${BASE_PATH}/category-promotion-mappings/${id}`, mapping);
+  mapping: Partial<NewFeeGroupPromotionMapping>,
+): Promise<ApiResponse<FeeGroupPromotionMappingDto>> {
+  const response = await axiosInstance.put(`${BASE_PATH}/group-promotion-mappings/${id}`, mapping);
   return response.data;
 }
 
-export async function deleteFeeCategoryPromotionMapping(id: number): Promise<ApiResponse<void>> {
-  const response = await axiosInstance.delete(`${BASE_PATH}/category-promotion-mappings/${id}`);
+export async function deleteFeeGroupPromotionMapping(id: number): Promise<ApiResponse<void>> {
+  const response = await axiosInstance.delete(`${BASE_PATH}/group-promotion-mappings/${id}`);
   return response.data;
 }
 
-export async function getFilteredFeeCategoryPromotionMappings(
-  filters: FeeCategoryPromotionFilterRequest,
-): Promise<ApiResponse<FilteredFeeCategoryPromotionMapping[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/category-promotion-mappings/filtered`, { params: filters });
+export async function getFilteredFeeGroupPromotionMappings(
+  filters: FeeGroupPromotionFilterRequest,
+): Promise<ApiResponse<FilteredFeeGroupPromotionMapping[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings/filtered`, { params: filters });
   return response.data;
 }
 
@@ -836,11 +913,11 @@ export interface BulkUploadResult {
   }>;
 }
 
-export async function bulkUploadFeeCategoryPromotionMappings(file: File): Promise<ApiResponse<BulkUploadResult>> {
+export async function bulkUploadFeeGroupPromotionMappings(file: File): Promise<ApiResponse<BulkUploadResult>> {
   const formData = new FormData();
   formData.append("file", file);
   const response = await axiosInstance.post<ApiResponse<BulkUploadResult>>(
-    `${BASE_PATH}/category-promotion-mappings/bulk-upload`,
+    `${BASE_PATH}/group-promotion-mappings/bulk-upload`,
     formData,
     {
       headers: {

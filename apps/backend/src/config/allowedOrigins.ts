@@ -18,6 +18,9 @@ async function getOrigins() {
     "http://localhost:3003",
     "https://academic360.app",
     "https://stage.academic360.app",
+
+    "http://localhost:8081",
+    "http://192.168.31.146:8081",
     process.env.CORS_ORIGIN!,
     "*",
     ...availableApps.map((app) => app.url),
