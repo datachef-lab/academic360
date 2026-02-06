@@ -1,12 +1,10 @@
 import React from "react";
 import { ScrollView, Text, View } from "react-native";
+import type { StudentDto } from "@repo/db/dtos/user";
 
 interface SubjectSelectionInstructionsProps {
   compact?: boolean;
-  student?: {
-    programCourse?: { course?: { name?: string }; name?: string };
-    currentPromotion?: { programCourse?: { name?: string } };
-  };
+  student?: StudentDto;
   visibleCategories?: { minor?: boolean; idc?: boolean; aec?: boolean; cvac?: boolean };
 }
 
