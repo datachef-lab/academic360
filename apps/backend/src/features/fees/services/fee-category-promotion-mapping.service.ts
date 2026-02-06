@@ -875,7 +875,7 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
                   );
 
                 if (existingFeeStudentMapping) {
-                  // Update existing mapping
+                  // Update existing  mapping
                   await db
                     .update(feeStudentMappingModel)
                     .set({
