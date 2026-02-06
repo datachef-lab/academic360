@@ -11,7 +11,7 @@ import {
   FeeCategoryPromotionFilter,
   bulkUploadFeeCategoryPromotionMappings,
 } from "../services/fee-category-promotion-mapping.service";
-import { createFeeCategoryPromotionMappingSchema } from "@repo/db/schemas";
+import { createFeeGroupPromotionMappingSchema } from "@repo/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
 
@@ -35,14 +35,13 @@ export async function createFeeCategoryPromotionMappingHandler(
     }
 
     // Validate input - exclude auto-generated fields and user ID fields
-    const schemaWithoutAutoFields =
-      createFeeCategoryPromotionMappingSchema.omit({
-        id: true,
-        createdAt: true,
-        updatedAt: true,
-        createdByUserId: true,
-        updatedByUserId: true,
-      });
+    const schemaWithoutAutoFields = createFeeGroupPromotionMappingSchema.omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true,
+      createdByUserId: true,
+      updatedByUserId: true,
+    });
     const parsed = schemaWithoutAutoFields.parse(req.body);
     const created = await createFeeCategoryPromotionMapping(parsed, userId);
     if (!created)
@@ -213,7 +212,7 @@ export async function updateFeeCategoryPromotionMappingHandler(
         );
     }
 
-    const partialSchema = createFeeCategoryPromotionMappingSchema.partial();
+    const partialSchema = createFeeGroupPromotionMappingSchema.partial();
     const parsed = partialSchema.parse(req.body);
 
     const updated = await updateFeeCategoryPromotionMapping(id, parsed, userId);
