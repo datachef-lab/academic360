@@ -8,6 +8,10 @@ import { BatchDto } from "../batches";
 import { AdmissionAcademicInfoDto, AdmissionCourseDetailsDto, ApplicationFormDto } from "../admissions";
 import { PoliceStationT } from "@/schemas/models/user/police-station.model";
 import { PostOfficeT } from "@/schemas/models/user/post-office.model";
+import { UserStatusMasterT } from "@/schemas/models/user/user-status-master.model";
+import { UserStatusMasterLevelT } from "@/schemas/models/user/user-status-master-level.model";
+import { UserStatusMasterDomainT } from "@/schemas/models/user/user-status-master-domain.model";
+import { UserStatusMasterFrequencyT } from "@/schemas/models/user/user-status-master-frequency.model";
 
 export interface PromotionDto extends Omit<PromotionT, "promotionStatusId" | "boardResultStatusId" | "sessionId" | "classId" | "sectionId" | "shiftId" | "programCourseId"> {
     promotionStatus: PromotionStatusT;
@@ -114,4 +118,10 @@ export interface ProfileInfo {
     emergencyContactDetails: EmergencyContactT | null;
     transportDetails: TransportDetailsDto | null;
     accommodationDetails: AccommodationDto | null;
+}
+
+export interface UserStatusMasterDto extends UserStatusMasterT {
+    levels: UserStatusMasterLevelT[];
+    domains: UserStatusMasterDomainT[];
+    frequencies: UserStatusMasterFrequencyT[];
 }
