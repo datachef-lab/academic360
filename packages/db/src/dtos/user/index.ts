@@ -12,6 +12,7 @@ import { UserStatusMasterT } from "@/schemas/models/user/user-status-master.mode
 import { UserStatusMasterLevelT } from "@/schemas/models/user/user-status-master-level.model";
 import { UserStatusMasterDomainT } from "@/schemas/models/user/user-status-master-domain.model";
 import { UserStatusMasterFrequencyT } from "@/schemas/models/user/user-status-master-frequency.model";
+import { UserStatusMappingT } from "@/schemas/models/user/user-status-mapping.model";
 
 export interface PromotionDto extends Omit<PromotionT, "promotionStatusId" | "boardResultStatusId" | "sessionId" | "classId" | "sectionId" | "shiftId" | "programCourseId"> {
     promotionStatus: PromotionStatusT;
@@ -42,6 +43,7 @@ export interface StaffDto extends Omit<StaffT, "shiftId"> {
 
 export interface UserDto extends UserT {
     payload: StudentDto | StaffDto,
+    statuses?: UserStatusMappingDto[],
 }
 
 export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "cityId" | "districtId" | "previousCountryId" | "previousStateId" | "previousCityId" | "previousDistrictId" | "postofficeId" | "policeStationId"> {
@@ -105,8 +107,6 @@ export interface FamilyDetailDto extends Omit<Family, "fatherDetailsPersonId" | 
     annualIncome?: AnnualIncomeT | null;
 }
 
-
-
 export interface ProfileInfo {
     applicationFormDto?: ApplicationFormDto | null; // Only for student
     admissionCourseDetailsDto: AdmissionCourseDetailsDto | null; // Only for student
@@ -124,4 +124,8 @@ export interface UserStatusMasterDto extends UserStatusMasterT {
     levels: UserStatusMasterLevelT[];
     domains: UserStatusMasterDomainT[];
     frequencies: UserStatusMasterFrequencyT[];
+}
+
+export interface UserStatusMappingDto extends Omit<UserStatusMappingT, "userStatusMasterId"> {
+    userStatusMaster: UserStatusMasterDto;
 }

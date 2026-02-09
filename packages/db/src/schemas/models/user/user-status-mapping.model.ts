@@ -5,9 +5,17 @@ import { userModel } from "./user.model";
 import { staffModel } from "./staff.model";
 import { studentModel } from "./student.model";
 import { promotionModel } from "../batches";
+import { userStatusMasterModel } from "./user-status-master.model";
+import { sessionModel } from "../academics";
 
 export const userStatusMappingModel = pgTable("user_status_mapping", {
     id: serial().primaryKey(),
+    sessionId: integer("session_id_fk")
+        .references(() => sessionModel.id)
+        .notNull(),
+    userStatusMasterId: integer("user_status_master_id_fk")
+        .references(() => userStatusMasterModel.id)
+        .notNull(),
     userId: integer("user_id_fk")
         .references(() => userModel.id)
         .notNull(),
@@ -27,8 +35,8 @@ export const userStatusMappingModel = pgTable("user_status_mapping", {
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createUserStatusSchema = createInsertSchema(userStatusMappingModel);
+export const createUserStatusMappingSchema = createInsertSchema(userStatusMappingModel);
 
-export type UserStatus = z.infer<typeof createUserStatusSchema>;
+export type UserStatusMapping = z.infer<typeof createUserStatusMappingSchema>;
 
-export type UserStatusT = typeof createUserStatusSchema._type;
+export type UserStatusMappingT = typeof createUserStatusMappingSchema._type;
