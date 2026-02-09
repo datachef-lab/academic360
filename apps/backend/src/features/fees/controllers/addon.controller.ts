@@ -91,7 +91,8 @@
 // };
 
 import { Request, Response } from "express";
-import { AddOn } from "@repo/db/schemas";
+import { AddOn, addonModel } from "@repo/db/schemas";
+import { createInsertSchema } from "drizzle-zod";
 import * as addonService from "../services/addon.service";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
@@ -101,8 +102,30 @@ import { ApiResponse } from "@/utils/ApiResonse";
  */
 export async function createAddonHandler(req: Request, res: Response) {
   try {
-    const body = req.body as AddOn;
-    const created = await addonService.createAddon(body);
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      return res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            "UNAUTHORIZED",
+            null,
+            "User authentication required",
+          ),
+        );
+    }
+
+    // Validate input - exclude auto-generated fields and user ID fields
+    const createAddonSchema = createInsertSchema(addonModel).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true,
+      createdByUserId: true,
+      updatedByUserId: true,
+    });
+    const parsed = createAddonSchema.parse(req.body);
+    const created = await addonService.createAddon(parsed, userId);
 
     // If service unexpectedly returns null/undefined treat as internal error
     if (!created) {
@@ -138,7 +161,7 @@ export async function getAllAddonsHandler(_req: Request, res: Response) {
  */
 export async function getAddonByIdHandler(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid ID format" });
     }
@@ -164,13 +187,27 @@ export async function getAddonByIdHandler(req: Request, res: Response) {
  */
 export async function updateAddonHandler(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid ID format" });
     }
 
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      return res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            "UNAUTHORIZED",
+            null,
+            "User authentication required",
+          ),
+        );
+    }
+
     const body = req.body as Partial<AddOn>;
-    const updated = await addonService.updateAddon(id, body);
+    const updated = await addonService.updateAddon(id, body, userId);
 
     if (!updated) {
       return res
@@ -191,7 +228,7 @@ export async function updateAddonHandler(req: Request, res: Response) {
  */
 export async function deleteAddonHandler(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (isNaN(id)) {
       return res.status(400).json({ message: "Invalid ID format" });
     }

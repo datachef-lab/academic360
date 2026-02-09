@@ -13,5 +13,8 @@
     "**/.turbo": true,
     "**/build": true
   },
-  "typescript.tsserver.maxTsServerMemory": 4096
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "git.pullRebase": false,
+  "git.rebaseWhenSync": false,
+  "git.confirmSync": false
 }

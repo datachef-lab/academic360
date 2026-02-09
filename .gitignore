@@ -15,11 +15,16 @@ node_modules/
 .pnp
 .pnp.js
 
-tsconfig.tsbuildinfo
+.pnpm-store
+
+# TypeScript build cache
+**/*.tsbuildinfo
 # Package manager files
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+.pnpm-store
 
 /apps/backend/public/temp
 # Local env files

@@ -39,9 +39,11 @@ import {
 } from "./user/routes/index.js";
 // import feesComponentRouter from "./fees/routes/feesComponent.route.js";
 import addonRouter from "./fees/routes/addon.route.js";
-import feeConcessionSlabRouter from "./fees/routes/fee-concession-slab.routes.js";
+import feeSlabRouter from "./fees/routes/fee-slab.route.js";
 import feeHeadRouter from "./fees/routes/fee-head.route.js";
 import feeStructureComponentRouter from "./fees/routes/fee-structure-component.routes.js";
+import feeCategoryRouter from "./fees/routes/fee-category.route.js";
+import feeGroupPromotionMappingRouter from "./fees/routes/fee-group-promotion-mapping.route.js";
 // import feesReceiptTypeRouter from "./fees/routes/fees-receipt-type.route.js";
 // import feesSlabRouter from "./fees/routes/fees-slab.route.js";
 // import feesStructureRouter from "./fees/routes/fees-structure.route.js";
@@ -118,9 +120,11 @@ export {
   batchRouter,
   //   feesComponentRouter,
   addonRouter,
-  feeConcessionSlabRouter,
+  feeSlabRouter,
   feeHeadRouter,
   feeStructureComponentRouter,
+  feeCategoryRouter,
+  feeGroupPromotionMappingRouter,
   //   feesReceiptTypeRouter,
   //   feesSlabRouter,
   //   feesStructureRouter,

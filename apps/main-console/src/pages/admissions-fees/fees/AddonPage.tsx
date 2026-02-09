@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { PlusCircle, Edit, Trash2, Download, Upload } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -25,8 +24,6 @@ const AddonPage: React.FC = () => {
   const [deletingItem, setDeletingItem] = useState<AddOn | null>(null);
   const [editingItem, setEditingItem] = useState<AddOn | null>(null);
   const [searchText, setSearchText] = useState("");
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
-  const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [form, setForm] = useState<{ name: string }>({ name: "" });
 
   const { addons, loading, addAddon, updateAddonById, deleteAddonById } = useAddons();
@@ -37,75 +34,6 @@ const AddonPage: React.FC = () => {
       const searchLower = searchText.toLowerCase();
       return addon.name?.toLowerCase().includes(searchLower);
     }) || [];
-
-  const handleDownloadTemplate = () => {
-    const templateData = [["Addon Name"], ["Example Addon"]];
-
-    const ws = XLSX.utils.aoa_to_sheet(templateData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, "addons_template.xlsx");
-    toast.success("Template downloaded successfully");
-  };
-
-  const handleBulkUpload = async () => {
-    if (!bulkFile) {
-      toast.warning("Please select a file to upload");
-      return;
-    }
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
-          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-            toast.error("The uploaded file does not contain any sheets");
-            return;
-          }
-          const sheetName = workbook.SheetNames[0];
-          if (!sheetName || typeof sheetName !== "string") {
-            toast.error("The uploaded file does not contain any sheets");
-            return;
-          }
-          const worksheet = workbook.Sheets[sheetName];
-          if (!worksheet) {
-            toast.error("Failed to read worksheet from the uploaded file");
-            return;
-          }
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-          // Process and upload data
-          let successCount = 0;
-          let errorCount = 0;
-
-          for (const row of jsonData as any[]) {
-            try {
-              await addAddon({
-                name: row["Addon Name"] || "",
-              } as AddOn);
-              successCount++;
-            } catch (error) {
-              errorCount++;
-              console.error("Error uploading row:", error);
-            }
-          }
-
-          toast.success(`Bulk upload completed: ${successCount} successful, ${errorCount} failed`);
-          setIsBulkUploadOpen(false);
-          setBulkFile(null);
-        } catch (error) {
-          console.error("Error processing file:", error);
-          toast.error("Failed to process file. Please check the format.");
-        }
-      };
-      reader.readAsArrayBuffer(bulkFile);
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      toast.error("Failed to upload file");
-    }
-  };
 
   const handleDownloadAll = () => {
     if (!addons || addons.length === 0) {
@@ -249,33 +177,6 @@ const AddonPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Upload className="mr-2 h-4 w-4" /> Bulk Upload
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Bulk Upload Addons</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col gap-4">
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
-                  />
-                  <Button onClick={handleBulkUpload} disabled={!bulkFile}>
-                    Upload
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button variant="outline" onClick={handleDownloadTemplate}>
-              <Download className="mr-2 h-4 w-4" /> Download Template
-            </Button>
-
             <AlertDialog open={showModal} onOpenChange={setShowModal}>
               <AlertDialogTrigger asChild>
                 <Button
@@ -341,11 +242,11 @@ const AddonPage: React.FC = () => {
           </div>
 
           <div className="relative" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[600px]" style={{ tableLayout: "fixed" }}>
+            <div className="overflow-y-auto h-full">
+              <Table className="border rounded-md" style={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60 }}>ID</TableHead>
+                    <TableHead style={{ width: 60, whiteSpace: "nowrap" }}>Sr. No.</TableHead>
                     <TableHead style={{ width: 400 }}>Addon Name</TableHead>
                     <TableHead style={{ width: 140 }}>Actions</TableHead>
                   </TableRow>
@@ -358,9 +259,9 @@ const AddonPage: React.FC = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredAddons.map((row) => (
+                    filteredAddons.map((row, index) => (
                       <TableRow key={row.id} className="group">
-                        <TableCell style={{ width: 60 }}>{row.id}</TableCell>
+                        <TableCell style={{ width: 60 }}>{index + 1}</TableCell>
                         <TableCell style={{ width: 400 }}>{row.name}</TableCell>
                         <TableCell style={{ width: 120 }}>
                           <div className="flex space-x-2">
