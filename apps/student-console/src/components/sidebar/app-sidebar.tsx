@@ -12,6 +12,7 @@ import {
   ListChecks,
   UserPlus,
   FileText,
+  UploadCloud,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -252,12 +253,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             isActive: pathname === "/dashboard/admission-registration",
           },
         ]),
+
     {
       title: "Exams",
       url: "/dashboard/exams",
       icon: NotebookPen,
       isActive: pathname === "/dashboard/exams",
       badge: upcomingExamCount > 0 ? upcomingExamCount : undefined,
+    },
+    {
+      title: "CU Form Upload",
+      url: "/dashboard/cu-form-upload",
+      icon: UploadCloud,
+      isActive: pathname === "/dashboard/cu-form-upload",
     },
     // {
     //   title: "Course Catalogue",
