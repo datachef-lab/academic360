@@ -16,7 +16,8 @@ node_modules/
 .pnp.js
 
 .pnpm-store
-
+ios/
+android/
 # TypeScript build cache
 **/*.tsbuildinfo
 # Package manager files
