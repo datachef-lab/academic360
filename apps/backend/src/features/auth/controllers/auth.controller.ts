@@ -298,16 +298,30 @@ export const refresh = async (
           process.env.ACCESS_TOKEN_EXPIRY! as StringValue,
         );
 
+        const refreshToken = generateToken(
+          { id: rawUser.id as number, type: rawUser.type },
+          process.env.REFRESH_TOKEN_SECRET!,
+          process.env.REFRESH_TOKEN_EXPIRY! as StringValue,
+        );
+
+        // Use student_jwt cookie for student console (matches refresh endpoint)
+        const cookieName = isStudentConsole ? "student_jwt" : "jwt";
+        const isProduction = process.env.NODE_ENV === "production";
+        res.cookie(cookieName, refreshToken, {
+          httpOnly: true,
+          secure: isProduction,
+          sameSite: isProduction ? "none" : "lax",
+          maxAge: 1000 * 60 * 60 * 24, // 1 day
+        });
+
+        // For student console (incl. mobile native), return refreshToken in body so it can be stored
+        const payload = isStudentConsole
+          ? { accessToken, refreshToken, user: userWithPayload }
+          : { accessToken, user: userWithPayload };
+
         res
           .status(200)
-          .json(
-            new ApiResponse(
-              200,
-              "SUCCESS",
-              { accessToken, user: userWithPayload },
-              "Token refreshed",
-            ),
-          );
+          .json(new ApiResponse(200, "SUCCESS", payload, "Token refreshed"));
       },
     );
   } catch (error) {

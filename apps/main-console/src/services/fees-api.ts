@@ -742,7 +742,6 @@ export interface NewFeeGroup {
   feeSlabId: number;
   description?: string | null;
   validityType: "SEMESTER" | "ACADEMIC_YEAR" | "PROGRAM_COURSE";
-  isCarryForwarded: boolean;
 }
 
 export async function getAllFeeGroups(): Promise<ApiResponse<FeeGroupDto[]>> {

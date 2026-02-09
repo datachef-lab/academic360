@@ -33,13 +33,11 @@ const FeeGroupsPage: React.FC = () => {
     feeSlabId: number | undefined;
     description: string;
     validityType: "SEMESTER" | "ACADEMIC_YEAR" | "PROGRAM_COURSE";
-    isCarryForwarded: boolean;
   }>({
     feeCategoryId: undefined,
     feeSlabId: undefined,
     description: "",
     validityType: "SEMESTER",
-    isCarryForwarded: false,
   });
 
   const { feeGroups, loading, addFeeGroup, updateFeeGroupById, deleteFeeGroupById } = useFeeGroups();
@@ -114,7 +112,6 @@ const FeeGroupsPage: React.FC = () => {
         g.feeSlab?.name || "",
         g.description || "",
         g.validityType || "",
-        g.isCarryForwarded ? "Yes" : "No",
       ]),
     ];
 
@@ -153,7 +150,6 @@ const FeeGroupsPage: React.FC = () => {
         feeSlabId: form.feeSlabId!,
         description: form.description.trim() || null,
         validityType: form.validityType,
-        isCarryForwarded: form.isCarryForwarded,
       };
 
       if (editingItem) {
@@ -197,7 +193,6 @@ const FeeGroupsPage: React.FC = () => {
       feeSlabId: undefined,
       description: "",
       validityType: "SEMESTER",
-      isCarryForwarded: false,
     });
   };
 
@@ -208,7 +203,6 @@ const FeeGroupsPage: React.FC = () => {
       feeSlabId: group.feeSlab?.id,
       description: group.description || "",
       validityType: group.validityType as "SEMESTER" | "ACADEMIC_YEAR" | "PROGRAM_COURSE",
-      isCarryForwarded: group.isCarryForwarded ?? false,
     });
     setShowModal(true);
   };
@@ -220,7 +214,6 @@ const FeeGroupsPage: React.FC = () => {
       feeSlabId: undefined,
       description: "",
       validityType: "SEMESTER",
-      isCarryForwarded: false,
     });
     setShowModal(true);
   };
@@ -403,13 +396,9 @@ const FeeGroupsPage: React.FC = () => {
                         value={form.validityType}
                         onValueChange={(value) => {
                           const validityType = value as "SEMESTER" | "ACADEMIC_YEAR" | "PROGRAM_COURSE";
-                          // Auto-select carry forwarded for PROGRAM_COURSE and ACADEMIC_YEAR
-                          const shouldCarryForward =
-                            validityType === "PROGRAM_COURSE" || validityType === "ACADEMIC_YEAR";
                           setForm({
                             ...form,
                             validityType,
-                            isCarryForwarded: shouldCarryForward ? true : form.isCarryForwarded,
                           });
                         }}
                       >
@@ -425,37 +414,6 @@ const FeeGroupsPage: React.FC = () => {
                           <SelectItem value="PROGRAM_COURSE">Program Course</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-
-                    {/* Carry Forwarded */}
-                    <div className="flex flex-col gap-2 sm:col-span-2">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="isCarryForwarded"
-                          checked={form.isCarryForwarded}
-                          onChange={(e) => setForm({ ...form, isCarryForwarded: e.target.checked })}
-                          disabled={form.validityType === "PROGRAM_COURSE" || form.validityType === "ACADEMIC_YEAR"}
-                          className="h-4 w-4 rounded border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                        <Label htmlFor="isCarryForwarded" className="cursor-pointer">
-                          Carry Forwarded
-                        </Label>
-                      </div>
-                      {/* Reserve space for note to prevent layout shifting */}
-                      <div className="min-h-[20px] ml-6">
-                        {form.validityType === "ACADEMIC_YEAR" && (
-                          <p className="text-sm text-red-600 font-medium">
-                            Note: Carry Forwarded is automatically enabled for Academic Year validity type and applies
-                            only for that academic year.
-                          </p>
-                        )}
-                        {form.validityType === "PROGRAM_COURSE" && (
-                          <p className="text-sm text-red-600 font-medium">
-                            Note: Carry Forwarded is automatically enabled for Program Course validity type.
-                          </p>
-                        )}
-                      </div>
                     </div>
                   </div>
 
@@ -505,7 +463,6 @@ const FeeGroupsPage: React.FC = () => {
                     <TableHead style={{ width: "16%" }}>Fee Slab</TableHead>
                     <TableHead style={{ width: "26%" }}>Description</TableHead>
                     <TableHead style={{ width: "15%" }}>Validity Type</TableHead>
-                    <TableHead style={{ width: "12%" }}>Carry Forward</TableHead>
                     <TableHead style={{ width: "8%" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -553,17 +510,7 @@ const FeeGroupsPage: React.FC = () => {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell style={{ width: "12%" }}>
-                          {row.isCarryForwarded ? (
-                            <Badge variant="outline" className="text-xs border-green-300 text-green-700 bg-green-50">
-                              Yes
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs border-gray-300 text-gray-700 bg-gray-50">
-                              No
-                            </Badge>
-                          )}
-                        </TableCell>
+
                         <TableCell style={{ width: "8%" }}>
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">

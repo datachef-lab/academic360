@@ -1,5 +1,5 @@
 import { feeCategoryValidityTypeEnum } from "@/schemas/enums";
-import { boolean, integer, pgTable, serial, timestamp, unique, varchar } from "drizzle-orm/pg-core";
+import {  integer, pgTable, serial, timestamp, unique, varchar } from "drizzle-orm/pg-core";
 
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
@@ -17,7 +17,7 @@ export const feeGroupModel = pgTable("fee_groups", {
         .notNull(),
     description: varchar({ length: 500 }),
     validityType: feeCategoryValidityTypeEnum().notNull().default("SEMESTER"),
-    isCarryForwarded: boolean().notNull().default(false),
+
     createdAt: timestamp({withTimezone: true})
         .notNull()
         .defaultNow(),
