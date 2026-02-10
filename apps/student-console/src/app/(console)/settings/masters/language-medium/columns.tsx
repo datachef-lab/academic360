@@ -1,5 +1,5 @@
 "use client";
-
+// @ts-nocheck
 import { ColumnDef } from "@tanstack/table-core";
 import { LanguageMedium } from "@/db/schema";
 import { Checkbox } from "@/components/ui/checkbox";

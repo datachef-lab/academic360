@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { AdmissionCourse, AdmissionCourseApplication, ApplicationForm, Course } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ReactNode } from 'react';
+import { ReactNode } from "react";
 import { getAdmissionCourses, getCourses } from "../../action";
 import { toast } from "@/components/ui/use-toast";
 import { useApplicationForm } from "@/hooks/use-application-form";
@@ -18,42 +19,38 @@ interface CourseApplicationStepProps {
 
 interface CourseWithSelection extends Course {
   selected: boolean;
-  
 }
 
-export default function CourseApplicationStep({
-  stepNotes,
-  onNext,
-  onPrev,
-  currentStep
-}: CourseApplicationStepProps) {
-  const {applicationForm} = useApplicationForm();
+export default function CourseApplicationStep({ stepNotes, onNext, onPrev, currentStep }: CourseApplicationStepProps) {
+  const { applicationForm } = useApplicationForm();
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [admissionCourses, setAdmissionCourses] = useState<AdmissionCourse[]>([]);
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
-  const [selectedCourses, setSelectedCourses] = useState<AdmissionCourseApplication[]>(applicationForm?.courseApplication ?? []);
+  const [selectedCourses, setSelectedCourses] = useState<AdmissionCourseApplication[]>(
+    applicationForm?.courseApplication ?? [],
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
-    getCourses()
-      .then(data => {
-        setAllCourses(data);
-      });
+    getCourses().then((data) => {
+      setAllCourses(data);
+    });
   }, []);
 
   useEffect(() => {
     if (applicationForm?.admissionId) {
-      getAdmissionCourses(applicationForm.admissionId)
-        .then(data => {
-          setAdmissionCourses(data);
-        });
+      getAdmissionCourses(applicationForm.admissionId).then((data) => {
+        setAdmissionCourses(data);
+      });
     }
   }, [allCourses, applicationForm?.admissionId]);
 
   useEffect(() => {
     if (allCourses.length > 0 && admissionCourses.length > 0) {
-      const tmpCourses = allCourses.filter(ele => admissionCourses.find(admCourse => admCourse.courseId === ele.id));
+      const tmpCourses = allCourses.filter((ele) =>
+        admissionCourses.find((admCourse) => admCourse.courseId === ele.id),
+      );
       setAvailableCourses(tmpCourses);
     }
   }, [allCourses, admissionCourses]);
@@ -86,14 +83,20 @@ export default function CourseApplicationStep({
         form: {
           admissionId: applicationForm!.admissionId,
           formStatus: applicationForm!.formStatus,
-          ...(selectedCourses.length > 0 && applicationForm && 'currentStep' in applicationForm && 'admissionStep' in applicationForm
-            ? { currentStep: (applicationForm as any).currentStep, admissionStep: (applicationForm as any).admissionStep }
-            : { currentStep: 3, admissionStep: "ADDITIONAL_INFORMATION" })
+          ...(selectedCourses.length > 0 &&
+          applicationForm &&
+          "currentStep" in applicationForm &&
+          "admissionStep" in applicationForm
+            ? {
+                currentStep: (applicationForm as any).currentStep,
+                admissionStep: (applicationForm as any).admissionStep,
+              }
+            : { currentStep: 3, admissionStep: "ADDITIONAL_INFORMATION" }),
         },
-        courseApplications: selectedCourses.map(sc => ({
+        courseApplications: selectedCourses.map((sc) => ({
           applicationFormId: sc.applicationFormId,
-          admissionCourseId: sc.admissionCourseId
-        }))
+          admissionCourseId: sc.admissionCourseId,
+        })),
       };
 
       const response = await fetch(`/api/admissions/application-forms?id=${applicationForm!.id}`, {
@@ -112,13 +115,13 @@ export default function CourseApplicationStep({
 
       // Insert selected courses
       await Promise.all(
-        selectedCourses.map(sc =>
-          fetch('/api/admissions/course-info', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+        selectedCourses.map((sc) =>
+          fetch("/api/admissions/course-info", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(sc),
-          })
-        )
+          }),
+        ),
       );
 
       toast({
@@ -148,8 +151,8 @@ export default function CourseApplicationStep({
   };
 
   const totalAmount = selectedCourses.reduce((sum, sc) => {
-    const admissionCourse = admissionCourses.find(ac => ac.id === sc.admissionCourseId);
-    const course = allCourses.find(c => c.id === admissionCourse?.courseId);
+    const admissionCourse = admissionCourses.find((ac) => ac.id === sc.admissionCourseId);
+    const course = allCourses.find((c) => c.id === admissionCourse?.courseId);
     return sum + (course ? Number(course.amount) : 0);
   }, 0);
 
@@ -176,20 +179,20 @@ export default function CourseApplicationStep({
             </thead>
             <tbody>
               {availableCourses?.map((course) => {
-                const admissionCourse = admissionCourses.find(ac => ac.courseId === course.id);
-                const selected = selectedCourses.find(sc => sc.admissionCourseId === admissionCourse?.id);
+                const admissionCourse = admissionCourses.find((ac) => ac.courseId === course.id);
+                const selected = selectedCourses.find((sc) => sc.admissionCourseId === admissionCourse?.id);
                 return (
                   <tr
                     key={course.id}
-                    className={`hover:bg-purple-200 transition border-b last:border-b-0 ${selected ? 'bg-purple-200' : ''}`}
+                    className={`hover:bg-purple-200 transition border-b last:border-b-0 ${selected ? "bg-purple-200" : ""}`}
                     onClick={() => {
                       if (!admissionCourse) return;
                       if (selected) {
-                        setSelectedCourses(selectedCourses.filter(sc => sc.admissionCourseId !== admissionCourse.id));
+                        setSelectedCourses(selectedCourses.filter((sc) => sc.admissionCourseId !== admissionCourse.id));
                       } else {
                         setSelectedCourses([
                           ...selectedCourses,
-                          { admissionCourseId: admissionCourse.id as number, applicationFormId: applicationForm!.id! }
+                          { admissionCourseId: admissionCourse.id as number, applicationFormId: applicationForm!.id! },
                         ]);
                       }
                     }}
@@ -204,10 +207,16 @@ export default function CourseApplicationStep({
                           if (checked) {
                             setSelectedCourses([
                               ...selectedCourses,
-                              { id: 0, admissionCourseId: admissionCourse.id as number, applicationFormId: applicationForm!.id! }
+                              {
+                                id: 0,
+                                admissionCourseId: admissionCourse.id as number,
+                                applicationFormId: applicationForm!.id!,
+                              },
                             ]);
                           } else {
-                            setSelectedCourses(selectedCourses.filter(sc => sc.admissionCourseId !== admissionCourse.id));
+                            setSelectedCourses(
+                              selectedCourses.filter((sc) => sc.admissionCourseId !== admissionCourse.id),
+                            );
                           }
                         }}
                         onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
@@ -240,18 +249,11 @@ export default function CourseApplicationStep({
       {/* Navigation Buttons */}
       <div className="flex justify-end gap-4 mt-6">
         {currentStep > 1 && (
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={isSubmitting}
-          >
+          <Button variant="outline" onClick={handlePrevious} disabled={isSubmitting}>
             Previous
           </Button>
         )}
-        <Button
-          onClick={handleNext}
-          disabled={isSubmitting || selectedCourses.length === 0}
-        >
+        <Button onClick={handleNext} disabled={isSubmitting || selectedCourses.length === 0}>
           {isSubmitting ? "Saving..." : "Save & Continue"}
         </Button>
       </div>

@@ -10,6 +10,7 @@ import {
 import { createFeeStudentMappingSchema } from "@repo/db/schemas";
 import { handleError } from "@/utils";
 import { ApiResponse } from "@/utils/ApiResonse";
+import { z } from "zod";
 
 export async function createFeeStudentMappingHandler(
   req: Request,

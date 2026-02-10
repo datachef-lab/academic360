@@ -3,12 +3,13 @@ import {
   feeStudentMappingModel,
   createFeeStudentMappingSchema,
   feeStructureModel,
-  feeCategoryPromotionMappingModel,
+  feeGroupPromotionMappingModel,
+  feeGroupModel,
 } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
 import * as feeStructureService from "./fee-structure.service.js";
-import * as feeCategoryPromotionMappingService from "./fee-category-promotion-mapping.service.js";
+import * as feeGroupPromotionMappingService from "./fee-group-promotion-mapping.service.js";
 import * as feeStructureInstallmentService from "./fee-structure-installment.service.js";
 import * as userService from "@/features/user/services/user.service.js";
 
@@ -22,13 +23,13 @@ async function modelToDto(
 
   const [
     feeStructure,
-    feeCategoryPromotionMapping,
+    feeGroupPromotionMapping,
     feeStructureInstallment,
     waivedOffByUser,
   ] = await Promise.all([
     feeStructureService.getFeeStructureById(model.feeStructureId),
-    feeCategoryPromotionMappingService.getFeeCategoryPromotionMappingById(
-      model.feeCategoryPromotionMappingId,
+    feeGroupPromotionMappingService.getFeeGroupPromotionMappingById(
+      model.feeGroupPromotionMappingId,
     ),
     model.feeStructureInstallmentId
       ? feeStructureInstallmentService.getFeeStructureInstallmentById(
@@ -40,18 +41,18 @@ async function modelToDto(
       : Promise.resolve(null),
   ]);
 
-  if (!feeStructure || !feeCategoryPromotionMapping) {
+  if (!feeStructure || !feeGroupPromotionMapping) {
     return null;
   }
 
-  // Get all fee category promotion mappings for this fee structure
+  // Get all fee group promotion mappings for this fee structure
   // This might need to be adjusted based on your business logic
-  const feeCategoryPromotionMappings = [feeCategoryPromotionMapping];
+  const feeGroupPromotionMappings = [feeGroupPromotionMapping];
 
   return {
     ...model,
     feeStructure,
-    feeCategoryPromotionMappings,
+    feeGroupPromotionMappings,
     feeStructureInstallment,
     waivedOffByUser,
   };
@@ -120,28 +121,28 @@ export const updateFeeStudentMapping = async (
 
   // If waived off details are being updated, recalculate totalPayable
   if (data.isWaivedOff !== undefined || data.waivedOffAmount !== undefined) {
-    // Get fee structure and fee category promotion mapping to calculate base totalPayable
+    // Get fee structure and fee group promotion mapping to calculate base totalPayable
     const [feeStructure] = await db
       .select()
       .from(feeStructureModel)
       .where(eq(feeStructureModel.id, existing.feeStructureId));
 
-    const [feeCategoryPromotionMapping] = await db
+    const [feeGroupPromotionMapping] = await db
       .select()
-      .from(feeCategoryPromotionMappingModel)
+      .from(feeGroupPromotionMappingModel)
       .where(
         eq(
-          feeCategoryPromotionMappingModel.id,
-          existing.feeCategoryPromotionMappingId,
+          feeGroupPromotionMappingModel.id,
+          existing.feeGroupPromotionMappingId,
         ),
       );
 
-    if (feeStructure && feeCategoryPromotionMapping) {
+    if (feeStructure && feeGroupPromotionMapping) {
       // Calculate base totalPayable (after concession, before waiver) using the service function
       const baseTotalPayable =
         await feeStructureService.calculateTotalPayableForFeeStudentMapping(
           existing.feeStructureId,
-          feeCategoryPromotionMapping.feeCategoryId,
+          feeGroupPromotionMapping.feeGroupId,
         );
 
       // Determine waived off amount: use new value if provided, otherwise use existing value

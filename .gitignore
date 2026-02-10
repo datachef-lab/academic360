@@ -16,14 +16,16 @@ node_modules/
 .pnp.js
 
 .pnpm-store
-
+ios/
+android/
 # TypeScript build cache
 **/*.tsbuildinfo
-
 # Package manager files
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+.pnpm-store
 
 /apps/backend/public/temp
 # Local env files
@@ -66,4 +68,3 @@ yarn-error.log*
 
 # dummy server
 db.json
-*.tsbuildinfo

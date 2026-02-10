@@ -1972,7 +1972,9 @@ export default function ScheduleExamPage() {
                             {currentDate && currentStartTime && currentDuration && (
                               <>
                                 <span> on </span>
-                                <span className="font-semibold">{new Date(currentDate).toLocaleDateString()}</span>
+                                <span className="font-semibold">
+                                  {new Date(currentDate).toLocaleDateString("en-GB")}
+                                </span>
                                 <span> from </span>
                                 <span className="font-mono font-semibold">{formatTimeToAMPM(currentStartTime)}</span>
                                 <span> to </span>
@@ -2073,7 +2075,7 @@ export default function ScheduleExamPage() {
                                         {paper.code || "-"}
                                       </TableCell>
                                       <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
-                                        {schedule.date ? new Date(schedule.date).toLocaleDateString() : "-"}
+                                        {schedule.date ? new Date(schedule.date).toLocaleDateString("en-GB") : "-"}
                                       </TableCell>
                                       <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
                                         {schedule.startTime && schedule.endTime

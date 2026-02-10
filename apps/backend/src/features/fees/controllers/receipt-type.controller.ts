@@ -205,7 +205,8 @@ export const deleteReceiptType = async (
         .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
       return;
     }
-    const deleted = await receiptTypeService.deleteReceiptType(id);
+    const userId = (req.user as any)?.id;
+    const deleted = await receiptTypeService.deleteReceiptType(id, userId);
     if (!deleted) {
       res
         .status(404)

@@ -264,11 +264,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     },
 
     {
+      title: "Admission & Reg. Data",
+      url: "/dashboard/admission-registration",
+      icon: FileText,
+      isActive: pathname === "/dashboard/admission-registration",
+    },
+    {
       title: "CU Form Upload",
       url: "/dashboard/cu-form-upload",
       icon: UploadCloud,
       isActive: pathname === "/dashboard/cu-form-upload",
     },
+
     // {
     //   title: "Course Catalogue",
     //   url: "/dashboard/course-catalogue",
