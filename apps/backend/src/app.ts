@@ -153,6 +153,7 @@ import {
   studentSubjectSelectionRoutes,
   dynamicSubjectsRoutes,
 } from "@/features/subject-selection/routes/index.js";
+import { userStatusMappingRouter } from "./features/user/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -370,6 +371,9 @@ app.use(
 // app.use("/api/batch-papers/old-data", batchPaperRouter);
 
 app.use("/api/users", userRouter);
+
+app.use("/api/user-statuses", userStatusMappingRouter);
+
 app.use("/api/sessions", sessionRouter);
 
 app.use("/api/personal-details", personalDetailsRouter);

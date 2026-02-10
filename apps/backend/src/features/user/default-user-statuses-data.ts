@@ -1,6 +1,6 @@
 import { UserStatusMasterDto } from "@repo/db/dtos";
 
-const defaultUserStatusesMastersDtos: UserStatusMasterDto[] = [
+export const defaultUserStatusesMastersDtos: UserStatusMasterDto[] = [
   {
     tag: "Regular",
     description:
@@ -22,10 +22,8 @@ const defaultUserStatusesMastersDtos: UserStatusMasterDto[] = [
     ],
     frequencies: [
       { userStatusMasterId: 0, frequency: "ALWAYS_NEW_ENTRY" },
-      { userStatusMasterId: 0, frequency: "PER_ACADEMIC_YEAR" },
       { userStatusMasterId: 0, frequency: "PER_SEMESTER" },
       { userStatusMasterId: 0, frequency: "ONLY_ONCE" },
-      { userStatusMasterId: 0, frequency: "REQUIRED" },
     ],
   },
   {

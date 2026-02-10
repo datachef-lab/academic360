@@ -14,6 +14,7 @@ import studentRouter from "@/features/user/routes/student.route.js";
 import studentApaarUpdateRouter from "@/features/user/routes/student-apaar-update.route.js";
 import reportRouter from "@/features/user/routes/report.route.js";
 import specializationRouter from "@/features/course-design/routes/specialization.routes.js";
+import userStatusMappingRouter from "@/features/user/routes/user-status-mapping.routes";
 
 export {
   accommodationRouter,
@@ -25,6 +26,7 @@ export {
   personRouter,
   personalDetailsRouter,
   // disabilityRouter,
+  userStatusMappingRouter,
   transportDetailsRouter,
   userRouter,
   studentRouter,

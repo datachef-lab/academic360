@@ -37,6 +37,7 @@ import { sendAdmRegFormToNotSendStudents } from "@/features/admissions/services/
 import { exportStaffDataToExcel } from "@/features/user/services/tmp-service";
 import { loadAllStaff } from "@/features/user/services/staff.service";
 import { getIrpNotFoundCourseDesigns } from "@/features/exams/services/exam-schedule.service";
+import { loadDefaultUserStatusMaster } from "@/features/user/services/user-status-mapping.service";
 
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -90,6 +91,7 @@ export const connectToDatabase = async () => {
     // loadOldSubjects();
     // loadOldCourses();
     // loadOldSubjectTypes();
+    loadDefaultUserStatusMaster();
     // console.log(
     //   "[backend] - CU Registration App Path:",
     //   process.env.CU_REGISTRATION_APP_PATH,
