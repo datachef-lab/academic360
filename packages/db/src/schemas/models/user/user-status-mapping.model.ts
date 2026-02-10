@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { userModel } from "./user.model";
@@ -31,6 +31,7 @@ export const userStatusMappingModel = pgTable("user_status_mapping", {
     byUserId: integer("by_user_id_fk")
         .references(() => userModel.id)
         .notNull(),
+    isActive: boolean().notNull().default(true),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });

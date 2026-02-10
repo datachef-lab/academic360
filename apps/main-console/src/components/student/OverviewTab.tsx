@@ -4,9 +4,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/utils/api";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Pencil } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Checkbox } from "../ui/checkbox";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -26,6 +27,7 @@ interface UserStatusMappingRow {
   suspendedReason: string | null;
   suspendedTillDate: string | null;
   remarks: string | null;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
   userStatusMaster: UserStatusMasterRow;
@@ -40,6 +42,7 @@ interface UserStatusMasterRow {
   tag: string;
   description: string;
   enrollmentStatus: string;
+  remarks: string;
   domains: { domain: string }[];
   frequencies: { frequency: string }[];
   levels: { level: string }[];
@@ -68,6 +71,7 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
   const { availableAcademicYears } = useAcademicYear();
   const [filterAcademicYearId, setFilterAcademicYearId] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingMapping, setEditingMapping] = useState<UserStatusMappingRow | null>(null);
 
   // ── Fetch user-status-mappings ──
   const {
@@ -95,15 +99,26 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
   });
 
   // ── Fetch promotions for this student ──
-  const { data: promotions } = useQuery<PromotionRow[]>({
+  const { data: promotionsData } = useQuery<{
+    promotions: PromotionRow[];
+    meta: { totalSemesters: number | null; completedSemesters: number };
+  }>({
     queryKey: ["student-promotions", studentId],
     queryFn: async () => {
-      if (!studentId) return [];
+      if (!studentId) return { promotions: [], meta: { totalSemesters: null, completedSemesters: 0 } };
       const res = await axiosInstance.get(`/api/user-statuses/student/${studentId}/promotions`);
-      return res.data?.payload ?? [];
+      return {
+        promotions: res.data?.payload ?? [],
+        meta: res.data?.meta ?? { totalSemesters: null, completedSemesters: 0 },
+      };
     },
     enabled: !!studentId && studentId > 0,
   });
+
+  const promotions = promotionsData?.promotions ?? [];
+  const isEligibleForAlumni =
+    promotionsData?.meta?.totalSemesters &&
+    promotionsData?.meta?.completedSemesters >= promotionsData.meta.totalSemesters;
 
   // ── Filter mappings by academic year ──
   const filteredMappings = useMemo(() => {
@@ -112,16 +127,14 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
     return mappings.filter((m) => String(m.academicYear?.id) === filterAcademicYearId);
   }, [mappings, filterAcademicYearId]);
 
-  // ── Delete ──
-  const handleDelete = async (mappingId: number) => {
-    try {
-      await axiosInstance.delete(`/api/user-statuses/${mappingId}`);
-      toast.success("Status mapping deleted");
-      refetch();
-    } catch {
-      toast.error("Failed to delete status mapping");
-    }
-  };
+  // ── Check if there's any active terminal status ──
+  const hasActiveTerminalStatus = useMemo(() => {
+    if (!mappings) return false;
+    const terminalTags = ["alumni", "transfer certificate", "tc", "cancel"];
+    return mappings.some(
+      (m) => m.isActive && terminalTags.some((tag) => m.userStatusMaster.tag.toLowerCase().includes(tag)),
+    );
+  }, [mappings]);
 
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
@@ -181,7 +194,16 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
           <Button
             size="sm"
             className="bg-violet-600 hover:bg-violet-700 text-white text-xs gap-1"
-            onClick={() => setDialogOpen(true)}
+            onClick={() => {
+              setEditingMapping(null);
+              setDialogOpen(true);
+            }}
+            disabled={hasActiveTerminalStatus}
+            title={
+              hasActiveTerminalStatus
+                ? "Cannot add new status when a terminal status (Alumni/TC/Dropped/Cancelled) is active"
+                : ""
+            }
           >
             <Plus className="h-3.5 w-3.5" />
             Add Status
@@ -199,113 +221,195 @@ export default function OverviewTab({ studentId, userId }: OverviewTabProps) {
           <p className="text-sm text-muted-foreground py-4">No status records found.</p>
         ) : (
           <div className="rounded-md border border-gray-200 overflow-hidden shadow-none">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50/80">
-                  <TableHead
-                    style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
-                    className="w-16 text-xs font-semibold text-gray-600"
-                  >
-                    Sr. No.
-                  </TableHead>
-                  <TableHead
-                    style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
-                    className="text-xs font-semibold text-gray-600"
-                  >
-                    Status
-                  </TableHead>
-                  <TableHead
-                    style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
-                    className="text-xs font-semibold text-gray-600"
-                  >
-                    Tag
-                  </TableHead>
-                  <TableHead
-                    style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
-                    className="text-xs font-semibold text-gray-600"
-                  >
-                    Academic Year
-                  </TableHead>
-                  <TableHead
-                    style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
-                    className="text-xs font-semibold text-gray-600"
-                  >
-                    Semester
-                  </TableHead>
-                  <TableHead
-                    style={{ padding: "12px 8px" }}
-                    className="w-24 text-xs font-semibold text-gray-600 text-center"
-                  >
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMappings.map((mapping, index) => (
-                  <TableRow key={mapping.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }} className="text-sm">
-                      {index + 1}
-                    </TableCell>
-                    <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
-                      {mapping.userStatusMaster.status === "ACTIVE" ? (
-                        <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">Active</Badge>
-                      ) : (
-                        <Badge className="bg-red-500 text-white hover:bg-red-600 text-xs">Inactive</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
-                      <Badge variant="outline" className={`text-xs ${getTagBadgeStyle(mapping.userStatusMaster.tag)}`}>
-                        {mapping.userStatusMaster.tag}
-                      </Badge>
-                    </TableCell>
-                    <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
-                      {mapping.academicYear?.year || mapping.academicYear?.name ? (
-                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
-                          {mapping.academicYear.year || mapping.academicYear.name}
-                        </Badge>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
-                      {mapping.class?.name ? (
-                        <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
-                          {mapping.class.name}
-                        </Badge>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell style={{ padding: "12px 8px" }} className="text-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => handleDelete(mapping.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80">
+                    <TableHead
+                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "60px" }}
+                      className="text-xs font-semibold text-gray-600"
+                    >
+                      Sr. No.
+                    </TableHead>
+                    <TableHead
+                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "100px" }}
+                      className="text-xs font-semibold text-gray-600"
+                    >
+                      Status
+                    </TableHead>
+                    <TableHead
+                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "180px" }}
+                      className="text-xs font-semibold text-gray-600"
+                    >
+                      Tag
+                    </TableHead>
+                    <TableHead
+                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "120px" }}
+                      className="text-xs font-semibold text-gray-600"
+                    >
+                      Academic Year
+                    </TableHead>
+                    <TableHead
+                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "100px" }}
+                      className="text-xs font-semibold text-gray-600"
+                    >
+                      Semester
+                    </TableHead>
+                    <TableHead
+                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "200px" }}
+                      className="text-xs font-semibold text-gray-600"
+                    >
+                      Remarks
+                    </TableHead>
+                    <TableHead
+                      style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb", minWidth: "150px" }}
+                      className="text-xs font-semibold text-gray-600"
+                    >
+                      Suspended Till
+                    </TableHead>
+                    <TableHead
+                      style={{ padding: "12px 8px", minWidth: "80px" }}
+                      className="text-xs font-semibold text-gray-600 text-center"
+                    >
+                      Actions
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredMappings.map((mapping, index) => (
+                    <TableRow
+                      key={mapping.id}
+                      className={`border-b border-gray-200 hover:bg-gray-50 ${!mapping.isActive ? "opacity-60" : ""}`}
+                    >
+                      <TableCell
+                        style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        className={`text-sm ${!mapping.isActive ? "line-through" : ""}`}
+                      >
+                        {index + 1}
+                      </TableCell>
+                      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <div className={!mapping.isActive ? "line-through" : ""}>
+                          {mapping.userStatusMaster.status === "ACTIVE" ? (
+                            <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">Active</Badge>
+                          ) : (
+                            <Badge className="bg-red-500 text-white hover:bg-red-600 text-xs">Inactive</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <div className={!mapping.isActive ? "line-through" : ""}>
+                          <div className="flex flex-col gap-1">
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${getTagBadgeStyle(mapping.userStatusMaster.tag)} w-fit`}
+                            >
+                              {mapping.userStatusMaster.tag}
+                            </Badge>
+                            <span className="text-[10px] text-gray-400">
+                              {new Date(mapping.updatedAt).toLocaleDateString("en-GB", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              })}
+                              ,{" "}
+                              {new Date(mapping.updatedAt).toLocaleTimeString("en-US", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <div className={!mapping.isActive ? "line-through" : ""}>
+                          {mapping.academicYear?.year || mapping.academicYear?.name ? (
+                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                              {mapping.academicYear.year || mapping.academicYear.name}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400 text-sm">-</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <div className={!mapping.isActive ? "line-through" : ""}>
+                          {mapping.class?.name ? (
+                            <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                              {mapping.class.name.replace(/SEMESTER\s*/i, "")}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400 text-sm">-</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <div className={!mapping.isActive ? "line-through" : ""}>
+                          <span className="text-xs text-gray-600">
+                            {mapping.remarks || mapping.suspendedReason || "-"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <div className={!mapping.isActive ? "line-through" : ""}>
+                          {mapping.suspendedTillDate ? (
+                            <span className="text-xs text-gray-600">
+                              {new Date(mapping.suspendedTillDate).toLocaleString("en-IN", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-sm">-</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell style={{ padding: "12px 8px" }} className="text-center">
+                        <button
+                          className={`p-1.5 rounded-md transition-colors ${
+                            !mapping.isActive ? "cursor-not-allowed opacity-40" : "hover:bg-gray-100 cursor-pointer"
+                          }`}
+                          onClick={() => {
+                            if (mapping.isActive) {
+                              setEditingMapping(mapping);
+                              setDialogOpen(true);
+                            }
+                          }}
+                          disabled={!mapping.isActive}
+                        >
+                          <Pencil className="h-4 w-4 text-gray-600" />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Add Status Dialog */}
+      {/* Add/Edit Status Dialog */}
       <AddStatusDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingMapping(null);
+        }}
         studentId={studentId}
         userId={userId}
         byUserId={authUser?.id}
         masters={masters ?? []}
-        promotions={promotions ?? []}
+        promotions={promotions}
         existingMappings={mappings ?? []}
+        editingMapping={editingMapping}
+        isEligibleForAlumni={!!isEligibleForAlumni}
         onSuccess={() => {
           refetch();
+          setEditingMapping(null);
           queryClient.invalidateQueries({ queryKey: ["user-status-mappings", studentId] });
         }}
       />
@@ -324,6 +428,8 @@ interface AddStatusDialogProps {
   masters: UserStatusMasterRow[];
   promotions: PromotionRow[];
   existingMappings: UserStatusMappingRow[];
+  editingMapping: UserStatusMappingRow | null;
+  isEligibleForAlumni: boolean;
   onSuccess: () => void;
 }
 
@@ -336,14 +442,39 @@ function AddStatusDialog({
   masters,
   promotions,
   existingMappings,
+  editingMapping,
+  isEligibleForAlumni,
   onSuccess,
 }: AddStatusDialogProps) {
+  const isEditMode = !!editingMapping;
+
   const [selectedMasterId, setSelectedMasterId] = useState<string>("");
   const [selectedPromotionId, setSelectedPromotionId] = useState<string>("");
   const [remarks, setRemarks] = useState("");
   const [suspendedTillDate, setSuspendedTillDate] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Initialize form when editing
+  useMemo(() => {
+    if (editingMapping && open) {
+      setSelectedMasterId(String(editingMapping.userStatusMaster.id));
+      setSelectedPromotionId(editingMapping.promotionId ? String(editingMapping.promotionId) : "");
+      setRemarks(editingMapping.remarks || "");
+      setSuspendedTillDate(
+        editingMapping.suspendedTillDate ? new Date(editingMapping.suspendedTillDate).toISOString().slice(0, 16) : "",
+      );
+      setIsActive(editingMapping.isActive);
+    } else if (!editingMapping && open) {
+      // Reset for create mode
+      setSelectedMasterId("");
+      setSelectedPromotionId("");
+      setRemarks("");
+      setSuspendedTillDate("");
+      setIsActive(true);
+    }
+  }, [editingMapping, open]);
 
   // Only show masters with domain STUDENT
   const studentMasters = useMemo(() => {
@@ -358,6 +489,45 @@ function AddStatusDialog({
     return promotions.find((p) => String(p.id) === selectedPromotionId) ?? null;
   }, [promotions, selectedPromotionId]);
 
+  // Filter out conflicting statuses based on selected promotion
+  const availableMasters = useMemo(() => {
+    // In edit mode, show all student masters
+    if (isEditMode) return studentMasters;
+
+    // Require batch selection first
+    if (!selectedPromotion) return [];
+
+    return studentMasters.filter((master) => {
+      const masterTag = master.tag.toLowerCase();
+      const isRegular = masterTag.includes("regular");
+      const isCasual = masterTag.includes("casual");
+      const isAlumni = masterTag.includes("alumni");
+
+      // Filter out Alumni if student hasn't completed all semesters
+      if (isAlumni && !isEligibleForAlumni) return false;
+
+      // Check if Regular or Casual - they are mutually exclusive
+      if (isRegular || isCasual) {
+        const conflictingTag = isRegular ? "casual" : "regular";
+        const hasConflict = existingMappings.some(
+          (m) =>
+            m.isActive &&
+            m.class?.id === selectedPromotion.class?.id &&
+            m.userStatusMaster.tag.toLowerCase().includes(conflictingTag),
+        );
+        if (hasConflict) return false;
+      }
+
+      // Check if this exact status already exists for this semester
+      const alreadyExists = existingMappings.some(
+        (m) => m.isActive && m.class?.id === selectedPromotion.class?.id && m.userStatusMaster.id === master.id,
+      );
+      if (alreadyExists) return false;
+
+      return true;
+    });
+  }, [studentMasters, selectedPromotion, existingMappings, isEditMode, isEligibleForAlumni]);
+
   const isSuspended = selectedMaster?.tag?.toLowerCase().includes("suspended") ?? false;
 
   // ── Client-side frequency validation ──
@@ -365,45 +535,71 @@ function AddStatusDialog({
     if (!selectedMaster) return "Please select a status.";
     if (!selectedPromotion) return "Please select a batch.";
 
-    // Suspended must have a till-date
+    // Suspended must have a till-date and reason
     if (isSuspended && !suspendedTillDate) {
       return "Suspended till date is required when assigning a Suspended status.";
+    }
+    if (isSuspended && !remarks.trim()) {
+      return "Reason is required when assigning a Suspended status.";
     }
 
     const frequencies = selectedMaster.frequencies.map((f) => f.frequency);
 
-    // ONLY_ONCE: check if this master already exists for this user at all
+    // ONLY_ONCE: check if this master already exists for this user (only active)
     if (frequencies.includes("ONLY_ONCE")) {
-      const exists = existingMappings.some((m) => m.userStatusMaster.id === selectedMaster.id);
+      const exists = existingMappings.some((m) => m.isActive && m.userStatusMaster.id === selectedMaster.id);
       if (exists) {
         return `"${selectedMaster.tag}" can only be assigned once. It already exists for this student.`;
       }
     }
 
-    // PER_ACADEMIC_YEAR: check if same master + same academic year already exists
+    // PER_ACADEMIC_YEAR: check if same master + same academic year already exists (only active)
     if (frequencies.includes("PER_ACADEMIC_YEAR") && selectedPromotion?.academicYear?.id) {
       const exists = existingMappings.some(
-        (m) => m.userStatusMaster.id === selectedMaster.id && m.academicYear?.id === selectedPromotion.academicYear?.id,
+        (m) =>
+          m.isActive &&
+          m.userStatusMaster.id === selectedMaster.id &&
+          m.academicYear?.id === selectedPromotion.academicYear?.id,
       );
       if (exists) {
         return `"${selectedMaster.tag}" already exists for academic year ${selectedPromotion.academicYear?.year || ""}.`;
       }
     }
 
-    // PER_SEMESTER: check if same master + same class (via promotion) already exists
+    // PER_SEMESTER: check if same master + same class (via promotion) already exists (only active)
     if (frequencies.includes("PER_SEMESTER") && selectedPromotion?.class?.id) {
       const exists = existingMappings.some(
-        (m) => m.userStatusMaster.id === selectedMaster.id && m.class?.id === selectedPromotion.class?.id,
+        (m) => m.isActive && m.userStatusMaster.id === selectedMaster.id && m.class?.id === selectedPromotion.class?.id,
       );
       if (exists) {
         return `"${selectedMaster.tag}" already exists for semester ${selectedPromotion.class?.name || ""}.`;
       }
     }
 
-    // Check terminal status coexistence
+    // Regular and Casual are mutually exclusive for the same semester
+    const isRegular = selectedMaster.tag.toLowerCase().includes("regular");
+    const isCasual = selectedMaster.tag.toLowerCase().includes("casual");
+
+    if ((isRegular || isCasual) && selectedPromotion?.class?.id) {
+      const conflictingTag = isRegular ? "casual" : "regular";
+      const hasConflict = existingMappings.some(
+        (m) =>
+          m.isActive &&
+          m.class?.id === selectedPromotion.class?.id &&
+          m.userStatusMaster.tag.toLowerCase().includes(conflictingTag),
+      );
+
+      if (hasConflict) {
+        const currentTag = isRegular ? "Regular" : "Casual";
+        const existingTag = isRegular ? "Casual" : "Regular";
+        return `Cannot add "${currentTag}" status. A "${existingTag}" status already exists for this semester. Only one of Regular or Casual is allowed per semester.`;
+      }
+    }
+
+    // Check terminal status coexistence (only check active terminal statuses)
     const terminalTags = ["Alumni", "Taken Transfer Certificate (TC)", "Cancelled Admission"];
-    const hasTerminal = existingMappings.some((m) => terminalTags.includes(m.userStatusMaster.tag));
-    if (hasTerminal && terminalTags.includes(selectedMaster.tag)) {
+    const hasActiveTerminal = existingMappings.some((m) => m.isActive && terminalTags.includes(m.userStatusMaster.tag));
+    if (hasActiveTerminal && terminalTags.includes(selectedMaster.tag)) {
       return "A terminal status (Alumni / TC / Cancelled Admission) already exists. No further terminal statuses can be added.";
     }
 
@@ -413,10 +609,16 @@ function AddStatusDialog({
   const handleMasterChange = (val: string) => {
     setSelectedMasterId(val);
     setValidationError(null);
-    // Clear suspended date when switching away from suspended
+
     const master = studentMasters.find((m) => String(m.id) === val);
-    if (!master?.tag?.toLowerCase().includes("suspended")) {
-      setSuspendedTillDate("");
+    if (master) {
+      // Set default remarks from the master
+      setRemarks(master.remarks || "");
+
+      // Clear suspended date when switching away from suspended
+      if (!master.tag?.toLowerCase().includes("suspended")) {
+        setSuspendedTillDate("");
+      }
     }
   };
 
@@ -426,10 +628,13 @@ function AddStatusDialog({
   };
 
   const handleSubmit = async () => {
-    const error = validateFrequency();
-    if (error) {
-      setValidationError(error);
-      return;
+    // Skip validation for edit mode when only toggling isActive
+    if (!isEditMode) {
+      const error = validateFrequency();
+      if (error) {
+        setValidationError(error);
+        return;
+      }
     }
 
     if (!userId || !studentId || !byUserId || !selectedMaster || !selectedPromotion) {
@@ -439,7 +644,8 @@ function AddStatusDialog({
 
     setSubmitting(true);
     try {
-      await axiosInstance.post("/api/user-statuses", {
+      const payload = {
+        id: editingMapping?.id,
         userId,
         studentId,
         sessionId: selectedPromotion.sessionId,
@@ -448,16 +654,24 @@ function AddStatusDialog({
         remarks: remarks || null,
         suspendedTillDate: isSuspended && suspendedTillDate ? new Date(suspendedTillDate).toISOString() : null,
         suspendedReason: isSuspended ? remarks || null : null,
+        isActive,
         userStatusMaster: selectedMaster,
-      });
+      };
 
-      toast.success("Status mapping created");
+      if (isEditMode) {
+        await axiosInstance.put(`/api/user-statuses/${editingMapping.id}`, payload);
+        toast.success("Status mapping updated");
+      } else {
+        await axiosInstance.post("/api/user-statuses", payload);
+        toast.success("Status mapping created");
+      }
+
       onSuccess();
       resetAndClose();
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        "Failed to create status mapping";
+        (isEditMode ? "Failed to update status mapping" : "Failed to create status mapping");
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -469,6 +683,7 @@ function AddStatusDialog({
     setSelectedPromotionId("");
     setRemarks("");
     setSuspendedTillDate("");
+    setIsActive(true);
     setValidationError(null);
     onOpenChange(false);
   };
@@ -481,9 +696,9 @@ function AddStatusDialog({
         else onOpenChange(val);
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base">Add User Status</DialogTitle>
+          <DialogTitle className="text-base">{isEditMode ? "Edit User Status" : "Add User Status"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -525,12 +740,18 @@ function AddStatusDialog({
           <div className="grid grid-cols-4 items-center gap-3">
             <Label className="text-xs text-right text-gray-500">Status</Label>
             <div className="col-span-3">
-              <Select value={selectedMasterId} onValueChange={handleMasterChange}>
+              <Select
+                value={selectedMasterId}
+                onValueChange={handleMasterChange}
+                disabled={isEditMode || (!isEditMode && !selectedPromotionId)}
+              >
                 <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Select status tag" />
+                  <SelectValue
+                    placeholder={!selectedPromotionId && !isEditMode ? "Select batch first" : "Select status tag"}
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {studentMasters.map((m) => (
+                  {availableMasters.map((m) => (
                     <SelectItem key={m.id} value={String(m.id)}>
                       <span className="flex items-center gap-2">
                         <span className={`inline-block w-2 h-2 rounded-full ${getMasterDotColor(m.tag)}`} />
@@ -569,6 +790,21 @@ function AddStatusDialog({
                   value={suspendedTillDate}
                   onChange={(e) => setSuspendedTillDate(e.target.value)}
                 />
+              </div>
+            </div>
+          )}
+
+          {/* isActive toggle - only in edit mode */}
+          {isEditMode && (
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-xs text-right text-gray-500">Revoke Request?</Label>
+              <div className="col-span-3 flex items-center gap-2">
+                <Checkbox
+                  checked={!isActive}
+                  onCheckedChange={(checked) => setIsActive(!checked)}
+                  className="data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
+                />
+                <span className="text-xs text-gray-600">{!isActive ? "Revoked" : "Active"}</span>
               </div>
             </div>
           )}
@@ -613,7 +849,7 @@ function AddStatusDialog({
             disabled={submitting || !selectedMasterId || !selectedPromotionId}
           >
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
-            Add Status
+            {isEditMode ? "Update Status" : "Add Status"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -17,6 +17,7 @@ import {
 } from "@repo/db/schemas";
 import { and, count, eq, ilike, ne, desc } from "drizzle-orm";
 import { classModel } from "@repo/db/schemas/models/academics";
+import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import { defaultUserStatusesMastersDtos } from "../default-user-statuses-data";
 
 export async function loadDefaultUserStatusMaster() {
@@ -271,12 +272,13 @@ const validators: Record<Frequency, Validator> = {
   },
 
   /**
-   * Only once per user + status master
+   * Only once per user + status master (only check active entries)
    */
   ONLY_ONCE: async (dto) => {
     const conditions = [
       eq(userStatusMappingModel.userId, dto.userId),
       eq(userStatusMappingModel.userStatusMasterId, dto.userStatusMaster.id!),
+      eq(userStatusMappingModel.isActive, true),
     ];
 
     if (dto.id) {
@@ -293,7 +295,7 @@ const validators: Record<Frequency, Validator> = {
   },
 
   /**
-   * One entry per academic year
+   * One entry per academic year (only check active entries)
    */
   PER_ACADEMIC_YEAR: async (dto) => {
     const [session] = await db
@@ -309,6 +311,7 @@ const validators: Record<Frequency, Validator> = {
       eq(userStatusMappingModel.userId, dto.userId),
       eq(sessionModel.academicYearId, session.academicYearId!),
       eq(userStatusMappingModel.userStatusMasterId, dto.userStatusMaster.id!),
+      eq(userStatusMappingModel.isActive, true),
     ];
 
     if (dto.id) {
@@ -329,7 +332,7 @@ const validators: Record<Frequency, Validator> = {
   },
 
   /**
-   * One entry per semester/class
+   * One entry per semester/class (only check active entries)
    */
   PER_SEMESTER: async (dto) => {
     if (!dto.promotionId) {
@@ -349,6 +352,7 @@ const validators: Record<Frequency, Validator> = {
       eq(userStatusMappingModel.userId, dto.userId),
       eq(promotionModel.classId, promotion.classId),
       eq(userStatusMappingModel.userStatusMasterId, dto.userStatusMaster.id!),
+      eq(userStatusMappingModel.isActive, true),
     ];
 
     if (dto.id) {
@@ -418,6 +422,74 @@ export async function createUserStatusMapping(givenDto: UserStatusMappingDto) {
     };
   }
 
+  // Additional validation: Only one Regular status per semester
+  if (
+    givenDto.userStatusMaster.tag.toLowerCase().includes("regular") &&
+    givenDto.promotionId
+  ) {
+    const existingRegular = await db
+      .select()
+      .from(userStatusMappingModel)
+      .leftJoin(
+        userStatusMasterModel,
+        eq(userStatusMappingModel.userStatusMasterId, userStatusMasterModel.id),
+      )
+      .where(
+        and(
+          eq(userStatusMappingModel.studentId, givenDto.studentId!),
+          eq(userStatusMappingModel.promotionId, givenDto.promotionId),
+          ilike(userStatusMasterModel.tag, "%regular%"),
+          eq(userStatusMappingModel.isActive, true),
+        ),
+      );
+
+    if (existingRegular.length > 0) {
+      return {
+        data: null,
+        message:
+          "A Regular status already exists for this semester. Only one Regular status is allowed per semester.",
+        status: 409,
+      };
+    }
+  }
+
+  // Mutual exclusivity: Regular and Casual cannot coexist for the same semester
+  const isRegular = givenDto.userStatusMaster.tag
+    .toLowerCase()
+    .includes("regular");
+  const isCasual = givenDto.userStatusMaster.tag
+    .toLowerCase()
+    .includes("casual");
+
+  if ((isRegular || isCasual) && givenDto.promotionId) {
+    const conflictingTag = isRegular ? "%casual%" : "%regular%";
+    const existingConflict = await db
+      .select()
+      .from(userStatusMappingModel)
+      .leftJoin(
+        userStatusMasterModel,
+        eq(userStatusMappingModel.userStatusMasterId, userStatusMasterModel.id),
+      )
+      .where(
+        and(
+          eq(userStatusMappingModel.studentId, givenDto.studentId!),
+          eq(userStatusMappingModel.promotionId, givenDto.promotionId),
+          ilike(userStatusMasterModel.tag, conflictingTag),
+          eq(userStatusMappingModel.isActive, true),
+        ),
+      );
+
+    if (existingConflict.length > 0) {
+      const currentTag = isRegular ? "Regular" : "Casual";
+      const existingTag = isRegular ? "Casual" : "Regular";
+      return {
+        data: null,
+        message: `Cannot add "${currentTag}" status. A "${existingTag}" status already exists for this semester. Only one of Regular or Casual is allowed per semester.`,
+        status: 409,
+      };
+    }
+  }
+
   const { userStatusMaster, id, createdAt, updatedAt, ...rest } = givenDto;
 
   const [newUserStatusMapping] = await db
@@ -425,8 +497,57 @@ export async function createUserStatusMapping(givenDto: UserStatusMappingDto) {
     .values({
       ...rest,
       userStatusMasterId: userStatusMaster.id!,
+      isActive: true, // Always active on creation
     })
     .returning();
+
+  // Check if this is a terminal status (Alumni, TC, Cancelled Admission)
+  const terminalTags = ["alumni", "transfer certificate", "tc", "cancel"];
+  const isTerminal = terminalTags.some((tag) =>
+    givenDto.userStatusMaster.tag.toLowerCase().includes(tag),
+  );
+
+  if (isTerminal && givenDto.promotionId) {
+    // Find the academic year for this promotion
+    const promotion = await db
+      .select({
+        academicYearId: sessionModel.academicYearId,
+      })
+      .from(promotionModel)
+      .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+      .where(eq(promotionModel.id, givenDto.promotionId))
+      .limit(1);
+
+    if (promotion.length > 0 && promotion[0].academicYearId) {
+      const academicYearId = promotion[0].academicYearId;
+
+      // Find all ACTIVE mappings for this student in the same academic year
+      const mappingsToDeactivate = await db
+        .select({ id: userStatusMappingModel.id })
+        .from(userStatusMappingModel)
+        .leftJoin(
+          promotionModel,
+          eq(userStatusMappingModel.promotionId, promotionModel.id),
+        )
+        .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+        .where(
+          and(
+            eq(userStatusMappingModel.studentId, givenDto.studentId!),
+            eq(sessionModel.academicYearId, academicYearId),
+            eq(userStatusMappingModel.isActive, true), // Only deactivate ACTIVE mappings
+            ne(userStatusMappingModel.id, newUserStatusMapping.id),
+          ),
+        );
+
+      // Deactivate them
+      for (const mapping of mappingsToDeactivate) {
+        await db
+          .update(userStatusMappingModel)
+          .set({ isActive: false })
+          .where(eq(userStatusMappingModel.id, mapping.id));
+      }
+    }
+  }
 
   return {
     data: newUserStatusMapping,
@@ -449,11 +570,24 @@ export async function getUserStatusMappingById(id: number) {
 }
 
 export async function updateUserStatusMapping(givenDto: UserStatusMappingDto) {
-  const isValid = await checkValidation(givenDto);
+  // For updates, only validate if not changing isActive flag
+  const existingMapping = await db
+    .select()
+    .from(userStatusMappingModel)
+    .where(eq(userStatusMappingModel.id, givenDto.id!))
+    .limit(1);
 
-  if (!isValid) {
-    return { data: null, message: "Invalid update", status: 429 };
+  if (existingMapping.length === 0) {
+    return { data: null, message: "Mapping not found", status: 404 };
   }
+
+  // Check if we're deactivating a terminal status
+  const terminalTags = ["alumni", "transfer certificate", "tc", "cancel"];
+  const isTerminal = terminalTags.some((tag) =>
+    givenDto.userStatusMaster.tag.toLowerCase().includes(tag),
+  );
+  const wasActive = existingMapping[0].isActive;
+  const willBeInactive = givenDto.isActive === false;
 
   const { userStatusMaster, id, createdAt, updatedAt, ...rest } = givenDto;
 
@@ -462,9 +596,109 @@ export async function updateUserStatusMapping(givenDto: UserStatusMappingDto) {
     .set({
       ...rest,
       userStatusMasterId: userStatusMaster.id!,
+      isActive: givenDto.isActive !== undefined ? givenDto.isActive : true,
     })
     .where(eq(userStatusMappingModel.id, givenDto.id!))
     .returning();
+
+  // If we're deactivating a terminal status, reactivate other NON-TERMINAL mappings in the same academic year
+  if (isTerminal && wasActive && willBeInactive && givenDto.promotionId) {
+    const promotion = await db
+      .select({
+        academicYearId: sessionModel.academicYearId,
+      })
+      .from(promotionModel)
+      .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+      .where(eq(promotionModel.id, givenDto.promotionId))
+      .limit(1);
+
+    if (promotion.length > 0 && promotion[0].academicYearId) {
+      const academicYearId = promotion[0].academicYearId;
+
+      // Find all inactive mappings for this student in the same academic year
+      const mappingsToReactivate = await db
+        .select({
+          id: userStatusMappingModel.id,
+          masterTag: userStatusMasterModel.tag,
+        })
+        .from(userStatusMappingModel)
+        .leftJoin(
+          promotionModel,
+          eq(userStatusMappingModel.promotionId, promotionModel.id),
+        )
+        .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+        .leftJoin(
+          userStatusMasterModel,
+          eq(
+            userStatusMappingModel.userStatusMasterId,
+            userStatusMasterModel.id,
+          ),
+        )
+        .where(
+          and(
+            eq(userStatusMappingModel.studentId, givenDto.studentId!),
+            eq(sessionModel.academicYearId, academicYearId),
+            eq(userStatusMappingModel.isActive, false),
+            ne(userStatusMappingModel.id, givenDto.id!),
+          ),
+        );
+
+      // Reactivate them ONLY if they are not terminal statuses
+      for (const mapping of mappingsToReactivate) {
+        const isTerminalStatus = terminalTags.some((tag) =>
+          mapping.masterTag?.toLowerCase().includes(tag),
+        );
+
+        // Only reactivate non-terminal statuses
+        if (!isTerminalStatus) {
+          await db
+            .update(userStatusMappingModel)
+            .set({ isActive: true })
+            .where(eq(userStatusMappingModel.id, mapping.id));
+        }
+      }
+    }
+  }
+
+  // If activating a terminal status, deactivate other ACTIVE mappings
+  if (isTerminal && !wasActive && !willBeInactive && givenDto.promotionId) {
+    const promotion = await db
+      .select({
+        academicYearId: sessionModel.academicYearId,
+      })
+      .from(promotionModel)
+      .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+      .where(eq(promotionModel.id, givenDto.promotionId))
+      .limit(1);
+
+    if (promotion.length > 0 && promotion[0].academicYearId) {
+      const academicYearId = promotion[0].academicYearId;
+
+      const mappingsToDeactivate = await db
+        .select({ id: userStatusMappingModel.id })
+        .from(userStatusMappingModel)
+        .leftJoin(
+          promotionModel,
+          eq(userStatusMappingModel.promotionId, promotionModel.id),
+        )
+        .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+        .where(
+          and(
+            eq(userStatusMappingModel.studentId, givenDto.studentId!),
+            eq(sessionModel.academicYearId, academicYearId),
+            eq(userStatusMappingModel.isActive, true), // Only deactivate ACTIVE mappings
+            ne(userStatusMappingModel.id, givenDto.id!),
+          ),
+        );
+
+      for (const mapping of mappingsToDeactivate) {
+        await db
+          .update(userStatusMappingModel)
+          .set({ isActive: false })
+          .where(eq(userStatusMappingModel.id, mapping.id));
+      }
+    }
+  }
 
   return {
     data: savedUserStatusMapping,
@@ -610,6 +844,21 @@ export async function getPromotionsByStudentId(studentId: number) {
 
   const results = [];
 
+  // Get student's program course to determine total semesters
+  const [student] = await db
+    .select()
+    .from(studentModel)
+    .where(eq(studentModel.id, studentId));
+
+  let programCourse = null;
+  if (student?.programCourseId) {
+    const [pc] = await db
+      .select()
+      .from(programCourseModel)
+      .where(eq(programCourseModel.id, student.programCourseId));
+    programCourse = pc ?? null;
+  }
+
   for (const promotion of promotions) {
     // Get session
     const [session] = await db
@@ -641,7 +890,15 @@ export async function getPromotionsByStudentId(studentId: number) {
     });
   }
 
-  return { data: results, message: "Retrieved!", status: 200 };
+  return {
+    data: results,
+    message: "Retrieved!",
+    status: 200,
+    meta: {
+      totalSemesters: programCourse?.totalSemesters ?? null,
+      completedSemesters: promotions.length,
+    },
+  };
 }
 
 export async function deleteUserStatusMapping(id: number) {
