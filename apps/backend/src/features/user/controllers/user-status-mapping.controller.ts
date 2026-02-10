@@ -76,6 +76,87 @@ export const getUserStatusMappingController = async (
 };
 
 /**
+ * GET ALL MASTERS
+ */
+export const getAllUserStatusMastersController = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await userStatusMappingService.getAllUserStatusMasters();
+
+    res
+      .status(result.status)
+      .json(
+        new ApiResponse(result.status, "SUCCESS", result.data, result.message),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+/**
+ * GET PROMOTIONS BY STUDENT
+ */
+export const getPromotionsByStudentIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const studentId = Number(req.params.studentId);
+
+    if (!studentId || Number.isNaN(studentId)) {
+      res.status(400).json(new ApiError(400, "Valid studentId is required"));
+      return;
+    }
+
+    const result =
+      await userStatusMappingService.getPromotionsByStudentId(studentId);
+
+    res
+      .status(result.status)
+      .json(
+        new ApiResponse(result.status, "SUCCESS", result.data, result.message),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+/**
+ * GET BY STUDENT
+ */
+export const getUserStatusMappingsByStudentIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const studentId = Number(req.params.studentId);
+
+    if (!studentId || Number.isNaN(studentId)) {
+      res.status(400).json(new ApiError(400, "Valid studentId is required"));
+      return;
+    }
+
+    const result =
+      await userStatusMappingService.getUserStatusMappingsByStudentId(
+        studentId,
+      );
+
+    res
+      .status(result.status)
+      .json(
+        new ApiResponse(result.status, "SUCCESS", result.data, result.message),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+/**
  * UPDATE
  */
 export const updateUserStatusMappingController = async (

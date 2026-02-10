@@ -1,16 +1,22 @@
 import { db } from "@/db";
-import { UserStatusMappingDto } from "@repo/db/dtos";
+import { UserStatusMappingDto, UserStatusMasterDto } from "@repo/db/dtos";
 import {
+  academicYearModel,
   promotionModel,
   sessionModel,
+  studentModel,
+  StudentT,
+  userModel,
   userStatusMappingModel,
   userStatusMasterDomainModel,
   userStatusMasterFrequencyModel,
   userStatusMasterFrequencyTypeEnum,
   userStatusMasterLevelModel,
   userStatusMasterModel,
+  UserT,
 } from "@repo/db/schemas";
-import { and, eq, ilike, ne } from "drizzle-orm";
+import { and, count, eq, ilike, ne, desc } from "drizzle-orm";
+import { classModel } from "@repo/db/schemas/models/academics";
 import { defaultUserStatusesMastersDtos } from "../default-user-statuses-data";
 
 export async function loadDefaultUserStatusMaster() {
@@ -99,6 +105,145 @@ export async function loadDefaultUserStatusMaster() {
       }
     }
   }
+}
+
+export async function mapUserStatuses() {
+  const BATCH_SIZE = 500;
+  const [{ totalCount }] = await db
+    .select({ totalCount: count() })
+    .from(studentModel);
+  const batches = Math.ceil(totalCount / 500);
+
+  const academicYears = await db.select().from(academicYearModel);
+
+  const userStatusMasters = await db.select().from(userStatusMasterModel);
+
+  const userStatusMasterDtos: UserStatusMasterDto[] = [];
+
+  const [foundByUser] = await db
+    .select()
+    .from(userModel)
+    .where(eq(userModel.email, "test@gmail.com"));
+
+  if (!foundByUser) return;
+
+  for (let i = 0; i < userStatusMasters.length; i++) {
+    const levels = await db
+      .select()
+      .from(userStatusMasterLevelModel)
+      .where(
+        eq(
+          userStatusMasterLevelModel.userStatusMasterId,
+          userStatusMasters[i].id,
+        ),
+      );
+
+    const domains = await db
+      .select()
+      .from(userStatusMasterDomainModel)
+      .where(
+        eq(
+          userStatusMasterDomainModel.userStatusMasterId,
+          userStatusMasters[i].id,
+        ),
+      );
+
+    const frequencies = await db
+      .select()
+      .from(userStatusMasterFrequencyModel)
+      .where(
+        eq(
+          userStatusMasterFrequencyModel.userStatusMasterId,
+          userStatusMasters[i].id,
+        ),
+      );
+
+    userStatusMasterDtos.push({
+      ...userStatusMasters[i],
+      levels,
+      domains,
+      frequencies,
+    });
+  }
+
+  for (let i = 0; i < batches; i++) {
+    const result = await db
+      .select()
+      .from(studentModel)
+      .limit(BATCH_SIZE)
+      .offset(i * BATCH_SIZE);
+
+    for (let a = 0; a < academicYears.length; a++) {
+      for (let j = 0; j < result.length; j++) {
+        const [
+          {
+            academic_years: ay,
+            promotions: promotion,
+            sessions: session,
+            students: student,
+            users: user,
+          },
+        ] = await db
+          .select()
+          .from(studentModel)
+          .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+          .leftJoin(
+            promotionModel,
+            eq(promotionModel.studentId, studentModel.id),
+          )
+          .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+          .leftJoin(
+            academicYearModel,
+            eq(academicYearModel.id, sessionModel.academicYearId),
+          )
+          .where(eq(studentModel.id, result[j].id));
+
+        const userStatusMaster = await getUserStatusMaster(
+          user!,
+          student,
+          userStatusMasterDtos,
+        );
+
+        await createUserStatusMapping({
+          byUserId: foundByUser.id!,
+          sessionId: session!.id!,
+          userId: user!.id!,
+          userStatusMaster,
+          promotionId: promotion!.id!,
+          studentId: student.id,
+          remarks:
+            student.leavingReason ||
+            student.cancelledAdmissionReason ||
+            user?.suspendedReason,
+          suspendedTillDate: user?.suspendedTillDate,
+        });
+      }
+    }
+  }
+}
+
+async function getUserStatusMaster(
+  user: UserT,
+  student: StudentT,
+  userStatusMasterDtos: UserStatusMasterDto[],
+): Promise<UserStatusMasterDto> {
+  let tag: string = "Dropped Out";
+
+  if (user?.isSuspended) tag = "Suspended";
+  if (student?.hasCancelledAdmission) tag = "Cancelled Admission";
+  if (student?.takenTransferCertificate)
+    tag = "Taken Transfer Certificate (TC)";
+
+  if (student?.alumni && !student?.active) tag = "Alumni";
+  if (!student?.active && (student?.leavingDate || student?.leavingReason))
+    tag = "Dropped Out";
+  if (student?.active) tag = "Regular";
+
+  const foundUserStatusMaster = userStatusMasterDtos.find(
+    (ele) => ele.tag === tag,
+  )!;
+
+  return foundUserStatusMaster;
 }
 
 const FREQUENCY_ORDER = [
@@ -291,7 +436,7 @@ export async function createUserStatusMapping(givenDto: UserStatusMappingDto) {
 }
 
 export async function getUserStatusMappingById(id: number) {
-  const [foundUserStatusMapping] = await db
+  const foundUserStatusMapping = await db
     .select()
     .from(userStatusMappingModel)
     .where(eq(userStatusMappingModel.id, id!));
@@ -326,6 +471,177 @@ export async function updateUserStatusMapping(givenDto: UserStatusMappingDto) {
     message: "Updated!",
     status: 200,
   };
+}
+
+export async function getUserStatusMappingsByStudentId(studentId: number) {
+  const mappings = await db
+    .select()
+    .from(userStatusMappingModel)
+    .where(eq(userStatusMappingModel.studentId, studentId));
+
+  if (!mappings.length) {
+    return { data: [], message: "No mappings found", status: 200 };
+  }
+
+  const results: UserStatusMappingDto[] = [];
+
+  for (const mapping of mappings) {
+    // Get master
+    const [master] = await db
+      .select()
+      .from(userStatusMasterModel)
+      .where(eq(userStatusMasterModel.id, mapping.userStatusMasterId));
+
+    if (!master) continue;
+
+    // Get levels, domains, frequencies
+    const [levels, domains, frequencies] = await Promise.all([
+      db
+        .select()
+        .from(userStatusMasterLevelModel)
+        .where(eq(userStatusMasterLevelModel.userStatusMasterId, master.id)),
+      db
+        .select()
+        .from(userStatusMasterDomainModel)
+        .where(eq(userStatusMasterDomainModel.userStatusMasterId, master.id)),
+      db
+        .select()
+        .from(userStatusMasterFrequencyModel)
+        .where(
+          eq(userStatusMasterFrequencyModel.userStatusMasterId, master.id),
+        ),
+    ]);
+
+    // Get session -> academic year
+    let sessionData = null;
+    let academicYearData = null;
+    if (mapping.sessionId) {
+      const [sess] = await db
+        .select()
+        .from(sessionModel)
+        .where(eq(sessionModel.id, mapping.sessionId));
+      sessionData = sess ?? null;
+      if (sess?.academicYearId) {
+        const [ay] = await db
+          .select()
+          .from(academicYearModel)
+          .where(eq(academicYearModel.id, sess.academicYearId));
+        academicYearData = ay ?? null;
+      }
+    }
+
+    // Get promotion -> class (semester)
+    let promotionData = null;
+    let classData = null;
+    if (mapping.promotionId) {
+      const [prom] = await db
+        .select()
+        .from(promotionModel)
+        .where(eq(promotionModel.id, mapping.promotionId));
+      promotionData = prom ?? null;
+      if (prom?.classId) {
+        const { classModel } =
+          await import("@repo/db/schemas/models/academics");
+        const [cls] = await db
+          .select()
+          .from(classModel)
+          .where(eq(classModel.id, prom.classId));
+        classData = cls ?? null;
+      }
+    }
+
+    const { userStatusMasterId, ...restMapping } = mapping;
+    results.push({
+      ...restMapping,
+      userStatusMaster: {
+        ...master,
+        levels,
+        domains,
+        frequencies,
+      },
+      // Attach extra data for frontend convenience
+      session: sessionData,
+      academicYear: academicYearData,
+      class: classData,
+    } as UserStatusMappingDto & {
+      session?: unknown;
+      academicYear?: unknown;
+      class?: unknown;
+    });
+  }
+
+  return { data: results, message: "Retrieved!", status: 200 };
+}
+
+export async function getAllUserStatusMasters() {
+  const masters = await db.select().from(userStatusMasterModel);
+  const results: UserStatusMasterDto[] = [];
+
+  for (const master of masters) {
+    const [levels, domains, frequencies] = await Promise.all([
+      db
+        .select()
+        .from(userStatusMasterLevelModel)
+        .where(eq(userStatusMasterLevelModel.userStatusMasterId, master.id)),
+      db
+        .select()
+        .from(userStatusMasterDomainModel)
+        .where(eq(userStatusMasterDomainModel.userStatusMasterId, master.id)),
+      db
+        .select()
+        .from(userStatusMasterFrequencyModel)
+        .where(
+          eq(userStatusMasterFrequencyModel.userStatusMasterId, master.id),
+        ),
+    ]);
+
+    results.push({ ...master, levels, domains, frequencies });
+  }
+
+  return { data: results, message: "Retrieved!", status: 200 };
+}
+
+export async function getPromotionsByStudentId(studentId: number) {
+  const promotions = await db
+    .select()
+    .from(promotionModel)
+    .where(eq(promotionModel.studentId, studentId))
+    .orderBy(desc(promotionModel.id));
+
+  const results = [];
+
+  for (const promotion of promotions) {
+    // Get session
+    const [session] = await db
+      .select()
+      .from(sessionModel)
+      .where(eq(sessionModel.id, promotion.sessionId));
+
+    // Get academic year from session
+    let academicYear = null;
+    if (session?.academicYearId) {
+      const [ay] = await db
+        .select()
+        .from(academicYearModel)
+        .where(eq(academicYearModel.id, session.academicYearId));
+      academicYear = ay ?? null;
+    }
+
+    // Get class (semester)
+    const [cls] = await db
+      .select()
+      .from(classModel)
+      .where(eq(classModel.id, promotion.classId));
+
+    results.push({
+      ...promotion,
+      session: session ?? null,
+      academicYear,
+      class: cls ?? null,
+    });
+  }
+
+  return { data: results, message: "Retrieved!", status: 200 };
 }
 
 export async function deleteUserStatusMapping(id: number) {
