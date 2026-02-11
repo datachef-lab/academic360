@@ -264,14 +264,22 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
       if (feeGroupPromotionMapping) {
         const totalPayable = await calculateTotalPayableForFeeStudentMapping(
           feeStructure.id!,
-          feeGroupPromotionMapping.feeGroupId, // TODO: This needs to be refactored to use feeGroup
+          feeGroupPromotionMapping,
         );
 
         await db
           .update(feeStudentMappingModel)
           .set({
             feeGroupPromotionMappingId,
-            totalPayable,
+            // If the existing mapping has a waiver, subtract it so DB totalPayable
+            // continues to represent the amount after applying student-specific waivers.
+            totalPayable: Math.max(
+              0,
+              totalPayable -
+                (existingFeeStudentMapping.isWaivedOff
+                  ? existingFeeStudentMapping.waivedOffAmount || 0
+                  : 0),
+            ),
             updatedAt: new Date(),
           })
           .where(eq(feeStudentMappingModel.id, existingFeeStudentMapping.id!));
@@ -304,7 +312,7 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
     if (feeGroupPromotionMapping) {
       totalPayable = await calculateTotalPayableForFeeStudentMapping(
         feeStructure.id!,
-        feeGroupPromotionMapping.feeGroupId, // TODO: This needs to be refactored
+        feeGroupPromotionMapping,
       );
     }
 
@@ -336,17 +344,17 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
  */
 export async function calculateTotalPayableForFeeStudentMapping(
   feeStructureId: number,
-  feeGroupId: number,
+  feeGroupPromotionMapping: typeof feeGroupPromotionMappingModel.$inferSelect,
 ): Promise<number> {
   // Get the fee group to find its linked fee slab
   const [feeGroup] = await db
     .select()
     .from(feeGroupModel)
-    .where(eq(feeGroupModel.id, feeGroupId));
+    .where(eq(feeGroupModel.id, feeGroupPromotionMapping.feeGroupId));
 
   if (!feeGroup || !feeGroup.feeSlabId) {
     console.warn(
-      `No fee slab found for fee group ${feeGroupId}. Cannot calculate total payable.`,
+      `No fee slab found for fee group ${feeGroupPromotionMapping.feeGroupId}. Cannot calculate total payable.`,
     );
     return 0;
   }
@@ -367,10 +375,27 @@ export async function calculateTotalPayableForFeeStudentMapping(
     const totalAmount = feeStructureComponents.reduce((sum, component) => {
       return sum + (component.amount || 0);
     }, 0);
+
+    const [feeStudentMapping] = await db
+      .select()
+      .from(feeStudentMappingModel)
+      .where(
+        and(
+          eq(
+            feeStudentMappingModel.feeGroupPromotionMappingId,
+            feeGroupPromotionMapping.id,
+          ),
+          eq(feeStudentMappingModel.feeStructureId, feeStructureId),
+        ),
+      );
+
+    // Return base total (sum of components) without applying any student-specific
+    // waived off amounts. Waiver adjustments are handled at the mapping/update
+    // level so saving/updating fee structures doesn't implicitly include
+    // student-specific waivers.
     return Math.round(totalAmount);
   }
 
-  // If no components, return 0
   return 0;
 }
 

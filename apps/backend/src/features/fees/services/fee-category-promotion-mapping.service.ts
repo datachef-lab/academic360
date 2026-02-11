@@ -384,7 +384,7 @@ export const updateFeeCategoryPromotionMapping = async (
       for (const feeStudentMapping of relatedFeeStudentMappings) {
         const newTotalPayable = await calculateTotalPayableForFeeStudentMapping(
           feeStudentMapping.feeStructureId,
-          feeGroup.feeCategoryId,
+          updated,
         );
 
         // Recalculate final totalPayable accounting for waived off amount
@@ -539,26 +539,22 @@ export const getFilteredFeeCategoryPromotionMappings = async (
 
 /**
  * Calculate total payable amount for fee-student-mapping based on:
- * - Sum of all fee structure component amounts
+ * - Get the fee group and its linked fee slab
+ * - Sum only the fee structure components that match the slab
+ * - Components are now linked to specific slabs (feeSlabId)
  */
 async function calculateTotalPayable(
   feeStructureId: number,
-  feeGroupId: number,
+  feeGroupPromotionMapping: typeof feeGroupPromotionMappingModel.$inferSelect,
 ): Promise<number> {
-  // Get all fee structure components for this fee structure
-  const feeStructureComponents = await db
-    .select()
-    .from(feeStructureComponentModel)
-    .where(eq(feeStructureComponentModel.feeStructureId, feeStructureId));
+  // Import the main calculation function from fee-structure service
+  const { calculateTotalPayableForFeeStudentMapping } =
+    await import("./fee-structure.service.js");
 
-  if (feeStructureComponents.length > 0) {
-    const totalAmount = feeStructureComponents.reduce((sum, component) => {
-      return sum + (component.amount || 0);
-    }, 0);
-    return Math.round(totalAmount);
-  }
-
-  return 0;
+  return await calculateTotalPayableForFeeStudentMapping(
+    feeStructureId,
+    feeGroupPromotionMapping,
+  );
 }
 
 export interface BulkUploadRow {
@@ -829,7 +825,7 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
                 // Calculate total payable based on concession rate
                 const totalPayable = await calculateTotalPayable(
                   feeStructure.id!,
-                  selectedMappingFull.feeGroupId,
+                  selectedMappingFull,
                 );
 
                 // Check if fee-student-mapping already exists for this combination
@@ -847,12 +843,18 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
                   );
 
                 if (existingFeeStudentMapping) {
-                  // Update existing  mapping
+                  // Update existing mapping and account for any existing waiver
                   await db
                     .update(feeStudentMappingModel)
                     .set({
                       feeGroupPromotionMappingId: selectedMapping.id,
-                      totalPayable,
+                      totalPayable: Math.max(
+                        0,
+                        totalPayable -
+                          (existingFeeStudentMapping.isWaivedOff
+                            ? existingFeeStudentMapping.waivedOffAmount || 0
+                            : 0),
+                      ),
                       updatedAt: new Date(),
                     })
                     .where(

@@ -480,7 +480,7 @@ export const updateFeeGroupPromotionMapping = async (
     for (const feeStudentMapping of relatedFeeStudentMappings) {
       const newTotalPayable = await calculateTotalPayableForFeeStudentMapping(
         feeStudentMapping.feeStructureId,
-        updated.feeGroupId,
+        updated,
       );
 
       // Recalculate final totalPayable accounting for waived off amount
@@ -695,7 +695,7 @@ export const getFilteredFeeGroupPromotionMappings = async (
  */
 async function calculateTotalPayable(
   feeStructureId: number,
-  feeGroupId: number,
+  feeGroupPromotionMapping: typeof feeGroupPromotionMappingModel.$inferSelect,
 ): Promise<number> {
   // Import the main calculation function
   const { calculateTotalPayableForFeeStudentMapping } =
@@ -703,7 +703,7 @@ async function calculateTotalPayable(
 
   return await calculateTotalPayableForFeeStudentMapping(
     feeStructureId,
-    feeGroupId,
+    feeGroupPromotionMapping,
   );
 }
 
@@ -980,7 +980,7 @@ export const bulkUploadFeeGroupPromotionMappings = async (
                   // Calculate total payable based on concession rate
                   const totalPayable = await calculateTotalPayable(
                     feeStructure.id!,
-                    feeGroup.id!,
+                    selectedMappingFull,
                   );
 
                   // Check if fee-student-mapping already exists for this combination
@@ -998,12 +998,19 @@ export const bulkUploadFeeGroupPromotionMappings = async (
                     );
 
                   if (existingFeeStudentMapping) {
-                    // Update existing mapping
+                    // Update existing mapping. Preserve any student-specific waiver by
+                    // subtracting waivedOffAmount from the newly calculated totalPayable.
                     await db
                       .update(feeStudentMappingModel)
                       .set({
                         feeGroupPromotionMappingId: selectedMapping.id,
-                        totalPayable,
+                        totalPayable: Math.max(
+                          0,
+                          totalPayable -
+                            (existingFeeStudentMapping.isWaivedOff
+                              ? existingFeeStudentMapping.waivedOffAmount || 0
+                              : 0),
+                        ),
                         updatedAt: new Date(),
                       })
                       .where(
