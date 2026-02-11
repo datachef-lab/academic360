@@ -83,6 +83,8 @@ import {
   feeStructureComponentRouter,
   feeCategoryRouter,
   feeGroupPromotionMappingRouter,
+  userStatusMasterRouter,
+  userStatusMasterLevelRouter,
 } from "@/features/index.js";
 import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
@@ -370,6 +372,10 @@ app.use(
 // app.use("/api/batch-papers/old-data", batchPaperRouter);
 
 app.use("/api/users", userRouter);
+// User status master endpoints
+app.use("/api/user-status-masters", userStatusMasterRouter);
+// User status master level endpoints
+app.use("/api/user-status-master-levels", userStatusMasterLevelRouter);
 app.use("/api/sessions", sessionRouter);
 
 app.use("/api/personal-details", personalDetailsRouter);
