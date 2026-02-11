@@ -22,7 +22,10 @@ import {
 } from "@repo/db/schemas/models/user";
 import { and, inArray, or, ilike, desc, eq } from "drizzle-orm";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
-import { feeStructureModel, feeStructureSlabModel } from "@repo/db/schemas";
+import {
+  feeStructureModel,
+  feeStructureComponentModel,
+} from "@repo/db/schemas";
 import XLSX from "xlsx";
 import fs from "fs";
 import * as studentService from "@/features/user/services/student.service.js";
@@ -536,57 +539,26 @@ export const getFilteredFeeCategoryPromotionMappings = async (
 
 /**
  * Calculate total payable amount for fee-student-mapping based on:
- * - Fee structure base amount
- * - Fee group's fee slab
- * - Fee structure slab's concession rate
+ * - Sum of all fee structure component amounts
  */
 async function calculateTotalPayable(
   feeStructureId: number,
   feeGroupId: number,
 ): Promise<number> {
-  // Get fee structure
-  const [feeStructure] = await db
+  // Get all fee structure components for this fee structure
+  const feeStructureComponents = await db
     .select()
-    .from(feeStructureModel)
-    .where(eq(feeStructureModel.id, feeStructureId));
+    .from(feeStructureComponentModel)
+    .where(eq(feeStructureComponentModel.feeStructureId, feeStructureId));
 
-  if (!feeStructure || !feeStructure.baseAmount) {
-    return 0;
+  if (feeStructureComponents.length > 0) {
+    const totalAmount = feeStructureComponents.reduce((sum, component) => {
+      return sum + (component.amount || 0);
+    }, 0);
+    return Math.round(totalAmount);
   }
 
-  // Get fee group to get feeSlabId
-  const [feeGroup] = await db
-    .select()
-    .from(feeGroupModel)
-    .where(eq(feeGroupModel.id, feeGroupId));
-
-  if (!feeGroup || !feeGroup.feeSlabId) {
-    // If no fee slab, return base amount
-    return Math.round(feeStructure.baseAmount);
-  }
-
-  // Get fee structure slab for this fee structure and fee slab
-  const [feeStructureSlab] = await db
-    .select()
-    .from(feeStructureSlabModel)
-    .where(
-      and(
-        eq(feeStructureSlabModel.feeStructureId, feeStructureId),
-        eq(feeStructureSlabModel.feeSlabId, feeGroup.feeSlabId),
-      ),
-    );
-
-  if (!feeStructureSlab || !feeStructureSlab.concessionRate) {
-    // If no fee structure slab mapping found, return base amount
-    return Math.round(feeStructure.baseAmount);
-  }
-
-  // Calculate total payable: baseAmount - (baseAmount * concessionRate / 100)
-  const concessionAmount =
-    (feeStructure.baseAmount * feeStructureSlab.concessionRate) / 100;
-  const totalPayable = feeStructure.baseAmount - concessionAmount;
-
-  return Math.round(totalPayable);
+  return 0;
 }
 
 export interface BulkUploadRow {

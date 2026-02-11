@@ -3,13 +3,11 @@ import {
   CreateFeeStructureDto,
   FeeStructureDto,
   FeeStructureComponentDto,
-  FeeStructureSlabDto,
 } from "@repo/db/dtos/fees";
 import {
   feeStructureModel,
   FeeStructure,
   feeStructureComponentModel,
-  feeStructureSlabModel,
   feeStructureInstallmentModel,
   receiptTypeModel,
   feeHeadModel,
@@ -37,6 +35,7 @@ import {
   ne,
   not,
   notInArray,
+  or,
 } from "drizzle-orm";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import * as academicYearService from "@/features/academics/services/academic-year.service.js";
@@ -125,7 +124,13 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
   const [generalFeeCategory] = await db
     .select()
     .from(feeCategoryModel)
-    .where(eq(feeCategoryModel.name, "General"));
+    .where(
+      or(
+        eq(feeCategoryModel.name, "General"),
+        eq(feeCategoryModel.name, "Full Fee"),
+        eq(feeCategoryModel.name, "Full Fees"),
+      ),
+    );
 
   if (!generalFeeCategory) {
     console.warn(
@@ -325,80 +330,48 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
 
 /**
  * Calculate total payable amount for fee-student-mapping based on:
- * - Fee structure base amount
- * - Fee structure components (fee heads with percentages)
- * - Fee group's fee slab
- * - Fee structure slab's concession rate
+ * - Get the fee group and its linked fee slab
+ * - Sum only the fee structure components that match the slab
+ * - Components are now linked to specific slabs (feeSlabId)
  */
 export async function calculateTotalPayableForFeeStudentMapping(
   feeStructureId: number,
   feeGroupId: number,
 ): Promise<number> {
-  // Get fee structure with components
-  const [feeStructure] = await db
-    .select()
-    .from(feeStructureModel)
-    .where(eq(feeStructureModel.id, feeStructureId));
-
-  if (!feeStructure || !feeStructure.baseAmount) {
-    return 0;
-  }
-
-  // Get fee group to find the fee slab
+  // Get the fee group to find its linked fee slab
   const [feeGroup] = await db
     .select()
     .from(feeGroupModel)
     .where(eq(feeGroupModel.id, feeGroupId));
 
   if (!feeGroup || !feeGroup.feeSlabId) {
-    // If no fee group or slab, return base amount
-    return Math.round(feeStructure.baseAmount);
+    console.warn(
+      `No fee slab found for fee group ${feeGroupId}. Cannot calculate total payable.`,
+    );
+    return 0;
   }
 
-  // Get fee structure components
+  // Get fee structure components for this structure and slab
   const feeStructureComponents = await db
     .select()
     .from(feeStructureComponentModel)
-    .where(eq(feeStructureComponentModel.feeStructureId, feeStructureId));
-
-  // Get fee structure slabs to find the concession rate
-  const feeStructureSlabs = await db
-    .select()
-    .from(feeStructureSlabModel)
-    .where(eq(feeStructureSlabModel.feeStructureId, feeStructureId));
-
-  // Find the matching fee structure slab that has the same feeSlabId as the fee group
-  const matchingFeeStructureSlab = feeStructureSlabs.find(
-    (fs) => fs.feeSlabId === feeGroup.feeSlabId,
-  );
-
-  const concessionRate = matchingFeeStructureSlab?.concessionRate || 0;
-
-  // Calculate total from components with concession applied
-  if (feeStructureComponents.length > 0) {
-    const totalAfterConcession = feeStructureComponents.reduce(
-      (sum, component) => {
-        // Calculate component amount from base amount and percentage
-        const componentAmount = Math.round(
-          (feeStructure.baseAmount * (component.feeHeadPercentage || 0)) / 100,
-        );
-        // Apply concession rate
-        const concessionAmount = Math.round(
-          (componentAmount * concessionRate) / 100,
-        );
-        const amountAfterConcession = componentAmount - concessionAmount;
-        return sum + amountAfterConcession;
-      },
-      0,
+    .where(
+      and(
+        eq(feeStructureComponentModel.feeStructureId, feeStructureId),
+        eq(feeStructureComponentModel.feeSlabId, feeGroup.feeSlabId),
+      ),
     );
-    return totalAfterConcession;
+
+  // Calculate total as sum of all matching component amounts
+  if (feeStructureComponents.length > 0) {
+    const totalAmount = feeStructureComponents.reduce((sum, component) => {
+      return sum + (component.amount || 0);
+    }, 0);
+    return Math.round(totalAmount);
   }
 
-  // If no components, apply concession to base amount
-  const concessionAmount = Math.round(
-    (feeStructure.baseAmount * concessionRate) / 100,
-  );
-  return Math.round(feeStructure.baseAmount - concessionAmount);
+  // If no components, return 0
+  return 0;
 }
 
 /**
@@ -452,28 +425,13 @@ async function modelToDto(
         const feeHead = await feeHeadService.getFeeHeadById(
           component.feeHeadId,
         );
+        const feeSlab = await feeSlabService.getFeeSlabById(
+          component.feeSlabId,
+        );
         return {
           ...component,
           feeHead: feeHead || null,
-        };
-      }),
-    );
-
-    // Fetch concession slabs
-    const feeStructureSlabs = await db
-      .select()
-      .from(feeStructureSlabModel)
-      .where(eq(feeStructureSlabModel.feeStructureId, model.id!));
-
-    const feeStructureSlabDtos: FeeStructureSlabDto[] = await Promise.all(
-      feeStructureSlabs.map(async (slab) => {
-        const feeSlab = await feeSlabService.getFeeSlabById(slab.feeSlabId);
-        if (!feeSlab) {
-          throw new Error(`Fee slab not found: ${slab.feeSlabId}`);
-        }
-        return {
-          ...slab,
-          feeSlab,
+          feeSlab: feeSlab || null,
         };
       }),
     );
@@ -506,7 +464,6 @@ async function modelToDto(
       advanceForProgramCourse,
       advanceForClass,
       components: componentDtos,
-      feeStructureSlabs: feeStructureSlabDtos,
       installments,
     };
   } catch (error) {
@@ -677,7 +634,6 @@ export const getAllFeeStructures = async (
     classes,
     shifts,
     components,
-    feeStructureSlabs,
     installments,
   ] = await Promise.all([
     receiptTypeIds.length > 0
@@ -715,12 +671,6 @@ export const getAllFeeStructures = async (
     structureIds.length > 0
       ? db
           .select()
-          .from(feeStructureSlabModel)
-          .where(inArray(feeStructureSlabModel.feeStructureId, structureIds))
-      : [],
-    structureIds.length > 0
-      ? db
-          .select()
           .from(feeStructureInstallmentModel)
           .where(
             inArray(feeStructureInstallmentModel.feeStructureId, structureIds),
@@ -745,14 +695,10 @@ export const getAllFeeStructures = async (
   const classMap = new Map(classes.map((c) => [c.id, c]));
   const shiftMap = new Map(shifts.map((s) => [s.id, s]));
 
-  // Group components, slabs, and installments by structure ID
+  // Group components and installments by structure ID
   const componentsByStructureId = new Map<
     number,
     (typeof components)[number][]
-  >();
-  const slabsByStructureId = new Map<
-    number,
-    (typeof feeStructureSlabs)[number][]
   >();
   const installmentsByStructureId = new Map<
     number,
@@ -767,14 +713,6 @@ export const getAllFeeStructures = async (
     componentsByStructureId.get(structId)!.push(component);
   }
 
-  for (const slab of feeStructureSlabs) {
-    const structId = slab.feeStructureId;
-    if (!slabsByStructureId.has(structId)) {
-      slabsByStructureId.set(structId, []);
-    }
-    slabsByStructureId.get(structId)!.push(slab);
-  }
-
   for (const installment of installments) {
     const structId = installment.feeStructureId;
     if (!installmentsByStructureId.has(structId)) {
@@ -783,30 +721,30 @@ export const getAllFeeStructures = async (
     installmentsByStructureId.get(structId)!.push(installment);
   }
 
-  // Fetch fee heads for components
+  // Fetch fee heads and fee slabs for components
   const feeHeadIds = Array.from(
     new Set(components.map((c) => c.feeHeadId).filter(Boolean)),
   );
-  const feeHeads =
+  const feeSlabIds = Array.from(
+    new Set(components.map((c) => c.feeSlabId).filter(Boolean)),
+  );
+
+  const [feeHeads, feeSlabs] = await Promise.all([
     feeHeadIds.length > 0
-      ? await db
+      ? db
           .select()
           .from(feeHeadModel)
           .where(inArray(feeHeadModel.id, feeHeadIds))
-      : [];
-  const feeHeadMap = new Map(feeHeads.map((fh) => [fh.id, fh]));
-
-  // Fetch fee slabs for fee structure slabs
-  const feeSlabIds = Array.from(
-    new Set(feeStructureSlabs.map((fs) => fs.feeSlabId).filter(Boolean)),
-  );
-  const feeSlabs =
+      : [],
     feeSlabIds.length > 0
-      ? await db
+      ? db
           .select()
           .from(feeSlabModel)
           .where(inArray(feeSlabModel.id, feeSlabIds))
-      : [];
+      : [],
+  ]);
+
+  const feeHeadMap = new Map(feeHeads.map((fh) => [fh.id, fh]));
   const feeSlabMap = new Map(feeSlabs.map((fs) => [fs.id, fs]));
 
   // Convert to DTOs using batch-fetched data
@@ -842,22 +780,8 @@ export const getAllFeeStructures = async (
       (component) => ({
         ...component,
         feeHead: feeHeadMap.get(component.feeHeadId) || null,
+        feeSlab: feeSlabMap.get(component.feeSlabId) || null,
       }),
-    );
-
-    // Build slab DTOs
-    const structureSlabs = slabsByStructureId.get(structure.id!) || [];
-    const feeStructureSlabDtos: FeeStructureSlabDto[] = structureSlabs.map(
-      (slab) => {
-        const feeSlab = feeSlabMap.get(slab.feeSlabId);
-        if (!feeSlab) {
-          throw new Error(`Fee slab not found: ${slab.feeSlabId}`);
-        }
-        return {
-          ...slab,
-          feeSlab,
-        };
-      },
     );
 
     // Get installments
@@ -886,7 +810,6 @@ export const getAllFeeStructures = async (
       advanceForProgramCourse,
       advanceForClass,
       components: componentDtos,
-      feeStructureSlabs: feeStructureSlabDtos,
       installments: structureInstallments,
     });
   }
@@ -949,7 +872,6 @@ export async function createFeeStructureByDto(
         academicYearId: givenDto.academicYearId,
         classId: givenDto.classId,
         receiptTypeId: givenDto.receiptTypeId,
-        baseAmount: givenDto.baseAmount,
         programCourseId: givenDto.programCourseIds[i],
         shiftId: givenDto.shiftIds[j],
         closingDate: givenDto.closingDate,
@@ -1023,18 +945,8 @@ export async function createFeeStructureByDto(
           feeStructureId: newFeesStructure.id!,
         });
       }
-      // Step 3: - Add the fee-structure-slabs
-      for (let k = 0; k < givenDto.feeStructureSlabs.length; k++) {
-        const feeStructureSlab = givenDto.feeStructureSlabs[k];
 
-        await db.insert(feeStructureSlabModel).values({
-          feeStructureId: newFeesStructure.id!,
-          feeSlabId: feeStructureSlab.feeSlabId,
-          concessionRate: feeStructureSlab.concessionRate,
-        });
-      }
-
-      // Step 4: - Add installments if provided
+      // Step 3: - Add installments if provided
       if (givenDto.installments && givenDto.installments.length > 0) {
         for (let k = 0; k < givenDto.installments.length; k++) {
           const installment = givenDto.installments[k];
@@ -1170,7 +1082,6 @@ export async function updateFeeStructureByDto(
     academicYearId: givenDto.academicYearId,
     classId: givenDto.classId,
     receiptTypeId: givenDto.receiptTypeId,
-    baseAmount: givenDto.baseAmount,
     programCourseId:
       givenDto.programCourseIds[0] || existingFeeStructure.programCourseId, // For single structure update
     shiftId: givenDto.shiftIds[0] || existingFeeStructure.shiftId, // For single structure update
@@ -1214,25 +1125,7 @@ export async function updateFeeStructureByDto(
     }
   }
 
-  // Step 4: Upsert fee structure slabs (delete existing and insert new)
-  // Delete existing fee structure slabs
-  await db
-    .delete(feeStructureSlabModel)
-    .where(eq(feeStructureSlabModel.feeStructureId, feeStructureId));
-
-  // Insert new concession slabs
-  if (givenDto.feeStructureSlabs && givenDto.feeStructureSlabs.length > 0) {
-    for (let k = 0; k < givenDto.feeStructureSlabs.length; k++) {
-      const feeStructureSlab = givenDto.feeStructureSlabs[k];
-      await db.insert(feeStructureSlabModel).values({
-        feeStructureId: feeStructureId,
-        feeSlabId: feeStructureSlab.feeSlabId,
-        concessionRate: feeStructureSlab.concessionRate,
-      });
-    }
-  }
-
-  // Step 5: Upsert installments (delete existing and insert new)
+  // Step 4: Upsert installments (delete existing and insert new)
   // Delete existing installments
   await db
     .delete(feeStructureInstallmentModel)
@@ -1397,12 +1290,7 @@ export const deleteFeeStructure = async (
       .delete(feeStructureInstallmentModel)
       .where(eq(feeStructureInstallmentModel.feeStructureId, id));
 
-    // 4. Delete fee_structure_slabs
-    await tx
-      .delete(feeStructureSlabModel)
-      .where(eq(feeStructureSlabModel.feeStructureId, id));
-
-    // 5. Finally, delete the fee structure itself
+    // 4. Finally, delete the fee structure itself
     await tx.delete(feeStructureModel).where(eq(feeStructureModel.id, id));
   });
 
@@ -2130,21 +2018,15 @@ export const getAcademicYearsFromFeesStructures = async () => {
 };
 
 /**
- * Checks if the fee structure amounts are unique for all concession slabs
- * Calculated amounts should be unique across ALL fee structures, regardless of
- * academic year, semester, program courses, or shifts
+ * Checks if the fee structure amounts are unique
+ * This function is kept for compatibility but simplified since concession slabs are no longer used
  */
 export const checkUniqueFeeStructureAmounts = async (
   academicYearId: number,
   classId: number,
   programCourseIds: number[],
   shiftIds: number[],
-  baseAmount: number,
-  feeStructureSlabs: Array<{
-    feeSlabId: number;
-    concessionRate: number;
-  }>,
-  excludeFeeStructureId?: number, // For edit case, exclude current fee structure
+  excludeFeeStructureId?: number,
   page: number = 1,
   pageSize: number = 10,
 ): Promise<{
@@ -2164,225 +2046,16 @@ export const checkUniqueFeeStructureAmounts = async (
     receiptTypeName: string | null;
   }>;
 }> => {
-  const conflicts: Array<{
-    programCourseId: number;
-    shiftId: number;
-    feeSlabId: number;
-    feeSlabName: string;
-    conflictingAmount: number;
-    conflictingFeeStructureId: number;
-    academicYearId: number;
-    academicYearName: string | null;
-    classId: number;
-    className: string | null;
-    receiptTypeId: number;
-    receiptTypeName: string | null;
-  }> = [];
-
-  // Use a Set to track unique conflicts
-  // Since amounts must be unique globally (regardless of program course, shift, etc.),
-  // we group conflicts by feeSlabId + conflictingAmount only
-  // This eliminates redundancy where multiple fee structures have the same amount for the same fee slab
-  const uniqueConflictKeys = new Set<string>();
-
-  // Map to store the first conflicting fee structure for each unique conflict
-  // Key: feeSlabId-conflictingAmount, Value: first conflicting fee structure data
-  const conflictMap = new Map<
-    string,
-    {
-      programCourseId: number;
-      shiftId: number;
-      feeSlabId: number;
-      feeSlabName: string;
-      conflictingAmount: number;
-      conflictingFeeStructureId: number;
-      academicYearId: number;
-      academicYearName: string | null;
-      classId: number;
-      className: string | null;
-      receiptTypeId: number;
-      receiptTypeName: string | null;
-    }
-  >();
-
-  // Get all existing fee structures (excluding the current one if editing)
-  const conditions = [];
-  if (excludeFeeStructureId) {
-    conditions.push(not(eq(feeStructureModel.id, excludeFeeStructureId)));
-
-    // Also exclude fee structures that were created in the same batch
-    // (same baseAmount, academicYearId, classId, receiptTypeId, and same concession slabs)
-    // This prevents conflicts with other fee structures created together during multi-select creation
-
-    // First, get the current fee structure to find its "batch signature"
-    const [currentFeeStructure] = await db
-      .select()
-      .from(feeStructureModel)
-      .where(eq(feeStructureModel.id, excludeFeeStructureId));
-
-    if (currentFeeStructure) {
-      // Get all fee structure slabs for the current fee structure
-      const currentFeeStructureSlabs = await db
-        .select()
-        .from(feeStructureSlabModel)
-        .where(eq(feeStructureSlabModel.feeStructureId, excludeFeeStructureId));
-
-      // Find fee structures with the same "batch signature"
-      // (same baseAmount, academicYearId, classId, receiptTypeId)
-      const batchStructures = await db
-        .select()
-        .from(feeStructureModel)
-        .where(
-          and(
-            eq(feeStructureModel.baseAmount, currentFeeStructure.baseAmount),
-            eq(
-              feeStructureModel.academicYearId,
-              currentFeeStructure.academicYearId,
-            ),
-            eq(feeStructureModel.classId, currentFeeStructure.classId),
-            eq(
-              feeStructureModel.receiptTypeId,
-              currentFeeStructure.receiptTypeId,
-            ),
-            not(eq(feeStructureModel.id, excludeFeeStructureId)),
-          ),
-        );
-
-      // Check which of these have the same concession slabs
-      const batchStructureIds: number[] = [];
-      for (const batchStruct of batchStructures) {
-        const batchFeeStructureSlabs = await db
-          .select()
-          .from(feeStructureSlabModel)
-          .where(eq(feeStructureSlabModel.feeStructureId, batchStruct.id!));
-
-        // Check if they have the same fee structure slabs (same IDs and rates)
-        if (batchFeeStructureSlabs.length === currentFeeStructureSlabs.length) {
-          const currentSlabsMap = new Map(
-            currentFeeStructureSlabs.map((s) => [
-              s.feeSlabId,
-              s.concessionRate,
-            ]),
-          );
-          const batchSlabsMap = new Map(
-            batchFeeStructureSlabs.map((s) => [s.feeSlabId, s.concessionRate]),
-          );
-
-          // Check if all slabs match
-          let allMatch = true;
-          for (const [slabId, rate] of currentSlabsMap) {
-            if (batchSlabsMap.get(slabId) !== rate) {
-              allMatch = false;
-              break;
-            }
-          }
-
-          if (allMatch) {
-            batchStructureIds.push(batchStruct.id!);
-          }
-        }
-      }
-
-      // Exclude all fee structures from the same batch
-      if (batchStructureIds.length > 0) {
-        conditions.push(notInArray(feeStructureModel.id, batchStructureIds));
-      }
-    }
-  }
-
-  const allExistingStructures = await db
-    .select()
-    .from(feeStructureModel)
-    .where(conditions.length > 0 ? and(...conditions) : undefined);
-
-  // For each fee structure slab, calculate final amount and check for conflicts
-  for (const slab of feeStructureSlabs) {
-    const concessionAmount = (baseAmount * slab.concessionRate) / 100;
-    const finalAmount = baseAmount - concessionAmount;
-
-    // Check ALL existing fee structures (not filtered by academic year, class, program course, or shift)
-    for (const existingStructure of allExistingStructures) {
-      const existingFeeStructureSlabs = await db
-        .select()
-        .from(feeStructureSlabModel)
-        .where(eq(feeStructureSlabModel.feeStructureId, existingStructure.id!));
-
-      // Check if any existing slab has the same final amount for the same fee slab
-      for (const existingSlab of existingFeeStructureSlabs) {
-        if (existingSlab.feeSlabId === slab.feeSlabId) {
-          const existingConcessionAmount =
-            (existingStructure.baseAmount * existingSlab.concessionRate) / 100;
-          const existingFinalAmount =
-            existingStructure.baseAmount - existingConcessionAmount;
-
-          // Check if amounts match (with small tolerance for floating point)
-          if (Math.abs(existingFinalAmount - finalAmount) < 0.01) {
-            // Create a unique key based only on feeSlabId and amount
-            // This ensures we report each unique conflict only once, regardless of how many fee structures have it
-            const conflictKey = `${slab.feeSlabId}-${existingFinalAmount.toFixed(2)}`;
-
-            // Only process if we haven't seen this exact conflict before
-            if (!uniqueConflictKeys.has(conflictKey)) {
-              uniqueConflictKeys.add(conflictKey);
-
-              // Get fee slab name
-              const feeSlab = await feeSlabService.getFeeSlabById(
-                slab.feeSlabId,
-              );
-
-              // Fetch related entities for the conflicting fee structure
-              const conflictingAcademicYear =
-                await academicYearService.findAcademicYearById(
-                  existingStructure.academicYearId,
-                );
-              const conflictingClass = await classService.findClassById(
-                existingStructure.classId,
-              );
-              const conflictingReceiptType =
-                await receiptTypeService.getReceiptTypeById(
-                  existingStructure.receiptTypeId,
-                );
-
-              // Store the first conflicting fee structure for this unique conflict
-              conflictMap.set(conflictKey, {
-                programCourseId: existingStructure.programCourseId,
-                shiftId: existingStructure.shiftId,
-                feeSlabId: slab.feeSlabId,
-                feeSlabName: feeSlab?.name || "Unknown",
-                conflictingAmount: existingFinalAmount,
-                conflictingFeeStructureId: existingStructure.id!,
-                academicYearId: existingStructure.academicYearId,
-                academicYearName: conflictingAcademicYear?.year || null,
-                classId: existingStructure.classId,
-                className: conflictingClass?.name || null,
-                receiptTypeId: existingStructure.receiptTypeId,
-                receiptTypeName: conflictingReceiptType?.name || null,
-              });
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Convert map to array of conflicts
-  conflicts.push(...Array.from(conflictMap.values()));
-
-  // Paginate conflicts
-  const offset = (page - 1) * pageSize;
-  const limit = Math.max(1, Math.min(100, pageSize)); // Limit pageSize between 1 and 100
-  const totalElements = conflicts.length;
-  const totalPages = Math.max(1, Math.ceil(totalElements / limit));
-  const paginatedConflicts = conflicts.slice(offset, offset + limit);
-
+  // Since concession slabs are no longer used, we simply return that there are no conflicts
+  // This function is kept for API compatibility but always returns unique
   return {
-    isUnique: conflicts.length === 0,
+    isUnique: true,
     conflicts: {
-      content: paginatedConflicts,
+      content: [],
       page,
-      pageSize: limit,
-      totalPages,
-      totalElements,
+      pageSize,
+      totalPages: 1,
+      totalElements: 0,
     },
   };
 };

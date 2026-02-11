@@ -22,7 +22,7 @@ import {
 } from "@repo/db/schemas/models/user";
 import { and, inArray, or, ilike, desc, eq } from "drizzle-orm";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
-import { feeStructureModel, feeStructureSlabModel } from "@repo/db/schemas";
+import { feeStructureModel } from "@repo/db/schemas";
 import XLSX from "xlsx";
 import fs from "fs";
 import * as studentService from "@/features/user/services/student.service.js";

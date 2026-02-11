@@ -6,7 +6,7 @@ import { studentModel, userModel } from "@/schemas/models/user";
 import { feeStructureInstallmentModel, feeStructureModel } from "@/schemas/models/fees";
 import { paymentModeEnum, paymentStatusEnum, studentFeesMappingEnum } from "@/schemas/enums";
 
-import { feeSlabModel } from "./fee-slab.model";
+
 import { feeGroupPromotionMappingModel } from "./fee-group-promotion-mapping.model";
 
 export const feeStudentMappingModel = pgTable("fee_student_mappings", {
@@ -23,8 +23,7 @@ export const feeStudentMappingModel = pgTable("fee_student_mappings", {
     type: studentFeesMappingEnum().notNull().default("FULL"),
     feeStructureInstallmentId: integer("fee_structure_installment_id_fk")
         .references(() => feeStructureInstallmentModel.id),
-    feeSlabId: integer("fee_slab_id_fk")
-        .references(() => feeSlabModel.id),
+    
     isWaivedOff: boolean().notNull().default(false),
     waivedOffAmount: integer().notNull().default(0),
     waivedOffReason: varchar({ length: 500 }),

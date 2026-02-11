@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, doublePrecision, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { doublePrecision, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-import { feeHeadModel, feeStructureModel } from "@/schemas/models/fees";
+import { feeHeadModel, feeSlabModel, feeStructureModel } from "@/schemas/models/fees";
 
 export const feeStructureComponentModel = pgTable("fee_structure_components", {
     id: serial().primaryKey(),
@@ -13,9 +13,9 @@ export const feeStructureComponentModel = pgTable("fee_structure_components", {
     feeHeadId: integer("fee_head_id_fk")
         .references(() => feeHeadModel.id)
         .notNull(),
-    isConcessionApplicable: boolean().notNull().default(false),
-    feeHeadPercentage: doublePrecision().notNull().default(0),
-    sequence: integer(),
+    feeSlabId: integer("fee_slab_id_fk").references(() => feeSlabModel.id).notNull(),
+    amount: doublePrecision().notNull().default(0),
+    
     remarks: varchar({ length: 500 }),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
