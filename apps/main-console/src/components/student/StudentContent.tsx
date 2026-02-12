@@ -78,7 +78,7 @@ export default function StudentContent({ activeTab, studentId, userId, personalE
   const handleContent = () => {
     switch (activeTab.label) {
       case "Overview":
-        return <OverviewTab />;
+        return <OverviewTab studentId={studentId} userId={userId} />;
       case "Personal":
         // Prefer profile API payload when available; it contains personalDetails
         return (

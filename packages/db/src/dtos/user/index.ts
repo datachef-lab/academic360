@@ -8,11 +8,11 @@ import { BatchDto } from "../batches";
 import { AdmissionAcademicInfoDto, AdmissionCourseDetailsDto, ApplicationFormDto } from "../admissions";
 import { PoliceStationT } from "@/schemas/models/user/police-station.model";
 import { PostOfficeT } from "@/schemas/models/user/post-office.model";
-import { UserStatusMaster, UserStatusMasterT } from "@/schemas/models/user/user-status-master.model";
-import { UserStatusMasterLevel, UserStatusMasterLevelT } from "@/schemas/models/user/user-status-master-level.model";
-import { UserStatusMasterDomain, UserStatusMasterDomainT } from "@/schemas/models/user/user-status-master-domain.model";
-import { UserStatusMasterFrequency, UserStatusMasterFrequencyT } from "@/schemas/models/user/user-status-master-frequency.model";
-import { UserStatusMapping, UserStatusMappingT } from "@/schemas/models/user/user-status-mapping.model";
+import { UserStatusMaster, } from "@/schemas/models/user/user-status-master.model";
+import { UserStatusMasterLevel,  } from "@/schemas/models/user/user-status-master-level.model";
+import { UserStatusMasterDomain, } from "@/schemas/models/user/user-status-master-domain.model";
+import { UserStatusMasterFrequency,  } from "@/schemas/models/user/user-status-master-frequency.model";
+import { UserStatusMapping,  } from "@/schemas/models/user/user-status-mapping.model";
 
 export interface PromotionDto extends Omit<PromotionT, "promotionStatusId" | "boardResultStatusId" | "sessionId" | "classId" | "sectionId" | "shiftId" | "programCourseId"> {
     promotionStatus: PromotionStatusT;

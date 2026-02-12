@@ -329,11 +329,9 @@ export const createFeeStructureByDto = async (
         academicYearId: z.number(),
         classId: z.number(),
         receiptTypeId: z.number(),
-        baseAmount: z.number(),
         programCourseIds: z.array(z.number()),
         shiftIds: z.array(z.number()),
         components: z.array(z.any()),
-        feeStructureSlabs: z.array(z.any()),
         installments: z.array(z.any()).optional(),
         advanceForProgramCourseIds: z.array(z.number()).optional(),
         closingDate: z.string().nullable().optional(),
@@ -361,20 +359,13 @@ export const createFeeStructureByDto = async (
 
     const data = parse.data as CreateFeeStructureDto;
 
-    // Validate uniqueness before creating
+    // Validate uniqueness before creating (simplified - no longer checking amounts)
     const uniquenessCheck =
       await feeStructureService.checkUniqueFeeStructureAmounts(
         data.academicYearId,
         data.classId,
         data.programCourseIds,
         data.shiftIds,
-        data.baseAmount,
-        data.feeStructureSlabs
-          .filter((slab) => slab.concessionRate !== undefined)
-          .map((slab) => ({
-            feeSlabId: slab.feeSlabId,
-            concessionRate: slab.concessionRate ?? 0,
-          })),
         undefined, // No excludeFeeStructureId for new creation
         1, // page
         1, // pageSize - only need to check if conflicts exist
@@ -458,11 +449,9 @@ export const updateFeeStructureByDto = async (
         academicYearId: z.number(),
         classId: z.number(),
         receiptTypeId: z.number(),
-        baseAmount: z.number(),
         programCourseIds: z.array(z.number()),
         shiftIds: z.array(z.number()),
         components: z.array(z.any()),
-        feeStructureSlabs: z.array(z.any()),
         installments: z.array(z.any()).optional(),
         advanceForProgramCourseIds: z.array(z.number()).optional(),
         closingDate: z.string().nullable().optional(),
@@ -490,20 +479,13 @@ export const updateFeeStructureByDto = async (
 
     const data = parse.data as CreateFeeStructureDto;
 
-    // Validate uniqueness before updating (exclude current fee structure)
+    // Validate uniqueness before updating (exclude current fee structure) (simplified - no longer checking amounts)
     const uniquenessCheck =
       await feeStructureService.checkUniqueFeeStructureAmounts(
         data.academicYearId,
         data.classId,
         data.programCourseIds,
         data.shiftIds,
-        data.baseAmount,
-        data.feeStructureSlabs
-          .filter((slab) => slab.concessionRate !== undefined)
-          .map((slab) => ({
-            feeSlabId: slab.feeSlabId,
-            concessionRate: slab.concessionRate ?? 0,
-          })),
         id, // Exclude current fee structure from conflict check
         1, // page
         1, // pageSize - only need to check if conflicts exist
@@ -765,13 +747,6 @@ export const checkUniqueFeeStructureAmounts = async (
         classId: z.number(),
         programCourseIds: z.array(z.number()),
         shiftIds: z.array(z.number()),
-        baseAmount: z.number(),
-        feeStructureSlabs: z.array(
-          z.object({
-            feeSlabId: z.number(),
-            concessionRate: z.number(),
-          }),
-        ),
         excludeFeeStructureId: z.number().optional(),
         page: z.number().optional().default(1),
         pageSize: z.number().optional().default(10),
@@ -797,8 +772,6 @@ export const checkUniqueFeeStructureAmounts = async (
       classId,
       programCourseIds,
       shiftIds,
-      baseAmount,
-      feeStructureSlabs,
       excludeFeeStructureId,
       page,
       pageSize,
@@ -809,8 +782,6 @@ export const checkUniqueFeeStructureAmounts = async (
       classId,
       programCourseIds,
       shiftIds,
-      baseAmount,
-      feeStructureSlabs,
       excludeFeeStructureId,
       page,
       pageSize,

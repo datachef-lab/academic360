@@ -1,0 +1,1 @@
+ALTER TABLE "user_status_mapping" ADD COLUMN "is_active" boolean DEFAULT true NOT NULL;

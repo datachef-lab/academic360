@@ -567,9 +567,6 @@ const StudentFeesPage: React.FC = () => {
                         Receipt Type
                       </TableHead>
                       <TableHead className="w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
-                        Base Amount
-                      </TableHead>
-                      <TableHead className="w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
                         Total Payable
                       </TableHead>
                       <TableHead className="w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
@@ -616,13 +613,6 @@ const StudentFeesPage: React.FC = () => {
                         ) : (
                           <span className="text-gray-700 text-sm">-</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[100px]">
-                        <div className="flex justify-center">
-                          <span className="text-gray-900 font-semibold">
-                            ₹{selectedSummaryItem.feeStructure?.baseAmount?.toLocaleString() || "0"}
-                          </span>
-                        </div>
                       </TableCell>
                       <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[100px]">
                         <div className="flex justify-center">
@@ -776,16 +766,36 @@ const StudentFeesPage: React.FC = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {selectedSummaryItem.feeStructure.components.map((component, index) => {
-                          const componentAmount = Math.round(
-                            ((selectedSummaryItem.feeStructure?.baseAmount || 0) * (component.feeHeadPercentage || 0)) /
-                              100,
-                          );
-                          // Calculate concession for the connected slab only
+                        {(() => {
+                          // Filter components to only show those matching the student's assigned slab
                           const connectedSlabId =
                             selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup?.feeSlab?.id;
-                          if (!connectedSlabId) {
-                            // If no connected slab, show component amount without concession
+
+                          const filteredComponents = selectedSummaryItem.feeStructure.components.filter(
+                            (component) => component.feeSlab?.id === connectedSlabId,
+                          );
+
+                          if (filteredComponents.length === 0) {
+                            return (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center p-4 text-gray-500">
+                                  No components found for the assigned slab
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+
+                          return filteredComponents.map((component, index) => {
+                            const assignedSlabAmount = component.amount || 0;
+
+                            // Find Slab F amount for this fee head (for Allocation column)
+                            const slabFComponent = selectedSummaryItem.feeStructure.components.find(
+                              (comp) =>
+                                comp.feeHead?.id === component.feeHead?.id &&
+                                comp.feeSlab?.name?.toUpperCase() === "SLAB F",
+                            );
+                            const slabFAmount = slabFComponent?.amount || 0;
+
                             return (
                               <TableRow
                                 key={component.id || index}
@@ -798,51 +808,18 @@ const StudentFeesPage: React.FC = () => {
                                   {index + 1}
                                 </TableCell>
                                 <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-green-50">
-                                  {component.feeHead?.name || "-"}{" "}
-                                  <span className="text-red-600">
-                                    ({(component.feeHeadPercentage || 0).toFixed(2)}%)
-                                  </span>
+                                  {component.feeHead?.name || "-"}
                                 </TableCell>
                                 <TableCell className="text-center border-r-2 border-gray-400 p-2 font-semibold bg-yellow-50">
-                                  ₹{componentAmount.toLocaleString()}
+                                  ₹{slabFAmount.toLocaleString()}
                                 </TableCell>
                                 <TableCell className="text-center p-2 font-semibold bg-orange-50">
-                                  ₹{componentAmount.toLocaleString()}
+                                  ₹{assignedSlabAmount.toLocaleString()}
                                 </TableCell>
                               </TableRow>
                             );
-                          }
-                          const matchingSlab = selectedSummaryItem.feeStructure?.feeStructureSlabs?.find(
-                            (fs) => fs.feeSlab.id === connectedSlabId,
-                          );
-                          const concessionRate = matchingSlab?.concessionRate || 0;
-                          const concessionAmount = Math.round((componentAmount * concessionRate) / 100);
-                          const totalAfterConcession = componentAmount - concessionAmount;
-
-                          return (
-                            <TableRow
-                              key={component.id || index}
-                              className="border-b-2 border-gray-400"
-                              style={{
-                                backgroundColor: index % 2 === 0 ? "#f9fafb" : "#ffffff",
-                              }}
-                            >
-                              <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-blue-50">
-                                {index + 1}
-                              </TableCell>
-                              <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-green-50">
-                                {component.feeHead?.name || "-"}{" "}
-                                <span className="text-red-600">({(component.feeHeadPercentage || 0).toFixed(2)}%)</span>
-                              </TableCell>
-                              <TableCell className="text-center border-r-2 border-gray-400 p-2 font-semibold bg-yellow-50">
-                                ₹{componentAmount.toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-center p-2 font-semibold bg-orange-50">
-                                ₹{totalAfterConcession.toLocaleString()}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
+                          });
+                        })()}
                         {/* Total Row */}
                         <TableRow className="border-t-4 border-gray-600 bg-gray-100">
                           <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-blue-50">
@@ -852,50 +829,66 @@ const StudentFeesPage: React.FC = () => {
                             -
                           </TableCell>
                           <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-yellow-50">
-                            ₹{selectedSummaryItem.feeStructure?.baseAmount?.toLocaleString() || "0"}
+                            {(() => {
+                              // Sum of Slab F amounts (full fees)
+                              const slabFComponents = selectedSummaryItem.feeStructure.components.filter(
+                                (component) => component.feeSlab?.name?.toUpperCase() === "SLAB F",
+                              );
+
+                              const slabFTotal = slabFComponents.reduce((sum, comp) => sum + (comp.amount || 0), 0);
+                              return `₹${slabFTotal.toLocaleString()}`;
+                            })()}
                           </TableCell>
                           <TableCell className="text-center p-2 font-bold text-base bg-orange-50">
                             <div className="flex flex-col items-center gap-1">
                               {(() => {
                                 const connectedSlabId =
                                   selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup?.feeSlab?.id;
-                                if (!connectedSlabId) {
-                                  return <span className="text-gray-900 font-bold">-</span>;
-                                }
-                                const matchingSlab = selectedSummaryItem.feeStructure?.feeStructureSlabs?.find(
-                                  (fs) => fs.feeSlab.id === connectedSlabId,
+
+                                const filteredComponents = selectedSummaryItem.feeStructure.components.filter(
+                                  (component) => component.feeSlab?.id === connectedSlabId,
                                 );
-                                const concessionRate = matchingSlab?.concessionRate || 0;
-                                const totalAfterConcession = selectedSummaryItem.feeStructure.components.reduce(
-                                  (sum, component) => {
-                                    const componentAmount = Math.round(
-                                      ((selectedSummaryItem.feeStructure?.baseAmount || 0) *
-                                        (component.feeHeadPercentage || 0)) /
-                                        100,
-                                    );
-                                    const concessionAmount = Math.round((componentAmount * concessionRate) / 100);
-                                    const totalAfterConcession = componentAmount - concessionAmount;
-                                    return sum + totalAfterConcession;
-                                  },
+
+                                const calculatedTotal = filteredComponents.reduce(
+                                  (sum, comp) => sum + (comp.amount || 0),
                                   0,
                                 );
                                 const totalPayable = selectedSummaryItem.totalPayable || 0;
 
-                                // Show strike-through if waived off amount exists
-                                if (selectedSummaryItem.waivedOffAmount && selectedSummaryItem.waivedOffAmount > 0) {
+                                // Show strike-through if waived off amount exists and it differs from calculated
+                                const dbTotal = totalPayable;
+                                const waived = selectedSummaryItem.waivedOffAmount || 0;
+                                const expectedTotal = Math.max(0, calculatedTotal - waived);
+
+                                // If a waiver exists, always show the base calculated total
+                                // as strike-through and the amount after waiver beside it.
+                                if (waived > 0) {
                                   return (
                                     <>
                                       <span className="line-through text-gray-500 text-sm">
-                                        ₹{totalAfterConcession.toLocaleString()}
+                                        ₹{calculatedTotal.toLocaleString()}
                                       </span>
-                                      <span className="text-gray-900 font-bold">₹{totalPayable.toLocaleString()}</span>
+                                      <span className="text-gray-900 font-bold">₹{expectedTotal.toLocaleString()}</span>
                                     </>
                                   );
                                 }
+
+                                // No waiver: expected is calculatedTotal. If DB differs, show strike-through.
+                                if (Math.abs(dbTotal - calculatedTotal) > 1) {
+                                  return (
+                                    <>
+                                      <span className="line-through text-gray-500 text-sm">
+                                        ₹{dbTotal.toLocaleString()}
+                                      </span>
+                                      <span className="text-gray-900 font-bold">
+                                        ₹{calculatedTotal.toLocaleString()}
+                                      </span>
+                                    </>
+                                  );
+                                }
+
                                 return (
-                                  <span className="text-gray-900 font-bold">
-                                    ₹{totalAfterConcession.toLocaleString()}
-                                  </span>
+                                  <span className="text-gray-900 font-bold">₹{calculatedTotal.toLocaleString()}</span>
                                 );
                               })()}
                             </div>
