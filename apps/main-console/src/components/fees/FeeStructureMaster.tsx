@@ -22,6 +22,7 @@ import { getAllShifts } from "@/services/academic";
 import {
   getAllFeesHeads,
   getAllFeeConcessionSlabs,
+  getAllFeeGroups,
   checkUniqueFeeStructureAmounts,
   type CheckUniqueAmountsResponse,
   updateFeesStructure,
@@ -108,6 +109,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [feeHeads, setFeeHeads] = useState<FeesHead[]>([]);
   const [feeConcessionSlabs, setFeeConcessionSlabs] = useState<FeeConcessionSlabT[]>([]);
+  const [feeGroups, setFeeGroups] = useState<any[]>([]);
+  const [isCreateMode, setIsCreateMode] = useState<boolean>(true);
 
   const [feeStructureRow, setFeeStructureRow] = useState<FeeStructureRow>({
     feeType: "Admission",
@@ -153,6 +156,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
       const shift = shifts.find((s) => s.id === conflict.shiftId);
       return shift?.name === shiftName;
     });
+  };
+
+  // Helper function to get fee category name from slab ID
+  const getFeeCategoryFromSlabId = (slabId: number): string => {
+    const feeGroup = feeGroups.find((fg) => fg.feeSlab?.id === slabId);
+    return feeGroup?.feeCategory?.name || "General";
   };
 
   // Validate uniqueness of fee structure amounts
@@ -235,18 +244,25 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     ],
   );
 
-  // Fetch academic years, program courses, shifts, fee heads and concession slabs on component mount
+  // Fetch academic years, program courses, shifts, fee heads, concession slabs and fee groups on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [academicYearsData, programCoursesData, shiftsData, feeHeadsData, concessionSlabsResponse] =
-          await Promise.allSettled([
-            getAcademicYears(),
-            getProgramCourses(),
-            getAllShifts(),
-            getAllFeesHeads(),
-            getAllFeeConcessionSlabs(),
-          ]);
+        const [
+          academicYearsData,
+          programCoursesData,
+          shiftsData,
+          feeHeadsData,
+          concessionSlabsResponse,
+          feeGroupsResponse,
+        ] = await Promise.allSettled([
+          getAcademicYears(),
+          getProgramCourses(),
+          getAllShifts(),
+          getAllFeesHeads(),
+          getAllFeeConcessionSlabs(),
+          getAllFeeGroups(),
+        ]);
 
         // Handle academic years - getAcademicYears already returns the payload (array)
         if (academicYearsData.status === "fulfilled") {
@@ -303,7 +319,21 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
           setFeeConcessionSlabs([]);
         }
 
-        console.log("Fetched academic years, program courses, shifts, fee heads and concession slabs from API");
+        // Handle fee groups - getAllFeeGroups returns ApiResponse<FeeGroupDto[]>
+        if (feeGroupsResponse.status === "fulfilled") {
+          const feeGroupsArray =
+            feeGroupsResponse.value?.payload && Array.isArray(feeGroupsResponse.value.payload)
+              ? feeGroupsResponse.value.payload
+              : [];
+          setFeeGroups(feeGroupsArray);
+        } else {
+          console.error("Error fetching fee groups:", feeGroupsResponse.reason);
+          setFeeGroups([]);
+        }
+
+        console.log(
+          "Fetched academic years, program courses, shifts, fee heads, concession slabs and fee groups from API",
+        );
       } catch (error) {
         console.error("Unexpected error in fetchData:", error);
         // Fallback: set all to empty arrays
@@ -312,6 +342,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
         setShifts([]);
         setFeeHeads([]);
         setFeeConcessionSlabs([]);
+        setFeeGroups([]);
       }
     };
 
@@ -322,6 +353,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
 
   // Populate form when feeStructure is provided (edit mode)
   useEffect(() => {
+    setIsCreateMode(!feeStructure);
     if (feeStructure && open && feeConcessionSlabs.length > 0) {
       // Set academic year
       if (feeStructure.academicYear?.id) {
@@ -1272,7 +1304,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 >
                   <h3 className="text-lg font-semibold">Step 1 : Select Fee Head / Components</h3>
                   <div className="flex gap-2">
-                    {activeSection === "components" && (
+                    {isCreateMode && activeSection === "components" && (
                       <Button
                         size="sm"
                         onClick={() => {
@@ -1324,9 +1356,11 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             <TableHead className="border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
                               Fee Head Name
                             </TableHead>
-                            <TableHead className="w-[80px] p-2 text-center text-base font-semibold whitespace-nowrap">
-                              Action
-                            </TableHead>
+                            {isCreateMode && (
+                              <TableHead className="w-[80px] p-2 text-center text-base font-semibold whitespace-nowrap">
+                                Action
+                              </TableHead>
+                            )}
                           </TableRow>
                         </TableHeader>
                         <TableBody className="border-b-2 border-gray-400">
@@ -1373,7 +1407,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                       }}
                                     >
                                       <SelectTrigger className="h-8 text-sm w-full">
-                                        <SelectValue />
+                                        <SelectValue placeholder="Select Fee Head" />
                                       </SelectTrigger>
                                       <SelectContent>
                                         {feeHeads
@@ -1391,16 +1425,18 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                       </SelectContent>
                                     </Select>
                                   </TableCell>
-                                  <TableCell className="text-center p-2 min-h-[60px]">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => removeComponent(index)}
-                                      className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </TableCell>
+                                  {isCreateMode && (
+                                    <TableCell className="text-center p-2 min-h-[60px]">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeComponent(index)}
+                                        className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </TableCell>
+                                  )}
                                 </TableRow>
                               ))}
                             </>
@@ -1425,7 +1461,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 >
                   <h3 className="text-lg font-semibold">Step 2 : Concession Slabs</h3>
                   <div className="flex gap-2">
-                    {activeSection === "slabs" && feeStructureRow.feeComponents.length > 0 && (
+                    {isCreateMode && activeSection === "slabs" && feeStructureRow.feeComponents.length > 0 && (
                       <Button
                         size="sm"
                         onClick={() => {
@@ -1474,8 +1510,11 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             <TableHead className="w-[60px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap sticky left-0 bg-gray-100 z-10">
                               Sr. No
                             </TableHead>
-                            <TableHead className="min-w-[200px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap sticky left-[60px] bg-gray-100 z-10">
+                            <TableHead className="min-w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap sticky left-[60px] bg-gray-100 z-10">
                               Fee Slab
+                            </TableHead>
+                            <TableHead className="min-w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
+                              Fee Category
                             </TableHead>
                             {feeStructureRow.feeComponents.map((component) => (
                               <TableHead
@@ -1491,9 +1530,11 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             <TableHead className="min-w-[120px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap">
                               Allocation %
                             </TableHead>
-                            <TableHead className="w-[80px] p-2 text-center text-base font-semibold whitespace-nowrap sticky right-0 bg-gray-100 z-10">
-                              Action
-                            </TableHead>
+                            {isCreateMode && (
+                              <TableHead className="w-[80px] p-2 text-center text-base font-semibold whitespace-nowrap sticky right-0 bg-gray-100 z-10">
+                                Action
+                              </TableHead>
+                            )}
                           </TableRow>
                         </TableHeader>
                         <TableBody className="border-b-2 border-gray-400">
@@ -1592,7 +1633,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                           }}
                                         >
                                           <SelectTrigger className="h-8 text-sm w-full">
-                                            <SelectValue />
+                                            <SelectValue placeholder="Select Slab" />
                                           </SelectTrigger>
                                           <SelectContent>
                                             {feeConcessionSlabs
@@ -1612,6 +1653,13 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                       )}
                                     </TableCell>
 
+                                    {/* Fee Category Badge */}
+                                    <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[60px]">
+                                      <Badge className="bg-indigo-100 text-indigo-800 border-indigo-300">
+                                        {getFeeCategoryFromSlabId(slab.id)}
+                                      </Badge>
+                                    </TableCell>
+
                                     {/* Dynamic columns for each fee head */}
                                     {feeStructureRow.feeComponents.map((component) => (
                                       <TableCell
@@ -1625,6 +1673,15 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                             value={Number((slab.feeHeadAmounts?.[component.id] || 0).toFixed(2))}
                                             onChange={(e) => {
                                               const newAmount = parseFloat(e.target.value) || 0;
+                                              // Only apply Slab F limit to non-Slab F slabs
+                                              let finalAmount = newAmount;
+                                              if (slab.name.toUpperCase() !== "SLAB F") {
+                                                const slabF = feeStructureRow.concessionSlabs.find(
+                                                  (s) => s.name.toUpperCase() === "SLAB F",
+                                                );
+                                                const slabFAmount = slabF?.feeHeadAmounts?.[component.id] || 0;
+                                                finalAmount = Math.min(newAmount, slabFAmount);
+                                              }
                                               setFeeStructureRow((prev) => ({
                                                 ...prev,
                                                 concessionSlabs: prev.concessionSlabs.map((s, idx) =>
@@ -1633,7 +1690,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                                         ...s,
                                                         feeHeadAmounts: {
                                                           ...s.feeHeadAmounts,
-                                                          [component.id]: newAmount,
+                                                          [component.id]: finalAmount,
                                                         },
                                                       }
                                                     : s,
@@ -1661,20 +1718,22 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                     </TableCell>
 
                                     {/* Action */}
-                                    <TableCell className="text-center p-2 min-h-[60px] sticky right-0 bg-white">
-                                      {slab.name.toUpperCase() !== "SLAB F" ? (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => removeSlab(index)}
-                                          className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      ) : (
-                                        <span className="text-xs text-gray-400">Default</span>
-                                      )}
-                                    </TableCell>
+                                    {isCreateMode && (
+                                      <TableCell className="text-center p-2 min-h-[60px] sticky right-0 bg-white">
+                                        {slab.name.toUpperCase() !== "SLAB F" ? (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeSlab(index)}
+                                            className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        ) : (
+                                          <span className="text-xs text-gray-400">Default</span>
+                                        )}
+                                      </TableCell>
+                                    )}
                                   </TableRow>
                                 );
                               })}
@@ -1713,25 +1772,9 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
           <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {feeStructure?.id && (
-                <>
-                  {!feeStructure.isPublished && (
-                    <Button
-                      variant="default"
-                      onClick={handlePublish}
-                      disabled={isPublishing || saving}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {isPublishing ? "Publishing..." : "Publish"}
-                    </Button>
-                  )}
-                  <Button
-                    variant="destructive"
-                    onClick={() => setShowDeleteDialog(true)}
-                    disabled={isDeleting || saving}
-                  >
-                    Delete
-                  </Button>
-                </>
+                <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} disabled={isDeleting || saving}>
+                  Delete
+                </Button>
               )}
             </div>
             <div className="flex items-center gap-2">

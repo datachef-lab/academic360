@@ -57,7 +57,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const userId = (user?.id ?? "").toString();
   const [searchText, setSearchText] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const pageSize = 10;
   const [promotions, setPromotions] = useState<PromotionDto[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [academicYearOptions, setAcademicYearOptions] = useState<string[]>([]);
