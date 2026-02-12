@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, date, doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { boolean, date,  integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { receiptTypeModel } from "@/schemas/models/fees";
 import {  programCourseModel } from "@/schemas/models/course-design";
@@ -12,7 +12,7 @@ export const feeStructureModel = pgTable("fee_structures", {
     receiptTypeId: integer("receipt_type_id_fk")
         .references(() => receiptTypeModel.id)
         .notNull(),
-    baseAmount: doublePrecision().notNull(),
+
     closingDate: date(),
     academicYearId: integer("academic_year_id_fk")
         .references(() => academicYearModel.id)

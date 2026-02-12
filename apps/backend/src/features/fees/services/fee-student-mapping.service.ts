@@ -142,7 +142,7 @@ export const updateFeeStudentMapping = async (
       const baseTotalPayable =
         await feeStructureService.calculateTotalPayableForFeeStudentMapping(
           existing.feeStructureId,
-          feeGroupPromotionMapping.feeGroupId,
+          feeGroupPromotionMapping,
         );
 
       // Determine waived off amount: use new value if provided, otherwise use existing value

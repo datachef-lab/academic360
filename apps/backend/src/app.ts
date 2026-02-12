@@ -90,7 +90,6 @@ import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
 import feeStudentMappingRouter from "@/features/fees/routes/fee-student-mapping.route.js";
 import feesStructureRouter from "@/features/fees/routes/fees-structure.route.js";
-import feeStructureSlabRouter from "@/features/fees/routes/fee-structure-slab.route.js";
 
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "@/features/course-design/routes/course.routes.js";
@@ -155,6 +154,7 @@ import {
   studentSubjectSelectionRoutes,
   dynamicSubjectsRoutes,
 } from "@/features/subject-selection/routes/index.js";
+import { userStatusMappingRouter } from "./features/user/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -372,6 +372,9 @@ app.use(
 // app.use("/api/batch-papers/old-data", batchPaperRouter);
 
 app.use("/api/users", userRouter);
+
+app.use("/api/user-statuses", userStatusMappingRouter);
+
 // User status master endpoints
 app.use("/api/user-status-masters", userStatusMasterRouter);
 // User status master level endpoints
@@ -458,7 +461,7 @@ app.use("/api/v1/shifts", shiftRouter);
 app.use("/api/v1/academics", academicYearRouter);
 // Register specific routes BEFORE generic routes to avoid route conflicts
 app.use("/api/v1/fees/structure", feesStructureRouter);
-app.use("/api/v1/fees/structure-slabs", feeStructureSlabRouter);
+
 app.use("/api/v1/fees/structure-instalments", instalmentRouter);
 app.use("/api/v1/fees/student-mappings", feeStudentMappingRouter);
 app.use("/api/v1/fees/receipt-types", receiptTypeRouter);

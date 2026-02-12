@@ -6,7 +6,6 @@ export * from "./fee-head.model";
 export * from "./fee-slab.model";
 export * from "./fee-structure-component.model";
 export * from "./fee-structure-installment.model";
-export * from "./fee-structure-slab.model";
 export * from "./fee-structure.model";
 export * from "./fees-student-mapping.model";
 export * from "./receipt-type.model";

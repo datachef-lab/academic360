@@ -4,7 +4,6 @@ import feeGroupRouter from "./fee-group.route.js";
 import feeCategoryRouter from "./fee-category.route.js";
 import feeHeadRouter from "./fee-head.route.js";
 import feeStructureComponentRouter from "./fee-structure-component.routes.js";
-import feeStructureSlabRouter from "./fee-structure-slab.route.js";
 import feeStructureInstallmentRouter from "./instalment.route.js";
 import feeStudentMappingRouter from "./fee-student-mapping.route.js";
 import feeGroupPromotionMappingRouter from "./fee-group-promotion-mapping.route.js";
@@ -27,9 +26,6 @@ router.use("/heads", feeHeadRouter);
 
 // Fee Structure Components
 router.use("/structure-components", feeStructureComponentRouter);
-
-// Fee Structure Slabs
-router.use("/structure-slabs", feeStructureSlabRouter);
 
 // Fee Structure Installments
 router.use("/structure-installments", feeStructureInstallmentRouter);

@@ -520,7 +520,6 @@ const FeesStructurePage: React.FC = () => {
               <TableHeader>
                 <TableRow className="border-b">
                   <TableHead className="w-[200px] border-r">Program Course</TableHead>
-                  <TableHead className="bg-yellow-50 border-r">Base Amount</TableHead>
                   <TableHead className="border-r">Shift</TableHead>
                   <TableHead className="border-r">Components</TableHead>
                   <TableHead className="border-r">Concession Slab</TableHead>
@@ -530,11 +529,18 @@ const FeesStructurePage: React.FC = () => {
               <TableBody>
                 {sortedFeesStructures.map((fs) => {
                   const programCourseName = fs.programCourse?.name || "-";
-                  const baseAmount = fs.baseAmount || 0;
                   const shiftName = fs.shift?.name || "-";
-                  const feeHeads = fs.components
+                  // Get unique fee heads (since each fee head now has multiple components per slab)
+                  const allFeeHeads = fs.components
                     .map((c) => c.feeHead)
                     .filter((head): head is NonNullable<typeof head> => head !== null && head !== undefined);
+                  const uniqueFeeHeadMap = new Map();
+                  allFeeHeads.forEach((head) => {
+                    if (head.id && !uniqueFeeHeadMap.has(head.id)) {
+                      uniqueFeeHeadMap.set(head.id, head);
+                    }
+                  });
+                  const feeHeads = Array.from(uniqueFeeHeadMap.values());
                   const hasConcessionSlabs = fs.feeStructureSlabs && fs.feeStructureSlabs.length > 0;
 
                   return (
@@ -547,9 +553,6 @@ const FeesStructurePage: React.FC = () => {
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
-                      </TableCell>
-                      <TableCell className="font-bold bg-yellow-50 text-yellow-800 border-r">
-                        ₹ {baseAmount.toLocaleString()}
                       </TableCell>
                       <TableCell className="border-r">
                         {shiftName !== "-" ? (

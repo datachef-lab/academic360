@@ -10,7 +10,7 @@ export const feeStructureInstallmentModel = pgTable("fee_structure_installments"
         .references(() => feeStructureModel.id)
         .notNull(),
     installmentNumber: integer().notNull(),
-    baseAmount: doublePrecision().default(0).notNull(),
+    amount: doublePrecision().default(0).notNull(),
     startDate: timestamp(),
     endDate: timestamp(),
     onlineStartDate: timestamp(),
