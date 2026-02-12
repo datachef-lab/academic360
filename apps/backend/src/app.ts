@@ -85,6 +85,8 @@ import {
   feeGroupPromotionMappingRouter,
   userStatusMasterRouter,
   userStatusMasterLevelRouter,
+  userStatusMasterDomainRouter,
+  userStatusMasterFrequencyRouter,
 } from "@/features/index.js";
 import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
@@ -379,6 +381,10 @@ app.use("/api/user-statuses", userStatusMappingRouter);
 app.use("/api/user-status-masters", userStatusMasterRouter);
 // User status master level endpoints
 app.use("/api/user-status-master-levels", userStatusMasterLevelRouter);
+// User status master domain endpoints
+app.use("/api/user-status-master-domains", userStatusMasterDomainRouter);
+// User status master frequency endpoints
+app.use("/api/user-status-master-frequencies", userStatusMasterFrequencyRouter);
 app.use("/api/sessions", sessionRouter);
 
 app.use("/api/personal-details", personalDetailsRouter);
