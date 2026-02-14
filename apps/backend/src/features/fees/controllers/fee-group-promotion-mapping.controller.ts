@@ -76,7 +76,9 @@ export async function getAllFeeGroupPromotionMappingsHandler(
   res: Response,
 ) {
   try {
-    const rows = await getAllFeeGroupPromotionMappings();
+    const rows = await getAllFeeGroupPromotionMappings(
+      +String(_req.params.page),
+    );
     return res
       .status(200)
       .json(
@@ -295,6 +297,7 @@ export async function getFilteredFeeGroupPromotionMappingsHandler(
       categoryId,
       community,
       feeGroupId,
+      page,
     } = req.query;
 
     const parsedFilters: FeeGroupPromotionFilter = {

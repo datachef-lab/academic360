@@ -307,14 +307,15 @@ export const createFeeGroupPromotionMapping = async (
   return dto!;
 };
 
-export const getAllFeeGroupPromotionMappings = async (): Promise<
-  FeeGroupPromotionMappingDto[]
-> => {
+export const getAllFeeGroupPromotionMappings = async (
+  page: number = 10,
+): Promise<FeeGroupPromotionMappingDto[]> => {
   // Order by id DESC to maintain consistent ordering (updated items stay in place)
   const rows = await db
     .select()
     .from(feeGroupPromotionMappingModel)
-    .orderBy(desc(feeGroupPromotionMappingModel.id));
+    .orderBy(desc(feeGroupPromotionMappingModel.id))
+    .limit(page);
 
   // Batch fetch fee groups and promotions to reduce queries
   const feeGroupIds = [...new Set(rows.map((r) => r.feeGroupId))];
@@ -590,6 +591,7 @@ export interface FeeGroupPromotionFilter {
   categoryId?: number;
   community?: string;
   feeGroupId: number;
+  page?: number;
 }
 
 export interface FilteredFeeGroupPromotionMapping {
@@ -651,7 +653,8 @@ export const getFilteredFeeGroupPromotionMappings = async (
       personalDetailsModel,
       eq(personalDetailsModel.userId, studentModel.userId),
     )
-    .where(and(...conditions));
+    .where(and(...conditions))
+    .limit(filters.page || 10);
 
   const promotionRows = await baseQuery;
   if (!promotionRows.length) {

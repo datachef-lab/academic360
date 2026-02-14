@@ -835,8 +835,10 @@ export interface FilteredFeeGroupPromotionMapping {
   exists: boolean;
 }
 
-export async function getAllFeeGroupPromotionMappings(): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings`);
+export async function getAllFeeGroupPromotionMappings(
+  page: number,
+): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
+  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings?page=${page}`);
   return response.data;
 }
 
