@@ -157,24 +157,24 @@ export default function CUFormUploadPage() {
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[11px] text-white">
                     i
                   </span>
-                  Important Instructions
+                  Important Instructions: -
                 </h2>
                 <ul className="mt-3 list-disc pl-5 space-y-1.5">
                   <li>Exam form must be downloaded from the Calcutta University website.</li>
                   <li>
                     Please verify that all details mentioned in your examination form are correct. In case of any
-                    discrepancy, kindly fill out the Google Form provided here to notify us. It is advised to submit the
-                    form using your institutional email ID only.
+                    discrepancy, kindly fill out the Google Form provided here with to notify us. It is advised to
+                    submit the form using your institutional email ID only.
                     <a
                       href="https://docs.google.com/forms/d/e/1FAIpQLScwVkcMABpAExw-6TZwtMfdKycygF9DzCJhX1GAkum3ajoP7w/viewform?pli=1"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-4 text-blue-700 underline hover:text-blue-900 font-semibold text-xs  cursor-pointer"
+                      className="ml-1 text-blue-700 underline hover:text-blue-900 font-semibold  cursor-pointer"
                     >
                       Click here to fill the google form
                     </a>
                   </li>
-                  <li className="text-[11px] md:text-xs text-red-600 font-semibold">
+                  <li className="text-red-600 font-semibold">
                     It is mandatory to complete the enrolment process along with the payment of fees to be a bonafide
                     student of the college.
                   </li>
@@ -300,8 +300,8 @@ export default function CUFormUploadPage() {
                 Submit Semester I Examination Form
               </button>
               <p className="text-[11px] text-slate-500">
-                Once submitted, changes cannot be made from the portal. For any corrections, please visit the college
-                office.
+                Once submitted, changes cannot be made from the portal. For any corrections, please fillup the google
+                form given above.
               </p>
             </section>
           </div>
@@ -318,8 +318,8 @@ export default function CUFormUploadPage() {
             <div>
               <h2 className="text-base md:text-lg font-semibold text-slate-900">Form uploaded successfully</h2>
               <p className="mt-1 text-xs text-slate-600">
-                Your Semester I Calcutta University Examination Form has been submitted. You will receive further
-                communication on your registered contact details after verification.
+                Your Semester I Calcutta University Examination Form has been submitted. Please check your Institutional
+                Email ID for the confirmation of the same.
               </p>
             </div>
             <button
