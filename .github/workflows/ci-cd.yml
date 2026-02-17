@@ -258,6 +258,7 @@ jobs:
             put GOOGLE_CLIENT_ID "$(choose '${{ secrets.STAGING_GOOGLE_CLIENT_ID }}' '${{ secrets.GOOGLE_CLIENT_ID }}')"
             put GOOGLE_CLIENT_SECRET "$(choose '${{ secrets.STAGING_GOOGLE_CLIENT_SECRET }}' '${{ secrets.GOOGLE_CLIENT_SECRET }}')"
             put BACKEND_URL "$(choose '${{ secrets.STAGING_BACKEND_URL }}' '${{ secrets.BACKEND_URL }}')"
+            put EXAM_FORM_UPLOAD_PATH "$(choose '${{ secrets.STAGING_EXAM_FORM_UPLOAD_PATH }}' '${{ secrets.EXAM_FORM_UPLOAD_PATH }}')"
             echo "  📧 Email configuration..."
             put SMTP_HOST "$(choose '${{ secrets.STAGING_SMTP_HOST }}' '${{ secrets.SMTP_HOST }}')"
             put SMTP_PORT "$(choose '${{ secrets.STAGING_SMTP_PORT }}' '${{ secrets.SMTP_PORT }}')"
