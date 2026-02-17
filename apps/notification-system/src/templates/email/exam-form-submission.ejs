@@ -9,10 +9,7 @@
 
     *{margin:0;padding:0;box-sizing:border-box;}
 
-    body{
-      background:#e8ecf1;
-      font-family:'DM Sans',sans-serif;
-    }
+    body { margin: 0; padding: 0; background: #f6f8fb; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif; }
 
     .shell{
       max-width:560px;
@@ -38,7 +35,6 @@
       font-weight:600;
       color:#0f1f3d;
       line-height:1.35;
-      white-space:nowrap;
     }
     .lb-dept{
       font-size:10px;
@@ -237,21 +233,91 @@
     }
 
     @media(max-width:560px){
-      .shell{margin:0;border-radius:0;}
-      .logo-bar,.hero,.body,.footer{padding-left:16px;padding-right:16px;}
-      .hero-title{font-size:22px;}
-      .lb-name{font-size:12px;}
-      .logo-bar img{height:40px;}
-    }
+
+  body {
+    padding: 0 !important;
+  }
+
+  .shell{
+    margin:0 !important;
+    border-radius:0 !important;
+  }
+
+  .logo-bar,
+  .hero,
+  .body,
+  .footer{
+    padding-left:18px !important;
+    padding-right:18px !important;
+  }
+
+  .logo-bar{
+    padding-top:16px !important;
+    padding-bottom:16px !important;
+  }
+
+  .logo-bar img{
+    height:36px !important;
+  }
+
+  .lb-name{
+    font-size:12px !important;
+  }
+
+  .lb-dept{
+    font-size:9px !important;
+  }
+
+  /* HERO FIX */
+  .hero{
+    padding:36px 14px 32px !important;
+  }
+
+  .hero-title{
+    font-size:22px !important;
+    line-height:1.35 !important;
+  }
+
+  .hero-sub{
+    font-size:12px !important;
+  }
+
+  .hero-tag{
+    font-size:9px !important;
+    padding:4px 12px !important;
+  }
+
+  .check-wrap{
+    width:60px !important;
+    height:60px !important;
+  }
+
+  /* BODY */
+  .body{
+    padding:30px 18px !important;
+  }
+
+  .para{
+    font-size:13px !important;
+    line-height:1.75 !important;
+  }
+
+  /* CTA */
+  .cta{
+    padding:12px 28px !important;
+    font-size:11.5px !important;
+  }
+}
+
   </style>
 </head>
-<body>
-<div class="shell">
+<body style="background: #f6f8fb; color: #0f172a; padding: 12px 0;">
+<div class="shell" style="border: 1px solid bisque;">
 
   <!-- LOGO BAR -->
-  <div class="logo-bar">
-    <img src="https://stage.academic360.app/backend/api/v1/settings/file/4" alt="BESC Logo"/>
-    <div>
+  <div class="logo-bar" style="display: flex; align-items: center; gap: 24px;">
+    <img src="https://besc.academic360.app/api/api/v1/settings/file/4" alt="BESC Logo"/>
+    <div style="margin-left: 24px;">
       <div class="lb-name">The Bhawanipur Education Society College</div>
       <div class="lb-dept">Examination Department</div>
     </div>
@@ -259,28 +325,38 @@
 
   <!-- HERO -->
   <div class="hero">
-    <div class="check-wrap">
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <path d="M6 14.5L11.5 20.5L22 8.5" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
+    <div style="
+  width:72px;
+  height:72px;
+  border-radius:50%;
+  background:#22c55e;
+  margin:0 auto 10px;
+  text-align:center;
+  line-height:72px;
+  font-size:34px;
+  color:#ffffff;
+  font-weight:bold;
+">
+  ✓
+</div>
+
     <div class="hero-tag">Submission Confirmed</div>
     <div class="hero-title">Your Examination Form<br/>has been <em>successfully submitted.</em></div>
-    <p class="hero-sub">Calcutta University &nbsp;·&nbsp; Academic Year <%= academicYearName %></p>
+    <p class="hero-sub">Calcutta University &nbsp;·&nbsp; Academic Year <%= content.dtoTemplateData.academicYearName %></p>
   </div>
 
   <!-- BODY -->
   <div class="body">
 
-    <p class="dear">Dear Student,</p>
+    <p class="dear">Dear <%= content.dtoTemplateData.name %>,</p>
     <p class="para">
-      You have successfully submitted your <strong>Calcutta University Examination <%= academicYear %> Form</strong>
-      generated from the Calcutta University portal for <strong><%= semester %></strong>
+      You have successfully submitted your <strong>Calcutta University Examination <%= content.dtoTemplateData.academicYear %> Form</strong>
+      generated from the Calcutta University portal for <strong><%= content.dtoTemplateData.semester %></strong>
       through your Online profile.
     </p>
 
     <div class="cta-wrap">
-      <a href="https://besc.academic360.app/student-console" target="_blank" class="cta">Access Student Console →</a>
+      <a href="<%= content.dtoTemplateData.studentConsoleUrl %>" target="_blank" class="cta">Access Student Console →</a>
     </div>
 
     <hr class="divider"/>

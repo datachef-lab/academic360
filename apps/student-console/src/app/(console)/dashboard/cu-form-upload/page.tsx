@@ -9,10 +9,8 @@ import { useStudent } from "@/providers/student-provider";
 
 const SEMESTER_ONE_CLASS_ID = 1;
 
-export const fetchPromotionByStudentIdAndClassId = async (studentId: number, classId: number) => {
-  const response = await axiosInstance.get(
-    `/api/v1/fees/fee-category-promotion-mappings/promotion/student/${studentId}/class/${classId}`,
-  );
+const fetchPromotionByStudentIdAndClassId = async (studentId: number, classId: number) => {
+  const response = await axiosInstance.get(`/api/promotions/student/${studentId}/class/${classId}`);
   return response;
 };
 
@@ -103,7 +101,7 @@ export default function CUFormUploadPage() {
       setIsSubmitting(true);
 
       // console.log("Submitting CU exam form for student ID:", student.id);
-      const promotionResponse = await fetchPromotionByStudentIdAndClassId(student.id, SEMESTER_ONE_CLASS_ID);
+      const promotionResponse = await fetchPromotionByStudentIdAndClassId(student.id!, SEMESTER_ONE_CLASS_ID);
 
       const promotion = promotionResponse.data?.payload;
 
@@ -112,9 +110,14 @@ export default function CUFormUploadPage() {
         return;
       }
 
-      await axiosInstance.post(
-        `/api/v1/fees/fee-category-promotion-mappings/promotion/${promotion.id}/mark-exam-form-submitted`,
-      );
+      const formData = new FormData();
+      formData.append("examForm", file);
+
+      await axiosInstance.post(`/api/promotions/${promotion.id}/mark-exam-form-submitted`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       setSubmitted(true);
       toast.success("Semester I CU Examination Form uploaded successfully.");

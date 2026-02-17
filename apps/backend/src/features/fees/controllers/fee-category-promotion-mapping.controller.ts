@@ -10,8 +10,6 @@ import {
   getFilteredFeeCategoryPromotionMappings,
   FeeCategoryPromotionFilter,
   bulkUploadFeeCategoryPromotionMappings,
-  findPromotionByStudentIdAndClassId,
-  markExamFormSubmission,
 } from "../services/fee-category-promotion-mapping.service";
 import { createFeeGroupPromotionMappingSchema } from "@repo/db/schemas";
 import { handleError } from "@/utils";
@@ -383,110 +381,6 @@ export async function bulkUploadFeeCategoryPromotionMappingsHandler(
           "SUCCESS",
           result,
           `Bulk upload completed. ${result.summary.successful} successful, ${result.summary.failed} failed.`,
-        ),
-      );
-  } catch (error) {
-    return handleError(error, res);
-  }
-}
-
-export async function findPromotionByStudentIdAndClassIdHandler(
-  req: Request,
-  res: Response,
-) {
-  try {
-    const studentId = parseInt(req.params.studentId as string, 10);
-    const classId = parseInt(req.params.classId as string, 10);
-
-    if (Number.isNaN(studentId) || Number.isNaN(classId)) {
-      return res
-        .status(400)
-        .json(
-          new ApiResponse(
-            400,
-            "BAD_REQUEST",
-            null,
-            "Invalid studentId or classId format",
-          ),
-        );
-    }
-
-    const promotion = await findPromotionByStudentIdAndClassId(
-      studentId,
-      classId,
-    );
-
-    if (!promotion) {
-      return res
-        .status(404)
-        .json(
-          new ApiResponse(
-            404,
-            "NOT_FOUND",
-            null,
-            "Promotion not found for given studentId and classId",
-          ),
-        );
-    }
-
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          promotion,
-          "Promotion retrieved successfully",
-        ),
-      );
-  } catch (error) {
-    return handleError(error, res);
-  }
-}
-
-export async function markExamFormSubmissionHandler(
-  req: Request,
-  res: Response,
-) {
-  try {
-    const promotionId = parseInt(req.params.promotionId as string, 10);
-
-    if (Number.isNaN(promotionId)) {
-      return res
-        .status(400)
-        .json(
-          new ApiResponse(
-            400,
-            "BAD_REQUEST",
-            null,
-            "Invalid promotionId format",
-          ),
-        );
-    }
-
-    const updatedPromotion = await markExamFormSubmission(promotionId);
-
-    if (!updatedPromotion) {
-      return res
-        .status(404)
-        .json(
-          new ApiResponse(
-            404,
-            "NOT_FOUND",
-            null,
-            `Promotion with ID ${promotionId} not found`,
-          ),
-        );
-    }
-
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          "SUCCESS",
-          updatedPromotion,
-          "Exam form submission marked successfully",
         ),
       );
   } catch (error) {

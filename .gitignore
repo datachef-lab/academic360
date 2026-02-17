@@ -27,6 +27,8 @@ pnpm-lock.yaml
 
 .pnpm-store
 
+/apps/backend//exam-forms/
+
 /apps/backend/public/temp
 # Local env files
 .env

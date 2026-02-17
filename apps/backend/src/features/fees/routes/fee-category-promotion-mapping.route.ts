@@ -9,8 +9,6 @@ import {
   updateFeeCategoryPromotionMappingHandler,
   getFilteredFeeCategoryPromotionMappingsHandler,
   bulkUploadFeeCategoryPromotionMappingsHandler,
-  findPromotionByStudentIdAndClassIdHandler,
-  markExamFormSubmissionHandler,
 } from "../controllers/fee-category-promotion-mapping.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
@@ -41,10 +39,7 @@ router.get(
   "/promotion/:promotionId",
   asyncHandler(getFeeCategoryPromotionMappingsByPromotionIdHandler),
 );
-router.get(
-  "/promotion/student/:studentId/class/:classId",
-  asyncHandler(findPromotionByStudentIdAndClassIdHandler),
-);
+
 router.get("/:id", asyncHandler(getFeeCategoryPromotionMappingByIdHandler));
 router.post("/", asyncHandler(createFeeCategoryPromotionMappingHandler));
 router.post(
@@ -52,10 +47,7 @@ router.post(
   uploadExcelMiddleware,
   asyncHandler(bulkUploadFeeCategoryPromotionMappingsHandler),
 );
-router.post(
-  "/promotion/:promotionId/mark-exam-form-submitted",
-  asyncHandler(markExamFormSubmissionHandler),
-);
+
 router.put("/:id", asyncHandler(updateFeeCategoryPromotionMappingHandler));
 router.delete("/:id", asyncHandler(deleteFeeCategoryPromotionMappingHandler));
 

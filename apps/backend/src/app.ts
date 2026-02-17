@@ -30,6 +30,7 @@ import {
   marksheetPaperMappingRouter,
   marksheetPaperComponentMappingRouter,
   sessionRouter,
+  promotionRouter,
 } from "@/features/academics/routes/index.js";
 import { userModel, User } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -364,6 +365,7 @@ passport.deserializeUser((user: Express.User, done) => done(null, user));
 app.use("/auth", authRouter);
 
 app.use("/api/batches", batchRouter);
+app.use("/api/promotions", promotionRouter);
 app.use("/api/academics/batch-student-mappings", batchStudentMappingRouter);
 app.use("/api/academics/marksheet-paper-mappings", marksheetPaperMappingRouter);
 app.use(
