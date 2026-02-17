@@ -12,7 +12,7 @@ import {
   findPromotionByStudentIdAndClassIdHandler,
   markExamFormSubmissionHandler,
 } from "../controllers/fee-category-promotion-mapping.controller.js";
-// import { verifyJWT } from "@/middlewares/verifyJWT.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = Router();
@@ -26,7 +26,7 @@ function asyncHandler(
 }
 
 // Apply authentication middleware to all routes
-// router.use(verifyJWT);
+router.use(verifyJWT);
 
 router.get("/", asyncHandler(getAllFeeCategoryPromotionMappingsHandler));
 router.get(
