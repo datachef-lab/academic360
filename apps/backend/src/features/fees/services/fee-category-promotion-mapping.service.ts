@@ -929,3 +929,29 @@ export const bulkUploadFeeCategoryPromotionMappings = async (
     throw error;
   }
 };
+
+export async function findPromotionByStudentIdAndClassId(
+  studentId: number,
+  classId: number,
+) {
+  const [{ promotions: promotion }] = await db
+    .select()
+    .from(promotionModel)
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .leftJoin(classModel, eq(classModel.id, promotionModel.classId))
+    .where(and(eq(studentModel.id, studentId), eq(classModel.id, classId)));
+
+  return promotion;
+}
+
+export async function markExamFormSubmission(promotionId: number) {
+  const [updatedPromotion] = await db
+    .update(promotionModel)
+    .set({
+      isExamFormSubmitted: true,
+    })
+    .where(and(eq(promotionModel.id, promotionId)))
+    .returning();
+
+  return updatedPromotion;
+}

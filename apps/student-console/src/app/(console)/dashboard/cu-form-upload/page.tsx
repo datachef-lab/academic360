@@ -4,13 +4,50 @@ import { Fragment, useEffect, useState } from "react";
 import { FileText, CheckCircle2, UploadCloud, FileSearch2, ShieldCheck, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { axiosInstance } from "@/lib/utils";
+import { useStudent } from "@/providers/student-provider";
+
+const SEMESTER_ONE_CLASS_ID = 1;
+
+export const fetchPromotionByStudentIdAndClassId = async (studentId: number, classId: number) => {
+  const response = await axiosInstance.get(
+    `/api/v1/fees/fee-category-promotion-mappings/promotion/student/${studentId}/class/${classId}`,
+  );
+  return response;
+};
 
 export default function CUFormUploadPage() {
-  // Start directly on the upload view
   const [submitted, setSubmitted] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { student } = useStudent();
+
+  useEffect(() => {
+    const checkExamFormStatus = async () => {
+      if (!student?.id) {
+        return;
+      }
+
+      try {
+        const promotionResponse = await fetchPromotionByStudentIdAndClassId(student.id, SEMESTER_ONE_CLASS_ID);
+        const promotion = promotionResponse.data?.payload;
+
+        if (promotion?.isExamFormSubmitted === true) {
+          setSubmitted(true);
+        }
+      } catch (error) {
+        // console.error("Failed to check exam form submission status:", error);
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    };
+
+    checkExamFormStatus();
+  }, [student?.id]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -51,6 +88,50 @@ export default function CUFormUploadPage() {
     setIsDragOver(false);
   };
 
+  const handleSubmit = async () => {
+    if (!file) {
+      toast.error("Please upload your examination form before submitting.");
+      return;
+    }
+
+    if (!student || !student.id) {
+      toast.error("Unable to identify logged-in student. Please re-login and try again.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // console.log("Submitting CU exam form for student ID:", student.id);
+      const promotionResponse = await fetchPromotionByStudentIdAndClassId(student.id, SEMESTER_ONE_CLASS_ID);
+
+      const promotion = promotionResponse.data?.payload;
+
+      if (!promotion || !promotion.id) {
+        toast.error("No promotion record found for Semester I. Please contact the college office.");
+        return;
+      }
+
+      await axiosInstance.post(
+        `/api/v1/fees/fee-category-promotion-mappings/promotion/${promotion.id}/mark-exam-form-submitted`,
+      );
+
+      setSubmitted(true);
+      toast.success("Semester I CU Examination Form uploaded successfully.");
+    } catch (error: any) {
+      // console.error("Failed to submit CU exam form:", error);
+
+      const backendMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "An unexpected error occurred while submitting your form.";
+
+      toast.error(backendMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // 1 = upload, 2 = preview, 3 = submitted
   const progressStep = submitted ? 3 : file ? 2 : 1;
 
@@ -68,6 +149,61 @@ export default function CUFormUploadPage() {
       URL.revokeObjectURL(url);
     };
   }, [file]);
+
+  // ─── Loading state ───────────────────────────────────────────────────────────
+  // Show a neutral loader while we wait for the student context AND the status
+  // API call to resolve. This prevents a flash of the upload UI for students
+  // who have already submitted.
+  if (isCheckingStatus) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        {/* Keep the same header so the page doesn't jump on load */}
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-800 text-white py-8 mb-6 shadow-md relative overflow-hidden rounded-b-3xl">
+          <div className="absolute inset-0 opacity-20 pointer-events-none">
+            <div className="absolute -right-16 -top-16 w-40 h-40 rounded-full bg-blue-400 blur-2xl" />
+            <div className="absolute right-32 top-10 w-28 h-28 rounded-full bg-purple-400 blur-xl" />
+            <div className="absolute left-10 bottom-4 w-40 h-40 rounded-full bg-indigo-300 blur-2xl" />
+          </div>
+          <div className="relative max-w-5xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/20 flex items-center justify-center">
+                <FileText className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">Exams</p>
+                <h1 className="text-2xl md:text-3xl font-semibold leading-snug">
+                  CU Semester I Examination Form Upload
+                </h1>
+                <p className="mt-1 text-xs md:text-sm text-blue-100/90 max-w-xl">
+                  Upload your Calcutta University Semester I examination form and verify every page before final
+                  submission.
+                </p>
+              </div>
+            </div>
+            <div className="hidden md:flex items-center gap-2 text-xs text-blue-100/90">
+              <FileText className="w-4 h-4" />
+              <span>PDF only • 1 file • Max 2 MB</span>
+            </div>
+          </div>
+        </div>
+
+        <main className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-slate-500">
+            <svg
+              className="animate-spin h-7 w-7 text-indigo-600"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <p className="text-sm">Checking submission status…</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen  flex flex-col">
@@ -179,11 +315,6 @@ export default function CUFormUploadPage() {
                     student of the college.
                   </li>
                 </ul>
-                {/* <p className="pt-2 text-[11px] text-slate-600">
-                  For any issue with form fill-up, please contact{" "}
-                  <span className="font-semibold">System Control Room (Room No. 424, 4th Floor)</span> before the last
-                  date.
-                </p> */}
               </div>
             </section>
 
@@ -251,18 +382,6 @@ export default function CUFormUploadPage() {
                 {file && previewUrl && (
                   <section className="space-y-2 text-sm text-slate-800">
                     <div className="rounded-md border bg-white min-h-[18rem] md:min-h-[20rem] overflow-hidden flex flex-col">
-                      {/* <div className="flex items-center justify-between gap-2 border-b bg-slate-50 px-3 py-2">
-                       
-                        {/* <a
-                          href={previewUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 underline whitespace-nowrap"
-                        >
-                          Open in new tab
-                        </a> }
-                      </div> */}
-
                       <iframe
                         key={previewUrl}
                         title="PDF Preview"
@@ -283,21 +402,16 @@ export default function CUFormUploadPage() {
             {/* Submit */}
             <section className="pt-2 space-y-2">
               <button
-                onClick={() => {
-                  setSubmitted(true);
-                  toast.success("Semester I CU Examination Form uploaded successfully.", {
-                    description: "You will receive confirmation once the form is verified by the college.",
-                  });
-                }}
-                disabled={!file}
+                onClick={handleSubmit}
+                disabled={!file || isSubmitting}
                 className={`w-full inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${
-                  file
+                  file && !isSubmitting
                     ? "bg-emerald-600 text-white hover:bg-emerald-700"
                     : "bg-slate-200 text-slate-500 cursor-not-allowed"
                 }`}
               >
                 <CheckCircle2 className="w-5 h-5" />
-                Submit Semester I Examination Form
+                {isSubmitting ? "Submitting..." : "Submit Semester I Examination Form"}
               </button>
               <p className="text-[11px] text-slate-500">
                 Once submitted, changes cannot be made from the portal. For any corrections, please fillup the google
@@ -322,17 +436,6 @@ export default function CUFormUploadPage() {
                 Email ID for the confirmation of the same.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSubmitted(false);
-                setFile(null);
-                setPreviewUrl(null);
-              }}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-            >
-              Back to upload
-            </button>
           </div>
         </main>
       )}
