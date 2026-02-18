@@ -458,9 +458,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
           source: "repo.tar.gz,env.deploy"
-          target: "${{ steps.host.outputs.remotedir }}"
+          target: "${{ steps.host.outputs.remotedir }}"   # unchanged
           strip_components: 0
-        if: steps.host.outputs.env == 'staging'
+          tar_tmp_path: /var/tmp   # ← add this line
+          debug: true              # keep for troubleshooting
+          overwrite: true          # optional but useful
 
       - name: Verify file transfer (staging)
         uses: appleboy/ssh-action@v1.0.3
