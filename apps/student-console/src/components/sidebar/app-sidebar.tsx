@@ -13,7 +13,6 @@ import {
   UserPlus,
   FileText,
   UploadCloud,
-
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -270,13 +269,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: FileText,
       isActive: pathname === "/dashboard/admission-registration",
     },
-    {
-      title: "CU Form Upload",
-      url: "/dashboard/cu-form-upload",
-      icon: UploadCloud,
-      isActive: pathname === "/dashboard/cu-form-upload",
-    },
-    
+    // 19 Feb 2026, 11:00 PM IST
+    Date.now() > new Date("2026-02-19T23:00:00+05:30").getTime()
+      ? {
+          title: "CU Form Upload",
+          url: "/dashboard/cu-form-upload",
+          icon: UploadCloud,
+          isActive: pathname === "/dashboard/cu-form-upload",
+        }
+      : null,
+
     // {
     //   title: "Course Catalogue",
     //   url: "/dashboard/course-catalogue",

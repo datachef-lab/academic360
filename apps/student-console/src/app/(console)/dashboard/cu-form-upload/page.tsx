@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { axiosInstance } from "@/lib/utils";
 import { useStudent } from "@/providers/student-provider";
+import { useRouter } from "next/navigation";
 
 const SEMESTER_ONE_CLASS_ID = 1;
 
@@ -21,8 +22,25 @@ export default function CUFormUploadPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
   const { student } = useStudent();
+
+  useEffect(() => {
+    if (!student) return; // wait until student is loaded
+
+    const now = Date.now();
+
+    // 19 Feb 2026, 11:00 PM IST
+    const cutoff = new Date("2026-02-19T23:00:00+05:30").getTime();
+
+    // 20 Feb 2026, 4:00 PM IST
+    // const cutoff = new Date("2026-02-20T16:00:00+05:30").getTime();
+
+    if (now < cutoff) {
+      router.replace("/dashboard/"); // better than push here
+    }
+  }, [student]);
 
   useEffect(() => {
     const checkExamFormStatus = async () => {

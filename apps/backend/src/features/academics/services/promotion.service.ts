@@ -164,7 +164,7 @@ export async function exportPromotionStudentsReport(params: {
       WHEN std.active = false 
            AND (std.leaving_date IS NOT NULL OR std.leaving_reason IS NOT NULL)
            THEN 'DROPPED_OUT'
-      WHEN std.active = true THEN 'REGULAR'
+      WHEN u.is_active = true THEN 'REGULAR'
       ELSE 'DROPPED_OUT'
     END AS status,
     cls.name AS semester,
