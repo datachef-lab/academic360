@@ -7,6 +7,7 @@ import { boardResultStatusModel } from "../resources";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 
+
 export const promotionModel = pgTable("promotions", {
     id: serial().primaryKey(),
     legacyHistoricalRecordId: integer("legacy_historical_record_id"),
@@ -46,6 +47,7 @@ export const promotionModel = pgTable("promotions", {
     startDate: timestamp("start_date"),
     endDate: timestamp("end_date"),
     remarks: text("remarks"),
+    examFormSubmissionTimeStamp: timestamp({withTimezone: true}),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

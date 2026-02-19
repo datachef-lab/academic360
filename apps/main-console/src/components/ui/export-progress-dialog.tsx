@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -215,6 +215,7 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
             {getDialogTitle()}
             {getStatusBadge()}
           </DialogTitle>
+          <DialogDescription className="sr-only">{message || "Export progress dialog"}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

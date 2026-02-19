@@ -5,6 +5,7 @@ import {
 } from "../controllers/promotion.controller";
 import { uploadExamFormMiddleware } from "@/middlewares/uploadExamForm.middleware";
 import { verifyJWT } from "@/middlewares";
+import { exportPromotionStudentsReportHandler } from "../controllers/promotion.controller";
 
 const router = Router();
 
@@ -26,6 +27,12 @@ router.post(
   verifyJWT,
   uploadExamFormMiddleware,
   asyncHandler(markExamFormSubmissionHandler),
+);
+
+router.get(
+  "/export",
+  verifyJWT,
+  asyncHandler(exportPromotionStudentsReportHandler),
 );
 
 export default router;

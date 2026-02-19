@@ -95,7 +95,7 @@ export const connectToDatabase = async () => {
     // loadOldCourses();
     // loadOldSubjectTypes();
     loadDefaultUserStatusMaster();
-    mapUserStatuses();
+    // mapUserStatuses();
     // console.log(
     //   "[backend] - CU Registration App Path:",
     //   process.env.CU_REGISTRATION_APP_PATH,
