@@ -313,10 +313,10 @@ export default function CUFormUploadPage() {
                       Click here to fill the google form
                     </a>
                   </li>
-                  <li className="text-red-600 font-semibold">
+                  {/* <li className="text-red-600 font-semibold">
                     It is mandatory to complete the enrolment process along with the payment of fees to be a bonafide
                     student of the college.
-                  </li>
+                  </li> */}
                 </ul>
               </div>
             </section>
