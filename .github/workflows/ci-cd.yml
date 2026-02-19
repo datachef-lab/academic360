@@ -14,7 +14,7 @@ on:
         required: true
         default: backend,main-console,student-console
   push:
-    branches: [staging]
+    branches: [staging_q]
     paths:
       - "apps/backend/**"
       - "apps/main-console/**"
