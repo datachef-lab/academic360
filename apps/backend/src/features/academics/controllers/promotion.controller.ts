@@ -8,6 +8,8 @@ import {
 import { User, userModel } from "@repo/db/schemas";
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
+import { exportPromotionStudentsReport } from "../services/promotion.service";
+import { socketService } from "@/services/socketService.js";
 
 export async function findPromotionByStudentIdAndClassIdHandler(
   req: Request,
@@ -267,3 +269,95 @@ export const getAdminStaffUserId = async (req: Request) => {
     return null;
   }
 };
+
+export async function exportPromotionStudentsReportHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const sessionIdParam = req.query.sessionId as string | undefined;
+    const classIdParam = req.query.classId as string | undefined;
+
+    const sessionId = sessionIdParam ? Number(sessionIdParam) : undefined;
+    const classId = classIdParam ? Number(classIdParam) : undefined;
+
+    if (
+      (sessionIdParam && Number.isNaN(sessionId)) ||
+      (classIdParam && Number.isNaN(classId))
+    ) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid sessionId or classId parameter",
+          ),
+        );
+    }
+
+    const userId = (req.user as User)?.id?.toString();
+    if (userId) {
+      const startUpdate = socketService.createExportProgressUpdate(
+        userId,
+        "Starting promotion students export",
+        5,
+        "started",
+      );
+      socketService.sendProgressUpdate(userId, startUpdate);
+    }
+
+    const result = await exportPromotionStudentsReport({ sessionId, classId });
+
+    if (userId) {
+      const midUpdate = socketService.createExportProgressUpdate(
+        userId,
+        "Preparing Excel workbook",
+        60,
+        "in_progress",
+      );
+      socketService.sendProgressUpdate(userId, midUpdate);
+    }
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${result.fileName}"`,
+    );
+    res.setHeader("Content-Length", result.buffer.length);
+
+    if (userId) {
+      const doneUpdate = socketService.createExportProgressUpdate(
+        userId,
+        "Promotion students report ready",
+        100,
+        "completed",
+        result.fileName,
+      );
+      socketService.sendProgressUpdate(userId, doneUpdate);
+    }
+
+    return res.status(200).send(result.buffer);
+  } catch (error: any) {
+    const userId = (req.user as User)?.id?.toString();
+    if (userId) {
+      const errUpdate = socketService.createExportProgressUpdate(
+        userId,
+        "Failed to generate promotion students report",
+        100,
+        "error",
+        undefined,
+        undefined,
+        error?.message ?? "Unknown error",
+      );
+      socketService.sendProgressUpdate(userId, errUpdate);
+    }
+
+    return handleError(error, res, next);
+  }
+}

@@ -6,6 +6,7 @@ import { promotionStatusModel } from "./promotion-status.model";
 import { boardResultStatusModel } from "../resources";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
+import { time } from "drizzle-orm/mysql-core";
 
 export const promotionModel = pgTable("promotions", {
     id: serial().primaryKey(),
@@ -46,6 +47,7 @@ export const promotionModel = pgTable("promotions", {
     startDate: timestamp("start_date"),
     endDate: timestamp("end_date"),
     remarks: text("remarks"),
+    examFormSubmissionTimeStamp: timestamp(),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

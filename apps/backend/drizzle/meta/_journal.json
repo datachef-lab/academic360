@@ -610,6 +610,13 @@
       "when": 1771326057968,
       "tag": "0086_pale_nighthawk",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1771409531340,
+      "tag": "0087_wise_zombie",
+      "breakpoints": true
     }
   ]
 }

@@ -715,6 +715,59 @@ export class ExportService {
   }
 
   /**
+   * Export promotion students report
+   * Optional filters: sessionId, classId
+   */
+  static async exportPromotionStudentsReport(params?: {
+    sessionId?: number;
+    classId?: number;
+  }): Promise<ExportResponse> {
+    try {
+      const query = new URLSearchParams();
+      if (params?.sessionId != null) query.set("sessionId", String(params.sessionId));
+      if (params?.classId != null) query.set("classId", String(params.classId));
+      const queryStr = query.toString() ? `?${query.toString()}` : "";
+
+      // Backend promotions router is mounted at /api/promotions
+      const endpoint = `/api/promotions/export${queryStr}`;
+
+      const response = await axiosInstance.get(endpoint, { responseType: "blob" });
+
+      // Extract filename from response headers (inline, same as other methods)
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = "promotion-students-report.xlsx";
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+        }
+      }
+
+      // Create download URL
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const downloadUrl = URL.createObjectURL(blob);
+
+      return {
+        success: true,
+        message: "Export completed successfully",
+        data: {
+          downloadUrl,
+          fileName,
+          totalRecords: 0,
+        },
+      };
+    } catch (error: unknown) {
+      console.error("Promotion students export error:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Export failed",
+      };
+    }
+  }
+
+  /**
    * Download file from URL
    * @param downloadUrl - The URL to download from
    * @param fileName - The filename for the download

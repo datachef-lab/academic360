@@ -627,6 +627,39 @@ export default function ReportsPage() {
     }
   };
 
+  const downloadPromotionStudentsReport = async () => {
+    setCurrentProgressUpdate({
+      id: `export_${Date.now()}`,
+      userId: userId,
+      type: "export_progress",
+      message: "Exporting Promotion Students Report...",
+      progress: 25,
+      status: "in_progress",
+      createdAt: new Date(),
+    });
+
+    // Optional: pass filters (sessionId, classId) here in the future
+    const result = await ExportService.exportPromotionStudentsReport();
+
+    if (result.success && result.data) {
+      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: userId,
+        type: "export_progress",
+        message: "Promotion Students Report downloaded successfully!",
+        progress: 100,
+        status: "completed",
+        fileName: result.data?.fileName,
+        downloadUrl: result.data?.downloadUrl,
+        createdAt: new Date(),
+      });
+      toast.success("Promotion Students Report downloaded successfully!");
+    } else {
+      throw new Error(result.message || "Export failed");
+    }
+  };
+
   const downloadStudentUniversitySubjectsReport = async () => {
     if (!selectedAcademicYearId) {
       toast.error("Please select an academic year");
@@ -740,6 +773,16 @@ export default function ReportsPage() {
       icon: <FileText className="h-5 w-5 text-teal-600" />,
       downloadFunction: () => handleDownload("student-academic-subjects-report", downloadStudentAcademicSubjectsReport),
       requiresAcademicYear: true,
+      requiresRegulation: false,
+    },
+    {
+      id: "promotion-students-report",
+      domain: "PROMOTION_PHASE",
+      name: "Promotion Students Report",
+      description: "Export promotion students (eligible/processed) with details",
+      icon: <FileText className="h-5 w-5 text-emerald-700" />,
+      downloadFunction: () => handleDownload("promotion-students-report", downloadPromotionStudentsReport),
+      requiresAcademicYear: false,
       requiresRegulation: false,
     },
     {

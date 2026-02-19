@@ -10,6 +10,8 @@ import {
   userModel,
 } from "@repo/db/schemas";
 import { and, eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+import XLSX from "xlsx";
 
 export async function findPromotionByStudentIdAndClassId(
   studentId: number,
@@ -34,6 +36,7 @@ export async function markExamFormSubmission(
     .update(promotionModel)
     .set({
       isExamFormSubmitted: true,
+      examFormSubmissionTimeStamp: new Date(),
     })
     .where(and(eq(promotionModel.id, promotionId)))
     .returning();
@@ -120,4 +123,76 @@ export async function notifyExamForm(
   };
 
   enqueueNotification(notificationData);
+}
+
+export async function exportPromotionStudentsReport(params: {
+  sessionId?: number;
+  classId?: number;
+}) {
+  const { sessionId, classId } = params;
+
+  const { rows } = await db.execute(sql`
+    SELECT 
+      std.uid AS student_uid,
+      u.name AS student_name,
+      std.registration_number AS registration_number,
+      std.roll_number AS roll_number,
+      pc.name AS program_course_name,
+      cls.name AS class_name,
+      sec.name AS section_name,
+      sh.name AS shift_name,
+      pr.is_exam_form_submitted AS is_exam_form_submitted,
+      -- New fields
+      ay.year AS academic_year,
+      cls.name AS semester, -- using class name as semester for now
+      ussm.tag AS student_status,
+      pd.email AS personal_email,
+      COALESCE(pd.whatsapp_number, u.whatsapp_number) AS whatsapp_number,
+      pr.exam_form_submission_time_stamp AS date_of_upload
+    FROM promotions pr
+    JOIN students std ON pr.student_id_fk = std.id
+    JOIN users u ON u.id = std.user_id_fk
+    LEFT JOIN program_courses pc ON pc.id = pr.program_course_id_fk
+    LEFT JOIN classes cls ON cls.id = pr.class_id_fk
+    LEFT JOIN sections sec ON sec.id = pr.section_id_fk
+    LEFT JOIN shifts sh ON sh.id = pr.shift_id_fk
+    -- Academic year
+    LEFT JOIN sessions s ON s.id = pr.session_id_fk
+    LEFT JOIN academic_years ay ON ay.id = s.academic_id_fk
+    -- Personal details for email and WhatsApp
+    LEFT JOIN personal_details pd ON pd.user_id_fk = std.user_id_fk
+    -- Latest active student status for this promotion (avoid duplicates)
+    LEFT JOIN LATERAL (
+      SELECT usm1.*
+      FROM user_status_mapping usm1
+      WHERE usm1.student_id_fk = std.id
+        AND usm1.promotion_id_fk = pr.id
+        AND usm1.is_active = true
+      ORDER BY usm1.id DESC
+      LIMIT 1
+    ) usm ON TRUE
+    LEFT JOIN user_statuses_master ussm ON ussm.id = usm.user_status_master_id_fk
+    WHERE 1=1
+    ${sessionId ? sql` AND pr.session_id_fk = ${sessionId}` : sql``}
+    ${classId ? sql` AND pr.class_id_fk = ${classId}` : sql``}
+  `);
+
+  // Build Excel from rows
+  const worksheet = XLSX.utils.json_to_sheet(rows || []);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Promotions");
+
+  const excelBuffer = XLSX.write(workbook, {
+    type: "buffer",
+    bookType: "xlsx",
+  });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const fileName = `promotion_students_${timestamp}.xlsx`;
+
+  return {
+    buffer: excelBuffer,
+    fileName,
+    totalRecords: rows?.length ?? 0,
+  };
 }
