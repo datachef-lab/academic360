@@ -735,7 +735,7 @@ export class ExportService {
 
       // Extract filename from response headers (inline, same as other methods)
       const contentDisposition = response.headers["content-disposition"];
-      let fileName = "promotion-students-report.xlsx";
+      let fileName = "exam-form-submission-report.xlsx";
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
         if (fileNameMatch) {

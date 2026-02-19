@@ -775,16 +775,7 @@ export default function ReportsPage() {
       requiresAcademicYear: true,
       requiresRegulation: false,
     },
-    {
-      id: "promotion-students-report",
-      domain: "PROMOTION_PHASE",
-      name: "Promotion Students Report",
-      description: "Export promotion students (eligible/processed) with details",
-      icon: <FileText className="h-5 w-5 text-emerald-700" />,
-      downloadFunction: () => handleDownload("promotion-students-report", downloadPromotionStudentsReport),
-      requiresAcademicYear: false,
-      requiresRegulation: false,
-    },
+
     {
       id: "subject-selection",
       domain: "SUBJECT_SELECTION_PHASE",
@@ -850,6 +841,16 @@ export default function ReportsPage() {
       requiresRegulation: false,
       actionType: "upload",
       uploadOperation: "student_cu_roll_reg_update",
+    },
+    {
+      id: "exam-form-submission-report",
+      domain: "EXAM_FORM_SUBMISSION_PHASE",
+      name: "Exam Form Submitted Report",
+      description: "Export list of students who have submitted exam form with their details.",
+      icon: <FileText className="h-5 w-5 text-emerald-700" />,
+      downloadFunction: () => handleDownload("exam-form-submission-report", downloadPromotionStudentsReport),
+      requiresAcademicYear: false,
+      requiresRegulation: false,
     },
   ];
 
