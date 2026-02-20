@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { FileText, CheckCircle2, UploadCloud, FileSearch2, ShieldCheck, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -26,6 +26,20 @@ export default function CUFormUploadPage() {
 
   const { student } = useStudent();
 
+  // Check if student's program course is MA or MCOM (hide admission registration for these)
+  const isBlockedProgram = useMemo(() => {
+    if (!student?.programCourse?.name) return false;
+
+    const rawName = student.programCourse.name;
+    const normalizedName = rawName
+      .normalize("NFKD")
+      .replace(/[^A-Za-z]/g, "")
+      .toUpperCase();
+
+    const blockedPrograms = ["MA", "MCOM", "BBA"];
+    return blockedPrograms.some((program) => normalizedName.startsWith(program));
+  }, [student?.programCourse?.course?.name]);
+
   useEffect(() => {
     if (!student) return; // wait until student is loaded
 
@@ -38,7 +52,13 @@ export default function CUFormUploadPage() {
     // const cutoff = new Date("2026-02-20T16:00:00+05:30").getTime();
 
     if (now < cutoff) {
-      router.replace("/dashboard/"); // better than push here
+      router.replace("/dashboard/");
+    }
+  }, [student]);
+
+  useEffect(() => {
+    if (isBlockedProgram) {
+      router.replace("/dashboard/");
     }
   }, [student]);
 
