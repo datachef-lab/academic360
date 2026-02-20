@@ -6,6 +6,7 @@ import {
   getFeeStructureComponentByIdHandler,
   updateFeeStructureComponentHandler,
 } from "../controllers/fee-structure-component.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = Router();
 
@@ -16,6 +17,9 @@ function asyncHandler(
     fn(req, res, next).catch(next);
   };
 }
+
+// Apply authentication middleware to all routes
+router.use(verifyJWT);
 
 router.get("/", asyncHandler(getAllFeeStructureComponentsHandler));
 router.get("/:id", asyncHandler(getFeeStructureComponentByIdHandler));

@@ -16,6 +16,9 @@
   "pnpm": {
     "overrides": {
       "drizzle-orm": "0.44.5"
+    },
+    "patchedDependencies": {
+      "expo-status-bar@3.0.9": "patches/expo-status-bar@3.0.9.patch"
     }
   },
   "devDependencies": {

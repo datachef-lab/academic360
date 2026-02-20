@@ -1,17 +1,18 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { date, doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { boolean, date,  integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { receiptTypeModel } from "@/schemas/models/fees";
 import {  programCourseModel } from "@/schemas/models/course-design";
 import { academicYearModel, classModel, shiftModel } from "@/schemas/models/academics";
+import { userModel } from "../user";
 
 export const feeStructureModel = pgTable("fee_structures", {
     id: serial().primaryKey(),
     receiptTypeId: integer("receipt_type_id_fk")
         .references(() => receiptTypeModel.id)
         .notNull(),
-    baseAmount: doublePrecision().notNull(),
+
     closingDate: date(),
     academicYearId: integer("academic_year_id_fk")
         .references(() => academicYearModel.id)
@@ -25,13 +26,20 @@ export const feeStructureModel = pgTable("fee_structures", {
         .references(() => programCourseModel.id),
     advanceForClassId: integer("advance_for_class_id_fk")
         .references(() => classModel.id),
-    startDate: timestamp(),
-    endDate: timestamp(),
-    onlineStartDate: timestamp(),
-    onlineEndDate: timestamp(),
+    startDate: timestamp({withTimezone: true}),
+    endDate: timestamp({withTimezone: true}),
+    onlineStartDate: timestamp({withTimezone: true}),
+    onlineEndDate: timestamp({withTimezone: true}),
     numberOfInstallments: integer(),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    isPublished: boolean().notNull().default(false),
+    createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
+    updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
+    createdByUserId: integer("created_by_user_id_fk")
+        .references(() => userModel.id)
+        .notNull(),
+    updatedByUserId: integer("updated_by_user_id_fk")
+        .references(() => userModel.id)
+        .notNull(),
 });
 
 export const createFeeStructureSchema = createInsertSchema(feeStructureModel);

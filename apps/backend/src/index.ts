@@ -39,7 +39,7 @@ function checkRequiredEnvs() {
   );
   if (missing.length > 0) {
     console.error(
-      `\n[backend] - Missing required environment variables: ${missing.join(", ")}`,
+      `\n[backend] - Missing required environment variables: - ${missing.join(", ")}`,
     );
     process.exit(1);
   }
@@ -59,7 +59,7 @@ function checkRequiredEnvs() {
     }
     httpServer.listen(PORT, async () => {
       console.log(
-        `[backend] - academic360 is running on http://localhost:${PORT} 🚀\n`,
+        `[backend] - academic360 is running on http://localhost:${PORT} 🚀 \n`,
       );
       console.log(`PROFILE: ${process.env.NODE_ENV!}\n`);
       console.log("Press Ctrl+C to stop the application.\n");

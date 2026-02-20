@@ -250,13 +250,12 @@ import { useAuth } from "../hooks/use-auth";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login: loginProvider } = useAuth();
+  const { login: loginProvider, accessToken, isReady } = useAuth();
   const { settings } = useSettings();
   const [showPassword, setShowPassword] = useState(false);
   const [credential, setCredential] = useState({ email: "", password: "" });
 
-  useEffect(() => {}, [settings]);
-
+  // All hooks must be called before any conditional returns
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
@@ -264,7 +263,68 @@ const LoginPage = () => {
       loginProvider(data.payload.accessToken, data.payload.user);
       navigate("/dashboard", { replace: true });
     },
+    onError: (error: any) => {
+      console.error("Login error:", error);
+    },
   });
+
+  useEffect(() => {}, [settings]);
+
+  // Show loading animation only if:
+  // 1. Auth check is still in progress (!isReady), OR
+  // 2. User is authenticated (accessToken exists) - will redirect to dashboard
+  // Don't show loading if auth check is done and no token (user logged out)
+  // Simplify: show loading if not ready OR if we have a token
+  if (!isReady || accessToken) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative w-[60px] h-[60px]">
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "36", "--translation": "150", "--delay": "0.1" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "72", "--translation": "150", "--delay": "0.2" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "108", "--translation": "150", "--delay": "0.3" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "144", "--translation": "150", "--delay": "0.4" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "180", "--translation": "150", "--delay": "0.5" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "216", "--translation": "150", "--delay": "0.6" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "252", "--translation": "150", "--delay": "0.7" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "288", "--translation": "150", "--delay": "0.8" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "324", "--translation": "150", "--delay": "0.9" } as React.CSSProperties}
+            ></div>
+            <div
+              className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
+              style={{ "--rotation": "360", "--translation": "150", "--delay": "1" } as React.CSSProperties}
+            ></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const togglePasswordVisibility = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();

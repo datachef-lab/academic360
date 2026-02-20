@@ -1,0 +1,20 @@
+diff --git a/tsconfig.json b/tsconfig.json
+index ae1ae0dd02a3f563bb496f151e9c719158d300f1..8f4f9f88e953ef633b3cf8968683d5ec876b86b5 100644
+--- a/tsconfig.json
++++ b/tsconfig.json
+@@ -1,8 +1,12 @@
+ {
+-  "extends": "expo-module-scripts/tsconfig.base",
+   "compilerOptions": {
+-    "outDir": "./build",
+-    "emitDeclarationOnly": true
++    "target": "ESNext",
++    "module": "ESNext",
++    "moduleResolution": "bundler",
++    "strict": true,
++    "skipLibCheck": true,
++    "noEmit": true,
++    "jsx": "react-jsx"
+   },
+   "include": ["./src"],
+   "exclude": ["**/__mocks__/*", "**/__tests__/*", "**/__rsc_tests__/*"]

@@ -1,5 +1,5 @@
 "use client";
-
+// @ts-nocheck
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,11 +26,7 @@ interface AddCategoryDialogProps {
   onSuccess?: () => void;
 }
 
-export function AddCategoryDialog({
-  initialData,
-  trigger,
-  onSuccess,
-}: AddCategoryDialogProps) {
+export function AddCategoryDialog({ initialData, trigger, onSuccess }: AddCategoryDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -51,14 +47,10 @@ export function AddCategoryDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {trigger || <Button>{initialData ? "Edit" : "Add Category"}</Button>}
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger || <Button>{initialData ? "Edit" : "Add Category"}</Button>}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>
-            {initialData ? "Edit Category" : "Add New Category"}
-          </DialogTitle>
+          <DialogTitle>{initialData ? "Edit Category" : "Add New Category"}</DialogTitle>
         </DialogHeader>
         <form action={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -66,25 +58,13 @@ export function AddCategoryDialog({
               <Label htmlFor="name" className="text-right">
                 Category Name
               </Label>
-              <Input
-                id="name"
-                name="name"
-                defaultValue={initialData?.name}
-                className="col-span-3"
-                required
-              />
+              <Input id="name" name="name" defaultValue={initialData?.name} className="col-span-3" required />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Code
               </Label>
-              <Input
-                id="code"
-                name="code"
-                defaultValue={initialData?.code}
-                className="col-span-3"
-                required
-              />
+              <Input id="code" name="code" defaultValue={initialData?.code} className="col-span-3" required />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="documentRequired" className="text-right">
@@ -137,10 +117,7 @@ interface DeleteCategoryDialogProps {
   onSuccess?: () => void;
 }
 
-export function DeleteCategoryDialog({
-  categoryId,
-  onSuccess,
-}: DeleteCategoryDialogProps) {
+export function DeleteCategoryDialog({ categoryId, onSuccess }: DeleteCategoryDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -179,11 +156,7 @@ export function DeleteCategoryDialog({
               Cancel
             </Button>
           </DialogClose>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
+          <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
             {isDeleting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

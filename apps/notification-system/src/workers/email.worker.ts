@@ -214,7 +214,9 @@ async function processBatch() {
           }
           // Extract subject from notificationEvent
           if (parsedMessage?.notificationEvent?.subject) {
-            extractedSubject = parsedMessage.notificationEvent.subject;
+            extractedSubject =
+              extractedTemplateData.subject ??
+              parsedMessage.notificationEvent.subject;
             console.log(
               "[email.worker] ✅ Extracted subject from notification message:",
               extractedSubject,
@@ -316,12 +318,15 @@ async function processBatch() {
           };
           // Use explicit subject from notificationEvent if available (highest priority after template)
           const explicitSubject = dto?.subject || (dto as any)?.subject;
-          subject = asString(
-            subjectFromTemplate || explicitSubject,
-            templateKey
-              ? defaultSubjectByTemplate[String(templateKey)] || "Notification"
-              : "Notification",
-          );
+          subject =
+            extractedTemplateData.subject ??
+            asString(
+              subjectFromTemplate || explicitSubject,
+              templateKey
+                ? defaultSubjectByTemplate[String(templateKey)] ||
+                    "Notification"
+                : "Notification",
+            );
           console.log(
             "[email.worker] Subject resolution:",
             JSON.stringify(
@@ -505,33 +510,11 @@ async function processBatch() {
         }),
       };
 
-      console.log(
-        "[email.worker] transformed subjectsByCategory:",
-        JSON.stringify(subjectsByCategory, null, 2),
-      );
-      console.log(
-        "[email.worker] resolvedContent with merged templateData:",
-        JSON.stringify(
-          {
-            isEWS: (resolvedContent as any).isEWS,
-            isPWD: (resolvedContent as any).isPWD,
-            isSCSTOBC: (resolvedContent as any).isSCSTOBC,
-            isIndian: (resolvedContent as any).isIndian,
-            hasCURegistration: (resolvedContent as any).hasCURegistration,
-            boardCode: (resolvedContent as any).boardCode,
-            templateDataKeys: Object.keys(resolvedContent.templateData || {}),
-            dtoTemplateData: dto.templateData,
-            computedTemplateData,
-          },
-          null,
-          2,
-        ),
-      );
       // Log full resolvedContent for debugging
-      //   console.log(
-      //     "[email.worker] Full resolvedContent object:",
-      //     JSON.stringify(resolvedContent, null, 2),
-      //   );
+      console.log(
+        "[email.worker] Full resolvedContent object:",
+        JSON.stringify(resolvedContent, null, 2),
+      );
       // Debug: log subject/template/otp for visibility
       // console.log(
       //     "[email.worker] resolved subject/template/otp ->",
@@ -587,7 +570,7 @@ async function processBatch() {
               eq(userModel.isSuspended, false),
             ),
           )
-          .limit(500);
+          .limit(20);
         if (staffUsers.length > 0) {
           for (const staff of staffUsers) {
             const recipient = asString(
@@ -595,7 +578,9 @@ async function processBatch() {
               process.env.DEVELOPER_EMAIL!,
             );
             console.log(`[email.worker] sending to staff: ${recipient}`);
-            subject = (dto.templateData?.subject || "Notification") as string;
+            subject =
+              extractedTemplateData.subject ??
+              ((dto.templateData?.subject || "Notification") as string);
             const res = await sendZeptoMail(
               recipient,
               subject,

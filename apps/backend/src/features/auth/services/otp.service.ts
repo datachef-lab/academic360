@@ -244,7 +244,11 @@ export const findUserForOtp = async (email: string) => {
   }
 
   if (!user.isActive || user.isSuspended) {
-    return { success: false, message: "Account is disabled or suspended" };
+    return {
+      success: false,
+      message:
+        "Account is disabled or suspended, please contact administration.",
+    };
   }
 
   return { success: true, user };

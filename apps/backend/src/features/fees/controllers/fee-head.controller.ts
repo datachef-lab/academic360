@@ -12,8 +12,30 @@ import { ApiResponse } from "@/utils/ApiResonse";
 
 export async function createFeeHeadHandler(req: Request, res: Response) {
   try {
-    const parsed = createFeeHeadSchema.parse(req.body);
-    const created = await createFeeHead(parsed);
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      return res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            "UNAUTHORIZED",
+            null,
+            "User authentication required",
+          ),
+        );
+    }
+
+    // Validate input - exclude auto-generated fields and user ID fields
+    const schemaWithoutAutoFields = createFeeHeadSchema.omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true,
+      createdByUserId: true,
+      updatedByUserId: true,
+    });
+    const parsed = schemaWithoutAutoFields.parse(req.body);
+    const created = await createFeeHead(parsed, userId);
     if (!created)
       return res
         .status(500)
@@ -54,7 +76,7 @@ export async function getAllFeeHeadsHandler(_req: Request, res: Response) {
 
 export async function getFeeHeadByIdHandler(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
@@ -85,7 +107,7 @@ export async function getFeeHeadByIdHandler(req: Request, res: Response) {
 
 export async function updateFeeHeadHandler(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
@@ -94,7 +116,21 @@ export async function updateFeeHeadHandler(req: Request, res: Response) {
     const partialSchema = createFeeHeadSchema.partial();
     const parsed = partialSchema.parse(req.body);
 
-    const updated = await updateFeeHead(id, parsed);
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      return res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            "UNAUTHORIZED",
+            null,
+            "User authentication required",
+          ),
+        );
+    }
+
+    const updated = await updateFeeHead(id, parsed, userId);
     if (!updated)
       return res
         .status(404)
@@ -124,13 +160,14 @@ export async function updateFeeHeadHandler(req: Request, res: Response) {
 
 export async function deleteFeeHeadHandler(req: Request, res: Response) {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     if (Number.isNaN(id))
       return res
         .status(400)
         .json({ success: false, message: "Invalid ID format" });
 
-    const deleted = await deleteFeeHead(id);
+    const userId = (req.user as any)?.id;
+    const deleted = await deleteFeeHead(id, userId);
     if (!deleted)
       return res
         .status(404)

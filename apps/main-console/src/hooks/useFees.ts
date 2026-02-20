@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useError } from "./useError";
 import {
   // Fees Structure
@@ -41,6 +42,19 @@ import {
   deleteFeeConcessionSlab,
   NewFeeConcessionSlab,
 
+  // Fee Categories
+  getAllFeeCategories,
+  createFeeCategory,
+  updateFeeCategory,
+  deleteFeeCategory,
+  NewFeeCategory,
+  // Fee Groups
+  getAllFeeGroups,
+  createFeeGroup,
+  updateFeeGroup,
+  deleteFeeGroup,
+  NewFeeGroup,
+
   // Student Fees Mapping
   getAllStudentFeesMappings,
   createStudentFeesMapping,
@@ -55,11 +69,11 @@ import {
   FeesSlab,
   FeesReceiptType,
   AddOn,
-  StudentFeesMapping,
   FeesSlabMapping,
   CreateFeesStructureDto,
 } from "@/types/fees";
-import { CreateFeeStructureDto, FeeStructureDto } from "@repo/db/dtos/fees";
+import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
+import { CreateFeeStructureDto, FeeStructureDto, FeeCategoryDto, FeeGroupDto } from "@repo/db/dtos/fees";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Course } from "@/types/course-design";
 import {
@@ -67,56 +81,51 @@ import {
   getCoursesFromFeesStructures,
   getFeesStructuresByAcademicYearAndCourse,
 } from "@/services/fees-api";
-import { FeeConcessionSlabT } from "@/schemas";
+import type { FeeSlabT } from "@/schemas";
 
 // ==================== FEES STRUCTURE HOOKS ====================
 
-export const useFeesStructures = () => {
-  const [feesStructures, setFeesStructures] = useState<FeeStructureDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 10,
-    totalElements: 0,
-    totalPages: 0,
-  });
+export const useFeesStructures = (
+  page: number = 1,
+  pageSize: number = 10,
+  filters?: {
+    academicYearId?: number;
+    classId?: number;
+    receiptTypeId?: number;
+    programCourseId?: number;
+    shiftId?: number;
+  },
+) => {
   const { showError } = useError();
+  const queryClient = useQueryClient();
 
-  const fetchFeesStructures = useCallback(
-    async (
-      page: number = 1,
-      pageSize: number = 10,
-      filters?: {
-        academicYearId?: number;
-        classId?: number;
-        receiptTypeId?: number;
-        programCourseId?: number;
-        shiftId?: number;
-      },
-    ) => {
-      try {
-        setLoading(true);
-        const response = await getAllFeesStructures(page, pageSize, filters);
-        if (response.payload) {
-          setFeesStructures(response.payload.content);
-          setPagination({
-            page: response.payload.page,
-            pageSize: response.payload.pageSize,
-            totalElements: response.payload.totalElements,
-            totalPages: response.payload.totalPages,
-          });
-        } else {
-          setFeesStructures([]);
-        }
-      } catch {
-        showError({ message: "Failed to fetch fees structures" });
-        setFeesStructures([]);
-      } finally {
-        setLoading(false);
-      }
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["fees-structures", { page, pageSize, filters }],
+    queryFn: async () => {
+      const response = await getAllFeesStructures(page, pageSize, filters);
+      return response;
     },
-    [showError],
-  );
+    staleTime: 30_000,
+    cacheTime: 5 * 60_000,
+    onError: () => {
+      showError({ message: "Failed to fetch fees structures" });
+    },
+  });
+
+  const feesStructures = data?.payload?.content ?? [];
+  const pagination = data?.payload
+    ? {
+        page: data.payload.page,
+        pageSize: data.payload.pageSize,
+        totalElements: data.payload.totalElements,
+        totalPages: data.payload.totalPages,
+      }
+    : {
+        page,
+        pageSize,
+        totalElements: 0,
+        totalPages: 1,
+      };
 
   const addFeesStructure = useCallback(
     async (newFeesStructure: CreateFeesStructureDto | CreateFeeStructureDto) => {
@@ -127,12 +136,12 @@ export const useFeesStructures = () => {
         if (isNewDto) {
           // Use the new bulk creation endpoint
           const response = await createFeeStructureByDto(newFeesStructure as CreateFeeStructureDto);
-          await fetchFeesStructures(1, 10);
+          await queryClient.invalidateQueries({ queryKey: ["fees-structures"] });
           return response.payload;
         } else {
           // Use the old single creation endpoint
           const response = await createFeesStructure(newFeesStructure);
-          await fetchFeesStructures(1, 10);
+          await queryClient.invalidateQueries({ queryKey: ["fees-structures"] });
           return response.payload;
         }
       } catch (error) {
@@ -141,47 +150,42 @@ export const useFeesStructures = () => {
         return null;
       }
     },
-    [fetchFeesStructures, showError],
+    [queryClient, showError],
   );
 
   const updateFeesStructureById = useCallback(
     async (id: number, feesStructure: Partial<FeeStructureDto>) => {
       try {
         const response = await updateFeesStructure(id, feesStructure);
-        await fetchFeesStructures(1, 10);
+        await queryClient.invalidateQueries({ queryKey: ["fees-structures"] });
         return response.payload;
       } catch {
         showError({ message: "Failed to update fees structure" });
         return null;
       }
     },
-    [fetchFeesStructures, showError],
+    [queryClient, showError],
   );
 
   const deleteFeesStructureById = useCallback(
     async (id: number) => {
       try {
         await deleteFeesStructure(id);
-        await fetchFeesStructures(1, 10);
+        await queryClient.invalidateQueries({ queryKey: ["fees-structures"] });
         return true;
       } catch {
         showError({ message: "Failed to delete fees structure" });
         return false;
       }
     },
-    [fetchFeesStructures, showError],
+    [queryClient, showError],
   );
-
-  // Remove initial fetch - let the component control when to fetch
-  // useEffect(() => {
-  //   fetchFeesStructures();
-  // }, []);
 
   return {
     feesStructures,
-    loading,
+    loading: isLoading,
     pagination,
-    refetch: fetchFeesStructures,
+    refetch,
     addFeesStructure,
     updateFeesStructureById,
     deleteFeesStructureById,
@@ -360,9 +364,15 @@ export const useFeesSlabs = () => {
     try {
       setLoading(true);
       const response = await getAllFeesSlabs();
-      setFeesSlabs(response || []);
-    } catch {
+      if (response.payload) {
+        setFeesSlabs(response.payload);
+      } else {
+        setFeesSlabs([]);
+      }
+    } catch (error) {
+      console.error("Error fetching fees slabs:", error);
       showError({ message: "Failed to fetch fees slabs" });
+      setFeesSlabs([]);
     } finally {
       setLoading(false);
     }
@@ -583,7 +593,7 @@ export const useAddons = () => {
 // ==================== STUDENT FEES MAPPING HOOKS ====================
 
 export const useStudentFeesMappings = () => {
-  const [studentFeesMappings, setStudentFeesMappings] = useState<StudentFeesMapping[]>([]);
+  const [studentFeesMappings, setStudentFeesMappings] = useState<FeeStudentMappingDto[]>([]);
   const [loading, setLoading] = useState(true);
   const { showError } = useError();
 
@@ -600,7 +610,7 @@ export const useStudentFeesMappings = () => {
   }, [showError]);
 
   const addStudentFeesMapping = useCallback(
-    async (newStudentFeesMapping: StudentFeesMapping) => {
+    async (newStudentFeesMapping: Partial<FeeStudentMappingDto>) => {
       try {
         const response = await createStudentFeesMapping(newStudentFeesMapping);
         await fetchStudentFeesMappings();
@@ -614,7 +624,7 @@ export const useStudentFeesMappings = () => {
   );
 
   const updateStudentFeesMappingById = useCallback(
-    async (id: number, studentFeesMapping: Partial<StudentFeesMapping>) => {
+    async (id: number, studentFeesMapping: Partial<FeeStudentMappingDto>) => {
       try {
         const response = await updateStudentFeesMapping(id, studentFeesMapping);
         await fetchStudentFeesMappings();
@@ -701,7 +711,7 @@ export const useFeesSlabMappings = () => {
 // ==================== FEE CONCESSION SLABS HOOKS ====================
 
 export const useFeeConcessionSlabs = () => {
-  const [concessionSlabs, setConcessionSlabs] = useState<FeeConcessionSlabT[]>([]);
+  const [concessionSlabs, setConcessionSlabs] = useState<FeeSlabT[]>([]);
   const [loading, setLoading] = useState(true);
   const { showError } = useError();
 
@@ -710,7 +720,12 @@ export const useFeeConcessionSlabs = () => {
       setLoading(true);
       const response = await getAllFeeConcessionSlabs();
       if (response.payload) {
-        setConcessionSlabs(response.payload);
+        // Map defaultRate to defaultConcessionRate for frontend compatibility
+        const mappedSlabs = response.payload.map((slab: any) => ({
+          ...slab,
+          defaultConcessionRate: slab.defaultRate ?? slab.defaultConcessionRate ?? 0,
+        }));
+        setConcessionSlabs(mappedSlabs);
       } else {
         setConcessionSlabs([]);
       }
@@ -724,13 +739,13 @@ export const useFeeConcessionSlabs = () => {
   }, [showError]);
 
   const addFeeConcessionSlab = useCallback(
-    async (newSlab: FeeConcessionSlabT) => {
+    async (newSlab: FeeSlabT) => {
       try {
         // Map FeeConcessionSlabT to NewFeeConcessionSlab format
         const mappedSlab: NewFeeConcessionSlab = {
           name: newSlab.name,
           description: newSlab.description,
-          defaultConcessionRate: newSlab.defaultConcessionRate ?? 0,
+          defaultRate: newSlab.defaultRate ?? 0,
           sequence: newSlab.sequence ?? 0,
           legacyFeeSlabId: newSlab.legacyFeeSlabId ?? null,
         };
@@ -747,15 +762,15 @@ export const useFeeConcessionSlabs = () => {
   );
 
   const updateFeeConcessionSlabById = useCallback(
-    async (id: number, slab: Partial<FeeConcessionSlabT>) => {
+    async (id: number, slab: Partial<FeeSlabT>) => {
       try {
         // Map Partial<FeeConcessionSlabT> to Partial<NewFeeConcessionSlab> format
         const mappedSlab: Partial<NewFeeConcessionSlab> = {
           ...(slab.name !== undefined && { name: slab.name }),
           ...(slab.description !== undefined && { description: slab.description }),
-          ...(slab.defaultConcessionRate !== undefined &&
-            slab.defaultConcessionRate !== null && {
-              defaultConcessionRate: slab.defaultConcessionRate,
+          ...(slab.defaultRate !== undefined &&
+            slab.defaultRate !== null && {
+              defaultRate: slab.defaultRate,
             }),
           ...(slab.sequence !== undefined && slab.sequence !== null && { sequence: slab.sequence }),
           ...(slab.legacyFeeSlabId !== undefined && { legacyFeeSlabId: slab.legacyFeeSlabId }),
@@ -798,5 +813,173 @@ export const useFeeConcessionSlabs = () => {
     addFeeConcessionSlab,
     updateFeeConcessionSlabById,
     deleteFeeConcessionSlabById,
+  };
+};
+
+// ==================== FEE CATEGORIES HOOKS ====================
+
+export const useFeeCategories = () => {
+  const [feeCategories, setFeeCategories] = useState<FeeCategoryDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { showError } = useError();
+
+  const fetchFeeCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getAllFeeCategories();
+      if (response.payload) {
+        setFeeCategories(response.payload);
+      } else {
+        setFeeCategories([]);
+      }
+    } catch (error) {
+      console.error("Error fetching fee categories:", error);
+      showError({ message: "Failed to fetch fee categories" });
+      setFeeCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [showError]);
+
+  const addFeeCategory = useCallback(
+    async (newCategory: NewFeeCategory) => {
+      try {
+        const response = await createFeeCategory(newCategory);
+        await fetchFeeCategories();
+        return response.payload;
+      } catch (error) {
+        console.error("Error creating fee category:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to create fee category" });
+        return null;
+      }
+    },
+    [fetchFeeCategories, showError],
+  );
+
+  const updateFeeCategoryById = useCallback(
+    async (id: number, category: Partial<NewFeeCategory>) => {
+      try {
+        const response = await updateFeeCategory(id, category);
+        await fetchFeeCategories();
+        return response.payload;
+      } catch (error) {
+        console.error("Error updating fee category:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to update fee category" });
+        return null;
+      }
+    },
+    [fetchFeeCategories, showError],
+  );
+
+  const deleteFeeCategoryById = useCallback(
+    async (id: number) => {
+      try {
+        await deleteFeeCategory(id);
+        await fetchFeeCategories();
+        return true;
+      } catch (error) {
+        console.error("Error deleting fee category:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to delete fee category" });
+        return false;
+      }
+    },
+    [fetchFeeCategories, showError],
+  );
+
+  useEffect(() => {
+    fetchFeeCategories();
+  }, [fetchFeeCategories]);
+
+  return {
+    feeCategories,
+    loading,
+    fetchFeeCategories,
+    addFeeCategory,
+    updateFeeCategoryById,
+    deleteFeeCategoryById,
+  };
+};
+
+// ==================== FEE GROUPS HOOKS ====================
+
+export const useFeeGroups = () => {
+  const [feeGroups, setFeeGroups] = useState<FeeGroupDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { showError } = useError();
+
+  const fetchFeeGroups = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getAllFeeGroups();
+      if (response.payload) {
+        setFeeGroups(response.payload);
+      } else {
+        setFeeGroups([]);
+      }
+    } catch (error) {
+      console.error("Error fetching fee groups:", error);
+      showError({ message: "Failed to fetch fee groups" });
+      setFeeGroups([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [showError]);
+
+  const addFeeGroup = useCallback(
+    async (newGroup: NewFeeGroup) => {
+      try {
+        const response = await createFeeGroup(newGroup);
+        await fetchFeeGroups();
+        return response.payload;
+      } catch (error) {
+        console.error("Error creating fee group:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to create fee group" });
+        return null;
+      }
+    },
+    [fetchFeeGroups, showError],
+  );
+
+  const updateFeeGroupById = useCallback(
+    async (id: number, group: Partial<NewFeeGroup>) => {
+      try {
+        const response = await updateFeeGroup(id, group);
+        await fetchFeeGroups();
+        return response.payload;
+      } catch (error) {
+        console.error("Error updating fee group:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to update fee group" });
+        return null;
+      }
+    },
+    [fetchFeeGroups, showError],
+  );
+
+  const deleteFeeGroupById = useCallback(
+    async (id: number) => {
+      try {
+        await deleteFeeGroup(id);
+        await fetchFeeGroups();
+        return true;
+      } catch (error) {
+        console.error("Error deleting fee group:", error);
+        showError({ message: error instanceof Error ? error.message : "Failed to delete fee group" });
+        return false;
+      }
+    },
+    [fetchFeeGroups, showError],
+  );
+
+  useEffect(() => {
+    fetchFeeGroups();
+  }, [fetchFeeGroups]);
+
+  return {
+    feeGroups,
+    loading,
+    fetchFeeGroups,
+    addFeeGroup,
+    updateFeeGroupById,
+    deleteFeeGroupById,
   };
 };

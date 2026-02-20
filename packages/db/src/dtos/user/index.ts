@@ -8,6 +8,11 @@ import { BatchDto } from "../batches";
 import { AdmissionAcademicInfoDto, AdmissionCourseDetailsDto, ApplicationFormDto } from "../admissions";
 import { PoliceStationT } from "@/schemas/models/user/police-station.model";
 import { PostOfficeT } from "@/schemas/models/user/post-office.model";
+import { UserStatusMaster, } from "@/schemas/models/user/user-status-master.model";
+import { UserStatusMasterLevel,  } from "@/schemas/models/user/user-status-master-level.model";
+import { UserStatusMasterDomain, } from "@/schemas/models/user/user-status-master-domain.model";
+import { UserStatusMasterFrequency,  } from "@/schemas/models/user/user-status-master-frequency.model";
+import { UserStatusMapping,  } from "@/schemas/models/user/user-status-mapping.model";
 
 export interface PromotionDto extends Omit<PromotionT, "promotionStatusId" | "boardResultStatusId" | "sessionId" | "classId" | "sectionId" | "shiftId" | "programCourseId"> {
     promotionStatus: PromotionStatusT;
@@ -38,6 +43,7 @@ export interface StaffDto extends Omit<StaffT, "shiftId"> {
 
 export interface UserDto extends UserT {
     payload: StudentDto | StaffDto,
+    statuses?: UserStatusMappingDto[],
 }
 
 export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "cityId" | "districtId" | "previousCountryId" | "previousStateId" | "previousCityId" | "previousDistrictId" | "postofficeId" | "policeStationId"> {
@@ -101,8 +107,6 @@ export interface FamilyDetailDto extends Omit<Family, "fatherDetailsPersonId" | 
     annualIncome?: AnnualIncomeT | null;
 }
 
-
-
 export interface ProfileInfo {
     applicationFormDto?: ApplicationFormDto | null; // Only for student
     admissionCourseDetailsDto: AdmissionCourseDetailsDto | null; // Only for student
@@ -114,4 +118,14 @@ export interface ProfileInfo {
     emergencyContactDetails: EmergencyContactT | null;
     transportDetails: TransportDetailsDto | null;
     accommodationDetails: AccommodationDto | null;
+}
+
+export interface UserStatusMasterDto extends UserStatusMaster {
+    levels: UserStatusMasterLevel[];
+    domains: UserStatusMasterDomain[];
+    frequencies: UserStatusMasterFrequency[];
+}
+
+export interface UserStatusMappingDto extends Omit<UserStatusMapping, "userStatusMasterId"> {
+    userStatusMaster: UserStatusMasterDto;
 }

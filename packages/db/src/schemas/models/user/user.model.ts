@@ -19,8 +19,8 @@ export const userModel = pgTable('users', {
     suspendedTillDate: timestamp(),
     isActive: boolean().default(true),
     sendStagingNotifications: boolean().default(false),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
+    updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const createUserSchema = createInsertSchema(userModel);

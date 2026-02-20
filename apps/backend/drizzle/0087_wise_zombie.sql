@@ -1,0 +1,1 @@
+ALTER TABLE "promotions" ADD COLUMN "exam_form_submission_time_stamp" timestamp;

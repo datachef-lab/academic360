@@ -51,7 +51,7 @@ export async function getAllBoardsHandler(req: Request, res: Response) {
 export async function getBoardByIdHandler(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const board = await getBoardById(parseInt(id));
+    const board = await getBoardById(parseInt(id as string));
 
     if (!board) {
       const response = new ApiResponse(
@@ -79,7 +79,7 @@ export async function updateBoardHandler(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const updateData = req.body;
-    const result = await updateBoard(parseInt(id), updateData);
+    const result = await updateBoard(parseInt(id as string), updateData);
     const response = new ApiResponse(
       200,
       "OK",
@@ -95,7 +95,7 @@ export async function updateBoardHandler(req: Request, res: Response) {
 export async function deleteBoardHandler(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const result = await deleteBoard(parseInt(id));
+    const result = await deleteBoard(parseInt(id as string));
     const response = new ApiResponse(
       200,
       "OK",

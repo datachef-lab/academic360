@@ -316,6 +316,22 @@ class SocketService {
     return count;
   }
 
+  // Expose list of online student userIds (for REST API consumers)
+  public getOnlineStudentUserIds(): number[] {
+    const ids: number[] = [];
+    this.activeConnections.forEach((sockets, userId) => {
+      if (sockets.size === 0) return;
+      const userInfo = this.userInfoCache.get(userId);
+      if (userInfo?.type === "STUDENT") {
+        const num = Number(userId);
+        if (!Number.isNaN(num)) {
+          ids.push(num);
+        }
+      }
+    });
+    return ids;
+  }
+
   // Broadcast active users list to all connected clients
   private broadcastActiveUsers() {
     if (!this.io) {

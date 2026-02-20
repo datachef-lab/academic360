@@ -627,6 +627,39 @@ export default function ReportsPage() {
     }
   };
 
+  const downloadPromotionStudentsReport = async () => {
+    setCurrentProgressUpdate({
+      id: `export_${Date.now()}`,
+      userId: userId,
+      type: "export_progress",
+      message: "Exporting Promotion Students Report...",
+      progress: 25,
+      status: "in_progress",
+      createdAt: new Date(),
+    });
+
+    // Optional: pass filters (sessionId, classId) here in the future
+    const result = await ExportService.exportPromotionStudentsReport();
+
+    if (result.success && result.data) {
+      ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: userId,
+        type: "export_progress",
+        message: "Promotion Students Report downloaded successfully!",
+        progress: 100,
+        status: "completed",
+        fileName: result.data?.fileName,
+        downloadUrl: result.data?.downloadUrl,
+        createdAt: new Date(),
+      });
+      toast.success("Promotion Students Report downloaded successfully!");
+    } else {
+      throw new Error(result.message || "Export failed");
+    }
+  };
+
   const downloadStudentUniversitySubjectsReport = async () => {
     if (!selectedAcademicYearId) {
       toast.error("Please select an academic year");
@@ -742,6 +775,7 @@ export default function ReportsPage() {
       requiresAcademicYear: true,
       requiresRegulation: false,
     },
+
     {
       id: "subject-selection",
       domain: "SUBJECT_SELECTION_PHASE",
@@ -807,6 +841,16 @@ export default function ReportsPage() {
       requiresRegulation: false,
       actionType: "upload",
       uploadOperation: "student_cu_roll_reg_update",
+    },
+    {
+      id: "exam-form-submission-report",
+      domain: "EXAM_FORM_SUBMISSION_PHASE",
+      name: "Exam Form Submitted Report",
+      description: "Export list of students who have submitted exam form with their details.",
+      icon: <FileText className="h-5 w-5 text-emerald-700" />,
+      downloadFunction: () => handleDownload("exam-form-submission-report", downloadPromotionStudentsReport),
+      requiresAcademicYear: false,
+      requiresRegulation: false,
     },
   ];
 

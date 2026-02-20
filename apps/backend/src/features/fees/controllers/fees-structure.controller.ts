@@ -42,10 +42,35 @@ export const createFeeStructure = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const parse = createFeeStructureSchema.safeParse(
-      req.body as z.input<typeof createFeeStructureSchema>,
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            "UNAUTHORIZED",
+            null,
+            "User authentication required",
+          ),
+        );
+      return;
+    }
+
+    // Validate input - exclude auto-generated fields and user ID fields
+    const schemaWithoutAutoFields = createFeeStructureSchema.omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true,
+      createdByUserId: true,
+      updatedByUserId: true,
+    });
+
+    const parse = schemaWithoutAutoFields.safeParse(
+      req.body as z.input<typeof schemaWithoutAutoFields>,
     );
     if (!parse.success) {
+      console.error("Validation error:", parse.error);
       res
         .status(400)
         .json(
@@ -58,23 +83,49 @@ export const createFeeStructure = async (
         );
       return;
     }
-    const body = parse.data as Omit<FeeStructure, "id">;
+
+    const body = parse.data as Omit<
+      FeeStructure,
+      "id" | "createdAt" | "updatedAt" | "createdByUserId" | "updatedByUserId"
+    >;
     convertDates(body);
-    const created = await feeStructureService.createFeeStructure(
-      body as Omit<FeeStructure, "id" | "createdAt" | "updatedAt">,
-    );
-    if (!created) {
+
+    try {
+      const created = await feeStructureService.createFeeStructure(
+        {
+          ...body,
+          createdByUserId: userId,
+          updatedByUserId: userId,
+        },
+        userId,
+      );
+      if (!created) {
+        res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              "ERROR",
+              null,
+              "Failed to create fee structure",
+            ),
+          );
+        return;
+      }
       res
-        .status(400)
+        .status(201)
         .json(
-          new ApiResponse(400, "ERROR", null, "Failed to create fee structure"),
+          new ApiResponse(201, "CREATED", created, "Fee structure created"),
         );
-      return;
+    } catch (dbError: any) {
+      console.error("Database error creating fee structure:", dbError);
+      console.error("Error code:", dbError?.code);
+      console.error("Error message:", dbError?.message);
+      console.error("Error stack:", dbError?.stack);
+      throw dbError;
     }
-    res
-      .status(201)
-      .json(new ApiResponse(201, "CREATED", created, "Fee structure created"));
   } catch (error) {
+    console.error("Error creating fee structure:", error);
     handleError(error, res, next);
   }
 };
@@ -188,9 +239,28 @@ export const updateFeeStructure = async (
         );
       return;
     }
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            "UNAUTHORIZED",
+            null,
+            "User authentication required",
+          ),
+        );
+      return;
+    }
+
     const body = parse.data as Partial<FeeStructure>;
     convertDates(body);
-    const updated = await feeStructureService.updateFeeStructure(id, body);
+    const updated = await feeStructureService.updateFeeStructure(
+      id,
+      body,
+      userId,
+    );
     if (!updated) {
       res
         .status(404)
@@ -225,7 +295,8 @@ export const deleteFeeStructure = async (
         .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
       return;
     }
-    const deleted = await feeStructureService.deleteFeeStructure(id);
+    const userId = (req.user as any)?.id;
+    const deleted = await feeStructureService.deleteFeeStructure(id, userId);
     if (!deleted) {
       res
         .status(404)
@@ -258,11 +329,9 @@ export const createFeeStructureByDto = async (
         academicYearId: z.number(),
         classId: z.number(),
         receiptTypeId: z.number(),
-        baseAmount: z.number(),
         programCourseIds: z.array(z.number()),
         shiftIds: z.array(z.number()),
         components: z.array(z.any()),
-        feeStructureConcessionSlabs: z.array(z.any()),
         installments: z.array(z.any()).optional(),
         advanceForProgramCourseIds: z.array(z.number()).optional(),
         closingDate: z.string().nullable().optional(),
@@ -290,20 +359,13 @@ export const createFeeStructureByDto = async (
 
     const data = parse.data as CreateFeeStructureDto;
 
-    // Validate uniqueness before creating
+    // Validate uniqueness before creating (simplified - no longer checking amounts)
     const uniquenessCheck =
       await feeStructureService.checkUniqueFeeStructureAmounts(
         data.academicYearId,
         data.classId,
         data.programCourseIds,
         data.shiftIds,
-        data.baseAmount,
-        data.feeStructureConcessionSlabs
-          .filter((slab) => slab.concessionRate !== undefined)
-          .map((slab) => ({
-            feeConcessionSlabId: slab.feeConcessionSlabId,
-            concessionRate: slab.concessionRate ?? 0,
-          })),
         undefined, // No excludeFeeStructureId for new creation
         1, // page
         1, // pageSize - only need to check if conflicts exist
@@ -324,19 +386,46 @@ export const createFeeStructureByDto = async (
       return;
     }
 
-    const created = await feeStructureService.createFeeStructureByDto(data);
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            "UNAUTHORIZED",
+            null,
+            "User authentication required",
+          ),
+        );
+      return;
+    }
 
-    res
-      .status(201)
-      .json(
-        new ApiResponse(
-          201,
-          "CREATED",
-          created,
-          "Fee structures created successfully",
-        ),
+    try {
+      const created = await feeStructureService.createFeeStructureByDto(
+        data,
+        userId,
       );
+
+      res
+        .status(201)
+        .json(
+          new ApiResponse(
+            201,
+            "CREATED",
+            created,
+            "Fee structures created successfully",
+          ),
+        );
+    } catch (dbError: any) {
+      console.error("Database error creating fee structure by DTO:", dbError);
+      console.error("Error code:", dbError?.code);
+      console.error("Error message:", dbError?.message);
+      console.error("Error stack:", dbError?.stack);
+      throw dbError;
+    }
   } catch (error) {
+    console.error("Error creating fee structure by DTO:", error);
     handleError(error, res, next);
   }
 };
@@ -360,11 +449,9 @@ export const updateFeeStructureByDto = async (
         academicYearId: z.number(),
         classId: z.number(),
         receiptTypeId: z.number(),
-        baseAmount: z.number(),
         programCourseIds: z.array(z.number()),
         shiftIds: z.array(z.number()),
         components: z.array(z.any()),
-        feeStructureConcessionSlabs: z.array(z.any()),
         installments: z.array(z.any()).optional(),
         advanceForProgramCourseIds: z.array(z.number()).optional(),
         closingDate: z.string().nullable().optional(),
@@ -392,20 +479,13 @@ export const updateFeeStructureByDto = async (
 
     const data = parse.data as CreateFeeStructureDto;
 
-    // Validate uniqueness before updating (exclude current fee structure)
+    // Validate uniqueness before updating (exclude current fee structure) (simplified - no longer checking amounts)
     const uniquenessCheck =
       await feeStructureService.checkUniqueFeeStructureAmounts(
         data.academicYearId,
         data.classId,
         data.programCourseIds,
         data.shiftIds,
-        data.baseAmount,
-        data.feeStructureConcessionSlabs
-          .filter((slab) => slab.concessionRate !== undefined)
-          .map((slab) => ({
-            feeConcessionSlabId: slab.feeConcessionSlabId,
-            concessionRate: slab.concessionRate ?? 0,
-          })),
         id, // Exclude current fee structure from conflict check
         1, // page
         1, // pageSize - only need to check if conflicts exist
@@ -426,7 +506,26 @@ export const updateFeeStructureByDto = async (
       return;
     }
 
-    const updated = await feeStructureService.updateFeeStructureByDto(id, data);
+    const userId = (req.user as any)?.id;
+    if (!userId) {
+      res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            "UNAUTHORIZED",
+            null,
+            "User authentication required",
+          ),
+        );
+      return;
+    }
+
+    const updated = await feeStructureService.updateFeeStructureByDto(
+      id,
+      data,
+      userId,
+    );
 
     if (!updated) {
       res
@@ -648,13 +747,6 @@ export const checkUniqueFeeStructureAmounts = async (
         classId: z.number(),
         programCourseIds: z.array(z.number()),
         shiftIds: z.array(z.number()),
-        baseAmount: z.number(),
-        feeStructureConcessionSlabs: z.array(
-          z.object({
-            feeConcessionSlabId: z.number(),
-            concessionRate: z.number(),
-          }),
-        ),
         excludeFeeStructureId: z.number().optional(),
         page: z.number().optional().default(1),
         pageSize: z.number().optional().default(10),
@@ -680,8 +772,6 @@ export const checkUniqueFeeStructureAmounts = async (
       classId,
       programCourseIds,
       shiftIds,
-      baseAmount,
-      feeStructureConcessionSlabs,
       excludeFeeStructureId,
       page,
       pageSize,
@@ -692,8 +782,6 @@ export const checkUniqueFeeStructureAmounts = async (
       classId,
       programCourseIds,
       shiftIds,
-      baseAmount,
-      feeStructureConcessionSlabs,
       excludeFeeStructureId,
       page,
       pageSize,

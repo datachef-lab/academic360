@@ -34,7 +34,13 @@ const nextConfig = {
       {
         protocol: "http",
         hostname: "localhost",
-        port: "3008", // Add this
+        port: "3008",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "8080",
         pathname: "/**",
       },
       {

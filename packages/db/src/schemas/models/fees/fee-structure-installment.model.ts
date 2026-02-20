@@ -10,13 +10,13 @@ export const feeStructureInstallmentModel = pgTable("fee_structure_installments"
         .references(() => feeStructureModel.id)
         .notNull(),
     installmentNumber: integer().notNull(),
-    baseAmount: doublePrecision().default(0).notNull(),
+    amount: doublePrecision().default(0).notNull(),
     startDate: timestamp(),
     endDate: timestamp(),
     onlineStartDate: timestamp(),
     onlineEndDate: timestamp(),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
+    updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const createFeeStructureInstallmentSchema = createInsertSchema(feeStructureInstallmentModel);

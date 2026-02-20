@@ -1,5 +1,5 @@
 "use client";
-
+// @ts-nocheck
 import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -94,12 +94,12 @@ export default function CURegistrationPage() {
   const hasAutoNavigatedRef = React.useRef(false);
 
   // Navigate user back as Registration process is closed
-  useEffect(() => {
-    const isNestedIframe = window.self !== window.top;
-    if (!isNestedIframe) {
-      router.replace("/dashboard");
-    }
-  }, []);
+  // useEffect(() => {
+  //   const isNestedIframe = window.self !== window.top;
+  //   if (!isNestedIframe) {
+  //     router.replace("/dashboard");
+  //   }
+  // }, []);
 
   // Debug activeTab changes
   useEffect(() => {
@@ -182,12 +182,12 @@ export default function CURegistrationPage() {
     return aadhaar;
   };
 
-  //   useEffect(() => {
-  //     if (process.env.NEXT_PUBLIC_APP_ENV === "production") {
-  //       router.replace("/dashboard"); // Use replace instead of push to avoid adding to history
-  //       return;
-  //     }
-  //   }, [router]);
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_APP_ENV === "production") {
+      router.replace("/dashboard"); // Use replace instead of push to avoid adding to history
+      return;
+    }
+  }, [router]);
 
   //   // Early return to prevent rendering in production
   //   if (process.env.NEXT_PUBLIC_APP_ENV === "production") {

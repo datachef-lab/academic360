@@ -845,6 +845,11 @@ export async function getStudentsByPapers(
   //     )
   //     .where(inArray(studentModel.id, studentIds));
 
+  const userConditions = [eq(userModel.id, studentModel.userId)];
+  if (params.excelStudents.length === 0) {
+    userConditions.push(eq(userModel.isActive, true));
+  }
+
   // Fetch students
   const students = await db
     .select({
@@ -859,13 +864,7 @@ export async function getStudentsByPapers(
       cuRegistrationNumber: studentModel.registrationNumber,
     })
     .from(studentModel)
-    .innerJoin(
-      userModel,
-      and(
-        eq(userModel.id, studentModel.userId),
-        eq(userModel.isActive, true), // ← Critical fix
-      ),
-    )
+    .innerJoin(userModel, and(...userConditions))
     .leftJoin(
       cuRegistrationCorrectionRequestModel,
       eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),

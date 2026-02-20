@@ -1,0 +1,2 @@
+ALTER TABLE "user_status_mapping" ADD COLUMN "session_id_fk" integer NOT NULL;--> statement-breakpoint
+ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_session_id_fk_sessions_id_fk" FOREIGN KEY ("session_id_fk") REFERENCES "public"."sessions"("id") ON DELETE no action ON UPDATE no action;

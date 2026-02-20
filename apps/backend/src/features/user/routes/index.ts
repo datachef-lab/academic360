@@ -9,11 +9,16 @@ import familyRouter from "@/features/user/routes/family.route.js";
 import personRouter from "@/features/user/routes/person.route.js";
 import personalDetailsRouter from "@/features/user/routes/personalDetails.route.js";
 import transportDetailsRouter from "@/features/user/routes/transportDetails.route.js";
+import userStatusMasterRouter from "@/features/user/routes/user-status-master.route.js";
+import userStatusMasterLevelRouter from "@/features/user/routes/user-status-master-level.route.js";
+import userStatusMasterDomainRouter from "@/features/user/routes/user-status-master-domain.route.js";
+import userStatusMasterFrequencyRouter from "@/features/user/routes/user-status-master-frequency.route.js";
 import userRouter from "@/features/user/routes/user.route.js";
 import studentRouter from "@/features/user/routes/student.route.js";
 import studentApaarUpdateRouter from "@/features/user/routes/student-apaar-update.route.js";
 import reportRouter from "@/features/user/routes/report.route.js";
 import specializationRouter from "@/features/course-design/routes/specialization.routes.js";
+import userStatusMappingRouter from "@/features/user/routes/user-status-mapping.routes";
 
 export {
   accommodationRouter,
@@ -25,7 +30,12 @@ export {
   personRouter,
   personalDetailsRouter,
   // disabilityRouter,
+  userStatusMappingRouter,
   transportDetailsRouter,
+  userStatusMasterRouter,
+  userStatusMasterLevelRouter,
+  userStatusMasterDomainRouter,
+  userStatusMasterFrequencyRouter,
   userRouter,
   studentRouter,
   studentApaarUpdateRouter,

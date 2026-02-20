@@ -1,0 +1,195 @@
+import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { OnlineStudentsModal } from "./onlineStudentModal";
+import { GraduationCap } from "lucide-react";
+
+// 20 dummy active users (mix of staff and students)
+const dummyActiveUsers = [
+  { id: 1, name: "Sarah Johnson", image: "https://i.pravatar.cc/150?img=1", type: "Teacher", tabActive: true },
+  { id: 2, name: "Mike Chen", image: "https://i.pravatar.cc/150?img=2", type: "Admin", tabActive: true },
+  { id: 3, name: "Emily Davis", image: "https://i.pravatar.cc/150?img=3", type: "Teacher", tabActive: false },
+  { id: 4, name: "Alex Kumar", image: "https://i.pravatar.cc/150?img=4", type: "Staff", tabActive: true },
+  { id: 5, name: "Lisa Wang", image: "https://i.pravatar.cc/150?img=5", type: "Admin", tabActive: true },
+  { id: 6, name: "John Smith", image: "https://i.pravatar.cc/150?img=6", type: "Teacher", tabActive: true },
+  { id: 7, name: "Rachel Green", image: "https://i.pravatar.cc/150?img=7", type: "Staff", tabActive: true },
+  { id: 8, name: "David Wilson", image: "https://i.pravatar.cc/150?img=8", type: "Teacher", tabActive: false },
+  { id: 9, name: "Jennifer Lopez", image: "https://i.pravatar.cc/150?img=9", type: "Admin", tabActive: true },
+  { id: 10, name: "Robert Brown", image: "https://i.pravatar.cc/150?img=10", type: "Staff", tabActive: true },
+  { id: 11, name: "Amanda White", image: "https://i.pravatar.cc/150?img=11", type: "Teacher", tabActive: true },
+  { id: 12, name: "Chris Martin", image: "https://i.pravatar.cc/150?img=12", type: "Staff", tabActive: false },
+  { id: 13, name: "Diana Ross", image: "https://i.pravatar.cc/150?img=13", type: "Teacher", tabActive: true },
+  { id: 14, name: "Eric Thompson", image: "https://i.pravatar.cc/150?img=14", type: "Admin", tabActive: true },
+  { id: 15, name: "Fiona Apple", image: "https://i.pravatar.cc/150?img=15", type: "Staff", tabActive: true },
+  { id: 16, name: "George Miller", image: "https://i.pravatar.cc/150?img=16", type: "Teacher", tabActive: true },
+  { id: 17, name: "Hannah Montana", image: "https://i.pravatar.cc/150?img=17", type: "Staff", tabActive: false },
+  { id: 18, name: "Ian Somerhalder", image: "https://i.pravatar.cc/150?img=18", type: "Teacher", tabActive: true },
+  { id: 19, name: "Julia Roberts", image: "https://i.pravatar.cc/150?img=19", type: "Admin", tabActive: true },
+  { id: 20, name: "Kevin Hart", image: "https://i.pravatar.cc/150?img=20", type: "Staff", tabActive: true },
+];
+
+// 15 dummy online students with avatars
+const dummyStudents = [
+  { id: 1, uid: "202401001", name: "Rahul Sharma", image: "https://i.pravatar.cc/150?img=33", program: "B.Tech CSE", session: "2024-25", shift: "Morning", section: "A", semester: "3rd", rollNumber: "CSE-101", registrationNumber: "REG2024001" },
+  { id: 2, uid: "202401002", name: "Priya Singh", image: "https://i.pravatar.cc/150?img=44", program: "B.Tech ECE", session: "2024-25", shift: "Morning", section: "B", semester: "3rd", rollNumber: "ECE-102", registrationNumber: "REG2024002" },
+  { id: 3, uid: "202401003", name: "Amit Patel", image: "https://i.pravatar.cc/150?img=52", program: "BBA", session: "2024-25", shift: "Evening", section: "A", semester: "5th", rollNumber: "BBA-103", registrationNumber: "REG2024003" },
+  { id: 4, uid: "202401004", name: "Sneha Gupta", image: "https://i.pravatar.cc/150?img=45", program: "B.Tech CSE", session: "2024-25", shift: "Morning", section: "A", semester: "3rd", rollNumber: "CSE-104", registrationNumber: "REG2024004" },
+  { id: 5, uid: "202401005", name: "Vikram Reddy", image: "https://i.pravatar.cc/150?img=53", program: "MBA", session: "2024-25", shift: "Evening", section: "C", semester: "1st", rollNumber: "MBA-105", registrationNumber: "REG2024005" },
+  { id: 6, uid: "202401006", name: "Anita Desai", image: "https://i.pravatar.cc/150?img=47", program: "B.Tech IT", session: "2024-25", shift: "Morning", section: "B", semester: "5th", rollNumber: "IT-106", registrationNumber: "REG2024006" },
+  { id: 7, uid: "202401007", name: "Karan Mehta", image: "https://i.pravatar.cc/150?img=54", program: "B.Com", session: "2024-25", shift: "Morning", section: "A", semester: "3rd", rollNumber: "BCOM-107", registrationNumber: "REG2024007" },
+  { id: 8, uid: "202401008", name: "Neha Joshi", image: "https://i.pravatar.cc/150?img=48", program: "BCA", session: "2024-25", shift: "Evening", section: "C", semester: "1st", rollNumber: "BCA-108", registrationNumber: "REG2024008" },
+  { id: 9, uid: "202401009", name: "Arjun Kapoor", image: "https://i.pravatar.cc/150?img=55", program: "B.Tech ME", session: "2024-25", shift: "Morning", section: "A", semester: "5th", rollNumber: "ME-109", registrationNumber: "REG2024009" },
+  { id: 10, uid: "202401010", name: "Kavya Nair", image: "https://i.pravatar.cc/150?img=49", program: "B.Tech CSE", session: "2024-25", shift: "Morning", section: "B", semester: "3rd", rollNumber: "CSE-110", registrationNumber: "REG2024010" },
+  { id: 11, uid: "202401011", name: "Rohit Verma", image: "https://i.pravatar.cc/150?img=56", program: "MBA", session: "2024-25", shift: "Evening", section: "A", semester: "1st", rollNumber: "MBA-111", registrationNumber: "REG2024011" },
+  { id: 12, uid: "202401012", name: "Shruti Iyer", image: "https://i.pravatar.cc/150?img=50", program: "B.Tech ECE", session: "2024-25", shift: "Morning", section: "A", semester: "5th", rollNumber: "ECE-112", registrationNumber: "REG2024012" },
+  { id: 13, uid: "202401013", name: "Aditya Saxena", image: "https://i.pravatar.cc/150?img=57", program: "BBA", session: "2024-25", shift: "Morning", section: "B", semester: "3rd", rollNumber: "BBA-113", registrationNumber: "REG2024013" },
+  { id: 14, uid: "202401014", name: "Meera Pillai", image: "https://i.pravatar.cc/150?img=51", program: "B.Tech IT", session: "2024-25", shift: "Evening", section: "C", semester: "1st", rollNumber: "IT-114", registrationNumber: "REG2024014" },
+  { id: 15, uid: "202401015", name: "Sanjay Kumar", image: "https://i.pravatar.cc/150?img=58", program: "B.Com", session: "2024-25", shift: "Morning", section: "A", semester: "5th", rollNumber: "BCOM-115", registrationNumber: "REG2024015" },
+];
+
+export function ActiveUsersAvatars() {
+  const [isStudentsModalOpen, setIsStudentsModalOpen] = useState(false);
+  const studentsOnlineCount = dummyStudents.length;
+
+  const maxVisible = 4;
+  const visibleUsers = dummyActiveUsers.slice(0, maxVisible);
+  const remainingCount = dummyActiveUsers.length - maxVisible;
+
+  return (
+    <>
+      <TooltipProvider delayDuration={100}>
+        <div className="flex items-center gap-4">
+          {/* Stacked Avatars with container */}
+          <div className="flex items-center bg-slate-50 rounded-full pl-1 pr-3 py-1 border border-slate-200/80">
+            <div className="flex -space-x-2">
+              {visibleUsers.map((user, index) => (
+                <Tooltip key={user.id}>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="relative group"
+                      style={{ zIndex: visibleUsers.length - index }}
+                    >
+                      <Avatar
+                        className={`
+                          h-7 w-7 border-2 border-white cursor-pointer
+                          transition-all duration-200 ease-out
+                          hover:scale-110 hover:z-50
+                          ${user.tabActive ? "" : "opacity-50 grayscale"}
+                        `}
+                      >
+                        <AvatarImage src={user.image} alt={user.name} />
+                        <AvatarFallback className="bg-gradient-to-br from-slate-600 to-slate-700 text-white text-[10px] font-medium">
+                          {user.name.split(" ").map(n => n[0]).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="bg-slate-900 text-white border-0 shadow-xl px-3 py-2"
+                  >
+                    <div className="text-xs">
+                      <div className="font-medium">{user.name}</div>
+                      <div className="text-slate-400 text-[11px]">{user.type}</div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+
+              {/* +X more indicator */}
+              {remainingCount > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="relative h-7 w-7 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-300 transition-colors"
+                      style={{ zIndex: 0 }}
+                    >
+                      <span className="text-[10px] font-semibold text-slate-600">
+                        +{remainingCount}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="bg-slate-900 text-white border-0">
+                    <span className="text-xs">{remainingCount} more online</span>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+
+            {/* Online dot */}
+            <div className="ml-2 flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-xs font-medium text-slate-500">{dummyActiveUsers.length}</span>
+            </div>
+          </div>
+
+          {/* Students Online - Icon based modern design */}
+          {studentsOnlineCount > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setIsStudentsModalOpen(true)}
+                  className="
+                    relative flex items-center justify-center
+                    h-10 w-10 rounded-xl
+                    bg-gradient-to-br from-indigo-500 to-violet-600
+                    shadow-lg shadow-indigo-500/30
+                    hover:shadow-xl hover:shadow-indigo-500/40
+                    hover:scale-105
+                    active:scale-95
+                    transition-all duration-200
+                  "
+                >
+                  <GraduationCap className="h-5 w-5 text-white" />
+                  
+                  {/* Count badge */}
+                  <span className="
+                    absolute -top-1 -right-1
+                    flex items-center justify-center
+                    min-w-[18px] h-[18px] px-1
+                    rounded-full
+                    bg-white text-indigo-600
+                    text-[10px] font-bold
+                    shadow-sm
+                    border border-indigo-100
+                  ">
+                    {studentsOnlineCount}
+                  </span>
+
+                  {/* Pulse ring */}
+                  <span className="absolute inset-0 rounded-xl bg-indigo-400 animate-ping opacity-20"></span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                className="bg-slate-900 text-white border-0 shadow-xl"
+              >
+                <div className="text-xs py-0.5">
+                  <span className="font-medium">{studentsOnlineCount} students</span>
+                  <span className="text-slate-400"> online</span>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </TooltipProvider>
+
+      <OnlineStudentsModal
+        open={isStudentsModalOpen}
+        onOpenChange={setIsStudentsModalOpen}
+        students={dummyStudents}
+        loading={false}
+        isError={false}
+      />
+    </>
+  );
+}
+

@@ -337,3 +337,28 @@ export const examOrderTypeEnum = pgEnum("exam_order_type", [
     "CU_REGISTRATION_NUMBER",
     "UID",
 ]);
+
+export const feeCategoryValidityTypeEnum = pgEnum("fee_category_type", [
+    "SEMESTER",
+    "ACADEMIC_YEAR",
+    "PROGRAM_COURSE",
+]);
+
+export const userStatusMasterTypeEnum = pgEnum("user_status_master_type", [
+    "ACTIVE",
+    "IN_ACTIVE",
+]);
+
+export const userStatusMasterLevelTypeEnum = pgEnum("user_status_master_level_type", [
+    "SYSTEM",
+    "ACADEMIC",
+]);
+
+export const userStatusMasterFrequencyTypeEnum = pgEnum("user_status_master_frequency_type", [
+    "ALWAYS_NEW_ENTRY",
+    "PER_ACADEMIC_YEAR",
+    "PER_SEMESTER",
+    "ONLY_ONCE",
+    "REQUIRED",
+    "OPTIONAL"
+]);
