@@ -46,15 +46,15 @@ export default function BasicInfo({ student }: { student: StudentDto | null }) {
           </span>
         </div>
 
-        {/* <div className="flex items-center justify-between py-2 border-b border-gray-100">
-          <span className="text-gray-500 text-sm">CU Registration Number</span>
-          <span className="font-semibold text-gray-800 text-base">N/A</span>
+        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+          <span className="text-red-500 text-sm">Calcutta University Registration Number</span>
+          <span className="font-semibold text-red-500 text-base">{student?.registrationNumber || "N/A"}</span>
         </div>
 
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
-          <span className="text-gray-500 text-sm">CU Roll Number</span>
-          <span className="font-semibold text-gray-800 text-base">N/A</span>
-        </div> */}
+          <span className="text-red-500 text-sm">Calcutta University Roll Number</span>
+          <span className="font-semibold text-red-500 text-base">{student?.rollNumber || "N/A"}</span>
+        </div>
       </CardContent>
     </Card>
   );

@@ -170,6 +170,22 @@ export default function ProfileScreen() {
                 {student?.currentPromotion?.programCourse?.name || "N/A"}
               </Text>
             </View>
+            <View className="flex-row justify-between items-center">
+              <Text style={{ color: theme.text, opacity: 0.7 }} className="text-sm">
+                Calcutta University Registration number
+              </Text>
+              <Text style={{ color: theme.text }} className="font-semibold">
+                {student?.registrationNumber || "N/A"}
+              </Text>
+            </View>
+            <View className="flex-row justify-between items-center">
+              <Text style={{ color: theme.text, opacity: 0.7 }} className="text-sm">
+                Calcutta University Roll Number
+              </Text>
+              <Text style={{ color: theme.text }} className="font-semibold">
+                {student?.rollNumber || "N/A"}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
