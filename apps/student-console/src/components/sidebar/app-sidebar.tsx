@@ -269,8 +269,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: FileText,
       isActive: pathname === "/dashboard/admission-registration",
     },
-    // 19 Feb 2026, 11:00 PM IST
-    Date.now() > new Date("2026-02-19T23:00:00+05:30").getTime() && !isBlockedProgram
+    // 20 Feb 2026, 16:00 PM IST
+    Date.now() > new Date("2026-02-20T16:00:00+05:30").getTime() && !isBlockedProgram
       ? {
           title: "CU Form Upload",
           url: "/dashboard/cu-form-upload",
