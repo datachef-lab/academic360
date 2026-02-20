@@ -7,6 +7,7 @@ import feeStructureComponentRouter from "./fee-structure-component.routes.js";
 import feeStructureInstallmentRouter from "./instalment.route.js";
 import feeStudentMappingRouter from "./fee-student-mapping.route.js";
 import feeGroupPromotionMappingRouter from "./fee-group-promotion-mapping.route.js";
+import feeCategoryPromotionMappingRouter from "./fee-category-promotion-mapping.route.js";
 import receiptTypeRouter from "./receipt-type.route.js";
 import addonRouter from "./addon.route.js";
 
@@ -35,6 +36,12 @@ router.use("/student-mappings", feeStudentMappingRouter);
 
 // Fee Group Promotion Mappings
 router.use("/group-promotion-mappings", feeGroupPromotionMappingRouter);
+
+// Fee Category Promotion Mappings (used for CU exam form submission tracking)
+router.use(
+  "/fee-category-promotion-mappings",
+  feeCategoryPromotionMappingRouter,
+);
 
 // Receipt Types
 router.use("/receipt-types", receiptTypeRouter);

@@ -39,6 +39,7 @@ router.get(
   "/promotion/:promotionId",
   asyncHandler(getFeeCategoryPromotionMappingsByPromotionIdHandler),
 );
+
 router.get("/:id", asyncHandler(getFeeCategoryPromotionMappingByIdHandler));
 router.post("/", asyncHandler(createFeeCategoryPromotionMappingHandler));
 router.post(
@@ -46,6 +47,7 @@ router.post(
   uploadExcelMiddleware,
   asyncHandler(bulkUploadFeeCategoryPromotionMappingsHandler),
 );
+
 router.put("/:id", asyncHandler(updateFeeCategoryPromotionMappingHandler));
 router.delete("/:id", asyncHandler(deleteFeeCategoryPromotionMappingHandler));
 

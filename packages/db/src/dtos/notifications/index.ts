@@ -33,6 +33,7 @@ export type EmailAttachment =
 
 export interface NotificationDto {
     userId: number;
+    adminStaffUserId?: number | null;
     variant: "EMAIL" | "WHATSAPP" | "SMS" | "WEB" | "OTHER";
     type: "UPLOAD" | "EDIT" | "UPDATE" | "INFO" | "FEE" | "EVENT" | "OTHER" | "ADMISSION" | "EXAM" | "MINOR_PAPER_SELECTION" | "SEMESTER_WISE_SUBJECT_SELECTION" | "ALERT" | "OTP";
     message: string;

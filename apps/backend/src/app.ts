@@ -30,6 +30,7 @@ import {
   marksheetPaperMappingRouter,
   marksheetPaperComponentMappingRouter,
   sessionRouter,
+  promotionRouter,
 } from "@/features/academics/routes/index.js";
 import { userModel, User } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -83,6 +84,10 @@ import {
   feeStructureComponentRouter,
   feeCategoryRouter,
   feeGroupPromotionMappingRouter,
+  userStatusMasterRouter,
+  userStatusMasterLevelRouter,
+  userStatusMasterDomainRouter,
+  userStatusMasterFrequencyRouter,
 } from "@/features/index.js";
 import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
@@ -360,6 +365,7 @@ passport.deserializeUser((user: Express.User, done) => done(null, user));
 app.use("/auth", authRouter);
 
 app.use("/api/batches", batchRouter);
+app.use("/api/promotions", promotionRouter);
 app.use("/api/academics/batch-student-mappings", batchStudentMappingRouter);
 app.use("/api/academics/marksheet-paper-mappings", marksheetPaperMappingRouter);
 app.use(
@@ -373,6 +379,14 @@ app.use("/api/users", userRouter);
 
 app.use("/api/user-statuses", userStatusMappingRouter);
 
+// User status master endpoints
+app.use("/api/user-status-masters", userStatusMasterRouter);
+// User status master level endpoints
+app.use("/api/user-status-master-levels", userStatusMasterLevelRouter);
+// User status master domain endpoints
+app.use("/api/user-status-master-domains", userStatusMasterDomainRouter);
+// User status master frequency endpoints
+app.use("/api/user-status-master-frequencies", userStatusMasterFrequencyRouter);
 app.use("/api/sessions", sessionRouter);
 
 app.use("/api/personal-details", personalDetailsRouter);

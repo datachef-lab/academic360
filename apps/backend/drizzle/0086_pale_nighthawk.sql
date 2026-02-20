@@ -1,0 +1,1 @@
+ALTER TABLE "promotions" ADD COLUMN "is_exam_form_submitted" boolean DEFAULT false;

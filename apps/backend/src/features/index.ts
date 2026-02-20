@@ -35,6 +35,10 @@ import {
   studentRouter,
   studentApaarUpdateRouter,
   transportDetailsRouter,
+  userStatusMasterRouter,
+  userStatusMasterLevelRouter,
+  userStatusMasterDomainRouter,
+  userStatusMasterFrequencyRouter,
   userRouter,
 } from "./user/routes/index.js";
 // import feesComponentRouter from "./fees/routes/feesComponent.route.js";
@@ -114,6 +118,10 @@ export {
   personRouter,
   personalDetailsRouter,
   transportDetailsRouter,
+  userStatusMasterRouter,
+  userStatusMasterLevelRouter,
+  userStatusMasterDomainRouter,
+  userStatusMasterFrequencyRouter,
   studentRouter,
   studentApaarUpdateRouter,
   userRouter,

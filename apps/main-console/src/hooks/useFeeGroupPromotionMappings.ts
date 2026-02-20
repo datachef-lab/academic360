@@ -21,11 +21,11 @@ export const feeGroupPromotionMappingKeys = {
 /**
  * Hook to fetch all fee group promotion mappings
  */
-export const useFeeGroupPromotionMappings = () => {
+export const useFeeGroupPromotionMappings = (page: number) => {
   return useQuery({
     queryKey: feeGroupPromotionMappingKeys.lists(),
     queryFn: async () => {
-      const response = await getAllFeeGroupPromotionMappings();
+      const response = await getAllFeeGroupPromotionMappings(page);
       return response.payload || [];
     },
     staleTime: 30000, // Consider data fresh for 30 seconds
