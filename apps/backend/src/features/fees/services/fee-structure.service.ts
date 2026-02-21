@@ -1,3 +1,18 @@
+/**
+ * Checks if any fee-student-mapping for a fee structure is marked as paid
+ * Returns true if any mapping is paid, else false
+ * Adjust the field name (isPaid/paymentStatus) as per your schema
+ */
+export async function hasPaidFeeStudentMappings(
+  feeStructureId: number,
+): Promise<boolean> {
+  const mappings = await db
+    .select()
+    .from(feeStudentMappingModel)
+    .where(eq(feeStudentMappingModel.feeStructureId, feeStructureId));
+  // Adjust the field name as per your schema
+  return mappings.some((m) => m.paymentStatus === "COMPLETED");
+}
 import { db } from "@/db/index.js";
 import {
   CreateFeeStructureDto,
@@ -36,6 +51,7 @@ import {
   not,
   notInArray,
   or,
+  asc,
 } from "drizzle-orm";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import * as academicYearService from "@/features/academics/services/academic-year.service.js";
@@ -206,6 +222,21 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
     },
   );
 
+  const [foundClass] = await db
+    .select()
+    .from(classModel)
+    .where(eq(classModel.id, feeStructure.classId));
+
+  const [foundAcademicYear] = await db
+    .select()
+    .from(academicYearModel)
+    .where(eq(academicYearModel.id, feeStructure.academicYearId));
+
+  const [foundProgramCourse] = await db
+    .select()
+    .from(programCourseModel)
+    .where(eq(programCourseModel.id, feeStructure.programCourseId));
+
   let processed = 0;
   for (const promotion of promotions) {
     // 1. Ensure fee-group-promotion-mapping exists for (promotion)
@@ -219,22 +250,149 @@ async function ensureDefaultFeeStudentMappingsForFeeStructure(
     if (existingMapping) {
       feeGroupPromotionMappingId = existingMapping.id!;
     } else {
-      const [createdMapping] = await db
-        .insert(feeGroupPromotionMappingModel)
-        .values({
-          feeGroupId: generalFeeGroup.id,
-          promotionId: promotion.id,
-          createdByUserId: userId,
-          updatedByUserId: userId,
-        })
-        .returning();
+      // For semester 1, we create the mapping by default for all students as they will be new and we want to ensure they get mapped to the general fee group and get the fees calculated without any extra steps.
+      if (foundClass.name.toUpperCase() === "SEMESTER I") {
+        const [createdMapping] = await db
+          .insert(feeGroupPromotionMappingModel)
+          .values({
+            feeGroupId: generalFeeGroup.id,
+            promotionId: promotion.id,
+            createdByUserId: userId,
+            updatedByUserId: userId,
+          })
+          .returning();
 
-      if (!createdMapping) {
-        // If for some reason insert failed, skip this promotion
-        continue;
+        feeGroupPromotionMappingId = createdMapping.id!;
+      } else {
+        // For other semesters, we will take the fee-group mapping from the previous session of the same student provided that the linked fee-group has carry forward enabled.
+        const [{ promotions: previousPromotion }] = await db
+          .select()
+          .from(promotionModel)
+          .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+          .where(and(eq(promotionModel.studentId, promotion.studentId)))
+          .orderBy(desc(sessionModel.name));
+
+        if (!previousPromotion) continue; // If there is no previous promotion, we cannot carry forward, so we skip creating the mapping for this student.
+
+        const [previousFeeGroupPromotionMapping] = await db
+          .select()
+          .from(feeGroupPromotionMappingModel)
+          .where(
+            and(
+              eq(
+                feeGroupPromotionMappingModel.promotionId,
+                previousPromotion.id,
+              ),
+            ),
+          );
+
+        if (!previousFeeGroupPromotionMapping) continue; // If there is no previous mapping, we skip creating the mapping for this student.
+
+        // Check if the fee group linked to the previous mapping has carry forward enabled
+        const [previousFeeGroup] = await db
+          .select()
+          .from(feeGroupModel)
+          .where(
+            eq(feeGroupModel.id, previousFeeGroupPromotionMapping.feeGroupId),
+          );
+
+        let shouldFeeGroupCarryForwarded: boolean = false;
+
+        if (!previousFeeGroup) {
+          shouldFeeGroupCarryForwarded = false;
+        } else if (
+          previousFeeGroup &&
+          previousFeeGroup.validityType === "ACADEMIC_YEAR"
+        ) {
+          const [{ academic_years: previousAcademicYear }] = await db
+            .select()
+            .from(academicYearModel)
+            .leftJoin(
+              sessionModel,
+              eq(sessionModel.academicYearId, academicYearModel.id),
+            )
+            .leftJoin(
+              promotionModel,
+              eq(promotionModel.sessionId, sessionModel.id),
+            )
+            .where(eq(promotionModel.id, previousPromotion.id));
+
+          if (!previousAcademicYear) {
+            throw new Error(
+              `Academic year not found for previous promotion ${previousPromotion.id}`,
+            );
+          }
+
+          if (previousAcademicYear.id === feeStructure.academicYearId) {
+            shouldFeeGroupCarryForwarded = true;
+          } else {
+            shouldFeeGroupCarryForwarded = false;
+          }
+        } else if (
+          previousFeeGroup &&
+          previousFeeGroup.validityType === "PROGRAM_COURSE"
+        ) {
+          const [{ academic_years: registrationAcademicYear }] = await db
+            .select()
+            .from(promotionModel)
+            .leftJoin(
+              studentModel,
+              eq(studentModel.id, promotionModel.studentId),
+            )
+            .leftJoin(
+              sessionModel,
+              eq(sessionModel.id, promotionModel.sessionId),
+            )
+            .leftJoin(
+              academicYearModel,
+              eq(academicYearModel.id, sessionModel.academicYearId),
+            )
+            .where(eq(studentModel.id, promotion.studentId))
+            .orderBy(asc(sessionModel.name));
+
+          if (!registrationAcademicYear) {
+            throw new Error(
+              `Academic year not found for student ${promotion.studentId} registration`,
+            );
+          }
+
+          const registrationYear = registrationAcademicYear.year
+            .split("-")[0]
+            .trim();
+          const currentYear = foundAcademicYear.year.split("-")[0].trim();
+
+          if (registrationYear + foundProgramCourse.duration <= currentYear) {
+            shouldFeeGroupCarryForwarded = true;
+          } else {
+            shouldFeeGroupCarryForwarded = false;
+          }
+        } else if (
+          previousFeeGroup &&
+          previousFeeGroup.validityType === "SEMESTER"
+        ) {
+          shouldFeeGroupCarryForwarded = false; // Semester-wise fee groups are not carried forward as the fees are different for each semester.
+        } else {
+          throw new Error(
+            `Invalid validity type for fee group ${previousFeeGroup.id}`,
+          );
+        }
+
+        if (shouldFeeGroupCarryForwarded) {
+          feeGroupPromotionMappingId = previousFeeGroupPromotionMapping.id!;
+        } else {
+          const [createdMapping] = await db
+            .insert(feeGroupPromotionMappingModel)
+            .values({
+              feeGroupId: generalFeeGroup.id,
+              promotionId: promotion.id,
+              createdByUserId: userId,
+              updatedByUserId: userId,
+            })
+            .returning();
+
+          feeGroupPromotionMappingId = createdMapping.id!;
+        }
       }
-
-      feeGroupPromotionMappingId = createdMapping.id!;
     }
 
     // 2. Ensure fee-student-mapping exists for this student + fee structure + mapping
@@ -1301,22 +1459,48 @@ export const deleteFeeStructure = async (
   await db.transaction(async (tx) => {
     // Delete nested data in the correct order (respecting foreign key constraints)
     // 1. Delete fee_student_mappings first (references feeStructureId and feeStructureInstallmentId)
+    const result = await tx
+      .select({ promotionId: promotionModel.id })
+      .from(feeStudentMappingModel)
+      .leftJoin(
+        feeGroupPromotionMappingModel,
+        eq(
+          feeStudentMappingModel.feeGroupPromotionMappingId,
+          feeGroupPromotionMappingModel.id,
+        ),
+      )
+      .leftJoin(
+        promotionModel,
+        eq(feeGroupPromotionMappingModel.promotionId, promotionModel.id),
+      )
+      .where(eq(feeStudentMappingModel.feeStructureId, id));
     await tx
       .delete(feeStudentMappingModel)
       .where(eq(feeStudentMappingModel.feeStructureId, id));
 
-    // 2. Delete fee_structure_components
+    // 3. Delete fee_structure_components
     await tx
       .delete(feeStructureComponentModel)
       .where(eq(feeStructureComponentModel.feeStructureId, id));
 
-    // 3. Delete fee_structure_installments (must be deleted after fee_student_mappings since they reference it)
+    // 4. Delete fee_structure_installments (must be deleted after fee_student_mappings since they reference it)
     await tx
       .delete(feeStructureInstallmentModel)
       .where(eq(feeStructureInstallmentModel.feeStructureId, id));
 
-    // 4. Finally, delete the fee structure itself
+    // 5. Finally, delete the fee structure itself
     await tx.delete(feeStructureModel).where(eq(feeStructureModel.id, id));
+
+    // 6. delete related fee group promotion mappings for the slabs used in this fee structure
+    if (result.length > 0) {
+      const promotionIds = result.map((row) => row.promotionId!);
+
+      await tx
+        .delete(feeGroupPromotionMappingModel)
+        .where(
+          and(inArray(feeGroupPromotionMappingModel.promotionId, promotionIds)),
+        );
+    }
   });
 
   // Emit socket event for fee structure deletion
