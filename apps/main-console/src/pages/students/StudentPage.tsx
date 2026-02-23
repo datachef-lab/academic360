@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import StudentContent from "@/components/student/StudentContent";
 import StudentPanel from "@/components/student/StudentPanel";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axiosInstance from "@/utils/api";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Tabs } from "@/components/ui/tabs";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 import { useIsMobile } from "@/hooks/useMobile";
+import useDebounce from "@/components/Hooks/useDebounce";
 
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
@@ -40,6 +41,7 @@ export default function StudentPage() {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+
   type StudentTab = (typeof studentTabs)[number];
   const [activeTab, setActiveTab] = useState<StudentTab>(() => {
     if (location.state?.activeTab) {
@@ -80,6 +82,57 @@ export default function StudentPage() {
     },
   });
 
+  const [rfid, setRfid] = useState(data?.rfidNumber ?? "");
+
+  useEffect(() => {
+    setRfid(data?.rfidNumber ?? "");
+  }, [data?.rfidNumber]);
+
+  const handleRfidChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRfid(e.target.value);
+  };
+
+  // Debounced RFID value used to auto-save after user stops typing
+  const debouncedRfid = useDebounce(rfid, 1000);
+
+  // Track first run to avoid firing on initial load / refresh
+  const hasInitializedRfidUpdate = useRef(false);
+
+  // Auto-update RFID on server when user finishes typing
+  useEffect(() => {
+    const updateRfid = async () => {
+      if (!data?.id) return;
+
+      try {
+        await axiosInstance.put(`/api/students/${data.id}/status`, {
+          statusOption,
+          rfidNumber: debouncedRfid || null,
+        });
+
+        // Refresh cached student data so UI stays in sync
+        await queryClient.invalidateQueries({ queryKey: ["student", studentIdOrUid] });
+
+        // Show toast only when user actually changed RFID (not on initial load)
+        if (debouncedRfid && debouncedRfid !== data?.rfidNumber) {
+          toast.success("RFID updated");
+        }
+      } catch {
+        toast.error("Failed to update RFID");
+      }
+    };
+
+    // Skip first run so page refresh / initial load doesn't trigger update
+    if (!hasInitializedRfidUpdate.current) {
+      hasInitializedRfidUpdate.current = true;
+      return;
+    }
+
+    // Only call API when value actually exists (or was cleared) and student data is loaded
+    if (data && typeof debouncedRfid === "string") {
+      void updateRfid();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedRfid]);
   // Helper function to convert timestamp from database (Asia/Kolkata) to datetime-local format
   const convertISOToDatetimeLocal = (dateValue: string | Date | null | undefined): string => {
     if (!dateValue) return "";
@@ -147,6 +200,7 @@ export default function StudentPage() {
 
   // Sync status when userData or data changes
   useEffect(() => {
+    console.log("fetched data **", data);
     if (!data && !userData) return;
     const newStatus = getInitialStatus();
     setStatusOption(newStatus);
@@ -241,6 +295,10 @@ export default function StudentPage() {
             <div>{data?.currentPromotion?.shift?.name || "-"}</div>
             <div className="font-semibold text-gray-500">Email:</div>
             <div>{data?.personalEmail || "-"}</div>
+            <div className="font-semibold text-gray-500">RFID :</div>
+            <div>
+              <input type="text" value={rfid} onChange={handleRfidChange} className="rounded-sm border w-full p-2" />
+            </div>
           </div>
           {/* User status controls */}
           <div className="w-full mt-3 sm:mt-4 border-t pt-3 space-y-2 sm:space-y-3 pb-20 sm:pb-24">
@@ -519,6 +577,9 @@ export default function StudentPage() {
 
                   // Update student table with status
                   const studentPayload: Record<string, unknown> = { statusOption };
+
+                  // Always include the latest RFID number in the payload
+                  studentPayload.rfidNumber = rfid || null;
 
                   // Set fields based on status, and explicitly clear fields not used by this status
                   if (statusOption === "DROPPED_OUT" || statusOption === "COMPLETED_LEFT") {
