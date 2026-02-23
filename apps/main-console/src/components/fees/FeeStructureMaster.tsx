@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import axios from "axios";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ import { toast } from "sonner";
 
 // UI state type that extends DTO with calculated amount for display
 type ConcessionSlabUI = {
+  isNewlyAdded?: boolean;
   id: number; // From FeeConcessionSlabT
   name: string; // From FeeConcessionSlabT
   defaultConcessionRate: number; // From FeeConcessionSlabT (not null)
@@ -130,6 +132,26 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeSection, setActiveSection] = useState<"components" | "slabs">("components");
+  const [hasPaidMappings, setHasPaidMappings] = useState(false);
+  // Check for paid mappings before allowing delete
+  useEffect(() => {
+    const checkPaidMappings = async () => {
+      if (feeStructure?.id) {
+        try {
+          // Call backend API to check for paid mappings
+          const res = await axios.get(`/api/fees/structure/${feeStructure.id}/has-paid-mappings`);
+          setHasPaidMappings(res.data.hasPaidMappings === true);
+        } catch (err) {
+          setHasPaidMappings(false);
+        }
+      } else {
+        setHasPaidMappings(false);
+      }
+    };
+    if (open && feeStructure?.id) {
+      checkPaidMappings();
+    }
+  }, [open, feeStructure?.id]);
 
   // Helper function to check if a concession slab has conflicts
   const hasSlabConflict = (slabId: number): boolean => {
@@ -412,6 +434,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
               concessionAmount: 0,
               payableAmount: totalPayable,
               feeHeadAmounts: slabData.feeHeadAmounts,
+              isNewlyAdded: false, // ← explicit, or just omit (undefined = old)
             });
           }
         });
@@ -675,6 +698,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
         concessionAmount: 0,
         payableAmount: 0,
         feeHeadAmounts,
+        isNewlyAdded: true,
       };
       return {
         ...prev,
@@ -971,7 +995,11 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                       <TableHeader>
                         <TableRow className="border-b-2 border-gray-400 bg-gray-100">
                           <TableHead className="w-[140px] border-r-2 border-gray-400 p-2 relative text-center whitespace-nowrap">
-                            <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear}>
+                            <Select
+                              disabled={!!feeStructure}
+                              value={selectedAcademicYear}
+                              onValueChange={setSelectedAcademicYear}
+                            >
                               <SelectTrigger className="absolute inset-0 w-full h-full border-0 shadow-none bg-transparent focus:border-0 focus:ring-0 focus:ring-offset-0 [&>span]:hidden">
                                 <SelectValue />
                               </SelectTrigger>
@@ -988,7 +1016,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             </Select>
                           </TableHead>
                           <TableHead className="w-[140px] border-r-2 border-gray-400 p-2 relative text-center whitespace-nowrap">
-                            <Select value={selectedClass} onValueChange={setSelectedClass}>
+                            <Select disabled={!!feeStructure} value={selectedClass} onValueChange={setSelectedClass}>
                               <SelectTrigger className="absolute inset-0 w-full h-full border-0 shadow-none bg-transparent focus:border-0 focus:ring-0 focus:ring-offset-0 [&>span]:hidden">
                                 <SelectValue />
                               </SelectTrigger>
@@ -1003,7 +1031,11 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             </Select>
                           </TableHead>
                           <TableHead className="w-[140px] border-r-2 border-gray-400 p-2 relative text-center whitespace-nowrap">
-                            <Select value={selectedReceiptType} onValueChange={setSelectedReceiptType}>
+                            <Select
+                              disabled={!!feeStructure}
+                              value={selectedReceiptType}
+                              onValueChange={setSelectedReceiptType}
+                            >
                               <SelectTrigger className="absolute inset-0 w-full h-full border-0 shadow-none bg-transparent focus:border-0 focus:ring-0 focus:ring-offset-0 [&>span]:hidden">
                                 <SelectValue />
                               </SelectTrigger>
@@ -1021,6 +1053,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                           </TableHead>
                           <TableHead className="w-[200px] border-r-2 border-gray-400 p-2 relative text-center whitespace-nowrap">
                             <Select
+                              disabled={!!feeStructure}
                               value=""
                               onValueChange={(value) => {
                                 if (value && !feeStructureRow.programs.includes(value)) {
@@ -1052,6 +1085,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                           </TableHead>
                           <TableHead className="w-[180px] p-2 relative text-center whitespace-nowrap">
                             <Select
+                              disabled={!!feeStructure}
                               value=""
                               onValueChange={(value) => {
                                 if (value && !feeStructureRow.shifts.includes(value)) {
@@ -1215,6 +1249,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                     <div className="space-y-4">
                       <div className="flex gap-2">
                         <Select
+                          disabled={!!feeStructure}
                           value=""
                           onValueChange={(value) => {
                             if (value) {
@@ -1380,6 +1415,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                   <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[60px]">
                                     <Select
                                       value={String(component.id)}
+                                      disabled={!!feeStructure}
                                       onValueChange={(value) => {
                                         const newFeeHeadId = Number(value);
                                         const newFeeHead = feeHeads.find((h) => h.id === newFeeHeadId);
@@ -1461,7 +1497,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 >
                   <h3 className="text-lg font-semibold">Step 2 : Concession Slabs</h3>
                   <div className="flex gap-2">
-                    {isCreateMode && activeSection === "slabs" && feeStructureRow.feeComponents.length > 0 && (
+                    {activeSection === "slabs" && feeStructureRow.feeComponents.length > 0 && (
                       <Button
                         size="sm"
                         onClick={() => {
@@ -1585,6 +1621,10 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                       ) : (
                                         <Select
                                           value={String(slab.id)}
+                                          disabled={
+                                            !!feeStructure && // we're in edit mode
+                                            slab.isNewlyAdded !== true // AND it's NOT a newly added slab
+                                          }
                                           onValueChange={(value) => {
                                             const newSlabId = Number(value);
                                             const newSlab = feeConcessionSlabs.find((s) => s.id === newSlabId);
@@ -1748,9 +1788,6 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
             </div>
 
             <div className="flex gap-2 flex-shrink-0">
-              <Button onClick={checkStructure} className="flex-1 sm:flex-none">
-                Check Structure
-              </Button>
               <Button
                 onClick={openPreview}
                 variant="outline"
@@ -1772,7 +1809,12 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
           <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {feeStructure?.id && (
-                <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} disabled={isDeleting || saving}>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={isDeleting || saving || hasPaidMappings}
+                  title={hasPaidMappings ? "Cannot delete: Some students have already paid." : "Delete"}
+                >
                   Delete
                 </Button>
               )}
