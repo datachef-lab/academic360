@@ -17,8 +17,7 @@ export const examCandidateModel = pgTable("exam_candidates", {
         .references(() => promotionModel.id)
         .notNull(),
     examRoomId: integer("exam_room_id_fk")
-        .references(() => examRoomModel.id)
-        .notNull(),
+        .references(() => examRoomModel.id),
     examSubjectTypeId: integer("exam_subject_type_id_fk")
         .references(() => examSubjectTypeModel.id)
         .notNull(),
@@ -28,7 +27,7 @@ export const examCandidateModel = pgTable("exam_candidates", {
     paperId: integer("paper_id_fk")
         .references(() => paperModel.id)
         .notNull(),
-    seatNumber: varchar({ length: 255 }).notNull(),
+    seatNumber: varchar({ length: 255 }),
     foilNumber: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

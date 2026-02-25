@@ -613,6 +613,7 @@
                 DATE, TIME OF EXAMINATION
               </p>
             </td>
+            <% if (examRows.some(row => row.room)) { %>
             <td
               style="
                 width: 100pt;
@@ -634,6 +635,7 @@
                 VENUE OF EXAMINATION
               </p>
             </td>
+            <% } %>
             <td
               style="
                 width: 164pt;
@@ -729,6 +731,7 @@
 
             </div>
             </td>
+            <% if (row.room) { %>
             <td
               style="
                 width: 100pt;
@@ -743,7 +746,7 @@
                 padding: 8px;
               "
             >
-            <div
+              <div
                 style="
                   display: flex;
                   gap: 2px;
@@ -811,6 +814,7 @@
                 </p>
               </div>
             </td>
+            <% } %>
             <td
               style="
                 width: 164pt;

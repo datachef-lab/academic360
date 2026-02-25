@@ -107,13 +107,7 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
         const seatNumber = candidateData?.seatNumber;
         const paper = candidate?.paper;
 
-        if (!paper || !examRoomId || !examSubjectId) {
-          return null;
-        }
-
-        // Find matching exam room from exam.locations array
-        const examRoom = exam.locations?.find((loc) => loc?.id === examRoomId);
-        if (!examRoom || !examRoom.room) {
+        if (!paper || !examSubjectId) {
           return null;
         }
 
@@ -123,13 +117,24 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
           return null;
         }
 
+        // Room assignment is optional - if no examRoomId, show "Not assigned"
+        let room = "Not assigned";
+        let floor = "";
+        if (examRoomId) {
+          const examRoom = exam.locations?.find((loc) => loc?.id === examRoomId);
+          if (examRoom && examRoom.room) {
+            room = examRoom.room?.name || "Not assigned";
+            floor = examRoom.room?.floor?.name || "";
+          }
+        }
+
         return {
           paperCode: paper?.code || "",
           startTime: new Date(examSubject.startTime),
           endTime: new Date(examSubject.endTime),
-          room: examRoom.room?.name || "",
-          floor: examRoom.room?.floor?.name || "",
-          seatNumber: seatNumber || "",
+          room: room,
+          floor: floor,
+          seatNumber: seatNumber || "Not assigned",
         };
       })
       .filter((detail): detail is PaperDetails => detail !== null)
@@ -288,12 +293,24 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
                       </TableCell>
                       <TableCell className="py-4 px-4 ">
                         <div className="space-y-0.5">
-                          <div className="font-semibold text-gray-800 text-sm">Room: {detail.room}</div>
+                          <div className="font-semibold text-gray-800 text-sm">
+                            {detail.room === "Not assigned" ? (
+                              <span className="text-gray-500 italic">Room: Not assigned</span>
+                            ) : (
+                              <>Room: {detail.room}</>
+                            )}
+                          </div>
                           <div className="text-muted-gray-800 text-xs flex items-center font-mono gap-1.5">
-                            {detail.floor} •
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-600/10 font-mono text-accent-gray-800 text-xs font-medium">
-                              Seat:{detail.seatNumber}
-                            </span>
+                            {detail.floor ? (
+                              <>
+                                {detail.floor} •
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-600/10 font-mono text-accent-gray-800 text-xs font-medium">
+                                  Seat: {detail.seatNumber}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-gray-500 italic">Seat not assigned</span>
+                            )}
                           </div>
                         </div>
                       </TableCell>

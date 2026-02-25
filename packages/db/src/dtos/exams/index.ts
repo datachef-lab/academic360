@@ -51,6 +51,7 @@ export interface ExamDto extends Omit<ExamT, "academicYearId" | "examTypeId" | "
     examSubjects: ExamSubjectDto[];
     scheduledByUser?: ExamAuditUserInfo | null;
     lastUpdatedByUser?: ExamAuditUserInfo | null;
+    candidateCount?: number; // Number of exam candidates already allotted
 }
 
 export interface ExamPapersWithStats {

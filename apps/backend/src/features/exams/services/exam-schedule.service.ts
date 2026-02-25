@@ -677,8 +677,8 @@ export interface StudentWithSeat {
   whatsappPhone: string;
   cuRegistrationApplicationNumber: string | null;
   floorName: string | null;
-  roomName: string;
-  seatNumber: string;
+  roomName: string | null;
+  seatNumber: string | null;
   programCourseId: number | null;
   shiftId: number | null;
   registrationNumber: string | null;
@@ -957,14 +957,15 @@ export async function getStudentsByPapers(
   });
 
   // Fetch original room data to determine if social distancing is applied
-  const roomIds = roomAssignments.map((r) => Number(r.roomId));
+  const safeRoomAssignments = roomAssignments || [];
+  const roomIds = safeRoomAssignments.map((r) => Number(r.roomId));
   const roomsData = await db
     .select({
       id: roomModel.id,
       maxStudentsPerBench: roomModel.maxStudentsPerBench,
     })
     .from(roomModel)
-    .where(inArray(roomModel.id, roomIds));
+    .where(roomIds.length > 0 ? inArray(roomModel.id, roomIds) : sql`FALSE`);
 
   console.log(
     "[EXAM-SCHEDULE] Fetched original room capacities:",
@@ -978,54 +979,73 @@ export async function getStudentsByPapers(
     roomsData.map((r) => [r.id, r.maxStudentsPerBench || 2]),
   );
 
-  const result: StudentWithSeat[] = [];
+  let result: StudentWithSeat[] = [];
   let studentIdx = 0;
 
-  for (const room of roomAssignments) {
-    console.log("[EXAM-SCHEDULE] Room:", room);
-    const roomIdNum = Number(room.roomId);
-    const actualStudentsPerBench = Number(room.maxStudentsPerBench);
-    const originalRoomCapacity = originalRoomCapacityMap.get(roomIdNum);
-    console.log(
-      `[EXAM-SCHEDULE] Room ${roomIdNum}: actualStudentsPerBench=${actualStudentsPerBench}, originalRoomCapacity=${originalRoomCapacity}, isSocialDistancing=${actualStudentsPerBench < (originalRoomCapacity || actualStudentsPerBench)}`,
-    );
-    const letters = generateSeatPositions(
-      actualStudentsPerBench,
-      originalRoomCapacity,
-    );
-    console.log(
-      `[EXAM-SCHEDULE] Generated seat positions for room ${roomIdNum}:`,
-      letters,
-    );
-    let seatIdx = 0;
+  if (safeRoomAssignments.length > 0) {
+    for (const room of safeRoomAssignments) {
+      console.log("[EXAM-SCHEDULE] Room:", room);
+      const roomIdNum = Number(room.roomId);
+      const actualStudentsPerBench = Number(room.maxStudentsPerBench);
+      const originalRoomCapacity = originalRoomCapacityMap.get(roomIdNum);
+      console.log(
+        `[EXAM-SCHEDULE] Room ${roomIdNum}: actualStudentsPerBench=${actualStudentsPerBench}, originalRoomCapacity=${originalRoomCapacity}, isSocialDistancing=${actualStudentsPerBench < (originalRoomCapacity || actualStudentsPerBench)}`,
+      );
+      const letters = generateSeatPositions(
+        actualStudentsPerBench,
+        originalRoomCapacity,
+      );
+      console.log(
+        `[EXAM-SCHEDULE] Generated seat positions for room ${roomIdNum}:`,
+        letters,
+      );
+      let seatIdx = 0;
 
-    while (
-      studentIdx < students.length &&
-      seatIdx < (room.capacity || actualStudentsPerBench * room.numberOfBenches)
-    ) {
-      const bench = Math.floor(seatIdx / actualStudentsPerBench) + 1;
-      const letter = letters[seatIdx % actualStudentsPerBench];
-      const seatNumber = `${bench}${letter}`;
+      while (
+        studentIdx < students.length &&
+        seatIdx <
+          (room.capacity || actualStudentsPerBench * room.numberOfBenches)
+      ) {
+        const bench = Math.floor(seatIdx / actualStudentsPerBench) + 1;
+        const letter = letters[seatIdx % actualStudentsPerBench];
+        const seatNumber = `${bench}${letter}`;
 
-      const s = students[studentIdx++];
-      const promotion = promotionMap.get(s.studentId);
-      result.push({
-        studentId: s.studentId,
-        uid: s.uid || "",
-        name: s.userName || "",
-        email: s.userEmail || "",
-        whatsappPhone: s.userWhatsappPhone || "",
-        cuRegistrationApplicationNumber: s.cuRegistrationApplicationNumber,
-        floorName: room.floorName,
-        roomName: room.roomName,
-        seatNumber,
-        programCourseId: promotion?.programCourseId ?? null,
-        shiftId: promotion?.shiftId ?? null,
-        registrationNumber: s.cuRegistrationNumber,
-        rollNumber: s.cuRollNumber,
-      });
-      seatIdx++;
+        const s = students[studentIdx++];
+        const promotion = promotionMap.get(s.studentId);
+        result.push({
+          studentId: s.studentId,
+          uid: s.uid || "",
+          name: s.userName || "",
+          email: s.userEmail || "",
+          whatsappPhone: s.userWhatsappPhone || "",
+          cuRegistrationApplicationNumber: s.cuRegistrationApplicationNumber,
+          floorName: room.floorName,
+          roomName: room.roomName,
+          seatNumber,
+          programCourseId: promotion?.programCourseId ?? null,
+          shiftId: promotion?.shiftId ?? null,
+          registrationNumber: s.cuRegistrationNumber,
+          rollNumber: s.cuRollNumber,
+        });
+        seatIdx++;
+      }
     }
+  } else {
+    result = students.map((s) => ({
+      studentId: s.studentId,
+      uid: s.uid || "",
+      name: s.userName || "",
+      email: s.userEmail || "",
+      whatsappPhone: s.userWhatsappPhone || "",
+      cuRegistrationApplicationNumber: s.cuRegistrationApplicationNumber,
+      floorName: null,
+      roomName: null,
+      seatNumber: null,
+      programCourseId: null,
+      shiftId: null,
+      registrationNumber: s.cuRegistrationNumber,
+      rollNumber: s.cuRollNumber,
+    }));
   }
 
   console.log("getStudentsbyPapers(), result:", result.length);
@@ -2357,38 +2377,44 @@ export async function allotExamRoomsAndStudents(
       gender: dto.gender,
     };
 
-    // Fetch full room details for room assignments
-    const roomIds = dto.locations.map((l) => l.room.id!);
-    const roomsData = await tx
-      .select()
-      .from(roomModel)
-      .where(inArray(roomModel.id, roomIds));
+    // Fetch full room details for room assignments (only if rooms are selected)
+    let roomMap = new Map();
+    let roomAssignments: any[] = [];
 
-    const roomMap = new Map(roomsData.map((r) => [r.id, r]));
+    if (dto.locations.length > 0) {
+      const roomIds = dto.locations.map((l) => l.room.id!);
+      const roomsData = await tx
+        .select()
+        .from(roomModel)
+        .where(inArray(roomModel.id, roomIds));
 
-    const roomAssignments = dto.locations.map((l) => {
-      const room = roomMap.get(l.room.id!);
-      if (!room) {
-        throw new Error(`Room with ID ${l.room.id} not found`);
-      }
-      return {
-        roomId: l.room.id!,
-        floorId: room.floorId ?? null,
-        floorName: null, // Will be resolved if needed
-        roomName: room.name,
-        maxStudentsPerBench: l.studentsPerBench,
-        numberOfBenches: room.numberOfBenches || 0,
-        capacity:
-          l.capacity || (room.numberOfBenches || 0) * l.studentsPerBench,
-      };
-    });
+      roomMap = new Map(roomsData.map((r) => [r.id, r]));
+
+      roomAssignments = dto.locations.map((l) => {
+        const room = roomMap.get(l.room.id!);
+        if (!room) {
+          throw new Error(`Room with ID ${l.room.id} not found`);
+        }
+        return {
+          roomId: l.room.id!,
+          floorId: room.floorId ?? null,
+          floorName: null, // Will be resolved if needed
+          roomName: room.name,
+          maxStudentsPerBench: l.studentsPerBench,
+          numberOfBenches: room.numberOfBenches || 0,
+          capacity:
+            l.capacity || (room.numberOfBenches || 0) * l.studentsPerBench,
+        };
+      });
+    }
 
     const studentsWithSeats = await getStudentsByPapers(
       seatParams,
       roomAssignments,
     );
 
-    if (studentsWithSeats.length === 0) {
+    // Allow empty student list only if no rooms are selected (room selection disabled)
+    if (studentsWithSeats.length === 0 && dto.locations.length > 0) {
       throw new Error("No eligible students found");
     }
 
@@ -2466,14 +2492,19 @@ export async function allotExamRoomsAndStudents(
           const examSubjectTypeId = examSubjectType.id;
 
           for (const s of studentsWithSeats) {
-            const examRoom = [...roomIdToExamRoom.entries()].find(
-              ([rid]) =>
-                s.roomName ===
-                dto.locations.find((l) => l.room.id === rid)?.room.name,
-            )?.[1] as ExamRoomT;
+            let examRoom: ExamRoomT | undefined;
 
-            if (!examRoom) {
-              throw new Error(`Room not found for student ${s.uid}`);
+            // Only look for exam room if rooms are selected
+            if (dto.locations.length > 0) {
+              examRoom = [...roomIdToExamRoom.entries()].find(
+                ([rid]) =>
+                  s.roomName ===
+                  dto.locations.find((l) => l.room.id === rid)?.room.name,
+              )?.[1] as ExamRoomT;
+
+              if (!examRoom) {
+                throw new Error(`Room not found for student ${s.uid}`);
+              }
             }
 
             const promotionId = promotionMap.get(s.studentId);
@@ -2487,7 +2518,7 @@ export async function allotExamRoomsAndStudents(
             candidateInserts.push({
               examId: examId,
               promotionId,
-              examRoomId: examRoom.id!,
+              examRoomId: examRoom?.id || null,
               examSubjectTypeId,
               examSubjectId,
               paperId: mappedPaperId,
@@ -2509,14 +2540,19 @@ export async function allotExamRoomsAndStudents(
         }
 
         for (const s of studentsWithSeats) {
-          const examRoom = [...roomIdToExamRoom.entries()].find(
-            ([rid]) =>
-              s.roomName ===
-              dto.locations.find((l) => l.room.id === rid)?.room.name,
-          )?.[1] as ExamRoomT;
+          let examRoom: ExamRoomT | undefined;
 
-          if (!examRoom) {
-            throw new Error(`Room not found for student ${s.uid}`);
+          // Only look for exam room if rooms are selected
+          if (dto.locations.length > 0) {
+            examRoom = [...roomIdToExamRoom.entries()].find(
+              ([rid]) =>
+                s.roomName ===
+                dto.locations.find((l) => l.room.id === rid)?.room.name,
+            )?.[1] as ExamRoomT;
+
+            if (!examRoom) {
+              throw new Error(`Room not found for student ${s.uid}`);
+            }
           }
 
           const promotionId = promotionMap.get(s.studentId);
@@ -2530,7 +2566,7 @@ export async function allotExamRoomsAndStudents(
           candidateInserts.push({
             examId: examId,
             promotionId,
-            examRoomId: examRoom.id!,
+            examRoomId: examRoom?.id || null,
             examSubjectTypeId,
             examSubjectId,
             paperId,
@@ -2768,6 +2804,7 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
     foundExamSubjects,
     foundExamSubjectType,
     foundExamRooms,
+    candidateCountResult,
   ] = await Promise.all([
     findAcademicYearById(model.academicYearId),
     db
@@ -2818,6 +2855,11 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
       .from(examSubjectTypeModel)
       .where(eq(examSubjectTypeModel.examId, model.id)),
     db.select().from(examRoomModel).where(eq(examRoomModel.examId, model.id!)),
+    // Count exam candidates for this exam
+    db
+      .select({ count: count(examCandidateModel.id) })
+      .from(examCandidateModel)
+      .where(eq(examCandidateModel.examId, model.id)),
   ]);
 
   const [foundExamType] = foundExamTypeResult;
@@ -3038,6 +3080,12 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
     ? lastUpdatedByUserResult
     : [];
 
+  // Extract candidate count
+  const [candidateCountData] = Array.isArray(candidateCountResult)
+    ? candidateCountResult
+    : [{ count: 0 }];
+  const candidateCount = candidateCountData?.count ?? 0;
+
   return {
     ...model,
     academicYear: foundAcademicYear!,
@@ -3050,6 +3098,7 @@ async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
     locations,
     scheduledByUser: scheduledByUser ?? null,
     lastUpdatedByUser: lastUpdatedByUser ?? null,
+    candidateCount,
   };
 }
 
@@ -4729,7 +4778,7 @@ export async function getExamCandidatesByStudentIdAndExamId(
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .where(and(eq(studentModel.id, studentId), eq(examModel.id, examId)));
 
-  return await Promise.all(
+  const result = await Promise.all(
     examCandidates.map(async (examCandidate) => {
       const paper = await db
         .select()
@@ -4739,11 +4788,13 @@ export async function getExamCandidatesByStudentIdAndExamId(
         .then((rows) => rows[0]);
 
       return {
-        ...examCandidate,
+        ...examCandidate.exam_candidates,
         paper,
       };
     }),
   );
+
+  return result;
 }
 
 // export async function downloadAttendanceSheetsByExamId(
