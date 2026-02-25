@@ -211,13 +211,13 @@ export default function ReportsPage() {
       .trim()
       .replace(/[^A-Za-z0-9]/g, "");
 
-  const readExcelAsMatrix = async (file: File): Promise<any[][]> => {
+  const readExcelAsMatrix = async (file: File): Promise<string[][]> => {
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: "array" });
     const sheetName = workbook.SheetNames[0];
     const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
     if (!sheet) return [];
-    return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][];
+    return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as string[][];
   };
 
   const validateCuRollRegExcel = async (file: File) => {
@@ -302,7 +302,7 @@ export default function ReportsPage() {
       const cleaned = cleanUidForImport(rawUid);
       const displayUid = String(rawUid ?? "").trim();
 
-      const isRowEmpty = row.every((cell: any) => String(cell ?? "").trim() === "");
+      const isRowEmpty = row.every((cell: unknown) => String(cell ?? "").trim() === "");
       if (isRowEmpty) continue;
 
       if (!cleaned) return { ok: false, message: `Row ${r + 1}: UID is required.`, uids: [] };
@@ -885,8 +885,8 @@ export default function ReportsPage() {
       </div>
 
       {/* Reports Table */}
-      <div className="overflow-x-hidden ">
-        <Table className="w-full table-fixed">
+      <div className="w-full overflow-x-auto">
+        <Table className="w-full min-w-[900px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[6%] border border-slate-200 text-xs sm:text-sm">Sr. No.</TableHead>
@@ -985,13 +985,13 @@ export default function ReportsPage() {
                             <>
                               <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
                               <span className="hidden sm:inline">Upload</span>
-                              <span className="sm:hidden">UP</span>
+                              <span className="sm:hidden">Upload</span>
                             </>
                           ) : (
                             <>
                               <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                               <span className="hidden sm:inline">Download</span>
-                              <span className="sm:hidden">DL</span>
+                              <span className="sm:hidden">Download</span>
                             </>
                           )}
                         </>
