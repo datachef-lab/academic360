@@ -299,6 +299,7 @@ export async function updateStudentStatusById(
     cancelledAdmissionAt?: string | null;
     cancelledAdmissionByUserId?: number | null;
     alumni?: boolean;
+    rfidNumber?: string | null;
   },
 ) {
   const update: any = {};
@@ -471,6 +472,10 @@ export async function updateStudentStatusById(
     update.takenTransferCertificate = data.takenTransferCertificate;
   if (typeof data.hasCancelledAdmission === "boolean")
     update.hasCancelledAdmission = data.hasCancelledAdmission;
+  // If RFID is provided (including empty string or null), update that column
+  if (Object.prototype.hasOwnProperty.call(data, "rfidNumber")) {
+    update.rfidNumber = data.rfidNumber ?? null;
+  }
   // Helper to convert timestamp string to Date object representing IST time
   const convertToISTTimestamp = (
     value: string | null | undefined,

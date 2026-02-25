@@ -337,6 +337,7 @@ export const updateStudentStatus = async (
       cancelledAdmissionAt,
       cancelledAdmissionByUserId,
       alumni,
+      rfidNumber,
     } = req.body as any;
 
     // If cancelled and no explicit user id provided, take from auth context
@@ -370,6 +371,8 @@ export const updateStudentStatus = async (
       cancelledAdmissionAt,
       cancelledAdmissionByUserId: effectiveCancelledBy,
       alumni,
+      // Pass through RFID so service can persist it
+      rfidNumber,
     });
 
     if (!result) {

@@ -127,8 +127,8 @@ export interface StudentWithSeat {
   whatsappPhone: string;
   cuRegistrationApplicationNumber: string | null;
   floorName: string | null;
-  roomName: string;
-  seatNumber: string;
+  roomName: string | null;
+  seatNumber: string | null;
   programCourseId: number | null;
   shiftId: number | null;
   registrationNumber: string | null;

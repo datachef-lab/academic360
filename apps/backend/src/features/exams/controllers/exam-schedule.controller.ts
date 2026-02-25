@@ -399,8 +399,8 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
       !Array.isArray(programCourseIds) ||
       !Array.isArray(paperIds) ||
       !Array.isArray(academicYearIds) ||
-      !assignBy ||
-      !Array.isArray(roomAssignments)
+      !assignBy
+      // !Array.isArray(roomAssignments)
     ) {
       console.warn("[EXAM-SCHEDULE-CONTROLLER] Missing required fields");
       return res
@@ -418,8 +418,7 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
     if (
       programCourseIds.length === 0 ||
       paperIds.length === 0 ||
-      academicYearIds.length === 0 ||
-      roomAssignments.length === 0
+      academicYearIds.length === 0
     ) {
       console.log(
         "[EXAM-SCHEDULE-CONTROLLER] Empty arrays, returning empty array",
@@ -481,7 +480,7 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
       excelStudents,
     };
 
-    const students = await getStudentsByPapers(params, roomAssignments);
+    const students = await getStudentsByPapers(params, roomAssignments || []);
 
     console.log(
       "[EXAM-SCHEDULE-CONTROLLER] Service returned students:",
@@ -1432,16 +1431,11 @@ export const allotExamRoomsAndStudentsController = async (
         .json(new ApiResponse(400, "ERROR", null, "Invalid examId"));
     }
 
-    if (!locations || !Array.isArray(locations) || locations.length === 0) {
+    if (!Array.isArray(locations)) {
       return res
         .status(400)
         .json(
-          new ApiResponse(
-            400,
-            "ERROR",
-            null,
-            "locations array is required and must not be empty",
-          ),
+          new ApiResponse(400, "ERROR", null, "locations must be an array"),
         );
     }
 

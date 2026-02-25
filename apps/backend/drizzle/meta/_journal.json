@@ -624,6 +624,13 @@
       "when": 1771496690124,
       "tag": "0088_icy_brood",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1771928344660,
+      "tag": "0089_brave_brother_voodoo",
+      "breakpoints": true
     }
   ]
 }

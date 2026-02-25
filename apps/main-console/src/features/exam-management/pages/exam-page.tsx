@@ -12,7 +12,7 @@ import {
   updateExamSubject,
 } from "@/services/exam.service";
 
-import { IdCard, Mail, Sheet, Trash2, UsersRound, Download, Calendar, AlertTriangle } from "lucide-react";
+import { IdCard, Sheet, Trash2, UsersRound, Download, Calendar, AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ExamPaperRow from "../components/exam-paper-row";
@@ -800,7 +800,7 @@ export default function ExamPage() {
                   </TooltipContent>
                 </Tooltip>
 
-                <Tooltip>
+                {/* <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" onClick={() => setSendAdmitCardDialogOpen(true)} className="p-2">
                       <Mail className="h-4 w-4" />
@@ -812,7 +812,7 @@ export default function ExamPage() {
                       <p className="text-xs text-gray-400">Email admit cards to all students</p>
                     </div>
                   </TooltipContent>
-                </Tooltip>
+                </Tooltip> */}
 
                 <Tooltip>
                   <TooltipTrigger asChild>

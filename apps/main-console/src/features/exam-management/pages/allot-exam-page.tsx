@@ -65,6 +65,7 @@ export default function AllotExamPage() {
   const [assignBy, setAssignBy] = useState<"CU_ROLL_NUMBER" | "UID" | "CU_REGISTRATION_NUMBER">("UID");
   const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
   const [enableFoilNumber, setEnableFoilNumber] = useState(false);
+  const [enableRoomSelection, setEnableRoomSelection] = useState(true);
 
   // Excel file upload state
   const [excelFile, setExcelFile] = useState<File | null>(null);
@@ -524,9 +525,20 @@ export default function AllotExamPage() {
 
   // Fetch students with seat assignments
   const { data: studentsWithSeats = [], isLoading: loadingStudents } = useQuery({
-    queryKey: ["studentsWithSeats", selectedExam?.id, selectedRooms, assignBy, gender, excelFile?.name],
+    queryKey: [
+      "studentsWithSeats",
+      selectedExam?.id,
+      selectedRooms,
+      assignBy,
+      gender,
+      excelFile?.name,
+      enableRoomSelection,
+    ],
     queryFn: async () => {
-      if (!selectedExam || selectedRooms.length === 0) return [];
+      if (!selectedExam) return [];
+
+      // If room selection is enabled and no rooms selected, return empty
+      if (enableRoomSelection && selectedRooms.length === 0) return [];
 
       const papers = await getPapersForExam();
       const paperIds = papers.map((p) => p.id).filter((id): id is number => id !== undefined);
@@ -536,21 +548,24 @@ export default function AllotExamPage() {
       const programCourseIds = selectedExam.examProgramCourses.map((epc) => epc.programCourse.id!);
       const shiftIds = selectedExam.examShifts.map((es) => es.shift.id!);
 
-      const roomAssignments = selectedRooms.map((room) => {
-        const floor = floors.find((f) => f.id === room.floor.id);
-        const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
-        const numberOfBenches = room.numberOfBenches || 0;
-        const capacity = room.capacity || numberOfBenches * maxStudentsPerBench;
-        return {
-          roomId: room.id!,
-          floorId: room.floor.id,
-          floorName: floor?.name || null,
-          roomName: room.name || `Room ${room.id}`,
-          maxStudentsPerBench,
-          numberOfBenches,
-          capacity,
-        };
-      });
+      // If room selection is disabled, use empty roomAssignments
+      const roomAssignments = enableRoomSelection
+        ? selectedRooms.map((room) => {
+            const floor = floors.find((f) => f.id === room.floor.id);
+            const maxStudentsPerBench = room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2;
+            const numberOfBenches = room.numberOfBenches || 0;
+            const capacity = room.capacity || numberOfBenches * maxStudentsPerBench;
+            return {
+              roomId: room.id!,
+              floorId: room.floor.id,
+              floorName: floor?.name || null,
+              roomName: room.name || `Room ${room.id}`,
+              maxStudentsPerBench,
+              numberOfBenches,
+              capacity,
+            };
+          })
+        : [];
 
       const response = await getStudentsForExam(
         {
@@ -571,7 +586,11 @@ export default function AllotExamPage() {
       }
       return [];
     },
-    enabled: !!selectedExam && selectedRooms.length > 0 && assignBy !== undefined && gender !== null,
+    enabled:
+      !!selectedExam &&
+      (enableRoomSelection ? selectedRooms.length > 0 : true) &&
+      assignBy !== undefined &&
+      gender !== null,
     onError: (error) => {
       console.error("[ALLOT-EXAM] Error fetching students with seats:", error);
     },
@@ -626,6 +645,7 @@ export default function AllotExamPage() {
     setAssignBy("UID");
     setSelectedRooms([]);
     setEnableFoilNumber(false);
+    setEnableRoomSelection(true);
     setExcelFile(null);
     setFoilNumberMap({});
     setAdmitCardStartDate("");
@@ -642,20 +662,22 @@ export default function AllotExamPage() {
         throw new Error("Please select an exam");
       }
 
-      if (selectedRooms.length === 0) {
+      if (enableRoomSelection && selectedRooms.length === 0) {
         throw new Error("Please select at least one room");
       }
 
-      const locations = selectedRooms.map((room) => ({
-        roomId: room.id!,
-        studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
-        capacity: room.capacity,
-        room: {
-          id: room.id!,
-          name: room.name,
-          floor: room.floor,
-        },
-      }));
+      const locations = enableRoomSelection
+        ? selectedRooms.map((room) => ({
+            roomId: room.id!,
+            studentsPerBench: room.maxStudentsPerBenchOverride || room.maxStudentsPerBench || 2,
+            capacity: room.capacity,
+            room: {
+              id: room.id!,
+              name: room.name,
+              floor: room.floor,
+            },
+          }))
+        : [];
 
       const params: AllotExamParams = {
         locations,
@@ -753,8 +775,25 @@ export default function AllotExamPage() {
     allotExamMutation.mutate();
   };
 
-  // Filter exams that don't have rooms assigned yet
-  const examsWithoutRooms = examsData?.filter((exam) => !exam.locations || exam.locations.length === 0) || [];
+  // Filter exams that are available for allotment
+  // Show exams that:
+  // 1. Have NO rooms/locations assigned (never allotted with rooms), AND
+  // 2. Have NO candidates (never allotted without rooms)
+  const examsWithoutRooms =
+    examsData?.filter((exam) => {
+      // Skip exams that already have rooms assigned
+      if (exam.locations && exam.locations.length > 0) {
+        return false;
+      }
+
+      // Skip exams that already have candidates allotted (allotted without rooms)
+      if (exam.candidateCount && exam.candidateCount > 0) {
+        return false;
+      }
+
+      // Include only newly scheduled exams with no allotment yet
+      return true;
+    }) || [];
 
   return (
     <div className="min-h-screen w-full p-7 py-4">
@@ -791,6 +830,7 @@ export default function AllotExamPage() {
                       setSelectedExam(null);
                       setSelectedRooms([]);
                       setEnableFoilNumber(false);
+                      setEnableRoomSelection(true);
                       setExcelFile(null);
                       setAdmitCardStartDate("");
                       setAdmitCardEndDate("");
@@ -873,7 +913,7 @@ export default function AllotExamPage() {
                   <Button
                     onClick={() => setRoomsModalOpen(true)}
                     variant="outline"
-                    disabled={!selectedExam || selectedExam.examSubjects.length === 0}
+                    disabled={!selectedExam || selectedExam.examSubjects.length === 0 || !enableRoomSelection}
                     className="h-10 border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <DoorOpen className="w-4 h-4 mr-2" />
@@ -888,26 +928,49 @@ export default function AllotExamPage() {
                     <Users className="w-4 h-4 mr-2" />
                     View Students ({studentsWithSeats.length})
                   </Button>
-                  {/* Foil Number Switch */}
+                  {/* Room Selection and Foil Number Switches */}
                   {selectedExam && (
-                    <div className="flex items-center gap-3 ml-auto">
-                      <Label htmlFor="foil-number-switch" className="text-sm font-medium text-gray-700 cursor-pointer">
-                        Enable Foil Number
-                      </Label>
-                      <Switch
-                        id="foil-number-switch"
-                        checked={enableFoilNumber}
-                        onCheckedChange={(checked) => {
-                          setEnableFoilNumber(checked);
-                          if (!checked) {
-                            setExcelFile(null);
-                            setFoilNumberMap({});
-                            if (fileInputRef.current) {
-                              fileInputRef.current.value = "";
+                    <div className="flex items-center gap-6 ml-auto">
+                      <div className="flex items-center gap-3">
+                        <Label
+                          htmlFor="room-selection-switch"
+                          className="text-sm font-medium text-gray-700 cursor-pointer"
+                        >
+                          Room Selection
+                        </Label>
+                        <Switch
+                          id="room-selection-switch"
+                          checked={enableRoomSelection}
+                          onCheckedChange={(checked) => {
+                            setEnableRoomSelection(checked);
+                            if (!checked) {
+                              setSelectedRooms([]);
                             }
-                          }
-                        }}
-                      />
+                          }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Label
+                          htmlFor="foil-number-switch"
+                          className="text-sm font-medium text-gray-700 cursor-pointer"
+                        >
+                          Enable Foil Number
+                        </Label>
+                        <Switch
+                          id="foil-number-switch"
+                          checked={enableFoilNumber}
+                          onCheckedChange={(checked) => {
+                            setEnableFoilNumber(checked);
+                            if (!checked) {
+                              setExcelFile(null);
+                              setFoilNumberMap({});
+                              if (fileInputRef.current) {
+                                fileInputRef.current.value = "";
+                              }
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -1562,7 +1625,7 @@ export default function AllotExamPage() {
                 onClick={handleAllotExam}
                 disabled={
                   allotExamMutation.status === "loading" ||
-                  selectedRooms.length === 0 ||
+                  (enableRoomSelection && selectedRooms.length === 0) ||
                   !selectedExam ||
                   !areAdmitCardDatesValid()
                 }
@@ -1589,7 +1652,7 @@ export default function AllotExamPage() {
                         : "Invalid admit card dates"}
                 </p>
               )}
-              {selectedRooms.length === 0 && (
+              {enableRoomSelection && selectedRooms.length === 0 && (
                 <p className="text-xs text-red-500">
                   <AlertTriangle className="w-3 h-3 inline mr-1" />
                   Please select at least one room

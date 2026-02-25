@@ -46,10 +46,10 @@ export default function CUFormUploadPage() {
     const now = Date.now();
 
     // 19 Feb 2026, 11:00 PM IST
-    const cutoff = new Date("2026-02-19T23:00:00+05:30").getTime();
+    // const cutoff = new Date("2026-02-19T23:00:00+05:30").getTime();
 
     // 20 Feb 2026, 4:00 PM IST
-    // const cutoff = new Date("2026-02-20T16:00:00+05:30").getTime();
+    const cutoff = new Date("2026-02-20T16:00:00+05:30").getTime();
 
     if (now < cutoff) {
       router.replace("/dashboard/");
