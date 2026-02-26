@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { UserAvatar } from "@/hooks/UserAvatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Users, Trash2, Loader2, Upload, DoorOpen, Download, ArrowLeft, AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -1989,7 +1990,16 @@ export default function AllotExamPage() {
                         >
                           <td className="p-4 align-middle border-r border-border text-center text-sm">{idx + 1}</td>
                           <td className="p-4 align-middle border-r border-border text-sm font-medium">
-                            {student.name}
+                            <div className="flex items-center gap-3">
+                              <UserAvatar
+                                user={{
+                                  name: student.name,
+                                  image: `${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${student.uid}.jpg`,
+                                }}
+                                size="sm"
+                              />
+                              <span>{student.name}</span>
+                            </div>
                           </td>
                           <td className="p-4 align-middle border-r border-border text-sm font-mono">
                             {assignBy === "UID"
@@ -2011,7 +2021,7 @@ export default function AllotExamPage() {
                           <td className="p-4 align-middle border-r border-border text-sm">
                             {student.roomName || "N/A"}
                           </td>
-                          <td className="p-4 align-middle text-sm font-mono">{student.seatNumber}</td>
+                          <td className="p-4 align-middle text-sm font-mono">{student.seatNumber || "N/A"}</td>
                         </tr>
                       ))}
                     </tbody>
