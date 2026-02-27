@@ -41,17 +41,18 @@ export const createFeeCategory = async (
       timestamp: new Date().toISOString(),
     });
 
-    // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `fee_category_created_${dto.id}_${Date.now()}`,
-      type: "info",
+      type: "info" as const,
       userId: userId.toString(),
       userName,
       message: `created a new fee category: ${dto.name}`,
       createdAt: new Date(),
       read: false,
       meta: { feeCategoryId: dto.id, type: "creation" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io.emit("notification", notification);
   }
 
   return dto;
@@ -125,17 +126,18 @@ export const deleteFeeCategory = async (
       timestamp: new Date().toISOString(),
     });
 
-    // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `fee_category_deleted_${id}_${Date.now()}`,
-      type: "update",
-      userId: userId ? userId.toString() : undefined,
+      type: "update" as const,
+      userId: userId?.toString(),
       userName,
       message: `deleted fee category: ${existing?.name || `ID: ${id}`}`,
       createdAt: new Date(),
       read: false,
       meta: { feeCategoryId: id, type: "deletion" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io.emit("notification", notification);
   }
 
   return dto;

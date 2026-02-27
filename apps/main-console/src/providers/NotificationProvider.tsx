@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { socketService, Notification } from "../services/socketService";
 import { AuthContext } from "../features/auth/providers/auth-provider";
 
@@ -37,14 +38,26 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     }
   }, [user?.id]);
 
+  const queryClient = useQueryClient();
+
   // Listen for notifications
   useEffect(() => {
     const removeListener = socketService.addNotificationListener((notification) => {
       setNotifications((prev) => [notification, ...prev]);
+
+      // When a fee-related notification arrives, invalidate relevant queries
+      const feeRelated = notification.meta
+        ? Object.keys(notification.meta).some((k) => k.toString().startsWith("fee"))
+        : notification.message.toLowerCase().includes("fee");
+      if (feeRelated) {
+        queryClient.invalidateQueries({
+          predicate: (query) => typeof query.queryKey[0] === "string" && query.queryKey[0].startsWith("fees"),
+        });
+      }
     });
 
     return removeListener;
-  }, []);
+  }, [queryClient]);
 
   // Calculate unread count
   const unreadCount = notifications.filter((n) => !n.read).length;

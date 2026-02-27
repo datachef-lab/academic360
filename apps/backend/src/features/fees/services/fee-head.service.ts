@@ -24,6 +24,37 @@ export const createFeeHead = async (
       updatedByUserId: userId,
     })
     .returning();
+
+  // emit socket event for creation
+  const io = socketService.getIO();
+  if (io && created) {
+    const user = await userService.findById(userId);
+    const userName = user?.name || "Unknown User";
+
+    io.emit("fee_head_created", {
+      feeHeadId: created.id,
+      type: "creation",
+      message: "A new fee head has been created",
+      timestamp: new Date().toISOString(),
+    });
+
+    const notification = {
+      id: `fee_head_created_${created.id}_${Date.now()}`,
+      type: "info" as const,
+      userId: userId.toString(),
+      userName,
+      message: `created fee head: ${created.name}`,
+      createdAt: new Date(),
+      read: false,
+      meta: { feeHeadId: created.id, type: "creation" },
+    };
+
+    // send to admin/staff users first
+    socketService.sendNotificationToAdminStaff(notification);
+    // also broadcast to everyone so that others can see who performed the action
+    io.emit("notification", notification);
+  }
+
   return created;
 };
 

@@ -21,6 +21,33 @@ export const createReceiptType = async (
       updatedByUserId: userId,
     })
     .returning();
+
+  if (created) {
+    const io = socketService.getIO();
+    const user = await userService.findById(userId);
+    const userName = user?.name || "Unknown User";
+
+    io?.emit("receipt_type_created", {
+      receiptTypeId: created.id,
+      type: "creation",
+      message: "A new receipt type has been created",
+      timestamp: new Date().toISOString(),
+    });
+
+    const notification = {
+      id: `receipt_type_created_${created.id}_${Date.now()}`,
+      type: "info" as const,
+      userId: userId.toString(),
+      userName,
+      message: `created receipt type: ${created.name}`,
+      createdAt: new Date(),
+      read: false,
+      meta: { receiptTypeId: created.id, type: "creation" },
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io?.emit("notification", notification);
+  }
+
   return created || null;
 };
 
@@ -67,17 +94,18 @@ export const updateReceiptType = async (
       timestamp: new Date().toISOString(),
     });
 
-    // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `receipt_type_updated_${updated.id}_${Date.now()}`,
-      type: "update",
+      type: "update" as const,
       userId: userId.toString(),
       userName,
       message: `updated receipt type: ${updated.name}`,
       createdAt: new Date(),
       read: false,
       meta: { receiptTypeId: updated.id, type: "update" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io.emit("notification", notification);
   }
 
   return updated || null;
@@ -115,17 +143,18 @@ export const deleteReceiptType = async (
       timestamp: new Date().toISOString(),
     });
 
-    // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `receipt_type_deleted_${id}_${Date.now()}`,
-      type: "update",
+      type: "update" as const,
       userId: userId?.toString(),
       userName,
       message: `deleted receipt type: ${existing?.name || `ID: ${id}`}`,
       createdAt: new Date(),
       read: false,
       meta: { receiptTypeId: id, type: "deletion" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io.emit("notification", notification);
   }
 
   return deleted || null;

@@ -404,6 +404,32 @@ class SocketService {
     }
   }
 
+  // Send a notification only to currently active staff and admin users
+  // This iterates the cached active users and emits directly to their rooms.
+  sendNotificationToAdminStaff(notification: Notification) {
+    if (!this.io) {
+      console.error(
+        "[SocketService] Cannot send admin/staff notification: io is null",
+      );
+      return;
+    }
+
+    try {
+      const activeUsers = this.getActiveAdminStaffUsers();
+      activeUsers.forEach((u) => {
+        this.io!.to(`user:${u.id}`).emit("notification", notification);
+      });
+      console.log(
+        `[SocketService] Sent notification to admin/staff: ${notification.message}`,
+      );
+    } catch (error) {
+      console.error(
+        "[SocketService] Error sending notification to admin/staff:",
+        error,
+      );
+    }
+  }
+
   // Create a notification for file upload
   createUploadNotification(filename: string, userId?: string): Notification {
     return {

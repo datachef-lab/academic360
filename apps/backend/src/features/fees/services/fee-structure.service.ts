@@ -693,16 +693,18 @@ export const createFeeStructure = async (
     });
 
     // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `fee_structure_created_${dto.id}_${Date.now()}`,
-      type: "info",
+      type: "info" as const,
       userId: userId.toString(),
       userName,
       message: `created a new fee structure (ID: ${dto.id})`,
       createdAt: new Date(),
       read: false,
       meta: { feeStructureId: dto.id, type: "creation" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io.emit("notification", notification);
   }
 
   return dto;
@@ -1353,17 +1355,18 @@ export async function updateFeeStructureByDto(
       timestamp: new Date().toISOString(),
     });
 
-    // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `fee_structure_updated_${dto.id}_${Date.now()}`,
-      type: "update",
+      type: "update" as const,
       userId: userId.toString(),
       userName,
       message: `updated fee structure (ID: ${dto.id})`,
       createdAt: new Date(),
       read: false,
       meta: { feeStructureId: dto.id, type: "update" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io.emit("notification", notification);
   }
 
   return dto;
@@ -1419,17 +1422,18 @@ export const updateFeeStructure = async (
       timestamp: new Date().toISOString(),
     });
 
-    // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `fee_structure_updated_${dto.id}_${Date.now()}`,
-      type: "update",
+      type: "update" as const,
       userId: userId.toString(),
       userName,
       message: `updated fee structure (ID: ${dto.id})`,
       createdAt: new Date(),
       read: false,
       meta: { feeStructureId: dto.id, type: "update" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io.emit("notification", notification);
   }
 
   return dto;
@@ -1521,16 +1525,18 @@ export const deleteFeeStructure = async (
     });
 
     // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `fee_structure_deleted_${id}_${Date.now()}`,
-      type: "update",
+      type: "update" as const,
       userId: userId?.toString() || "",
       userName,
       message: `deleted fee structure (ID: ${id})`,
       createdAt: new Date(),
       read: false,
       meta: { feeStructureId: id, type: "deletion" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io.emit("notification", notification);
   }
 
   return feeStructureDto;

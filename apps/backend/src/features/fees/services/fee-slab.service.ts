@@ -49,16 +49,19 @@ export const createFeeSlab = async (
     });
 
     // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `fee_slab_created_${created.id}_${Date.now()}`,
-      type: "info",
+      type: "info" as const,
       userId: userId.toString(),
       userName,
       message: `created a new fee slab: ${created.name}`,
       createdAt: new Date(),
       read: false,
       meta: { feeSlabId: created.id, type: "creation" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    // also broadcast globally so other users can see who performed the action
+    io.emit("notification", notification);
   }
 
   return created;
@@ -124,15 +127,17 @@ export const updateFeeSlab = async (
     });
 
     // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `fee_slab_updated_${updated.id}_${Date.now()}`,
-      type: "update",
+      type: "update" as const,
       userName,
       message: `updated fee slab: ${updated.name}`,
       createdAt: new Date(),
       read: false,
       meta: { feeSlabId: updated.id, type: "update" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io.emit("notification", notification);
   }
 
   return updated ?? null;
@@ -171,16 +176,18 @@ export const deleteFeeSlab = async (
     });
 
     // Emit notification to all staff/admin users
-    io.emit("notification", {
+    const notification = {
       id: `fee_slab_deleted_${id}_${Date.now()}`,
-      type: "update",
+      type: "update" as const,
       userId: userId ? userId.toString() : undefined,
       userName,
       message: `deleted fee slab: ${existing?.name || `ID: ${id}`}`,
       createdAt: new Date(),
       read: false,
       meta: { feeSlabId: id, type: "deletion" },
-    });
+    };
+    socketService.sendNotificationToAdminStaff(notification);
+    io.emit("notification", notification);
   }
 
   return deleted ?? null;

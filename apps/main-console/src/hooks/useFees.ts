@@ -85,6 +85,8 @@ import type { FeeSlabT } from "@/schemas";
 
 // ==================== FEES STRUCTURE HOOKS ====================
 
+import { socketService } from "../services/socketService";
+
 export const useFeesStructures = (
   page: number = 1,
   pageSize: number = 10,
@@ -111,6 +113,31 @@ export const useFeesStructures = (
       showError({ message: "Failed to fetch fees structures" });
     },
   });
+
+  // Listen for socket events even if the current component isn't directly subscribing
+  // so that any hook user automatically gets fresh data.
+  useEffect(() => {
+    const invalidate = () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => typeof query.queryKey[0] === "string" && query.queryKey[0].startsWith("fees-structures"),
+      });
+    };
+
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.on("fee_structure_created", invalidate);
+      socket.on("fee_structure_updated", invalidate);
+      socket.on("fee_structure_deleted", invalidate);
+    }
+
+    return () => {
+      if (socket) {
+        socket.off("fee_structure_created", invalidate);
+        socket.off("fee_structure_updated", invalidate);
+        socket.off("fee_structure_deleted", invalidate);
+      }
+    };
+  }, [queryClient]);
 
   const feesStructures = data?.payload?.content ?? [];
   const pagination = data?.payload
@@ -292,6 +319,24 @@ export const useFeesHeads = () => {
     }
   }, [showError]);
 
+  // refresh fees heads when socket events fire
+  useEffect(() => {
+    const handle = () => fetchFeesHeads();
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.on("fee_head_created", handle);
+      socket.on("fee_head_updated", handle);
+      socket.on("fee_head_deleted", handle);
+    }
+    return () => {
+      if (socket) {
+        socket.off("fee_head_created", handle);
+        socket.off("fee_head_updated", handle);
+        socket.off("fee_head_deleted", handle);
+      }
+    };
+  }, [fetchFeesHeads]);
+
   const addFeesHead = useCallback(
     async (newFeesHead: NewFeesHead) => {
       try {
@@ -378,6 +423,24 @@ export const useFeesSlabs = () => {
     }
   }, [showError]);
 
+  // refresh fees slabs on socket events
+  useEffect(() => {
+    const handle = () => fetchFeesSlabs();
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.on("fee_slab_created", handle);
+      socket.on("fee_slab_updated", handle);
+      socket.on("fee_slab_deleted", handle);
+    }
+    return () => {
+      if (socket) {
+        socket.off("fee_slab_created", handle);
+        socket.off("fee_slab_updated", handle);
+        socket.off("fee_slab_deleted", handle);
+      }
+    };
+  }, [fetchFeesSlabs]);
+
   const addFeesSlab = useCallback(
     async (newFeesSlab: FeesSlab) => {
       try {
@@ -452,6 +515,24 @@ export const useFeesReceiptTypes = () => {
       setLoading(false);
     }
   }, [showError]);
+
+  // refresh receipt types on socket events
+  useEffect(() => {
+    const handle = () => fetchFeesReceiptTypes();
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.on("receipt_type_created", handle);
+      socket.on("receipt_type_updated", handle);
+      socket.on("receipt_type_deleted", handle);
+    }
+    return () => {
+      if (socket) {
+        socket.off("receipt_type_created", handle);
+        socket.off("receipt_type_updated", handle);
+        socket.off("receipt_type_deleted", handle);
+      }
+    };
+  }, [fetchFeesReceiptTypes]);
 
   const addFeesReceiptType = useCallback(
     async (newFeesReceiptType: NewFeesReceiptType) => {
@@ -840,6 +921,24 @@ export const useFeeCategories = () => {
       setLoading(false);
     }
   }, [showError]);
+
+  // refresh fee categories on socket events
+  useEffect(() => {
+    const handle = () => fetchFeeCategories();
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.on("fee_category_created", handle);
+      socket.on("fee_category_updated", handle);
+      socket.on("fee_category_deleted", handle);
+    }
+    return () => {
+      if (socket) {
+        socket.off("fee_category_created", handle);
+        socket.off("fee_category_updated", handle);
+        socket.off("fee_category_deleted", handle);
+      }
+    };
+  }, [fetchFeeCategories]);
 
   const addFeeCategory = useCallback(
     async (newCategory: NewFeeCategory) => {

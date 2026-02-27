@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Edit, ReceiptIndianRupee, Trash2, Download, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,8 +17,6 @@ import { FeesReceiptType } from "@/types/fees";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
-import { useSocket } from "@/hooks/useSocket";
-import { useAuth } from "@/features/auth/providers/auth-provider";
 
 type ReceiptTypeForm = {
   name: string;
@@ -29,10 +27,6 @@ const EMPTY_FORM: ReceiptTypeForm = {
 };
 
 const FeesReceiptTypePage: React.FC = () => {
-  const { user } = useAuth();
-  const { socket, isConnected } = useSocket({
-    userId: user?.id?.toString(),
-  });
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingItem, setEditingItem] = useState<FeesReceiptType | null>(null);
@@ -42,39 +36,6 @@ const FeesReceiptTypePage: React.FC = () => {
 
   const { feesReceiptTypes, loading, addFeesReceiptType, updateFeesReceiptTypeById, deleteFeesReceiptTypeById } =
     useFeesReceiptTypes();
-
-  // Listen for receipt type socket events (only for staff/admin)
-  useEffect(() => {
-    if (!socket || !isConnected || (user?.type !== "ADMIN" && user?.type !== "STAFF")) return;
-
-    const handleReceiptTypeCreated = (data: { receiptTypeId: number; type: string; message: string }) => {
-      console.log("[Fees Receipt Type Page] Receipt type created:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
-    };
-
-    const handleReceiptTypeUpdated = (data: { receiptTypeId: number; type: string; message: string }) => {
-      console.log("[Fees Receipt Type Page] Receipt type updated:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
-    };
-
-    const handleReceiptTypeDeleted = (data: { receiptTypeId: number; type: string; message: string }) => {
-      console.log("[Fees Receipt Type Page] Receipt type deleted:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
-    };
-
-    socket.on("receipt_type_created", handleReceiptTypeCreated);
-    socket.on("receipt_type_updated", handleReceiptTypeUpdated);
-    socket.on("receipt_type_deleted", handleReceiptTypeDeleted);
-
-    return () => {
-      socket.off("receipt_type_created", handleReceiptTypeCreated);
-      socket.off("receipt_type_updated", handleReceiptTypeUpdated);
-      socket.off("receipt_type_deleted", handleReceiptTypeDeleted);
-    };
-  }, [socket, isConnected, user?.type]);
 
   // Filter receipt types based on search text
   const filteredReceiptTypes = feesReceiptTypes.filter((receipt) => {

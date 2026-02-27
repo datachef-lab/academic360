@@ -84,6 +84,11 @@ class SocketService {
     return this.connected;
   }
 
+  // Expose the underlying Socket.IO client instance
+  getSocket(): Socket | null {
+    return this.socket;
+  }
+
   // Register for connection status changes
   onConnectionChange(onConnect: ConnectionCallback, onDisconnect: ConnectionCallback) {
     this.connectListeners.push(onConnect);

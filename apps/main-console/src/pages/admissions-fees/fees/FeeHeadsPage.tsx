@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Layers, Edit, Trash2, Download, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,14 +18,8 @@ import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationM
 import { toast } from "sonner";
 import { NewFeesHead } from "@/services/fees-api";
 import * as XLSX from "xlsx";
-import { useSocket } from "@/hooks/useSocket";
-import { useAuth } from "@/features/auth/providers/auth-provider";
 
 const FeeHeadsPage: React.FC = () => {
-  const { user } = useAuth();
-  const { socket, isConnected } = useSocket({
-    userId: user?.id?.toString(),
-  });
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingItem, setEditingItem] = useState<FeesHead | null>(null);
@@ -44,39 +38,6 @@ const FeeHeadsPage: React.FC = () => {
   });
 
   const { feesHeads, loading, addFeesHead, updateFeesHeadById, deleteFeesHeadById } = useFeesHeads();
-
-  // Listen for fee head socket events (only for staff/admin)
-  useEffect(() => {
-    if (!socket || !isConnected || (user?.type !== "ADMIN" && user?.type !== "STAFF")) return;
-
-    const handleFeeHeadCreated = (data: { feeHeadId: number; type: string; message: string }) => {
-      console.log("[Fee Heads Page] Fee head created:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
-    };
-
-    const handleFeeHeadUpdated = (data: { feeHeadId: number; type: string; message: string }) => {
-      console.log("[Fee Heads Page] Fee head updated:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
-    };
-
-    const handleFeeHeadDeleted = (data: { feeHeadId: number; type: string; message: string }) => {
-      console.log("[Fee Heads Page] Fee head deleted:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
-    };
-
-    socket.on("fee_head_created", handleFeeHeadCreated);
-    socket.on("fee_head_updated", handleFeeHeadUpdated);
-    socket.on("fee_head_deleted", handleFeeHeadDeleted);
-
-    return () => {
-      socket.off("fee_head_created", handleFeeHeadCreated);
-      socket.off("fee_head_updated", handleFeeHeadUpdated);
-      socket.off("fee_head_deleted", handleFeeHeadDeleted);
-    };
-  }, [socket, isConnected, user?.type]);
 
   // Filter fee heads based on search text
   const filteredFeesHeads =

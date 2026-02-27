@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { FolderTree, Edit, Trash2, Download, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,14 +19,8 @@ import { FeeCategoryDto } from "@repo/db/dtos/fees";
 import { toast } from "sonner";
 import { NewFeeCategory } from "@/services/fees-api";
 import * as XLSX from "xlsx";
-import { useSocket } from "@/hooks/useSocket";
-import { useAuth } from "@/features/auth/providers/auth-provider";
 
 const FeeCategoryPage: React.FC = () => {
-  const { user } = useAuth();
-  const { socket, isConnected } = useSocket({
-    userId: user?.id?.toString(),
-  });
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingItem, setDeletingItem] = useState<FeeCategoryDto | null>(null);
@@ -41,39 +35,6 @@ const FeeCategoryPage: React.FC = () => {
   });
 
   const { feeCategories, loading, addFeeCategory, updateFeeCategoryById, deleteFeeCategoryById } = useFeeCategories();
-
-  // Listen for fee category socket events (only for staff/admin)
-  useEffect(() => {
-    if (!socket || !isConnected || (user?.type !== "ADMIN" && user?.type !== "STAFF")) return;
-
-    const handleFeeCategoryCreated = (data: { feeCategoryId: number; type: string; message: string }) => {
-      console.log("[Fee Category Page] Fee category created:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
-    };
-
-    const handleFeeCategoryUpdated = (data: { feeCategoryId: number; type: string; message: string }) => {
-      console.log("[Fee Category Page] Fee category updated:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
-    };
-
-    const handleFeeCategoryDeleted = (data: { feeCategoryId: number; type: string; message: string }) => {
-      console.log("[Fee Category Page] Fee category deleted:", data);
-      // Silently refresh UI without showing toast
-      window.location.reload(); // Refetch data
-    };
-
-    socket.on("fee_category_created", handleFeeCategoryCreated);
-    socket.on("fee_category_updated", handleFeeCategoryUpdated);
-    socket.on("fee_category_deleted", handleFeeCategoryDeleted);
-
-    return () => {
-      socket.off("fee_category_created", handleFeeCategoryCreated);
-      socket.off("fee_category_updated", handleFeeCategoryUpdated);
-      socket.off("fee_category_deleted", handleFeeCategoryDeleted);
-    };
-  }, [socket, isConnected, user?.type]);
 
   // Filter fee categories based on search text
   const filteredFeeCategories =
