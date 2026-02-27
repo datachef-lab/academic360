@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { AlertCircle, Trash2, Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,8 +22,9 @@ import { getSubjectTypes, getExamComponents } from "@/services/course-design.api
 import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
 import { checkDuplicateExam, countStudentsBreakdownForExam } from "@/services/exam-schedule.service";
+import { fetchExamGroups, type ExamFilters } from "@/services/exam.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto } from "@repo/db/index";
+import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto, ExamGroupDto } from "@repo/db/index";
 import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
@@ -243,13 +247,31 @@ export default function ScheduleExamPage() {
   // Keep selectedSubjectIds for backward compatibility with subject selection UI
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
   // Keep subjectSchedules as derived state for backward compatibility (will be removed later)
-  const subjectSchedules: Record<string, Schedule> = {};
-  selectedSubjectPapers.forEach((sp) => {
-    const key = `${sp.subjectId}`;
-    if (!subjectSchedules[key] || sp.schedule.date) {
-      subjectSchedules[key] = sp.schedule;
-    }
-  });
+  // const subjectSchedules: Record<string, Schedule> = {};
+  // selectedSubjectPapers.forEach((sp) => {
+  //   const key = `${sp.subjectId}`;
+  //   if (!subjectSchedules[key] || sp.schedule.date) {
+  //     subjectSchedules[key] = sp.schedule;
+  //   }
+  // });
+  // Memoize subjectSchedules to prevent unnecessary re-computations
+  const subjectSchedules = useMemo((): Record<string, Schedule> => {
+    const schedules: Record<string, Schedule> = {};
+    selectedSubjectPapers.forEach((sp) => {
+      const key = `${sp.subjectId}`;
+      if (!schedules[key] || sp.schedule.date) {
+        schedules[key] = sp.schedule;
+      }
+    });
+    return schedules;
+  }, [selectedSubjectPapers]);
+
+  // Exam Group Selection State
+  const [examGroupMode, setExamGroupMode] = useState<"new" | "existing">("new");
+  const [newGroupName, setNewGroupName] = useState<string>("");
+  const [selectedExistingGroupId, setSelectedExistingGroupId] = useState<number | null>(null);
+  const [existingGroups, setExistingGroups] = useState<ExamGroupDto[]>([]);
+  const [loadingExamGroups, setLoadingExamGroups] = useState(false);
 
   // Room and student selection moved to allot-exam-page
   // Excel file upload moved to allot-exam-page
@@ -1093,6 +1115,9 @@ export default function ScheduleExamPage() {
           lastUpdatedByUserId: user?.id ?? null,
           admitCardStartDownloadDate: null,
           admitCardLastDownloadDate: null,
+          examGroupId: null,
+          isRoomsSelected: false,
+          seatAllocationMode: null,
         };
 
         const result = await checkDuplicateExam(tmpExamAssignment);
@@ -1235,6 +1260,17 @@ export default function ScheduleExamPage() {
 
   const assignExamMutation = useMutation({
     mutationFn: async () => {
+      // Validate exam group selection
+      if (examGroupMode === "new" && !newGroupName.trim()) {
+        throw new Error("Please enter an exam group name");
+      }
+      if (examGroupMode === "new" && !newGroupCommencementDate) {
+        throw new Error("Please select an exam commencement date for the new group");
+      }
+      if (examGroupMode === "existing" && !selectedExistingGroupId) {
+        throw new Error("Please select an existing exam group");
+      }
+
       const examSubjects: ExamSubjectT[] = [];
       console.log("[SCHEDULE-EXAM] Selected subject papers:", selectedSubjectPapers);
 
@@ -1254,7 +1290,7 @@ export default function ScheduleExamPage() {
 
         examSubjects.push({
           subjectId: subjectPaper.subjectId,
-          paperId: subjectPaper.paperId, // Now includes paperId
+          paperId: subjectPaper.paperId,
           startTime: new Date(startDateTime),
           endTime: new Date(endDateTime),
           examId: 0,
@@ -1316,6 +1352,9 @@ export default function ScheduleExamPage() {
         lastUpdatedByUserId: null,
         admitCardStartDownloadDate: null,
         admitCardLastDownloadDate: null,
+        examGroupId: examGroupMode === "existing" ? selectedExistingGroupId : null,
+        isRoomsSelected: false,
+        seatAllocationMode: null,
       };
 
       // Check for duplicate exam before creating
@@ -1329,8 +1368,24 @@ export default function ScheduleExamPage() {
       }
 
       console.log("Before calling doAssignExam with:", tmpExamAssignment);
+      // Log exam group information
+      console.log("[SCHEDULE-EXAM] Exam Group Info:", {
+        mode: examGroupMode,
+        newGroupName: examGroupMode === "new" ? newGroupName : null,
+        newGroupCommencementDate: examGroupMode === "new" ? newGroupCommencementDate : null,
+        selectedExistingGroupId: examGroupMode === "existing" ? selectedExistingGroupId : null,
+      });
+
       // No Excel file needed for scheduling - only for allotment
-      const response = await doAssignExam(tmpExamAssignment, null);
+      const response = await doAssignExam(tmpExamAssignment, null, {
+        examGroupMode,
+        newGroupName: examGroupMode === "new" ? newGroupName : undefined,
+        examCommencementDate:
+          examGroupMode === "new" && newGroupCommencementDate
+            ? newGroupCommencementDate.toISOString().split("T")[0]
+            : undefined,
+        selectedExistingGroupId: examGroupMode === "existing" ? selectedExistingGroupId : undefined,
+      });
       console.log("In exam assignment post api, response:", response);
       return response;
     },
@@ -1373,11 +1428,124 @@ export default function ScheduleExamPage() {
     setCurrentDate("");
     setCurrentStartTime("");
     setCurrentDuration("");
+    // Reset exam group selection state
+    setExamGroupMode("new");
+    setNewGroupName("");
+    setNewGroupCommencementDate(undefined);
+    setSelectedExistingGroupId(null);
+    setExistingGroups([]);
+    setExistingGroupFilterDate(undefined);
   };
 
   const handleScheduleExam = () => {
     assignExamMutation.mutate();
   };
+
+  // Generate default name for new exam group
+  // const generateDefaultGroupName = useCallback(() => {
+  //   const streamNames = selectedProgramCourses
+  //     .map((pcId) => programCourses.find((pc) => pc.id === pcId)?.stream?.name)
+  //     .filter(Boolean)
+  //     .join(", ");
+
+  //   const examTypeName = examTypes.find((et) => et.id?.toString() === examType)?.name || "";
+  //   const academicYearName = availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)?.year || "";
+  //   const semesterName = classes.find((c) => c.id?.toString() === semester)?.name || "";
+
+  //   if (streamNames && examTypeName && academicYearName && semesterName) {
+  //     return `${semesterName} - ${examTypeName} (${academicYearName})`;
+  //   }
+  //   return "";
+  // }, [selectedProgramCourses, examType, selectedAcademicYearId, semester, programCourses, examTypes, availableAcademicYears, classes]);
+
+  function toSentenceCase(value: string) {
+    return value.toLowerCase().replace(/(^\w|\s\w)/g, (char) => char.toUpperCase());
+  }
+
+  const generateDefaultGroupName = useCallback(() => {
+    // Get distinct stream names
+    const streamNamesArray = Array.from(
+      new Set(
+        selectedProgramCourses
+          .map((pcId) => programCourses.find((pc) => pc.id === pcId)?.stream?.name!)
+          .filter(Boolean),
+      ),
+    ) as string[];
+
+    // Format stream names with &, commas
+    let formattedStreams = "";
+
+    if (streamNamesArray.length === 1) {
+      formattedStreams = streamNamesArray[0]!;
+    } else if (streamNamesArray.length === 2) {
+      formattedStreams = `${streamNamesArray[0]} & ${streamNamesArray[1]}`;
+    } else if (streamNamesArray.length > 2) {
+      formattedStreams =
+        streamNamesArray.slice(0, -1).join(", ") + " & " + streamNamesArray[streamNamesArray.length - 1];
+    }
+
+    const examTypeName = examTypes.find((et) => et.id?.toString() === examType)?.name || "";
+
+    const academicYearName = availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)?.year || "";
+
+    const semesterName = classes.find((c) => c.id?.toString() === semester)?.name || "";
+
+    if (formattedStreams && examTypeName && academicYearName && semesterName) {
+      return `${toSentenceCase(semesterName)} ${toSentenceCase(formattedStreams)} - ${toSentenceCase(examTypeName)} (${toSentenceCase(academicYearName)})`;
+    }
+
+    return "";
+  }, [
+    selectedProgramCourses,
+    examType,
+    selectedAcademicYearId,
+    semester,
+    programCourses,
+    examTypes,
+    availableAcademicYears,
+    classes,
+  ]);
+
+  // Set default name when filters change
+  useEffect(() => {
+    if (examGroupMode === "new") {
+      setNewGroupName(generateDefaultGroupName());
+    }
+  }, [examGroupMode, generateDefaultGroupName]);
+
+  // Update DatePicker state type
+  const [newGroupCommencementDate, setNewGroupCommencementDate] = useState<Date | undefined>(undefined);
+  const [existingGroupFilterDate, setExistingGroupFilterDate] = useState<Date | undefined>(undefined);
+
+  // Fetch existing exam groups with date filter
+  const handleFetchExistingGroups = useCallback(async () => {
+    try {
+      setLoadingExamGroups(true);
+      const filters: ExamFilters = {
+        academicYearId: selectedAcademicYearId,
+      };
+
+      if (existingGroupFilterDate) {
+        const dateStr = existingGroupFilterDate.toISOString().split("T")[0];
+        filters.dateFrom = dateStr;
+        filters.dateTo = dateStr;
+      }
+
+      const response = await fetchExamGroups(1, 100, filters);
+      const groups = response?.content || [];
+      setExistingGroups(groups);
+
+      if (groups.length === 0 && existingGroupFilterDate) {
+        toast.info("No exam groups found for the selected date");
+      }
+    } catch (error) {
+      console.error("Error fetching exam groups:", error);
+      toast.error("Failed to fetch exam groups");
+      setExistingGroups([]);
+    } finally {
+      setLoadingExamGroups(false);
+    }
+  }, [selectedAcademicYearId, existingGroupFilterDate]);
 
   return (
     <div className="min-h-screen w-full p-7 py-4">
@@ -1636,6 +1804,143 @@ export default function ScheduleExamPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Exam Group Selection Section */}
+            {examType && semester && selectedProgramCourses.length > 0 ? (
+              <Card className="border-0 shadow-none">
+                <CardContent className="space-y-4 pb-4 pt-4">
+                  <div className="space-y-3">
+                    <h3 className="text-base font-semibold text-gray-800">Exam Group Selection</h3>
+
+                    <Tabs
+                      value={examGroupMode}
+                      onValueChange={(value) => setExamGroupMode(value as "new" | "existing")}
+                      className="w-full"
+                    >
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger
+                          value="new"
+                          className="data-[state=active]:bg-purple-500 data-[state=active]:text-white"
+                        >
+                          Create New Group
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="existing"
+                          className="data-[state=active]:bg-purple-500 data-[state=active]:text-white"
+                        >
+                          Select Existing Group
+                        </TabsTrigger>
+                      </TabsList>
+
+                      {/* New Group Tab */}
+                      <TabsContent value="new" className="space-y-4 mt-4">
+                        <div className="space-y-3">
+                          {/* Group Name */}
+                          <div className="flex flex-col gap-2">
+                            <Label className="font-medium text-gray-700">Exam Group Name</Label>
+                            <Textarea
+                              value={newGroupName}
+                              onChange={(e) => setNewGroupName(e.target.value)}
+                              placeholder="Enter exam group name..."
+                              className="min-h-24 resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            />
+                            <p className="text-xs text-gray-500">
+                              This name will be used to identify the exam group. You can edit it before creating.
+                            </p>
+                          </div>
+
+                          {/* Commencement Date */}
+                          <div className="flex flex-col gap-2">
+                            <Label className="font-medium text-gray-700">Exam Commencement Date</Label>
+                            <DatePicker
+                              value={newGroupCommencementDate}
+                              onSelect={setNewGroupCommencementDate}
+                              className="w-full"
+                            />
+                            <p className="text-xs text-gray-500">Select the date when this exam group starts.</p>
+                          </div>
+                        </div>
+                      </TabsContent>
+
+                      {/* Existing Group Tab */}
+                      <TabsContent value="existing" className="space-y-4 mt-4">
+                        <div className="space-y-3">
+                          {/* Date Filter for Existing Groups */}
+                          <div className="flex flex-col gap-2">
+                            <Label className="font-medium text-gray-700">Filter by Date (Optional)</Label>
+                            <DatePicker
+                              value={existingGroupFilterDate}
+                              onSelect={setExistingGroupFilterDate}
+                              className="w-full"
+                            />
+                            <p className="text-xs text-gray-500">
+                              Leave empty to see all exam groups, or select a date to filter.
+                            </p>
+                          </div>
+
+                          {/* Fetch Button */}
+                          <Button
+                            onClick={handleFetchExistingGroups}
+                            disabled={loadingExamGroups}
+                            className="w-full h-10 bg-blue-500 hover:bg-blue-600 text-white font-medium"
+                          >
+                            {loadingExamGroups ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Fetching...
+                              </>
+                            ) : (
+                              "Search Exam Groups"
+                            )}
+                          </Button>
+
+                          {/* Existing Groups Selection */}
+                          {existingGroups.length > 0 ? (
+                            <div className="space-y-2">
+                              <Label className="font-medium text-gray-700">Available Exam Groups</Label>
+                              <div className="border border-gray-300 rounded-lg overflow-y-auto max-h-64 space-y-2 p-2">
+                                {existingGroups.map((group) => (
+                                  <button
+                                    key={group.id}
+                                    type="button"
+                                    onClick={() => setSelectedExistingGroupId(group.id ?? null)}
+                                    className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
+                                      selectedExistingGroupId === group.id
+                                        ? "border-purple-500 bg-purple-50"
+                                        : "border-gray-300 bg-gray-50 hover:border-purple-300"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Checkbox
+                                        checked={selectedExistingGroupId === group.id}
+                                        onCheckedChange={() => setSelectedExistingGroupId(group.id ?? null)}
+                                        className="h-4 w-4"
+                                      />
+                                      <div className="flex-1">
+                                        <p className="font-medium text-sm text-gray-800">{group.name}</p>
+                                        <p className="text-xs text-gray-600">
+                                          {group.exams?.length || 0} exam(s) in this group
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            loadingExamGroups === false && (
+                              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-sm text-gray-600">
+                                {examGroupMode === "existing" && "Click 'Search Exam Groups' to find available groups"}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
 
             {/* Check if all required fields from first section are selected */}
             {examType &&

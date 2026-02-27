@@ -407,6 +407,7 @@ export class PdfGenerationService {
       // Set content and wait for resources to load
       await page.setContent(htmlContent, {
         waitUntil: "networkidle0",
+        timeout: 0,
       });
 
       // Generate PDF buffer

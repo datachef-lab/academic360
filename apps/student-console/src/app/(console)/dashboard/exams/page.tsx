@@ -22,15 +22,16 @@ const TabsContentFixed = TabsContent as React.ComponentType<
 >;
 import { useStudent } from "@/providers/student-provider";
 import { format, parseISO } from "date-fns";
-import { ExamDto } from "@/dtos";
+import { ExamDto, ExamGroupDto } from "@/dtos";
 import { fetchExamsByStudentId } from "@/services/exam-api.service";
 import { ExamPapersModal } from "./exam-papers-modal";
 import { useAuth } from "@/hooks/use-auth";
+import { fetchExamGroupsByStudentId } from "@/services/exam-group.service";
 
 export default function ExamsContent() {
   const { student } = useStudent();
   const { user } = useAuth();
-  const [exams, setExams] = useState<ExamDto[]>([]);
+  const [examGroups, setExamGroups] = useState<ExamGroupDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
@@ -79,7 +80,8 @@ export default function ExamsContent() {
   };
 
   // Upcoming exams: Has at least one paper in the future
-  const upcomingExams = exams
+  const upcomingExams = examGroups
+    .flatMap((e) => e.exams)
     .filter((exam) => hasUpcomingPapers(exam))
     .sort((a, b) => {
       // Sort by earliest upcoming paper
@@ -103,7 +105,8 @@ export default function ExamsContent() {
     });
 
   // Today's exams: Has at least one paper today (not yet completed)
-  const recentExams = exams
+  const recentExams = examGroups
+    .flatMap((e) => e.exams)
     .filter((exam) => {
       if (!hasPapersToday(exam)) return false;
       // Only show if not all papers are completed
@@ -131,7 +134,8 @@ export default function ExamsContent() {
     });
 
   // Completed exams: All papers have been completed
-  const previousExams = exams
+  const previousExams = examGroups
+    .flatMap((e) => e.exams)
     .filter((exam) => {
       // Only completed if ALL papers are done AND no upcoming/today papers
       return allPapersCompleted(exam) && !hasUpcomingPapers(exam) && !hasPapersToday(exam);
@@ -160,7 +164,7 @@ export default function ExamsContent() {
     setLoading(true);
     setError(null);
 
-    fetchExamsByStudentId(student.id)
+    fetchExamGroupsByStudentId(student.id)
       .then((data) => {
         console.log("Fetched exams via service:", data, data.payload.content);
         // Filter exams: show if admitCardStartDownloadDate exists and is less than or equal to current time
@@ -169,17 +173,17 @@ export default function ExamsContent() {
         const nowTime = now.getTime();
         const filteredExams = (data.payload.content || []).filter((exam) => {
           // If no admit card start date is set, don't show the exam
-          if (!exam.admitCardStartDownloadDate) {
+          if (!exam.exams[0]?.admitCardStartDownloadDate) {
             return false;
           }
-          const startDate = new Date(exam.admitCardStartDownloadDate);
+          const startDate = new Date(exam.exams[0].admitCardStartDownloadDate);
           const startTime = startDate.getTime();
 
           // Show if start date time is less than or equal to current time
           // This includes both active and completed exams
           return startTime <= nowTime;
         });
-        setExams(filteredExams);
+        setExamGroups(filteredExams);
       })
       .catch((err) => {
         console.error("Error fetching exams via service:", err);
@@ -262,17 +266,17 @@ export default function ExamsContent() {
           });
           // Refetch exams
           if (student?.id) {
-            fetchExamsByStudentId(student.id)
+            fetchExamGroupsByStudentId(student.id)
               .then((data) => {
                 const now = new Date();
                 const filteredExams = (data.payload.content || []).filter((exam) => {
-                  if (!exam.admitCardStartDownloadDate) {
+                  if (!exam.exams[0]?.admitCardStartDownloadDate) {
                     return false;
                   }
-                  const startDate = new Date(exam.admitCardStartDownloadDate);
+                  const startDate = new Date(exam.exams[0].admitCardStartDownloadDate);
                   return startDate <= now;
                 });
-                setExams(filteredExams);
+                setExamGroups(filteredExams);
               })
               .catch((err: Error) => {
                 console.error("Error refetching exams:", err);
@@ -287,20 +291,20 @@ export default function ExamsContent() {
           });
           // Refetch exams
           if (student?.id) {
-            fetchExamsByStudentId(student.id)
+            fetchExamGroupsByStudentId(student.id)
               .then((data) => {
                 const now = new Date();
                 const filteredExams = (data.payload.content || []).filter((exam) => {
-                  if (!exam.admitCardStartDownloadDate) {
+                  if (!exam.exams[0]?.admitCardStartDownloadDate) {
                     return false;
                   }
-                  const startDate = new Date(exam.admitCardStartDownloadDate);
+                  const startDate = new Date(exam.exams[0].admitCardStartDownloadDate);
                   return startDate <= now;
                 });
-                setExams(filteredExams);
+                setExamGroups(filteredExams);
               })
               .catch((err: Error) => {
-                console.error("Error refetching exams:", err);
+                console.error("Error refetching exam groups:", err);
               });
           }
         });
@@ -471,9 +475,11 @@ export default function ExamsContent() {
     exam,
     index,
     variant = "default",
+    examGroup,
     onViewDetails,
   }: {
     exam: ExamDto;
+    examGroup?: ExamGroupDto;
     index: number;
     variant?: "default" | "today" | "completed";
     onViewDetails: (exam: ExamDto) => void;
@@ -558,7 +564,9 @@ export default function ExamsContent() {
                   <Icon className={`w-6 h-6 ${styles.iconColor}`} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">{exam.examType?.name || "Exam"}</h3>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {examGroup?.name || exam.examType?.name || "Exam"}
+                  </h3>
                   {/* {displayPaper?.subject?.name && (
                     <p className={`${styles.titleColor} font-medium mb-2`}>{displayPaper.subject.name}</p>
                   )} */}
@@ -566,12 +574,12 @@ export default function ExamsContent() {
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
-                        {format(new Date(displayPaper.startTime), "dd/MM/yyyy")}
+                        {format(new Date(examGroup?.examCommencementDate!), "dd/MM/yyyy")}
                       </div>
-                      <div className="flex items-center">
+                      {/* <div className="flex items-center">
                         <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
                         {format(new Date(displayPaper.startTime), "hh:mm a")}
-                      </div>
+                      </div> */}
                     </div>
                   )}
                 </div>
@@ -679,7 +687,9 @@ export default function ExamsContent() {
                       {
                         [
                           ...new Set(
-                            exams.flatMap((exam) => exam.examSubjects.map((es) => es.subject?.name).filter(Boolean)),
+                            examGroups
+                              .flatMap((e) => e.exams)
+                              .flatMap((exam) => exam.examSubjects.map((es) => es.subject?.name).filter(Boolean)),
                           ),
                         ].length
                       }
@@ -735,7 +745,7 @@ export default function ExamsContent() {
               <h3 className="text-lg font-medium text-gray-700 mb-2">Error Loading Exams</h3>
               <p className="text-gray-500 max-w-md mx-auto">{error}</p>
             </div>
-          ) : exams.length === 0 ? (
+          ) : examGroups.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-700 mb-2">No Exams Found</h3>
@@ -791,20 +801,25 @@ export default function ExamsContent() {
                         <p className="text-blue-700">Please arrive 15 minutes prior to the start time of all exams.</p>
                       </div>
                     </div>
-                    {upcomingExams
-                      .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
-                      .map((exam, index) => (
-                        <ExamCard
-                          key={exam.id}
-                          exam={exam}
-                          index={index}
-                          variant="default"
-                          onViewDetails={(exam) => {
-                            setSelectedExam(exam);
-                            setIsModalOpen(true);
-                          }}
-                        />
-                      ))}
+                    {Array.from(
+                      new Map(
+                        upcomingExams
+                          .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
+                          .map((exam) => [exam.examGroupId, exam]),
+                      ).values(),
+                    ).map((exam, index) => (
+                      <ExamCard
+                        key={exam.examGroupId}
+                        exam={exam}
+                        index={index}
+                        examGroup={examGroups.find((group) => group.id === exam.examGroupId)}
+                        variant="default"
+                        onViewDetails={(exam) => {
+                          setSelectedExam(exam);
+                          setIsModalOpen(true);
+                        }}
+                      />
+                    ))}
                   </>
                 )}
               </TabsContentFixed>
@@ -851,12 +866,20 @@ export default function ExamsContent() {
                         </div>
                       </div>
                     </div>
-                    {recentExams
-                      .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
-                      .map((exam, index) => (
+                    {Array.from(
+                      new Map(
+                        recentExams
+                          .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
+                          .map((exam) => [exam.examGroupId, exam]),
+                      ).values(),
+                    ).map((exam, index) => {
+                      const examGroup = examGroups.find((group) => group.id === exam.examGroupId);
+
+                      return (
                         <ExamCard
-                          key={exam.id}
+                          key={exam.examGroupId}
                           exam={exam}
+                          examGroup={examGroup}
                           index={index}
                           variant="today"
                           onViewDetails={(exam) => {
@@ -864,34 +887,52 @@ export default function ExamsContent() {
                             setIsModalOpen(true);
                           }}
                         />
-                      ))}
+                      );
+                    })}
                   </>
                 )}
               </TabsContentFixed>
 
               <TabsContentFixed value="previous" className="space-y-4">
-                {previousExams.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg">
-                    <History className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-700 mb-2">No Completed Exams</h3>
-                    <p className="text-gray-500 max-w-md mx-auto">You don&apos;t have any completed exam records.</p>
-                  </div>
-                ) : (
-                  previousExams
-                    .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
-                    .map((exam, index) => (
+                {(() => {
+                  const filteredExams = previousExams.filter(
+                    (exam) => selectedSemester === "all" || exam.class.name === selectedSemester,
+                  );
+
+                  const distinctExams = Array.from(
+                    new Map(filteredExams.map((exam) => [exam.examGroupId, exam])).values(),
+                  );
+
+                  if (distinctExams.length === 0) {
+                    return (
+                      <div className="text-center py-8 bg-gray-50 rounded-lg">
+                        <History className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-700 mb-2">No Completed Exams</h3>
+                        <p className="text-gray-500 max-w-md mx-auto">
+                          You don&apos;t have any completed exam records.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return distinctExams.map((exam, index) => {
+                    const examGroup = examGroups.find((group) => group.id === exam.examGroupId);
+
+                    return (
                       <ExamCard
-                        key={exam.id}
+                        key={exam.examGroupId}
                         exam={exam}
                         index={index}
+                        examGroup={examGroup}
                         variant="completed"
                         onViewDetails={(exam) => {
                           setSelectedExam(exam);
                           setIsModalOpen(true);
                         }}
                       />
-                    ))
-                )}
+                    );
+                  });
+                })()}
               </TabsContentFixed>
             </TabsFixed>
           )}
@@ -900,7 +941,13 @@ export default function ExamsContent() {
 
       {/* Exam Papers Modal */}
       {student?.id && (
-        <ExamPapersModal open={isModalOpen} onOpenChange={setIsModalOpen} exam={selectedExam} studentId={student.id} />
+        <ExamPapersModal
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          exam={selectedExam}
+          examGroup={examGroups.find((group) => group.id === selectedExam?.examGroupId)!}
+          studentId={student.id}
+        />
       )}
     </div>
   );

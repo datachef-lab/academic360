@@ -358,9 +358,12 @@ export class ExportService {
     }
   }
 
-  static async downloadExamAdmitCardsbyExamId(examId?: number, uploadSessionId?: string): Promise<ExportResponse> {
+  static async downloadExamAdmitCardsbyExamGroupId(
+    examGroupId?: number,
+    uploadSessionId?: string,
+  ): Promise<ExportResponse> {
     try {
-      const endpoint = `/api/exams/schedule/download-admit-cards?examId=${examId}`;
+      const endpoint = `/api/exams/schedule/download-admit-cards?examGroupId=${examGroupId}`;
 
       // Add session ID as query parameter for socket progress tracking
       const url = uploadSessionId ? `${endpoint}&uploadSessionId=${uploadSessionId}` : endpoint;
@@ -399,7 +402,7 @@ export class ExportService {
 
       // Extract filename from response headers
       const contentDisposition = response.headers["content-disposition"];
-      let fileName = `exam-${examId}-admit-cards.zip`;
+      let fileName = `exam-${examGroupId}-admit-cards.zip`;
 
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
@@ -478,12 +481,12 @@ export class ExportService {
     }
   }
 
-  static async downloadExamAttendanceSheetsbyExamId(
-    examId?: number,
+  static async downloadExamAttendanceSheetsbyExamGroupId(
+    examGroupId?: number,
     uploadSessionId?: string,
   ): Promise<ExportResponse> {
     try {
-      const endpoint = `/api/exams/schedule/download-attendance-sheets?examId=${examId}`;
+      const endpoint = `/api/exams/schedule/download-attendance-sheets?examGroupId=${examGroupId}`;
 
       // Add session ID as query parameter for socket progress tracking
       const url = uploadSessionId ? `${endpoint}&uploadSessionId=${uploadSessionId}` : endpoint;
@@ -527,7 +530,7 @@ export class ExportService {
 
       // Extract filename from response headers
       const contentDisposition = response.headers["content-disposition"];
-      let fileName = `exam-${examId}-attendance-sheets.zip`;
+      let fileName = `exam-${examGroupId}-attendance-sheets.zip`;
 
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="(.+)"/);

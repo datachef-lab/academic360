@@ -702,7 +702,7 @@ export default function AllotExamPage() {
       // Reset form after successful allotment
       resetForm();
       // Navigate back to exams list or exam details
-      navigate(`/dashboard/exam-management/exams/${selectedExamId}`);
+      navigate(`/dashboard/exam-management/exams/${selectedExam?.examGroupId}`);
     },
     onError: (error) => {
       console.log("In allot exam api, error:", error);

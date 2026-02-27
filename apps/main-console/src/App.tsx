@@ -187,7 +187,7 @@ const router = createBrowserRouter(
         },
 
         {
-          path: "exam-management/exams/:examId",
+          path: "exam-management/exams/:examGroupId",
           element: <examManagementModule.ExamLayoutMaster />,
           children: [
             { path: "", element: <examManagementModule.ExamPage /> },

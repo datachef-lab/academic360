@@ -25,6 +25,7 @@ import {
 } from "drizzle-orm";
 import {
   ExamDto,
+  ExamGroupDto,
   ExamProgramCourseDto,
   ExamRoomDto,
   ExamShiftDto,
@@ -41,6 +42,8 @@ import {
   courseTypeModel,
   ExamCandidate,
   examCandidateModel,
+  examGroupModel,
+  ExamGroupT,
   examModel,
   examProgramCourseModel,
   ExamRoom,
@@ -1596,14 +1599,18 @@ export async function getEligibleRooms(
 
 export async function createExamAssignment(
   dto: ExamDto,
+  examGroup: ExamGroupT,
   excelStudents: { foil_number: string; uid: string }[],
   userId?: number,
+  selectedExistingGroupId?: number | null,
 ) {
   return await db.transaction(async (tx) => {
     console.log(
       "[EXAM-SCHEDULE:createExamAssignment] Creating exam assignment:",
       dto,
       userId,
+      "selectedExistingGroupId:",
+      selectedExistingGroupId,
     );
 
     // Validate for duplicate exams before creating
@@ -1613,12 +1620,57 @@ export async function createExamAssignment(
     console.log(dto.class);
     console.log(dto.examType);
     console.log(dto.examSubjects);
+
+    let foundExamGroup: ExamGroupT | null = null;
+
+    // If selectedExistingGroupId is provided, try to use it directly
+    if (selectedExistingGroupId) {
+      [foundExamGroup] = await tx
+        .select()
+        .from(examGroupModel)
+        .where(eq(examGroupModel.id, selectedExistingGroupId));
+
+      if (!foundExamGroup) {
+        throw new Error(
+          `Exam group with ID ${selectedExistingGroupId} not found`,
+        );
+      }
+    } else {
+      // Otherwise, find or create by name and date
+      [foundExamGroup] = await tx
+        .select()
+        .from(examGroupModel)
+        .where(
+          and(
+            ilike(examGroupModel.name, examGroup.name),
+            eq(
+              examGroupModel.examCommencementDate,
+              examGroup.examCommencementDate,
+            ),
+          ),
+        );
+
+      if (!foundExamGroup) {
+        [foundExamGroup] = await tx
+          .insert(examGroupModel)
+          .values({
+            name: examGroup.name,
+            examCommencementDate: examGroup.examCommencementDate,
+          })
+          .returning();
+      }
+    }
+
     // 1. Create exam record
     const [exam] = await tx
       .insert(examModel)
       .values({
+        examGroupId: foundExamGroup.id!,
         academicYearId: dto.academicYear.id!,
         examTypeId: dto.examType.id!,
+        seatAllocationMode:
+          excelStudents.length > 0 ? "FOIL_NUMBER_BASED" : "STANDARD",
+        isRoomsSelected: dto.locations && dto.locations.length > 0,
         classId: dto.class.id!,
         gender: dto.gender,
         orderType: dto.orderType,
@@ -2789,7 +2841,7 @@ export async function findAll(
   };
 }
 
-async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
+export async function modelToDto(model: ExamT | null): Promise<ExamDto | null> {
   if (!model) return null;
 
   // Execute all independent queries in parallel
@@ -3305,14 +3357,40 @@ function sanitizeWorksheetName(name: string): string {
 }
 
 export async function downloadAdmitCardsAsZip(
-  examId: number,
-  userId: number,
+  examId?: number,
+  examGroupId?: number,
+  userId?: number,
   uploadSessionId?: string,
 ): Promise<{
   zipBuffer: Buffer;
   admitCardCount: number;
 }> {
-  console.log("examId:", examId);
+  if (!examId && !examGroupId) {
+    throw new Error("Either examId or examGroupId must be provided");
+  }
+
+  let foundExamGroup: ExamGroupT | null = null;
+  if (examId) {
+    console.log("examId:", examId);
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .leftJoin(examModel, eq(examModel.examGroupId, examGroupModel.id))
+      .where(eq(examModel.id, examId));
+
+    foundExamGroup = result[0]?.exam_groups || null;
+  } else {
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .where(eq(examGroupModel.id, examGroupId!));
+
+    foundExamGroup = result[0] || null;
+  }
+
+  if (!foundExamGroup) {
+    throw new Error("Exam group not found for the given examId or examGroupId");
+  }
 
   const result = await db
     .select({
@@ -3335,6 +3413,7 @@ export async function downloadAdmitCardsAsZip(
     })
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
     .leftJoin(
       examSubjectModel,
       eq(examSubjectModel.id, examCandidateModel.examSubjectId),
@@ -3359,7 +3438,7 @@ export async function downloadAdmitCardsAsZip(
     )
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .where(eq(examCandidateModel.examId, examId))
+    .where(eq(examGroupModel.id, foundExamGroup.id))
     .orderBy(asc(examSubjectModel.startTime));
 
   const zip = new JSZip();
@@ -3474,7 +3553,342 @@ export async function downloadAdmitCardsAsZip(
   };
 }
 
-export async function downloadExamCandidatesbyExamId(examId: number) {
+// export async function downloadExamCandidatesbyExamId(examId?: number, examGroupId?: number) {
+//   if (!examId && !examGroupId) {
+//     throw new Error("Either examId or examGroupId must be provided");
+//   }
+
+//   let foundExamGroup: ExamGroupT | null = null;
+//   if (examId) {
+//     console.log("examId:", examId);
+//     const result = await db
+//       .select()
+//       .from(examGroupModel)
+//       .leftJoin(examModel, eq(examModel.examGroupId, examGroupModel.id))
+//       .where(eq(examModel.id, examId));
+
+//       foundExamGroup = result[0]?.exam_groups || null;
+
+//   } else {
+//     const result = await db
+//       .select()
+//       .from(examGroupModel)
+//       .where(eq(examGroupModel.id, examGroupId!));
+
+//       foundExamGroup = result[0] || null;
+//   }
+
+//   if (!foundExamGroup) {
+//     throw new Error("Exam group not found for the given examId or examGroupId")
+//   }
+
+//   const result = await db
+//     .select({
+//       examType: examTypeModel.name,
+//       academicYear: academicYearModel.year,
+//       session: sessionModel.name,
+//       semester: classModel.name,
+//       orderType: examModel.orderType,
+//       gender: examModel.gender,
+//       examCreatedAt: examModel.createdAt,
+//       examUpdatedAt: examModel.updatedAt,
+
+//       floor: floorModel.name,
+//       room: roomModel.name,
+
+//       startDate: sql`${examSubjectModel.startTime}::date`.as("startDate"),
+//       startTime: sql`
+//     TO_CHAR(${examSubjectModel.startTime}, 'HH12:MI AM')
+//   `.as("startTime"),
+
+//       endDate: sql`${examSubjectModel.endTime}::date`.as("endDate"),
+//       endTime: sql`
+//     TO_CHAR(${examSubjectModel.endTime}, 'HH12:MI AM')
+//   `.as("endTime"),
+
+//       groupName: examGroupModel.name,
+//       examCommencementDate: examGroupModel.examCommencementDate,
+
+//       name: userModel.name,
+//       uid: studentModel.uid,
+//       roll_number: studentModel.rollNumber,
+//       registration_number: studentModel.registrationNumber,
+//       email: userModel.email,
+//       phone: userModel.phone,
+//       whatsapp_number: userModel.whatsappNumber,
+//       program_course: programCourseModel.name,
+//       section: sectionModel.name,
+//       shift: shiftModel.name,
+//       subject: subjectModel.code,
+//       subject_type: subjectTypeModel.code,
+//       paper: paperModel.name,
+//       paper_code: paperModel.code,
+//       seat: examCandidateModel.seatNumber,
+//       foilNumber: examCandidateModel.foilNumber,
+//     })
+//     .from(examCandidateModel)
+//     .leftJoin(
+//       examGroupModel,
+//       eq(examGroupModel.id, examModel.examGroupId),
+//     )
+//     .leftJoin(
+//       examRoomModel,
+//       eq(examRoomModel.id, examCandidateModel.examRoomId),
+//     )
+//     .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+//     .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+
+//     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+
+//     .leftJoin(
+//       academicYearModel,
+//       eq(academicYearModel.id, examModel.academicYearId),
+//     )
+//     .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+
+//     .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
+
+//     .leftJoin(
+//       promotionModel,
+//       eq(promotionModel.id, examCandidateModel.promotionId),
+//     )
+//     .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
+//     .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+
+//     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+//     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+
+//     .leftJoin(
+//       programCourseModel,
+//       eq(programCourseModel.id, promotionModel.programCourseId),
+//     )
+
+//     .leftJoin(
+//       examSubjectModel,
+//       and(
+//         eq(examSubjectModel.examId, examModel.id),
+//         eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+//       ),
+//     )
+
+//     .leftJoin(
+//       subjectModel,
+//       and(
+//         eq(subjectModel.id, examSubjectModel.subjectId),
+//         eq(examCandidateModel.examSubjectId, examSubjectModel.id),
+//       ),
+//     )
+
+//     .leftJoin(
+//       examSubjectTypeModel,
+//       and(
+//         eq(examSubjectTypeModel.examId, examModel.id),
+//         eq(examCandidateModel.examSubjectTypeId, examSubjectTypeModel.id),
+//       ),
+//     )
+//     .leftJoin(
+//       subjectTypeModel,
+//       eq(examSubjectTypeModel.subjectTypeId, subjectTypeModel.id),
+//     )
+
+//     .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+
+//     .leftJoin(classModel, eq(examModel.classId, classModel.id))
+
+//     .where(eq(examGroupModel.id, foundExamGroup!.id));
+
+//   // Sort based on exam order type
+//   if (result.length > 0 && result[0].orderType) {
+//     result.sort((a, b) => {
+//       let aValue: string | null | undefined;
+//       let bValue: string | null | undefined;
+
+//       if (a.orderType === "UID") {
+//         aValue = a.uid;
+//         bValue = b.uid;
+//       } else if (a.orderType === "CU_REGISTRATION_NUMBER") {
+//         aValue = a.registration_number;
+//         bValue = b.registration_number;
+//       } else {
+//         // CU_ROLL_NUMBER
+//         aValue = a.roll_number;
+//         bValue = b.roll_number;
+//       }
+
+//       // Normalize to empty string if null/undefined
+//       const aStr = aValue?.trim() || "";
+//       const bStr = bValue?.trim() || "";
+
+//       // Push empty values to the end
+//       if (!aStr && !bStr) return 0; // Both empty, equal
+//       if (!aStr) return 1; // a is empty, comes after b
+//       if (!bStr) return -1; // b is empty, comes after a
+
+//       // Both have values, compare normally
+//       return aStr.localeCompare(bStr);
+//     });
+//   }
+
+//   // Transform gender: null -> "ALL"
+//   result.forEach((row) => {
+//     if (!row.gender) {
+//       (row as any).gender = "ALL";
+//     }
+//   });
+
+//   // ✅ Group by subject / paper
+//   const groupedBySubject = new Map<string, typeof result>();
+
+//   for (const row of result) {
+//     const key = row.paper_code ?? row.subject ?? "UNKNOWN";
+//     if (!groupedBySubject.has(key)) {
+//       groupedBySubject.set(key, []);
+//     }
+//     groupedBySubject.get(key)!.push(row);
+//   }
+
+//   // ✅ Create Excel
+//   const workbook = new ExcelJS.Workbook();
+
+//   // 🛑 Handle empty result case
+//   if (groupedBySubject.size === 0) {
+//     const sheet = workbook.addWorksheet("No Candidates");
+//     sheet.addRow(["No exam candidates found for this exam"]);
+//     sheet.getRow(1).font = { bold: true };
+//     return await workbook.xlsx.writeBuffer();
+//   }
+
+//   for (const [subjectKey, rows] of groupedBySubject) {
+//     const sheet = workbook.addWorksheet(sanitizeWorksheetName(subjectKey));
+
+//     // 🔥 DEFINE COLUMNS WITH PROPER HEADERS
+//     if (rows.length > 0) {
+//       const headerMapping: Record<string, string> = {
+//         examType: "Exam Type",
+//         academicYear: "Academic Year",
+//         session: "Session",
+//         semester: "Semester",
+//         orderType: "Order Type",
+//         gender: "Gender",
+//         examCreatedAt: "Exam Created At",
+//         examUpdatedAt: "Exam Updated At",
+//         floor: "Floor",
+//         room: "Room",
+//         startDate: "Start Date",
+//         startTime: "Start Time",
+//         endDate: "End Date",
+//         endTime: "End Time",
+//         name: "Name",
+//         uid: "UID",
+//         roll_number: "Roll Number",
+//         registration_number: "Registration Number",
+//         email: "Email",
+//         phone: "Phone",
+//         whatsapp_number: "WhatsApp Number",
+//         program_course: "Program Course",
+//         section: "Section",
+//         shift: "Shift",
+//         subject: "Subject",
+//         subject_type: "Subject Type",
+//         paper: "Paper",
+//         paper_code: "Paper Code",
+//         seat: "Seat Number",
+//         foilNumber: "Foil Number",
+//       };
+
+//       const columns = Object.keys(rows[0]).map((key) => ({
+//         header: headerMapping[key] || key,
+//         key: key,
+//         width: 20,
+//       }));
+
+//       sheet.columns = columns;
+
+//       // 🔥 ADD FULL OBJECT DIRECTLY
+//       rows.forEach((row) => {
+//         sheet.addRow(row);
+//       });
+
+//       // Style header row with grey background and borders
+//       const headerRow = sheet.getRow(1);
+//       headerRow.font = { bold: true, size: 12 };
+//       headerRow.fill = {
+//         type: "pattern",
+//         pattern: "solid",
+//         fgColor: { argb: "FFD3D3D3" }, // Grey background
+//       };
+//       headerRow.alignment = { vertical: "middle", horizontal: "left" };
+//       headerRow.height = 20;
+
+//       // Add borders to header row
+//       headerRow.eachCell((cell) => {
+//         cell.border = {
+//           top: { style: "thin" },
+//           left: { style: "thin" },
+//           bottom: { style: "thin" },
+//           right: { style: "thin" },
+//         };
+//       });
+
+//       // Add borders to all data cells
+//       sheet.eachRow((row, rowNumber) => {
+//         if (rowNumber > 1) {
+//           row.eachCell((cell) => {
+//             cell.border = {
+//               top: { style: "thin", color: { argb: "FFD3D3D3" } },
+//               left: { style: "thin", color: { argb: "FFD3D3D3" } },
+//               bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+//               right: { style: "thin", color: { argb: "FFD3D3D3" } },
+//             };
+//           });
+//         }
+//       });
+
+//       // Freeze header row
+//       sheet.views = [{ state: "frozen", ySplit: 1 }];
+//     }
+//   }
+
+//   // ✅ Return Excel buffer
+//   const buffer = await workbook.xlsx.writeBuffer();
+//   return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+// }
+
+export async function downloadExamCandidatesbyExamId(
+  examId?: number,
+  examGroupId?: number,
+) {
+  if (!examId && !examGroupId) {
+    throw new Error("Either examId or examGroupId must be provided");
+  }
+
+  let foundExamGroup: ExamGroupT | null = null;
+
+  if (examId) {
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .leftJoin(examModel, eq(examModel.examGroupId, examGroupModel.id))
+      .where(eq(examModel.id, examId));
+
+    foundExamGroup = result[0]?.exam_groups || null;
+  } else {
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .where(eq(examGroupModel.id, examGroupId!));
+
+    foundExamGroup = result[0] || null;
+  }
+
+  if (!foundExamGroup) {
+    throw new Error("Exam group not found for the given examId or examGroupId");
+  }
+
+  // =========================
+  // FETCH DATA
+  // =========================
+
   const result = await db
     .select({
       examType: examTypeModel.name,
@@ -3483,21 +3897,6 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
       semester: classModel.name,
       orderType: examModel.orderType,
       gender: examModel.gender,
-      examCreatedAt: examModel.createdAt,
-      examUpdatedAt: examModel.updatedAt,
-
-      floor: floorModel.name,
-      room: roomModel.name,
-
-      startDate: sql`${examSubjectModel.startTime}::date`.as("startDate"),
-      startTime: sql`
-    TO_CHAR(${examSubjectModel.startTime}, 'HH12:MI AM')
-  `.as("startTime"),
-
-      endDate: sql`${examSubjectModel.endTime}::date`.as("endDate"),
-      endTime: sql`
-    TO_CHAR(${examSubjectModel.endTime}, 'HH12:MI AM')
-  `.as("endTime"),
 
       name: userModel.name,
       uid: studentModel.uid,
@@ -3509,410 +3908,186 @@ export async function downloadExamCandidatesbyExamId(examId: number) {
       program_course: programCourseModel.name,
       section: sectionModel.name,
       shift: shiftModel.name,
-      subject: subjectModel.code,
-      subject_type: subjectTypeModel.code,
+
       paper: paperModel.name,
       paper_code: paperModel.code,
-      seat: examCandidateModel.seatNumber,
-      foilNumber: examCandidateModel.foilNumber,
     })
     .from(examCandidateModel)
-
-    .leftJoin(
-      examRoomModel,
-      eq(examRoomModel.id, examCandidateModel.examRoomId),
-    )
-    .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
-    .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
-
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
-
     .leftJoin(
       academicYearModel,
       eq(academicYearModel.id, examModel.academicYearId),
     )
+    .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
     .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
-
-    .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
-
     .leftJoin(
       promotionModel,
       eq(promotionModel.id, examCandidateModel.promotionId),
     )
+    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
     .leftJoin(sectionModel, eq(sectionModel.id, promotionModel.sectionId))
     .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-
     .leftJoin(
       programCourseModel,
       eq(programCourseModel.id, promotionModel.programCourseId),
     )
-
-    .leftJoin(
-      examSubjectModel,
-      and(
-        eq(examSubjectModel.examId, examModel.id),
-        eq(examSubjectModel.id, examCandidateModel.examSubjectId),
-      ),
-    )
-
-    .leftJoin(
-      subjectModel,
-      and(
-        eq(subjectModel.id, examSubjectModel.subjectId),
-        eq(examCandidateModel.examSubjectId, examSubjectModel.id),
-      ),
-    )
-
-    .leftJoin(
-      examSubjectTypeModel,
-      and(
-        eq(examSubjectTypeModel.examId, examModel.id),
-        eq(examCandidateModel.examSubjectTypeId, examSubjectTypeModel.id),
-      ),
-    )
-    .leftJoin(
-      subjectTypeModel,
-      eq(examSubjectTypeModel.subjectTypeId, subjectTypeModel.id),
-    )
-
-    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
-
+    .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
     .leftJoin(classModel, eq(examModel.classId, classModel.id))
+    .where(eq(examGroupModel.id, foundExamGroup.id));
 
-    .where(eq(examModel.id, examId));
+  // =========================
+  // EMPTY CASE
+  // =========================
 
-  // Sort based on exam order type
-  if (result.length > 0 && result[0].orderType) {
-    result.sort((a, b) => {
-      let aValue: string | null | undefined;
-      let bValue: string | null | undefined;
-
-      if (a.orderType === "UID") {
-        aValue = a.uid;
-        bValue = b.uid;
-      } else if (a.orderType === "CU_REGISTRATION_NUMBER") {
-        aValue = a.registration_number;
-        bValue = b.registration_number;
-      } else {
-        // CU_ROLL_NUMBER
-        aValue = a.roll_number;
-        bValue = b.roll_number;
-      }
-
-      // Normalize to empty string if null/undefined
-      const aStr = aValue?.trim() || "";
-      const bStr = bValue?.trim() || "";
-
-      // Push empty values to the end
-      if (!aStr && !bStr) return 0; // Both empty, equal
-      if (!aStr) return 1; // a is empty, comes after b
-      if (!bStr) return -1; // b is empty, comes after a
-
-      // Both have values, compare normally
-      return aStr.localeCompare(bStr);
-    });
-  }
-
-  // Transform gender: null -> "ALL"
-  result.forEach((row) => {
-    if (!row.gender) {
-      (row as any).gender = "ALL";
-    }
-  });
-
-  // ✅ Group by subject / paper
-  const groupedBySubject = new Map<string, typeof result>();
-
-  for (const row of result) {
-    const key = row.paper_code ?? row.subject ?? "UNKNOWN";
-    if (!groupedBySubject.has(key)) {
-      groupedBySubject.set(key, []);
-    }
-    groupedBySubject.get(key)!.push(row);
-  }
-
-  // ✅ Create Excel
   const workbook = new ExcelJS.Workbook();
 
-  // 🛑 Handle empty result case
-  if (groupedBySubject.size === 0) {
+  if (result.length === 0) {
     const sheet = workbook.addWorksheet("No Candidates");
-    sheet.addRow(["No exam candidates found for this exam"]);
+    sheet.addRow(["No exam candidates found"]);
     sheet.getRow(1).font = { bold: true };
     return await workbook.xlsx.writeBuffer();
   }
 
-  for (const [subjectKey, rows] of groupedBySubject) {
-    const sheet = workbook.addWorksheet(sanitizeWorksheetName(subjectKey));
+  // =========================
+  // SORT BASED ON ORDER TYPE
+  // =========================
 
-    // 🔥 DEFINE COLUMNS WITH PROPER HEADERS
-    if (rows.length > 0) {
-      const headerMapping: Record<string, string> = {
-        examType: "Exam Type",
-        academicYear: "Academic Year",
-        session: "Session",
-        semester: "Semester",
-        orderType: "Order Type",
-        gender: "Gender",
-        examCreatedAt: "Exam Created At",
-        examUpdatedAt: "Exam Updated At",
-        floor: "Floor",
-        room: "Room",
-        startDate: "Start Date",
-        startTime: "Start Time",
-        endDate: "End Date",
-        endTime: "End Time",
-        name: "Name",
-        uid: "UID",
-        roll_number: "Roll Number",
-        registration_number: "Registration Number",
-        email: "Email",
-        phone: "Phone",
-        whatsapp_number: "WhatsApp Number",
-        program_course: "Program Course",
-        section: "Section",
-        shift: "Shift",
-        subject: "Subject",
-        subject_type: "Subject Type",
-        paper: "Paper",
-        paper_code: "Paper Code",
-        seat: "Seat Number",
-        foilNumber: "Foil Number",
-      };
+  const orderType = result[0].orderType;
 
-      const columns = Object.keys(rows[0]).map((key) => ({
-        header: headerMapping[key] || key,
-        key: key,
-        width: 20,
-      }));
+  result.sort((a, b) => {
+    let aValue: string | null | undefined;
+    let bValue: string | null | undefined;
 
-      sheet.columns = columns;
+    if (orderType === "UID") {
+      aValue = a.uid;
+      bValue = b.uid;
+    } else if (orderType === "CU_REGISTRATION_NUMBER") {
+      aValue = a.registration_number;
+      bValue = b.registration_number;
+    } else {
+      aValue = a.roll_number;
+      bValue = b.roll_number;
+    }
 
-      // 🔥 ADD FULL OBJECT DIRECTLY
-      rows.forEach((row) => {
-        sheet.addRow(row);
-      });
+    const aStr = aValue?.trim() || "";
+    const bStr = bValue?.trim() || "";
 
-      // Style header row with grey background and borders
-      const headerRow = sheet.getRow(1);
-      headerRow.font = { bold: true, size: 12 };
-      headerRow.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFD3D3D3" }, // Grey background
-      };
-      headerRow.alignment = { vertical: "middle", horizontal: "left" };
-      headerRow.height = 20;
+    if (!aStr && !bStr) return 0;
+    if (!aStr) return 1;
+    if (!bStr) return -1;
 
-      // Add borders to header row
-      headerRow.eachCell((cell) => {
-        cell.border = {
-          top: { style: "thin" },
-          left: { style: "thin" },
-          bottom: { style: "thin" },
-          right: { style: "thin" },
-        };
-      });
+    return aStr.localeCompare(bStr);
+  });
 
-      // Add borders to all data cells
-      sheet.eachRow((row, rowNumber) => {
-        if (rowNumber > 1) {
-          row.eachCell((cell) => {
-            cell.border = {
-              top: { style: "thin", color: { argb: "FFD3D3D3" } },
-              left: { style: "thin", color: { argb: "FFD3D3D3" } },
-              bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
-              right: { style: "thin", color: { argb: "FFD3D3D3" } },
-            };
-          });
-        }
-      });
+  // =========================
+  // GROUP BY STUDENT (UID)
+  // =========================
 
-      // Freeze header row
-      sheet.views = [{ state: "frozen", ySplit: 1 }];
+  const groupedByStudent = new Map<string, typeof result>();
+
+  for (const row of result) {
+    const key = row.uid ?? "UNKNOWN";
+
+    if (!groupedByStudent.has(key)) {
+      groupedByStudent.set(key, []);
+    }
+
+    groupedByStudent.get(key)!.push(row);
+  }
+
+  // =========================
+  // DETERMINE MAX PAPERS
+  // =========================
+
+  let maxPapers = 0;
+  for (const rows of groupedByStudent.values()) {
+    if (rows.length > maxPapers) {
+      maxPapers = rows.length;
     }
   }
 
-  // ✅ Return Excel buffer
-  const buffer = await workbook.xlsx.writeBuffer();
-  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
-}
+  // =========================
+  // CREATE SHEET
+  // =========================
 
-export async function downloadAdmitCardTrackingByExamId(examId: number) {
-  const result = await db
-    .select({
-      examType: examTypeModel.name,
-      academicYear: academicYearModel.year,
-      session: sessionModel.name,
-      semester: classModel.name,
-      orderType: examModel.orderType,
-      name: userModel.name,
-      uid: studentModel.uid,
-      registrationNumber: studentModel.registrationNumber,
-      rollNumber: studentModel.rollNumber,
-      email: userModel.email,
-      phone: userModel.phone,
-      whatsapp_number: userModel.whatsappNumber,
-      program_course: programCourseModel.name,
-      shift: shiftModel.name,
-      subject: subjectModel.code,
-      paper: paperModel.name,
-      paper_code: paperModel.code,
-      seat: examCandidateModel.seatNumber,
-      foilNumber: examCandidateModel.foilNumber,
-      admitCardDownloadCount: examCandidateModel.admitCardDownloadCount,
-      admitCardDownloadedAt: examCandidateModel.admitCardDownloadedAt,
-    })
-    .from(examCandidateModel)
-    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
-    .leftJoin(
-      academicYearModel,
-      eq(academicYearModel.id, examModel.academicYearId),
-    )
-    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
-    .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
-    .leftJoin(
-      promotionModel,
-      eq(promotionModel.id, examCandidateModel.promotionId),
-    )
-    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
-    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
-    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
-    .leftJoin(
-      programCourseModel,
-      eq(programCourseModel.id, promotionModel.programCourseId),
-    )
-    .leftJoin(
-      examSubjectModel,
-      and(
-        eq(examSubjectModel.examId, examModel.id),
-        eq(examSubjectModel.id, examCandidateModel.examSubjectId),
-      ),
-    )
-    .leftJoin(
-      subjectModel,
-      and(
-        eq(subjectModel.id, examSubjectModel.subjectId),
-        eq(examCandidateModel.examSubjectId, examSubjectModel.id),
-      ),
-    )
-    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
-    .leftJoin(classModel, eq(examModel.classId, classModel.id))
-    .where(eq(examModel.id, examId));
+  const sheet = workbook.addWorksheet("Exam Candidates");
 
-  if (!result.length) {
-    throw new Error("No exam candidates found");
-  }
+  const baseHeaders: Record<string, string> = {
+    examType: "Exam Type",
+    academicYear: "Academic Year",
+    session: "Session",
+    semester: "Semester",
+    gender: "Gender",
+    name: "Name",
+    uid: "UID",
+    roll_number: "Roll Number",
+    registration_number: "Registration Number",
+    email: "Email",
+    phone: "Phone",
+    whatsapp_number: "WhatsApp Number",
+    program_course: "Program Course",
+    section: "Section",
+    shift: "Shift",
+  };
 
-  // Sort based on exam order type
-  if (result[0].orderType) {
-    result.sort((a, b) => {
-      let aValue: string | null | undefined;
-      let bValue: string | null | undefined;
+  const baseColumns = Object.keys(baseHeaders).map((key) => ({
+    header: baseHeaders[key],
+    key,
+    width: 20,
+  }));
 
-      if (a.orderType === "UID") {
-        aValue = a.uid;
-        bValue = b.uid;
-      } else if (a.orderType === "CU_REGISTRATION_NUMBER") {
-        aValue = a.registrationNumber;
-        bValue = b.registrationNumber;
-      } else {
-        // CU_ROLL_NUMBER
-        aValue = a.rollNumber;
-        bValue = b.rollNumber;
-      }
-
-      // Normalize to empty string if null/undefined
-      const aStr = aValue?.trim() || "";
-      const bStr = bValue?.trim() || "";
-
-      // Push empty values to the end
-      if (!aStr && !bStr) return 0; // Both empty, equal
-      if (!aStr) return 1; // a is empty, comes after b
-      if (!bStr) return -1; // b is empty, comes after a
-
-      // Both have values, compare normally
-      return aStr.localeCompare(bStr);
-    });
-  }
-
-  // Create Excel workbook
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Admit Card Downloads");
-
-  // Define columns
-  sheet.columns = [
-    { header: "Exam Type", key: "examType", width: 20 },
-    { header: "Academic Year", key: "academicYear", width: 15 },
-    { header: "Session", key: "session", width: 20 },
-    { header: "Semester", key: "semester", width: 15 },
-    { header: "Name", key: "name", width: 30 },
-    { header: "UID", key: "uid", width: 20 },
-    { header: "Registration Number", key: "registrationNumber", width: 25 },
-    { header: "Roll Number", key: "rollNumber", width: 20 },
-    { header: "Email", key: "email", width: 30 },
-    { header: "Phone", key: "phone", width: 15 },
-    { header: "WhatsApp", key: "whatsapp_number", width: 15 },
-    { header: "Program Course", key: "program_course", width: 25 },
-    { header: "Shift", key: "shift", width: 15 },
-    { header: "Subject", key: "subject", width: 20 },
-    { header: "Paper", key: "paper", width: 30 },
-    { header: "Paper Code", key: "paper_code", width: 15 },
-    { header: "Seat Number", key: "seat", width: 15 },
-    { header: "Foil Number", key: "foilNumber", width: 15 },
-    { header: "Download Count", key: "admitCardDownloadCount", width: 15 },
-    {
-      header: "Last Downloaded At",
-      key: "admitCardDownloadedAt",
+  const paperColumns = [];
+  for (let i = 1; i <= maxPapers; i++) {
+    paperColumns.push({
+      header: `Paper ${i}`,
+      key: `paper_${i}`,
       width: 25,
-    },
-  ];
-
-  // Add rows (excluding orderType as it's only for sorting)
-  result.forEach((row) => {
-    sheet.addRow({
-      examType: row.examType || "",
-      academicYear: row.academicYear || "",
-      session: row.session || "",
-      semester: row.semester || "",
-      name: row.name || "",
-      uid: row.uid || "",
-      registrationNumber: row.registrationNumber || "",
-      rollNumber: row.rollNumber || "",
-      email: row.email || "",
-      phone: row.phone || "",
-      whatsapp_number: row.whatsapp_number || "",
-      program_course: row.program_course || "",
-      shift: row.shift || "",
-      subject: row.subject || "",
-      paper: row.paper || "",
-      paper_code: row.paper_code || "",
-      seat: row.seat || "",
-      foilNumber: row.foilNumber || "",
-      admitCardDownloadCount: row.admitCardDownloadCount || 0,
-      admitCardDownloadedAt: row.admitCardDownloadedAt
-        ? new Date(row.admitCardDownloadedAt).toLocaleString("en-IN", {
-            timeZone: "Asia/Kolkata",
-          })
-        : "Never",
     });
-  });
+  }
 
-  // Style header row
+  sheet.columns = [...baseColumns, ...paperColumns];
+
+  // =========================
+  // ADD ROWS (HORIZONTAL PAPERS)
+  // =========================
+
+  for (const studentRows of groupedByStudent.values()) {
+    const baseData = { ...studentRows[0] } as Record<string, any>;
+
+    const rowData: any = {};
+
+    // Base columns
+    for (const key of Object.keys(baseHeaders)) {
+      rowData[key] = baseData[key];
+    }
+
+    // Horizontal papers
+    studentRows.forEach((row, index) => {
+      rowData[`paper_${index + 1}`] =
+        row.paper && row.paper_code
+          ? `${row.paper} (${row.paper_code})`
+          : (row.paper ?? "");
+    });
+
+    sheet.addRow(rowData);
+  }
+
+  // =========================
+  // HEADER STYLING
+  // =========================
+
   const headerRow = sheet.getRow(1);
   headerRow.font = { bold: true, size: 12 };
   headerRow.fill = {
     type: "pattern",
     pattern: "solid",
-    fgColor: { argb: "FFD3D3D3" }, // Grey background
+    fgColor: { argb: "FFD3D3D3" },
   };
   headerRow.alignment = { vertical: "middle", horizontal: "left" };
   headerRow.height = 20;
 
-  // Add borders to header row
   headerRow.eachCell((cell) => {
     cell.border = {
       top: { style: "thin" },
@@ -3922,32 +4097,523 @@ export async function downloadAdmitCardTrackingByExamId(examId: number) {
     };
   });
 
-  // Add borders to all data cells
-  sheet.eachRow((row, rowNumber) => {
-    if (rowNumber > 1) {
-      row.eachCell((cell) => {
-        cell.border = {
-          top: { style: "thin", color: { argb: "FFD3D3D3" } },
-          left: { style: "thin", color: { argb: "FFD3D3D3" } },
-          bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
-          right: { style: "thin", color: { argb: "FFD3D3D3" } },
-        };
-      });
-    }
-  });
-
-  // Freeze header row
   sheet.views = [{ state: "frozen", ySplit: 1 }];
 
-  // Return Excel buffer
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+}
+
+// export async function downloadAdmitCardTrackingByExamId(examId?: number, examGroupId?: number) {
+//   if (!examId && !examGroupId) {
+//     throw new Error("Either examId or examGroupId must be provided");
+//   }
+
+//   let foundExamGroup: ExamGroupT | null = null;
+
+//   if (examId) {
+//     const result = await db
+//       .select()
+//       .from(examGroupModel)
+//       .leftJoin(examModel, eq(examModel.examGroupId, examGroupModel.id))
+//       .where(eq(examModel.id, examId));
+
+//     foundExamGroup = result[0]?.exam_groups || null;
+//   } else {
+//     const result = await db
+//       .select()
+//       .from(examGroupModel)
+//       .where(eq(examGroupModel.id, examGroupId!));
+
+//     foundExamGroup = result[0] || null;
+//   }
+
+//   if (!foundExamGroup) {
+//     throw new Error(
+//       "Exam group not found for the given examId or examGroupId"
+//     );
+//   }
+
+//   const result = await db
+//     .select({
+//       examType: examTypeModel.name,
+//       academicYear: academicYearModel.year,
+//       session: sessionModel.name,
+//       semester: classModel.name,
+//       orderType: examModel.orderType,
+//       name: userModel.name,
+//       uid: studentModel.uid,
+//       registrationNumber: studentModel.registrationNumber,
+//       rollNumber: studentModel.rollNumber,
+//       email: userModel.email,
+//       phone: userModel.phone,
+//       whatsapp_number: userModel.whatsappNumber,
+//       program_course: programCourseModel.name,
+//       shift: shiftModel.name,
+//       subject: subjectModel.code,
+//       paper: paperModel.name,
+//       paper_code: paperModel.code,
+//       seat: examCandidateModel.seatNumber,
+//       foilNumber: examCandidateModel.foilNumber,
+//       admitCardDownloadCount: examCandidateModel.admitCardDownloadCount,
+//       admitCardDownloadedAt: examCandidateModel.admitCardDownloadedAt,
+//     })
+//     .from(examCandidateModel)
+//     .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
+//     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+//     .leftJoin(
+//       academicYearModel,
+//       eq(academicYearModel.id, examModel.academicYearId),
+//     )
+//     .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+//     .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
+//     .leftJoin(
+//       promotionModel,
+//       eq(promotionModel.id, examCandidateModel.promotionId),
+//     )
+//     .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+//     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+//     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+//     .leftJoin(
+//       programCourseModel,
+//       eq(programCourseModel.id, promotionModel.programCourseId),
+//     )
+//     .leftJoin(
+//       examSubjectModel,
+//       and(
+//         eq(examSubjectModel.examId, examModel.id),
+//         eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+//       ),
+//     )
+//     .leftJoin(
+//       subjectModel,
+//       and(
+//         eq(subjectModel.id, examSubjectModel.subjectId),
+//         eq(examCandidateModel.examSubjectId, examSubjectModel.id),
+//       ),
+//     )
+//     .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+//     .leftJoin(classModel, eq(examModel.classId, classModel.id))
+//     .where(eq(examGroupModel.id, foundExamGroup.id));
+
+//   if (!result.length) {
+//     throw new Error("No exam candidates found");
+//   }
+
+//   // Sort based on exam order type
+//   if (result[0].orderType) {
+//     result.sort((a, b) => {
+//       let aValue: string | null | undefined;
+//       let bValue: string | null | undefined;
+
+//       if (a.orderType === "UID") {
+//         aValue = a.uid;
+//         bValue = b.uid;
+//       } else if (a.orderType === "CU_REGISTRATION_NUMBER") {
+//         aValue = a.registrationNumber;
+//         bValue = b.registrationNumber;
+//       } else {
+//         // CU_ROLL_NUMBER
+//         aValue = a.rollNumber;
+//         bValue = b.rollNumber;
+//       }
+
+//       // Normalize to empty string if null/undefined
+//       const aStr = aValue?.trim() || "";
+//       const bStr = bValue?.trim() || "";
+
+//       // Push empty values to the end
+//       if (!aStr && !bStr) return 0; // Both empty, equal
+//       if (!aStr) return 1; // a is empty, comes after b
+//       if (!bStr) return -1; // b is empty, comes after a
+
+//       // Both have values, compare normally
+//       return aStr.localeCompare(bStr);
+//     });
+//   }
+
+//   // Create Excel workbook
+//   const workbook = new ExcelJS.Workbook();
+//   const sheet = workbook.addWorksheet("Admit Card Downloads");
+
+//   // Define columns
+//   sheet.columns = [
+//     { header: "Exam Type", key: "examType", width: 20 },
+//     { header: "Academic Year", key: "academicYear", width: 15 },
+//     { header: "Session", key: "session", width: 20 },
+//     { header: "Semester", key: "semester", width: 15 },
+//     { header: "Name", key: "name", width: 30 },
+//     { header: "UID", key: "uid", width: 20 },
+//     { header: "Registration Number", key: "registrationNumber", width: 25 },
+//     { header: "Roll Number", key: "rollNumber", width: 20 },
+//     { header: "Email", key: "email", width: 30 },
+//     { header: "Phone", key: "phone", width: 15 },
+//     { header: "WhatsApp", key: "whatsapp_number", width: 15 },
+//     { header: "Program Course", key: "program_course", width: 25 },
+//     { header: "Shift", key: "shift", width: 15 },
+//     { header: "Subject", key: "subject", width: 20 },
+//     { header: "Paper", key: "paper", width: 30 },
+//     { header: "Paper Code", key: "paper_code", width: 15 },
+//     { header: "Seat Number", key: "seat", width: 15 },
+//     { header: "Foil Number", key: "foilNumber", width: 15 },
+//     { header: "Download Count", key: "admitCardDownloadCount", width: 15 },
+//     {
+//       header: "Last Downloaded At",
+//       key: "admitCardDownloadedAt",
+//       width: 25,
+//     },
+//   ];
+
+//   // Add rows (excluding orderType as it's only for sorting)
+//   result.forEach((row) => {
+//     sheet.addRow({
+//       examType: row.examType || "",
+//       academicYear: row.academicYear || "",
+//       session: row.session || "",
+//       semester: row.semester || "",
+//       name: row.name || "",
+//       uid: row.uid || "",
+//       registrationNumber: row.registrationNumber || "",
+//       rollNumber: row.rollNumber || "",
+//       email: row.email || "",
+//       phone: row.phone || "",
+//       whatsapp_number: row.whatsapp_number || "",
+//       program_course: row.program_course || "",
+//       shift: row.shift || "",
+//       subject: row.subject || "",
+//       paper: row.paper || "",
+//       paper_code: row.paper_code || "",
+//       seat: row.seat || "",
+//       foilNumber: row.foilNumber || "",
+//       admitCardDownloadCount: row.admitCardDownloadCount || 0,
+//       admitCardDownloadedAt: row.admitCardDownloadedAt
+//         ? new Date(row.admitCardDownloadedAt).toLocaleString("en-IN", {
+//             timeZone: "Asia/Kolkata",
+//           })
+//         : "Never",
+//     });
+//   });
+
+//   // Style header row
+//   const headerRow = sheet.getRow(1);
+//   headerRow.font = { bold: true, size: 12 };
+//   headerRow.fill = {
+//     type: "pattern",
+//     pattern: "solid",
+//     fgColor: { argb: "FFD3D3D3" }, // Grey background
+//   };
+//   headerRow.alignment = { vertical: "middle", horizontal: "left" };
+//   headerRow.height = 20;
+
+//   // Add borders to header row
+//   headerRow.eachCell((cell) => {
+//     cell.border = {
+//       top: { style: "thin" },
+//       left: { style: "thin" },
+//       bottom: { style: "thin" },
+//       right: { style: "thin" },
+//     };
+//   });
+
+//   // Add borders to all data cells
+//   sheet.eachRow((row, rowNumber) => {
+//     if (rowNumber > 1) {
+//       row.eachCell((cell) => {
+//         cell.border = {
+//           top: { style: "thin", color: { argb: "FFD3D3D3" } },
+//           left: { style: "thin", color: { argb: "FFD3D3D3" } },
+//           bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+//           right: { style: "thin", color: { argb: "FFD3D3D3" } },
+//         };
+//       });
+//     }
+//   });
+
+//   // Freeze header row
+//   sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+//   // Return Excel buffer
+//   const buffer = await workbook.xlsx.writeBuffer();
+//   return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+// }
+
+export async function downloadAdmitCardTrackingByExamId(
+  examId?: number,
+  examGroupId?: number,
+) {
+  if (!examId && !examGroupId) {
+    throw new Error("Either examId or examGroupId must be provided");
+  }
+
+  let foundExamGroup: ExamGroupT | null = null;
+
+  if (examId) {
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .leftJoin(examModel, eq(examModel.examGroupId, examGroupModel.id))
+      .where(eq(examModel.id, examId));
+
+    foundExamGroup = result[0]?.exam_groups || null;
+  } else {
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .where(eq(examGroupModel.id, examGroupId!));
+
+    foundExamGroup = result[0] || null;
+  }
+
+  if (!foundExamGroup) {
+    throw new Error("Exam group not found");
+  }
+
+  // ================= FETCH =================
+
+  const result = await db
+    .select({
+      examType: examTypeModel.name,
+      academicYear: academicYearModel.year,
+      session: sessionModel.name,
+      semester: classModel.name,
+      orderType: examModel.orderType,
+
+      name: userModel.name,
+      uid: studentModel.uid,
+      registrationNumber: studentModel.registrationNumber,
+      rollNumber: studentModel.rollNumber,
+      email: userModel.email,
+      phone: userModel.phone,
+      whatsapp_number: userModel.whatsappNumber,
+      program_course: programCourseModel.name,
+      shift: shiftModel.name,
+
+      paper: paperModel.name,
+      paper_code: paperModel.code,
+
+      admitCardDownloadCount: examCandidateModel.admitCardDownloadCount,
+      admitCardDownloadedAt: examCandidateModel.admitCardDownloadedAt,
+    })
+    .from(examCandidateModel)
+    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .leftJoin(
+      academicYearModel,
+      eq(academicYearModel.id, examModel.academicYearId),
+    )
+    .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
+    .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+    .leftJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+
+    .leftJoin(sessionModel, eq(sessionModel.id, promotionModel.sessionId))
+    .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      programCourseModel,
+      eq(programCourseModel.id, promotionModel.programCourseId),
+    )
+    .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
+    .leftJoin(classModel, eq(examModel.classId, classModel.id))
+    .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
+    .where(eq(examGroupModel.id, foundExamGroup.id));
+
+  if (!result.length) {
+    throw new Error("No exam candidates found");
+  }
+
+  // ================= SORT =================
+
+  const orderType = result[0].orderType;
+
+  result.sort((a, b) => {
+    let aValue: string | null | undefined;
+    let bValue: string | null | undefined;
+
+    if (orderType === "UID") {
+      aValue = a.uid;
+      bValue = b.uid;
+    } else if (orderType === "CU_REGISTRATION_NUMBER") {
+      aValue = a.registrationNumber;
+      bValue = b.registrationNumber;
+    } else {
+      aValue = a.rollNumber;
+      bValue = b.rollNumber;
+    }
+
+    const aStr = aValue?.trim() || "";
+    const bStr = bValue?.trim() || "";
+
+    if (!aStr && !bStr) return 0;
+    if (!aStr) return 1;
+    if (!bStr) return -1;
+
+    return aStr.localeCompare(bStr);
+  });
+
+  // ================= GROUP BY STUDENT =================
+
+  const groupedByStudent = new Map<string, typeof result>();
+
+  for (const row of result) {
+    const key = row.uid ?? "UNKNOWN";
+
+    if (!groupedByStudent.has(key)) {
+      groupedByStudent.set(key, []);
+    }
+
+    groupedByStudent.get(key)!.push(row);
+  }
+
+  // ================= FIND MAX PAPERS =================
+
+  let maxPapers = 0;
+  for (const rows of groupedByStudent.values()) {
+    if (rows.length > maxPapers) {
+      maxPapers = rows.length;
+    }
+  }
+
+  // ================= CREATE EXCEL =================
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Admit Card Tracking");
+
+  const baseHeaders: Record<string, string> = {
+    examType: "Exam Type",
+    academicYear: "Academic Year",
+    session: "Session",
+    semester: "Semester",
+    name: "Name",
+    uid: "UID",
+    registrationNumber: "Registration Number",
+    rollNumber: "Roll Number",
+    email: "Email",
+    phone: "Phone",
+    whatsapp_number: "WhatsApp",
+    program_course: "Program Course",
+    shift: "Shift",
+  };
+
+  const baseColumns = Object.keys(baseHeaders).map((key) => ({
+    header: baseHeaders[key],
+    key,
+    width: 22,
+  }));
+
+  // Dynamic paper columns
+  const paperColumns = [];
+  for (let i = 1; i <= maxPapers; i++) {
+    paperColumns.push(
+      {
+        header: `Paper ${i}`,
+        key: `paper_${i}`,
+        width: 30,
+      },
+      {
+        header: `Download Count ${i}`,
+        key: `download_${i}`,
+        width: 18,
+      },
+      {
+        header: `Last Downloaded At ${i}`,
+        key: `downloadedAt_${i}`,
+        width: 25,
+      },
+    );
+  }
+
+  sheet.columns = [...baseColumns, ...paperColumns];
+
+  // ================= ADD ROWS =================
+
+  for (const studentRows of groupedByStudent.values()) {
+    const baseData = { ...studentRows[0] } as Record<string, any>;
+    const rowData: any = {};
+
+    // Base fields
+    for (const key of Object.keys(baseHeaders)) {
+      rowData[key] = baseData[key] ?? "";
+    }
+
+    // Horizontal papers
+    studentRows.forEach((row, index) => {
+      const paperIndex = index + 1;
+
+      rowData[`paper_${paperIndex}`] =
+        row.paper && row.paper_code
+          ? `${row.paper} (${row.paper_code})`
+          : (row.paper ?? "");
+
+      rowData[`download_${paperIndex}`] = row.admitCardDownloadCount ?? 0;
+
+      rowData[`downloadedAt_${paperIndex}`] = row.admitCardDownloadedAt
+        ? new Date(row.admitCardDownloadedAt).toLocaleString("en-IN", {
+            timeZone: "Asia/Kolkata",
+          })
+        : "Never";
+    });
+
+    sheet.addRow(rowData);
+  }
+
+  // ================= STYLE =================
+
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true, size: 12 };
+  headerRow.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFD3D3D3" },
+  };
+
+  headerRow.eachCell((cell) => {
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
+
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 }
 
 export async function downloadSingleAdmitCard(
-  examId: number,
   studentId: number,
+  examId?: number,
+  examGroupId?: number,
 ): Promise<Buffer> {
+  if (!examId && !examGroupId) {
+    throw new Error("Either examId or examGroupId must be provided");
+  }
+
+  let foundExamGroup: ExamGroupT | null = null;
+
+  if (examId) {
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .leftJoin(examModel, eq(examModel.examGroupId, examGroupModel.id))
+      .where(eq(examModel.id, examId));
+
+    foundExamGroup = result[0]?.exam_groups || null;
+  } else {
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .where(eq(examGroupModel.id, examGroupId!));
+
+    foundExamGroup = result[0] || null;
+  }
+
+  if (!foundExamGroup) {
+    throw new Error("Exam group not found");
+  }
+
   const result = await db
     .select({
       semester: classModel.name,
@@ -3969,6 +4635,7 @@ export async function downloadSingleAdmitCard(
     })
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
     .leftJoin(
       examSubjectModel,
       eq(examSubjectModel.id, examCandidateModel.examSubjectId),
@@ -3995,10 +4662,11 @@ export async function downloadSingleAdmitCard(
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
     .where(
       and(
-        eq(examCandidateModel.examId, examId),
+        eq(examGroupModel.id, foundExamGroup!.id),
         eq(studentModel.id, studentId),
       ),
-    );
+    )
+    .orderBy(asc(examSubjectModel.startTime));
 
   if (!result.length) {
     throw new Error("No admit card found for this student");
@@ -4039,9 +4707,11 @@ export async function downloadSingleAdmitCard(
       eq(promotionModel.id, examCandidateModel.promotionId),
     )
     .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
     .where(
       and(
-        eq(examCandidateModel.examId, examId),
+        eq(examGroupModel.id, foundExamGroup!.id),
         eq(studentModel.id, studentId),
       ),
     )
@@ -4269,18 +4939,74 @@ export async function updateExamSubject(
   };
 }
 
-export async function updateExamAdmitCardDates(
-  examId: number,
-  admitCardStartDownloadDate: string | null,
-  admitCardLastDownloadDate: string | null,
-  userId?: number,
-): Promise<ExamDto | null> {
-  const [foundExam] = await db
+export async function findExamGroupById(
+  id: number,
+): Promise<ExamGroupDto | null> {
+  const [examGroup] = await db
+    .select()
+    .from(examGroupModel)
+    .where(eq(examGroupModel.id, id))
+    .limit(1);
+
+  if (!examGroup) {
+    return null;
+  }
+
+  const examsResult = await db
     .select()
     .from(examModel)
-    .where(eq(examModel.id, examId));
+    .where(eq(examModel.examGroupId, id));
 
-  if (!foundExam) return null;
+  const examDtos = (
+    await Promise.all(examsResult.map(async (exam) => modelToDto(exam)))
+  ).filter((exam): exam is NonNullable<typeof exam> => exam !== null);
+
+  return {
+    ...examGroup,
+    exams: examDtos,
+  };
+}
+
+export async function updateExamAdmitCardDates(
+  admitCardStartDownloadDate: string | null,
+  admitCardLastDownloadDate: string | null,
+  examId?: number,
+  examGroupId?: number,
+  userId?: number,
+): Promise<ExamGroupDto | null> {
+  if (!examId && !examGroupId) {
+    throw new Error("Either examId or examGroupId must be provided");
+  }
+
+  let foundExamGroup: ExamGroupT | null = null;
+  if (examId) {
+    console.log("examId:", examId);
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .leftJoin(examModel, eq(examModel.examGroupId, examGroupModel.id))
+      .where(eq(examModel.id, examId));
+
+    foundExamGroup = result[0]?.exam_groups || null;
+  } else {
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .where(eq(examGroupModel.id, examGroupId!));
+
+    foundExamGroup = result[0] || null;
+  }
+
+  if (!foundExamGroup) {
+    throw new Error("Exam group not found for the given examId or examGroupId");
+  }
+
+  const foundExams = await db
+    .select()
+    .from(examModel)
+    .where(eq(examModel.examGroupId, foundExamGroup.id));
+
+  if (foundExams.length === 0) return null;
 
   const updateData: Partial<typeof examModel.$inferInsert> = {};
   if (
@@ -4309,15 +5035,10 @@ export async function updateExamAdmitCardDates(
     return null;
   }
 
-  await db.update(examModel).set(updateData).where(eq(examModel.id, examId));
-
-  // Return updated exam with full relations
-  const [updatedExam] = await db
-    .select()
-    .from(examModel)
-    .where(eq(examModel.id, examId));
-
-  if (!updatedExam) return null;
+  await db
+    .update(examModel)
+    .set(updateData)
+    .where(eq(examModel.examGroupId, foundExamGroup.id));
 
   // Emit socket event for exam update
   const io = socketService.getIO();
@@ -4339,7 +5060,7 @@ export async function updateExamAdmitCardDates(
     });
   }
 
-  return await modelToDto(updatedExam);
+  return await findExamGroupById(foundExamGroup.id);
 }
 
 /**
@@ -4952,17 +5673,304 @@ export async function getExamCandidatesByStudentIdAndExamId(
 //     };
 // }
 
+// export async function downloadAttendanceSheetsByExamId(
+//   examId?: number,
+//   examGroupId?: number,
+//   userId: number,
+//   uploadSessionId?: string,
+// ): Promise<{
+//   zipBuffer: Buffer;
+//   roomCount: number;
+// }> {
+//   if (!examId && !examGroupId) {
+//     throw new Error("Either examId or examGroupId must be provided");
+//   }
+
+//   let foundExamGroup: ExamGroupT | null = null;
+
+//   if (examId) {
+//     const result = await db
+//       .select()
+//       .from(examGroupModel)
+//       .leftJoin(examModel, eq(examModel.examGroupId, examGroupModel.id))
+//       .where(eq(examModel.id, examId));
+
+//     foundExamGroup = result[0]?.exam_groups || null;
+//   } else {
+//     const result = await db
+//       .select()
+//       .from(examGroupModel)
+//       .where(eq(examGroupModel.id, examGroupId!));
+
+//     foundExamGroup = result[0] || null;
+//   }
+
+//   if (!foundExamGroup) {
+//     throw new Error("Exam group not found");
+//   }
+
+//   const result = await db
+//     .select({
+//       examType: examTypeModel.name,
+//       groupName: examGroupModel.name,
+//       examCommencementDate: examGroupModel.examCommencementDate,
+//       class: classModel.name,
+//       academicYear: academicYearModel.year,
+//       name: userModel.name,
+//       uid: studentModel.uid,
+//       rollNumber: studentModel.rollNumber,
+//       paperName: paperModel.name,
+//       paperCode: paperModel.code,
+//       floor: floorModel.name,
+//       orderType: examModel.orderType,
+//       room: roomModel.name,
+//       seatNumber: examCandidateModel.seatNumber,
+//       examStartTime: examSubjectModel.startTime,
+//       examEndTime: examSubjectModel.endTime,
+//     })
+//     .from(examCandidateModel)
+//     .leftJoin(examModel, eq(examCandidateModel.examId, examModel.id))
+//     .leftJoin(examGroupModel, eq(examModel.examGroupId, examGroupModel.id))
+//     .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
+//     .leftJoin(classModel, eq(classModel.id, examModel.classId))
+//     .leftJoin(
+//       academicYearModel,
+//       eq(academicYearModel.id, examModel.academicYearId),
+//     )
+//     .leftJoin(
+//       examRoomModel,
+//       eq(examCandidateModel.examRoomId, examRoomModel.id),
+//     )
+//     .leftJoin(roomModel, eq(roomModel.id, examRoomModel.roomId))
+//     .leftJoin(floorModel, eq(floorModel.id, roomModel.floorId))
+//     .leftJoin(
+//       promotionModel,
+//       eq(promotionModel.id, examCandidateModel.promotionId),
+//     )
+//     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+//     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+//     .leftJoin(paperModel, eq(paperModel.id, examCandidateModel.paperId))
+//     .leftJoin(
+//       examSubjectModel,
+//       eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+//     )
+//     .where(eq(examGroupModel.id, foundExamGroup!.id))
+//     .orderBy(
+//       asc(examSubjectModel.startTime),
+//       asc(examCandidateModel.seatNumber),
+//       asc(floorModel.name),
+//       asc(roomModel.name),
+//     );
+
+//   const zip = new JSZip();
+
+//   // ---------- SOCKET START ----------
+//   if (io && userId) {
+//     io.to(`user:${userId}`).emit("download_progress", {
+//       id: uploadSessionId,
+//       userId,
+//       message: "Generating attendance sheets...",
+//       progress: 0,
+//       status: "started",
+//       stage: "pdf_generation",
+//     });
+//   }
+
+//   // ---------- GROUP ROOMS ----------
+//   const rooms = Array.from(new Set(result.map((r) => r.room!).filter(Boolean)));
+//   const paperCodes = Array.from(
+//     new Set(result.map((r) => r.paperCode!).filter(Boolean)),
+//   );
+//   const totalRooms = rooms.length;
+
+//   const limit = pLimit(5); // max 5 parallel PDFs
+//   let completed = 0;
+
+//   await Promise.all(
+//     rooms.map((room) =>
+//       limit(async () => {
+//         const filteredResult = result
+//           .filter((r) => r.room === room)
+//           .sort((a, b) => {
+//             // Sort by seat number
+//             const seatA = a.seatNumber || "";
+//             const seatB = b.seatNumber || "";
+//             return seatA.localeCompare(seatB, undefined, {
+//               numeric: true,
+//               sensitivity: "base",
+//             });
+//           });
+
+//         if (!filteredResult.length) return;
+
+//         // ---------- ENSURE DATE-TIME-PAPER SEQUENCE ----------
+//         const examSlots: {
+//           date: string;
+//           time: string;
+//           paperCode: string;
+//         }[] = [];
+
+//         const seen = new Set<string>();
+
+//         for (const item of filteredResult) {
+//           if (!item.examStartTime) continue;
+
+//           const d = item.examStartTime;
+
+//           const date = `${String(d.getDate()).padStart(2, "0")}/${String(
+//             d.getMonth() + 1,
+//           ).padStart(2, "0")}/${d.getFullYear()}`;
+
+//           let hours = d.getHours();
+//           const minutes = String(d.getMinutes()).padStart(2, "0");
+//           const ampm = hours >= 12 ? "PM" : "AM";
+//           hours = hours % 12 || 12;
+
+//           const time = `${hours}:${minutes} ${ampm}`;
+//           const paperCode = item.paperCode!;
+
+//           const key = `${date}|${time}|${paperCode}`;
+
+//           if (!seen.has(key)) {
+//             seen.add(key);
+//             examSlots.push({ date, time, paperCode });
+//           }
+//         }
+
+//         // ---------- PDF GENERATION ----------
+//         console.log({
+//           semester: filteredResult[0].class!.split(" ")[1],
+//           examType: filteredResult[0].examType!,
+//           session: filteredResult[0].academicYear!,
+//           roomNumber: room!,
+//           examDates: examSlots.map((s) => s.date),
+//           examTimings: examSlots.map((s) => s.time),
+//           examPapersCodes: examSlots.map((s) => s.paperCode),
+//           examCandidates: filteredResult.map((r) => ({
+//             name: r.name!,
+//             identifier: r.orderType === "UID" ? r.uid! : r.rollNumber!,
+//             seatNumber: r.seatNumber!,
+//           })),
+//         });
+
+//         const uniqueCandidates = new Map<string, any>();
+
+//         filteredResult.forEach((r) => {
+//           // Use the most reliable unique identifier
+//           const key = r.orderType === "UID" ? r.uid : r.rollNumber;
+
+//           if (key && !uniqueCandidates.has(key)) {
+//             uniqueCandidates.set(key, {
+//               name: r.name!,
+//               identifier: r.orderType === "UID" ? r.uid! : r.rollNumber!,
+//               seatNumber: r.seatNumber!,
+//             });
+//           }
+//         });
+
+//         const pdfBuffer =
+//           await pdfGenerationService.generateExamAttendanceSheetPdfBuffer({
+//             semester: filteredResult[0].class!.split(" ")[1],
+//             examType: filteredResult[0].examType!,
+//             session: filteredResult[0].academicYear!,
+//             roomNumber: room!,
+//             examDates: examSlots.map((s) => s.date),
+//             examTimings: examSlots.map((s) => s.time),
+//             examPapersCodes: examSlots.map((s) => s.paperCode),
+//             examCandidates: Array.from(uniqueCandidates.values()),
+//           });
+
+//         const fileDate = filteredResult[0].examStartTime
+//           ? filteredResult[0].examStartTime.toISOString().split("T")[0]
+//           : "date";
+
+//         zip.file(
+//           `${filteredResult[0].examType}_${filteredResult[0].class}_room_${room}_${fileDate}.pdf`,
+//           pdfBuffer,
+//         );
+
+//         // ---------- SOCKET PROGRESS ----------
+//         completed++;
+
+//         if (io && userId) {
+//           io.to(`user:${userId}`).emit("download_progress", {
+//             id: uploadSessionId,
+//             userId,
+//             message: `Generated ${completed}/${totalRooms} PDFs`,
+//             progress: Math.round((completed / totalRooms) * 100),
+//             status: "processing",
+//             stage: "pdf_generation",
+//           });
+//         }
+//       }),
+//     ),
+//   );
+
+//   // ---------- ZIP FINALIZE ----------
+//   if (io && userId) {
+//     io.to(`user:${userId}`).emit("download_progress", {
+//       id: uploadSessionId,
+//       userId,
+//       message: "Creating ZIP file...",
+//       progress: 100,
+//       status: "finalizing",
+//       stage: "zipping",
+//     });
+//   }
+
+//   console.log("Creating zip file...");
+
+//   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+//   console.log("sending zip file from service...");
+//   return {
+//     zipBuffer,
+//     roomCount: totalRooms,
+//   };
+// }
+
 export async function downloadAttendanceSheetsByExamId(
-  examId: number,
   userId: number,
+  examId?: number,
+  examGroupId?: number,
   uploadSessionId?: string,
 ): Promise<{
   zipBuffer: Buffer;
   roomCount: number;
 }> {
+  if (!examId && !examGroupId) {
+    throw new Error("Either examId or examGroupId must be provided");
+  }
+
+  let foundExamGroup: ExamGroupT | null = null;
+
+  if (examId) {
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .leftJoin(examModel, eq(examModel.examGroupId, examGroupModel.id))
+      .where(eq(examModel.id, examId));
+
+    foundExamGroup = result[0]?.exam_groups || null;
+  } else {
+    const result = await db
+      .select()
+      .from(examGroupModel)
+      .where(eq(examGroupModel.id, examGroupId!));
+
+    foundExamGroup = result[0] || null;
+  }
+
+  if (!foundExamGroup) {
+    throw new Error("Exam group not found");
+  }
+
   const result = await db
     .select({
+      examId: examModel.id,
       examType: examTypeModel.name,
+      groupName: examGroupModel.name,
+      examCommencementDate: examGroupModel.examCommencementDate,
       class: classModel.name,
       academicYear: academicYearModel.year,
       name: userModel.name,
@@ -4979,6 +5987,7 @@ export async function downloadAttendanceSheetsByExamId(
     })
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examCandidateModel.examId, examModel.id))
+    .leftJoin(examGroupModel, eq(examModel.examGroupId, examGroupModel.id))
     .leftJoin(examTypeModel, eq(examTypeModel.id, examModel.examTypeId))
     .leftJoin(classModel, eq(classModel.id, examModel.classId))
     .leftJoin(
@@ -5002,8 +6011,9 @@ export async function downloadAttendanceSheetsByExamId(
       examSubjectModel,
       eq(examSubjectModel.id, examCandidateModel.examSubjectId),
     )
-    .where(eq(examCandidateModel.examId, examId))
+    .where(eq(examGroupModel.id, foundExamGroup!.id))
     .orderBy(
+      asc(examGroupModel.name),
       asc(examSubjectModel.startTime),
       asc(examCandidateModel.seatNumber),
       asc(floorModel.name),
@@ -5012,7 +6022,6 @@ export async function downloadAttendanceSheetsByExamId(
 
   const zip = new JSZip();
 
-  // ---------- SOCKET START ----------
   if (io && userId) {
     io.to(`user:${userId}`).emit("download_progress", {
       id: uploadSessionId,
@@ -5024,137 +6033,132 @@ export async function downloadAttendanceSheetsByExamId(
     });
   }
 
-  // ---------- GROUP ROOMS ----------
-  const rooms = Array.from(new Set(result.map((r) => r.room!).filter(Boolean)));
-  const paperCodes = Array.from(
-    new Set(result.map((r) => r.paperCode!).filter(Boolean)),
+  // -------- GROUP BY EXAM GROUP --------
+  const groupedByExamId = result.reduce(
+    (acc, row) => {
+      const key = `exam-id-${row.examId!}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(row);
+      return acc;
+    },
+    {} as Record<string, typeof result>,
   );
-  const totalRooms = rooms.length;
 
-  const limit = pLimit(5); // max 5 parallel PDFs
+  let totalRooms = 0;
   let completed = 0;
 
+  const limit = pLimit(5);
+
   await Promise.all(
-    rooms.map((room) =>
+    Object.entries(groupedByExamId).map(([groupName, groupRows]) =>
       limit(async () => {
-        const filteredResult = result
-          .filter((r) => r.room === room)
-          .sort((a, b) => {
-            // Sort by seat number
-            const seatA = a.seatNumber || "";
-            const seatB = b.seatNumber || "";
-            return seatA.localeCompare(seatB, undefined, {
-              numeric: true,
-              sensitivity: "base",
-            });
-          });
+        // Create folder for this exam group
+        const groupFolder = zip.folder(sanitizeWorksheetName(groupName));
 
-        if (!filteredResult.length) return;
-
-        // ---------- ENSURE DATE-TIME-PAPER SEQUENCE ----------
-        const examSlots: {
-          date: string;
-          time: string;
-          paperCode: string;
-        }[] = [];
-
-        const seen = new Set<string>();
-
-        for (const item of filteredResult) {
-          if (!item.examStartTime) continue;
-
-          const d = item.examStartTime;
-
-          const date = `${String(d.getDate()).padStart(2, "0")}/${String(
-            d.getMonth() + 1,
-          ).padStart(2, "0")}/${d.getFullYear()}`;
-
-          let hours = d.getHours();
-          const minutes = String(d.getMinutes()).padStart(2, "0");
-          const ampm = hours >= 12 ? "PM" : "AM";
-          hours = hours % 12 || 12;
-
-          const time = `${hours}:${minutes} ${ampm}`;
-          const paperCode = item.paperCode!;
-
-          const key = `${date}|${time}|${paperCode}`;
-
-          if (!seen.has(key)) {
-            seen.add(key);
-            examSlots.push({ date, time, paperCode });
-          }
-        }
-
-        // ---------- PDF GENERATION ----------
-        console.log({
-          semester: filteredResult[0].class!.split(" ")[1],
-          examType: filteredResult[0].examType!,
-          session: filteredResult[0].academicYear!,
-          roomNumber: room!,
-          examDates: examSlots.map((s) => s.date),
-          examTimings: examSlots.map((s) => s.time),
-          examPapersCodes: examSlots.map((s) => s.paperCode),
-          examCandidates: filteredResult.map((r) => ({
-            name: r.name!,
-            identifier: r.orderType === "UID" ? r.uid! : r.rollNumber!,
-            seatNumber: r.seatNumber!,
-          })),
-        });
-
-        const uniqueCandidates = new Map<string, any>();
-
-        filteredResult.forEach((r) => {
-          // Use the most reliable unique identifier
-          const key = r.orderType === "UID" ? r.uid : r.rollNumber;
-
-          if (key && !uniqueCandidates.has(key)) {
-            uniqueCandidates.set(key, {
-              name: r.name!,
-              identifier: r.orderType === "UID" ? r.uid! : r.rollNumber!,
-              seatNumber: r.seatNumber!,
-            });
-          }
-        });
-
-        const pdfBuffer =
-          await pdfGenerationService.generateExamAttendanceSheetPdfBuffer({
-            semester: filteredResult[0].class!.split(" ")[1],
-            examType: filteredResult[0].examType!,
-            session: filteredResult[0].academicYear!,
-            roomNumber: room!,
-            examDates: examSlots.map((s) => s.date),
-            examTimings: examSlots.map((s) => s.time),
-            examPapersCodes: examSlots.map((s) => s.paperCode),
-            examCandidates: Array.from(uniqueCandidates.values()),
-          });
-
-        const fileDate = filteredResult[0].examStartTime
-          ? filteredResult[0].examStartTime.toISOString().split("T")[0]
-          : "date";
-
-        zip.file(
-          `${filteredResult[0].examType}_${filteredResult[0].class}_room_${room}_${fileDate}.pdf`,
-          pdfBuffer,
+        const rooms = Array.from(
+          new Set(groupRows.map((r) => r.room!).filter(Boolean)),
         );
 
-        // ---------- SOCKET PROGRESS ----------
-        completed++;
+        totalRooms += rooms.length;
 
-        if (io && userId) {
-          io.to(`user:${userId}`).emit("download_progress", {
-            id: uploadSessionId,
-            userId,
-            message: `Generated ${completed}/${totalRooms} PDFs`,
-            progress: Math.round((completed / totalRooms) * 100),
-            status: "processing",
-            stage: "pdf_generation",
+        for (const room of rooms) {
+          const filteredResult = groupRows
+            .filter((r) => r.room === room)
+            .sort((a, b) =>
+              (a.seatNumber || "").localeCompare(
+                b.seatNumber || "",
+                undefined,
+                {
+                  numeric: true,
+                  sensitivity: "base",
+                },
+              ),
+            );
+
+          if (!filteredResult.length) continue;
+
+          // ---------- BUILD SLOT INFO ----------
+          const examSlots: {
+            date: string;
+            time: string;
+            paperCode: string;
+          }[] = [];
+
+          const seen = new Set<string>();
+
+          for (const item of filteredResult) {
+            if (!item.examStartTime) continue;
+
+            const d = item.examStartTime;
+
+            const date = `${String(d.getDate()).padStart(2, "0")}/${String(
+              d.getMonth() + 1,
+            ).padStart(2, "0")}/${d.getFullYear()}`;
+
+            const time = d.toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+
+            const paperCode = item.paperCode!;
+            const key = `${date}|${time}|${paperCode}`;
+
+            if (!seen.has(key)) {
+              seen.add(key);
+              examSlots.push({ date, time, paperCode });
+            }
+          }
+
+          const uniqueCandidates = new Map<string, any>();
+
+          filteredResult.forEach((r) => {
+            const key = r.orderType === "UID" ? r.uid : r.rollNumber;
+
+            if (key && !uniqueCandidates.has(key)) {
+              uniqueCandidates.set(key, {
+                name: r.name!,
+                identifier: r.orderType === "UID" ? r.uid! : r.rollNumber!,
+                seatNumber: r.seatNumber!,
+              });
+            }
           });
+
+          const pdfBuffer =
+            await pdfGenerationService.generateExamAttendanceSheetPdfBuffer({
+              semester: filteredResult[0].class!.split(" ")[1],
+              examType: filteredResult[0].examType!,
+              session: filteredResult[0].academicYear!,
+              roomNumber: room!,
+              examDates: examSlots.map((s) => s.date),
+              examTimings: examSlots.map((s) => s.time),
+              examPapersCodes: examSlots.map((s) => s.paperCode),
+              examCandidates: Array.from(uniqueCandidates.values()),
+            });
+
+          const fileDate = filteredResult[0].examStartTime
+            ? filteredResult[0].examStartTime.toISOString().split("T")[0]
+            : "date";
+
+          // 🔥 ADD PDF INSIDE GROUP FOLDER
+          groupFolder?.file(`room_${room}_${fileDate}.pdf`, pdfBuffer);
+
+          completed++;
+
+          if (io && userId) {
+            io.to(`user:${userId}`).emit("download_progress", {
+              id: uploadSessionId,
+              userId,
+              message: `Generated ${completed} PDFs`,
+              progress: 50,
+              status: "processing",
+              stage: "pdf_generation",
+            });
+          }
         }
       }),
     ),
   );
 
-  // ---------- ZIP FINALIZE ----------
   if (io && userId) {
     io.to(`user:${userId}`).emit("download_progress", {
       id: uploadSessionId,
@@ -5166,11 +6170,8 @@ export async function downloadAttendanceSheetsByExamId(
     });
   }
 
-  console.log("Creating zip file...");
-
   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
-  console.log("sending zip file from service...");
   return {
     zipBuffer,
     roomCount: totalRooms,

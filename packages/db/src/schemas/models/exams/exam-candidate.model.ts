@@ -29,8 +29,8 @@ export const examCandidateModel = pgTable("exam_candidates", {
         .notNull(),
     seatNumber: varchar({ length: 255 }),
     foilNumber: varchar({ length: 255 }),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
+    updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
     admitCardDownloadedAt: timestamp("admit_card_downloaded_at", { withTimezone: true }),
     admitCardDownloadCount: integer("admit_card_download_count").default(0),
 });

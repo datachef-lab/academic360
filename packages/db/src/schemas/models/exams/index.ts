@@ -1,4 +1,5 @@
 export * from "./exam-candidate.model";
+export * from "./exam-group.model";
 export * from "./exam-program-course.model";
 export * from "./exam-room.model";
 export * from "./exam-shift.model";

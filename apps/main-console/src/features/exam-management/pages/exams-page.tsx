@@ -45,18 +45,14 @@ import type {
   //   ProgramCourse,
   //   Course,
   //   CourseType,
-  ExamDto,
-  ExamProgramCourseDto,
-  ExamShiftDto,
-  ExamSubjectDto,
-  ExamSubjectTypeDto,
+  ExamGroupDto,
 } from "@repo/db/index";
 // import { Class } from "@/types/academics/class";
 // import { AxiosError } from "axios";
 // import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
 // import { useAcademicYear } from "@/hooks/useAcademicYear";
 // import { PaperEditModal } from "@/pages/courses-subjects-design/subject-paper-mapping/paper-edit-modal";
-import { fetchExams, type ExamFilters } from "@/services/exam.service";
+import { fetchExamGroups, type ExamFilters } from "@/services/exam.service";
 import { getAllExamTypes, type ExamTypeT } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
 import { getAffiliations, getRegulationTypes } from "@/services/course-design.api";
@@ -147,7 +143,7 @@ const ExamsPage = () => {
   //   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   //   const setIsDownloading = React.useState(false)[1];
   //   const setDownloadProgress = React.useState(0)[1];
-  const [exams, setExams] = useState<ExamDto[]>([]);
+  const [examGroups, setExamGroups] = useState<ExamGroupDto[]>([]);
   const [loading] = useState(false);
   const [error] = useState<string | null>(null);
   //   const [isFormSubmitting, setIsFormSubmitting] = React.useState(false);
@@ -375,35 +371,37 @@ const ExamsPage = () => {
 
   // Set default filters after data loads
   React.useEffect(() => {
-    if (!isInitialized && currentAcademicYear && exams.length > 0) {
+    if (!isInitialized && currentAcademicYear && examGroups.length > 0) {
       // Determine smart default status
       const now = new Date();
       let hasRecent = false;
       let hasUpcoming = false;
 
-      exams.forEach((exam) => {
-        if (!exam.examSubjects || exam.examSubjects.length === 0) return;
+      examGroups.forEach((examGroup) => {
+        examGroup.exams.forEach((exam) => {
+          if (!exam.examSubjects || exam.examSubjects.length === 0) return;
 
-        const dates = exam.examSubjects
-          .map((sub) => ({
-            start: new Date(sub.startTime),
-            end: new Date(sub.endTime),
-          }))
-          .sort((a, b) => a.start.getTime() - b.start.getTime());
+          const dates = exam.examSubjects
+            .map((sub) => ({
+              start: new Date(sub.startTime),
+              end: new Date(sub.endTime),
+            }))
+            .sort((a, b) => a.start.getTime() - b.start.getTime());
 
-        const firstStart = dates[0]?.start;
-        const lastEnd = dates[dates.length - 1]?.end;
+          const firstStart = dates[0]?.start;
+          const lastEnd = dates[dates.length - 1]?.end;
 
-        if (firstStart && lastEnd) {
-          // Check if recent (ongoing or ended within 7 days)
-          if (firstStart <= now && lastEnd >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)) {
-            hasRecent = true;
+          if (firstStart && lastEnd) {
+            // Check if recent (ongoing or ended within 7 days)
+            if (firstStart <= now && lastEnd >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)) {
+              hasRecent = true;
+            }
+            // Check if upcoming
+            if (firstStart > now) {
+              hasUpcoming = true;
+            }
           }
-          // Check if upcoming
-          if (firstStart > now) {
-            hasUpcoming = true;
-          }
-        }
+        });
       });
 
       const defaultStatus = hasRecent ? "recent" : hasUpcoming ? "upcoming" : "previous";
@@ -415,12 +413,12 @@ const ExamsPage = () => {
       }));
       setIsInitialized(true);
     }
-  }, [currentAcademicYear, exams, isInitialized]);
+  }, [currentAcademicYear, examGroups, isInitialized]);
 
   // Memoize fetch function to avoid recreating on every render
   const refetchExams = React.useCallback(() => {
-    fetchExams(currentPage, itemsPerPage, filters).then((data) => {
-      setExams(data.content);
+    fetchExamGroups(currentPage, itemsPerPage, filters).then((data) => {
+      setExamGroups(data.content);
       setTotalPages(data.totalPages);
       setTotalItems(data.totalElements);
     });
@@ -459,8 +457,8 @@ const ExamsPage = () => {
     // Only fetch data when authentication is ready, and only on initial mount
     if (displayFlag && accessToken && !hasInitialized.current) {
       hasInitialized.current = true;
-      fetchExams(currentPage, itemsPerPage, filters).then((data) => {
-        setExams(data.content);
+      fetchExamGroups(currentPage, itemsPerPage, filters).then((data) => {
+        setExamGroups(data.content);
         setTotalItems(data.totalElements);
         setTotalPages(data.totalPages);
         setCurrentPage(data.page);
@@ -472,8 +470,8 @@ const ExamsPage = () => {
   // Refetch when filters change (after initialization)
   useEffect(() => {
     if (hasInitialized.current && displayFlag && accessToken) {
-      fetchExams(currentPage, itemsPerPage, filters).then((data) => {
-        setExams(data.content);
+      fetchExamGroups(currentPage, itemsPerPage, filters).then((data) => {
+        setExamGroups(data.content);
         setTotalItems(data.totalElements);
         setTotalPages(data.totalPages);
         setCurrentPage(data.page);
@@ -1178,67 +1176,6 @@ const ExamsPage = () => {
       </div>
     );
   }
-
-  // Helper function to normalize subject names (trim and lowercase)
-  const normalizeSubjectName = (name: string | null | undefined): string => {
-    return (name || "").trim().toLowerCase();
-  };
-
-  // Helper function to get unique subjects (grouped by normalized name)
-  const getUniqueSubjects = (examSubjects: ExamSubjectDto[]): ExamSubjectDto[] => {
-    if (!examSubjects || examSubjects.length === 0) return [];
-
-    const seen = new Map<string, ExamSubjectDto>();
-
-    examSubjects.forEach((es) => {
-      const normalizedName = normalizeSubjectName(es.subject?.name);
-      if (normalizedName && !seen.has(normalizedName)) {
-        seen.set(normalizedName, es);
-      }
-    });
-
-    return Array.from(seen.values());
-  };
-
-  const formatExamDateRange = (examSubjects: ExamSubjectDto[]) => {
-    if (!examSubjects || examSubjects.length === 0) return "-";
-
-    // Extract and parse dates
-    const dates = examSubjects.map((es) => ({
-      start: new Date(es.startTime),
-      end: new Date(es.endTime),
-    }));
-
-    // Find min start and max end
-    const minStart = new Date(Math.min(...dates.map((d) => d.start.getTime())));
-    const maxEnd = new Date(Math.max(...dates.map((d) => d.end.getTime())));
-
-    // Format helper: dd/MM/yyyy
-    const formatDate = (date: Date): string => {
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    };
-
-    // Check if ALL subjects are on the exact same day (compare date parts only)
-    const allSameDay = dates.every((d) => {
-      return (
-        d.start.getDate() === minStart.getDate() &&
-        d.start.getMonth() === minStart.getMonth() &&
-        d.start.getFullYear() === minStart.getFullYear() &&
-        d.end.getDate() === minStart.getDate() &&
-        d.end.getMonth() === minStart.getMonth() &&
-        d.end.getFullYear() === minStart.getFullYear()
-      );
-    });
-
-    if (allSameDay) {
-      return formatDate(minStart); // Show only one date
-    }
-
-    return `${formatDate(minStart)} - ${formatDate(maxEnd)}`;
-  };
 
   return (
     <div className="p-2 sm:p-4">
@@ -2162,37 +2099,43 @@ const ExamsPage = () => {
                   </div>
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "15%" }}
+                    style={{ width: "11%" }}
                   >
                     Exam Type
                   </div>
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "14%" }}
+                    style={{ width: "16%" }}
                   >
-                    Program Courses
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "20%" }}
-                  >
-                    Subjects
+                    Exam Group Name
                   </div>
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
                     style={{ width: "16%" }}
                   >
+                    Program Courses
+                  </div>
+                  <div
+                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
+                    style={{ width: "11%" }}
+                  >
+                    Subjects
+                  </div>
+                  <div
+                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
+                    style={{ width: "11%" }}
+                  >
                     Shift(s)
                   </div>
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "12%" }}
+                    style={{ width: "11%" }}
                   >
                     Subject Category
                   </div>
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "10%" }}
+                    style={{ width: "11%" }}
                   >
                     Semester
                   </div>
@@ -2209,129 +2152,200 @@ const ExamsPage = () => {
               {/* Table Body */}
               <div className="bg-white relative">
                 {loading ? (
-                  <div className="flex items-center justify-center p-4 text-center" style={{ minWidth: "950px" }}>
+                  <div className="flex items-center justify-center p-4 text-center" style={{ minWidth: "1050px" }}>
                     Loading...
                   </div>
                 ) : (
-                  exams.map((exm: ExamDto, idx: number) => (
-                    <div key={exm.id} className="flex border-b hover:bg-gray-50 group" style={{ minWidth: "950px" }}>
+                  examGroups.map((examGroup: ExamGroupDto, groupIdx: number) => {
+                    // Extract all distinct exam types from the group
+                    const distinctExamTypeMap = new Map<number, (typeof examGroup.exams)[0]["examType"]>();
+                    examGroup.exams.forEach((exam) => {
+                      distinctExamTypeMap.set(exam.examType.id, exam.examType);
+                    });
+                    const distinctExamTypes = Array.from(distinctExamTypeMap.values());
+
+                    // Extract all distinct program courses from the group
+                    const distinctPCMap = new Map<
+                      number | undefined,
+                      (typeof examGroup.exams)[0]["examProgramCourses"][0]
+                    >();
+                    examGroup.exams.forEach((exam) => {
+                      exam.examProgramCourses.forEach((pc) => {
+                        if (pc.programCourse.id !== undefined) {
+                          distinctPCMap.set(pc.programCourse.id, pc);
+                        }
+                      });
+                    });
+                    const distinctProgramCourses = Array.from(distinctPCMap.values());
+
+                    // Extract all distinct subjects from the group
+                    const distinctSubjectMap = new Map<
+                      number | undefined,
+                      (typeof examGroup.exams)[0]["examSubjects"][0]
+                    >();
+                    examGroup.exams.forEach((exam) => {
+                      exam.examSubjects.forEach((es) => {
+                        if (es.subject?.id !== undefined) {
+                          distinctSubjectMap.set(es.subject.id, es);
+                        }
+                      });
+                    });
+                    const distinctSubjects = Array.from(distinctSubjectMap.values());
+
+                    // Extract all distinct shifts from the group
+                    const distinctShiftMap = new Map<
+                      number | undefined,
+                      (typeof examGroup.exams)[0]["examShifts"][0]
+                    >();
+                    examGroup.exams.forEach((exam) => {
+                      exam.examShifts.forEach((esh) => {
+                        if (esh.shift.id !== undefined) {
+                          distinctShiftMap.set(esh.shift.id, esh);
+                        }
+                      });
+                    });
+                    const distinctShifts = Array.from(distinctShiftMap.values());
+
+                    // Extract all distinct subject types from the group
+                    const distinctSTMap = new Map<
+                      number | undefined,
+                      (typeof examGroup.exams)[0]["examSubjectTypes"][0]
+                    >();
+                    examGroup.exams.forEach((exam) => {
+                      exam.examSubjectTypes.forEach((est) => {
+                        if (est.subjectType?.id !== undefined) {
+                          distinctSTMap.set(est.subjectType.id, est);
+                        }
+                      });
+                    });
+                    const distinctSubjectTypes = Array.from(distinctSTMap.values());
+
+                    return (
                       <div
-                        className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                        style={{ width: "6%" }}
+                        key={examGroup.id}
+                        className="flex border-b hover:bg-gray-50 group"
+                        style={{ minWidth: "1050px" }}
                       >
-                        {idx + 1}
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r  items-center gap-2 flex flex-col"
-                        style={{ width: "15%" }}
-                      >
-                        {/* Display exam component names */}
-                        <p>
-                          <Badge variant="outline" className="text-xs border-red-300 text-red-700 bg-red-50">
-                            {exm.examType.name}
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "6%" }}
+                        >
+                          {(currentPage - 1) * itemsPerPage + groupIdx + 1}
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r items-center gap-2 flex flex-col"
+                          style={{ width: "11%" }}
+                        >
+                          {/* Display exam types and exam group commencement date */}
+                          <div className="flex flex-col gap-1 items-center w-full">
+                            {distinctExamTypes.map((examType) => (
+                              <Badge
+                                key={examType.id}
+                                variant="outline"
+                                className="text-xs border-red-300 text-red-700 bg-red-50"
+                              >
+                                {examType.name}
+                              </Badge>
+                            ))}
+                          </div>
+                          <p className="text-center text-xs text-gray-600">
+                            {examGroup.examCommencementDate
+                              ? new Date(examGroup.examCommencementDate).toLocaleDateString()
+                              : "-"}
+                          </p>
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "16%" }}
+                        >
+                          <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-50">
+                            {examGroup.name}
                           </Badge>
-                        </p>
-                        <p className="text-center">{formatExamDateRange(exm.examSubjects)}</p>
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex gap-1 flex-col items-center"
-                        style={{ width: "14%" }}
-                      >
-                        {exm.examProgramCourses.map((pc: ExamProgramCourseDto, pcIndex: number) => (
-                          <p>
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex gap-1 flex-col items-center"
+                          style={{ width: "16%" }}
+                        >
+                          {distinctProgramCourses.map((pc) => (
                             <Badge
-                              key={`pc-index-${pcIndex}`}
+                              key={pc.id}
                               variant="outline"
                               className="text-xs border-blue-300 text-blue-700 bg-blue-50"
                             >
                               {pc.programCourse.name}
                             </Badge>
-                          </p>
-                        ))}
-                      </div>
-                      <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
-                        <p>
-                          {/* {sp.name ?? "-"}
-                          {!sp.isOptional && <span className="text-red-500 ml-1">*</span>}
-                          {sp.autoAssign && (
-                            <span className="ml-1 inline-flex items-center" title="Auto assigned">
-                              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-                              <span className="sr-only">Auto assigned</span>
-                            </span>
-                          )} */}
-                        </p>
-                        <div className="mt-1 flex flex-col gap-1">
-                          {getUniqueSubjects(exm.examSubjects).map((es: ExamSubjectDto, subjectIndex: number) => (
-                            <p key={`subject-${es.subject?.id}-${subjectIndex}`}>
+                          ))}
+                        </div>
+                        <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "11%" }}>
+                          <div className="mt-1 flex flex-col gap-1">
+                            {distinctSubjects.map((es, subjectIndex) => (
                               <Badge
+                                key={`subject-${es.subject?.id}-${subjectIndex}`}
                                 variant="outline"
                                 className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
                               >
                                 {es.subject?.name ?? "-"}
                               </Badge>
-                            </p>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
-                        style={{ width: "16%" }}
-                      >
-                        {exm.examShifts.map((esh: ExamShiftDto, eshIndex: number) => (
-                          <p>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
+                          style={{ width: "11%" }}
+                        >
+                          {distinctShifts.map((esh) => (
                             <Badge
-                              key={`pc-index-${eshIndex}`}
+                              key={esh.id}
                               variant="outline"
                               className="text-xs border-blue-300 text-blue-700 bg-blue-50"
                             >
                               {esh.shift.name}
                             </Badge>
-                          </p>
-                        ))}
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex gap-1 flex-col items-center justify-center"
-                        style={{ width: "12%" }}
-                      >
-                        {exm.examSubjectTypes.map((est: ExamSubjectTypeDto) => (
-                          <p>
+                          ))}
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex gap-1 flex-col items-center justify-center"
+                          style={{ width: "11%" }}
+                        >
+                          {distinctSubjectTypes.map((est) => (
                             <Badge
+                              key={est.id}
                               variant="outline"
                               className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
                             >
                               {est.subjectType?.code ?? "-"}
                             </Badge>
-                          </p>
-                        ))}
-                      </div>
-                      <div
-                        className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                        style={{ width: "10%" }}
-                      >
-                        <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
-                          {exm.class.name.split(" ")[1]}
-                        </Badge>
-                      </div>
+                          ))}
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "11%" }}
+                        >
+                          <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                            {examGroup.exams[0]?.class.name.split(" ")[1] || "-"}
+                          </Badge>
+                        </div>
 
-                      <div className="flex-shrink-0 p-3 flex items-center justify-center" style={{ width: "6%" }}>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              //   setIsPaperEditModalOpen(true);
-                              //   setSelectedPaperForEdit(sp);
-                            }}
-                            className="h-5 w-5 p-0"
-                          >
-                            <Link to={`${exm.id}`}>
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                          </Button>
+                        <div className="flex-shrink-0 p-3 flex items-center justify-center" style={{ width: "6%" }}>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                //   setIsPaperEditModalOpen(true);
+                                //   setSelectedPaperForEdit(sp);
+                              }}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Link to={`${examGroup.id}`}>
+                                <Edit className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

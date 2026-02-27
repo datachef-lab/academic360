@@ -362,3 +362,8 @@ export const userStatusMasterFrequencyTypeEnum = pgEnum("user_status_master_freq
     "REQUIRED",
     "OPTIONAL"
 ]);
+
+export const examSeatAllocationModeEnum = pgEnum("exam_seat_allocation_mode", [
+    "STANDARD",
+    "FOIL_NUMBER_BASED",
+]);

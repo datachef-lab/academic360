@@ -58,7 +58,16 @@ const BASE_URL = "/api/exams/schedule";
 //   }
 // }
 
-export async function doAssignExam(dto: ExamDto, file: File | null): Promise<ApiResponse<ExamT>> {
+export async function doAssignExam(
+  dto: ExamDto,
+  file: File | null,
+  examGroupData?: {
+    examGroupMode?: "new" | "existing";
+    newGroupName?: string;
+    examCommencementDate?: string;
+    selectedExistingGroupId?: number | null;
+  },
+): Promise<ApiResponse<ExamT>> {
   try {
     const formData = new FormData();
 
@@ -66,6 +75,31 @@ export async function doAssignExam(dto: ExamDto, file: File | null): Promise<Api
 
     // ✅ Send DTO as JSON (single field)
     formData.append("dto", JSON.stringify(dto));
+
+    // ✅ Build examGroup object from examGroupData
+    if (examGroupData) {
+      console.log("[SCHEDULE-EXAM] Appending exam group data to formData:", examGroupData);
+
+      let examGroup: any = {};
+
+      if (examGroupData.examGroupMode === "new") {
+        // For new group, use the provided name and commencement date
+        examGroup = {
+          name: examGroupData.newGroupName || "",
+          examCommencementDate: examGroupData.examCommencementDate || new Date().toISOString(),
+        };
+      } else if (examGroupData.examGroupMode === "existing") {
+        // For existing group, will be handled separately
+        // Backend will fetch the group by ID
+        formData.append("selectedExistingGroupId", examGroupData.selectedExistingGroupId?.toString() || "");
+        examGroup = {
+          name: `Existing Group ${examGroupData.selectedExistingGroupId}`,
+          examCommencementDate: new Date().toISOString(), // Placeholder, will be overridden by backend
+        };
+      }
+
+      formData.append("examGroup", JSON.stringify(examGroup));
+    }
 
     // ✅ Send file
     if (file) {

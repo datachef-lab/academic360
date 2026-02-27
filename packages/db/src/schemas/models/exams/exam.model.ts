@@ -1,14 +1,19 @@
-import {  integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import {  boolean, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { examTypeModel } from "./exam-type.model";
 import { academicYearModel, classModel } from "../academics";
-import { examOrderTypeEnum, genderTypeEnum } from "@/schemas/enums";
+import { examOrderTypeEnum, examSeatAllocationModeEnum, genderTypeEnum } from "@/schemas/enums";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { userModel } from "../user";
+import { examGroupModel } from "./exam-group.model";
 
 export const examModel = pgTable("exams", {
     id: serial().primaryKey(),
     legacyExamAssginmentId: integer(),
+    examGroupId: integer("exam_group_id_fk")
+        .references(() => examGroupModel.id),
+    isRoomsSelected: boolean().default(true),
+    seatAllocationMode: examSeatAllocationModeEnum().default("STANDARD"),
     academicYearId: integer()
         .references(() => academicYearModel.id)
         .notNull(),
