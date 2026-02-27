@@ -665,6 +665,10 @@ export const downloadAdmitCardsController = async (
     path: req.path,
     query: req.query,
   });
+
+  // disable default express timeout for long-running downloads
+  req.setTimeout(0);
+  res.setTimeout(0);
   try {
     const { examId, uploadSessionId } = req.query;
 
@@ -726,6 +730,11 @@ export const downloadAttendanceSheetsByExamIdController = async (
   next: NextFunction,
 ): Promise<void> => {
   console.log(req.query);
+
+  // ensure no timeout for potentially slow zip generation
+  req.setTimeout(0);
+  res.setTimeout(0);
+
   try {
     const { examId, uploadSessionId } = req.query;
 

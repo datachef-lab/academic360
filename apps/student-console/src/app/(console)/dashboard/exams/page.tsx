@@ -559,9 +559,9 @@ export default function ExamsContent() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">{exam.examType?.name || "Exam"}</h3>
-                  {displayPaper?.subject?.name && (
+                  {/* {displayPaper?.subject?.name && (
                     <p className={`${styles.titleColor} font-medium mb-2`}>{displayPaper.subject.name}</p>
-                  )}
+                  )} */}
                   {displayPaper && (
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                       <div className="flex items-center">

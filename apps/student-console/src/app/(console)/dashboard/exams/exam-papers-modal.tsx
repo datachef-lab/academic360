@@ -179,16 +179,14 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
       const blob = await downloadAdmitCard(examId, studentIdNum);
 
       // Create a download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `admit-card-${examId}-${studentIdNum}.pdf`;
-      document.body.appendChild(link);
-      link.click();
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const newTab = window.open(url, "_blank");
 
-      // Cleanup
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      if (newTab) {
+        newTab.addEventListener("load", () => window.URL.revokeObjectURL(url));
+      } else {
+        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      }
     } catch (err) {
       toast({
         title: "Download failed",
@@ -235,14 +233,19 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId }: ExamPap
                   <Button
                     onClick={handleDownloadAdmitCard}
                     disabled={downloading || loading}
-                    title="Download admit card (PDF)"
-                    className="h-10 w-10 mr-3 rounded-full flex items-center justify-center bg-indigo-00/40 drop-shadow-sm text-white hover:bg-indigo-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Download admit card"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm font-medium shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Download admit card"
                   >
                     {downloading ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-white" />
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-white shrink-0" />
+                      </>
                     ) : (
-                      <Download className="h-5 w-5 text-white" />
+                      <>
+                        <Download className="h-4 w-4 text-white shrink-0" />
+                        <span>Admit Card</span>
+                      </>
                     )}
                   </Button>
                 );
