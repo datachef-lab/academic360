@@ -506,7 +506,8 @@ export const getStudentsForExam = async (req: Request, res: Response) => {
 
 export const updateExamSubjectHandler = async (req: Request, res: Response) => {
   try {
-    const examSubject = await updateExamSubject(req.body.id, req.body);
+    const userId = (req as any)?.user?.id as number | undefined;
+    const examSubject = await updateExamSubject(req.body.id, req.body, userId);
 
     return res
       .status(200)

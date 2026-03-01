@@ -11,10 +11,14 @@ import { handleError } from "@/utils/handleError.js";
 
 export const createExamComponent = async (req: Request, res: Response) => {
   try {
-    const newExamComponent = await createExamComponentService({
-      ...req.body,
-      subjectId: req.body.subjectId,
-    });
+    const userId = (req as any)?.user?.id as number | undefined;
+    const newExamComponent = await createExamComponentService(
+      {
+        ...req.body,
+        subjectId: req.body.subjectId,
+      },
+      userId,
+    );
     res
       .status(201)
       .json(
@@ -75,9 +79,11 @@ export const getExamComponentById = async (req: Request, res: Response) => {
 
 export const updateExamComponent = async (req: Request, res: Response) => {
   try {
+    const userId = (req as any)?.user?.id as number | undefined;
     const updatedExamComponent = await updateExamComponentService(
       req.params.id as string,
       req.body,
+      userId,
     );
     if (!updatedExamComponent) {
       res
@@ -102,7 +108,11 @@ export const updateExamComponent = async (req: Request, res: Response) => {
 
 export const deleteExamComponent = async (req: Request, res: Response) => {
   try {
-    const result = await deleteExamComponentService(req.params.id as string);
+    const userId = (req as any)?.user?.id as number | undefined;
+    const result = await deleteExamComponentService(
+      req.params.id as string,
+      userId,
+    );
     if (!result) {
       res
         .status(404)

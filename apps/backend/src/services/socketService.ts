@@ -95,23 +95,25 @@ class SocketService {
       // Default: assume tab is active until we hear otherwise
       this.socketTabActive.set(socket.id, true);
 
-      // Handle user authentication and mapping
-      socket.on("authenticate", async (userId: string) => {
-        try {
-          await this.registerUser(userId, socket.id);
-          socket.join(`user:${userId}`); // Join a room specific to this user
-          console.log(
-            `[SocketService] User ${userId} authenticated with socket ${socket.id}`,
-          );
-          // Emit active users update after registration
-          this.broadcastActiveUsers();
-        } catch (error) {
-          console.error(
-            `[SocketService] Error authenticating user ${userId}:`,
-            error,
-          );
-        }
-      });
+      // Handle user authentication and mapping (accept string or { userName: string })
+      socket.on(
+        "authenticate",
+        async (payload: string | { userName?: string }) => {
+          try {
+            const userId =
+              typeof payload === "string" ? payload : (payload?.userName ?? "");
+            await this.registerUser(userId, socket.id);
+            socket.join(`user:${userId}`); // Join a room specific to this user
+            console.log(
+              `[SocketService] User ${userId} authenticated with socket ${socket.id}`,
+            );
+            // Emit active users update after registration
+            this.broadcastActiveUsers();
+          } catch (error) {
+            console.error(`[SocketService] Error authenticating user:`, error);
+          }
+        },
+      );
 
       // Track tab visibility (active tab vs background tab)
       socket.on("tab_visibility", (payload: { isActive: boolean }) => {
@@ -302,6 +304,47 @@ class SocketService {
       }
     });
     return activeUsers;
+  }
+
+  // Get user IDs of all connected staff and admin (for targeted broadcast)
+  private getActiveStaffAdminUserIds(): string[] {
+    const userIds: string[] = [];
+    this.activeConnections.forEach((sockets, userId) => {
+      if (sockets.size > 0) {
+        const userInfo = this.userInfoCache.get(userId);
+        if (
+          userInfo &&
+          (userInfo.type === "ADMIN" || userInfo.type === "STAFF")
+        ) {
+          userIds.push(userId);
+        }
+      }
+    });
+    return userIds;
+  }
+
+  // Emit an event only to connected staff and admin users
+  emitToStaffAndAdmin(event: string, payload: unknown) {
+    if (!this.io) {
+      console.error("[SocketService] Cannot emit to staff/admin: io is null");
+      return;
+    }
+    try {
+      const userIds = this.getActiveStaffAdminUserIds();
+      userIds.forEach((userId) => {
+        this.io!.to(`user:${userId}`).emit(event, payload);
+      });
+      console.log(
+        `[SocketService] Emitted "${event}" to ${userIds.length} staff/admin user(s)`,
+      );
+    } catch (error) {
+      console.error("[SocketService] Error emitting to staff/admin:", error);
+    }
+  }
+
+  // Send notification only to connected staff and admin users
+  sendNotificationToStaffAndAdmin(notification: Notification) {
+    this.emitToStaffAndAdmin("notification", notification);
   }
 
   private getOnlineStudentsCount(): number {

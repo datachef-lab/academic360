@@ -182,8 +182,10 @@ export const deleteExamGroupByIdController = async (
   try {
     const { id } = req.params;
 
+    const userId = (req as any)?.user?.id as number | undefined;
     const result = await examGroupService.deleteExamGroupByIdIfUpcoming(
       Number(id),
+      userId,
     );
 
     if (!result) {

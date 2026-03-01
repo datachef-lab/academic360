@@ -10,7 +10,8 @@ import {
 
 export const createExamType = async (req: Request, res: Response) => {
   try {
-    const created = await createExamTypeService(req.body);
+    const userId = (req as any)?.user?.id as number | undefined;
+    const created = await createExamTypeService(req.body, userId);
     res
       .status(201)
       .json(
@@ -65,9 +66,11 @@ export const getExamTypeById = async (req: Request, res: Response) => {
 
 export const updateExamType = async (req: Request, res: Response) => {
   try {
+    const userId = (req as any)?.user?.id as number | undefined;
     const updated = await updateExamTypeService(
       Number(req.params.id),
       req.body,
+      userId,
     );
     if (!updated) {
       return res
@@ -92,7 +95,11 @@ export const updateExamType = async (req: Request, res: Response) => {
 
 export const deleteExamType = async (req: Request, res: Response) => {
   try {
-    const result = await deleteExamTypeSafeService(Number(req.params.id));
+    const userId = (req as any)?.user?.id as number | undefined;
+    const result = await deleteExamTypeSafeService(
+      Number(req.params.id),
+      userId,
+    );
 
     if (result === null) {
       return res

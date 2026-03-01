@@ -16,7 +16,8 @@ import {
 } from "@repo/db/schemas";
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import * as examScheduleService from "./exam-schedule.service";
-import { socketService } from "@/services/socketService";
+import { socketService } from "@/services/socketService.js";
+import * as userService from "@/features/user/services/user.service.js";
 
 export async function findAll(
   page: number = 1,
@@ -324,28 +325,35 @@ export async function deleteExamGroupByIdIfUpcoming(
       throw new Error("Failed to delete exam.");
     }
 
-    // Emit socket event for exam deletion
-    const io = socketService.getIO();
-    if (io) {
-      io.emit("exam_group_deleted", {
+    // Emit to staff/admin only with userName
+    const userName =
+      userId != null
+        ? ((await userService.findById(userId))?.name ?? "Unknown User")
+        : "Unknown User";
+    socketService.emitToStaffAndAdmin("exam_management_update", {
+      entity: "exam_group",
+      action: "deleted",
+      entityId: examGroupId,
+      userName,
+      performedByUserId: userId ?? null,
+      message: "An exam group has been deleted",
+      timestamp: new Date().toISOString(),
+    });
+    socketService.sendNotificationToStaffAndAdmin({
+      id: `exam_group_deleted_${examGroupId}_${Date.now()}`,
+      type: "info",
+      userId: userId?.toString(),
+      userName,
+      message: `deleted exam group (ID: ${examGroupId})`,
+      createdAt: new Date(),
+      read: false,
+      meta: {
         examGroupId,
         type: "deletion",
-        message: "An exam group has been deleted",
-        timestamp: new Date().toISOString(),
-      });
-      io.emit("notification", {
-        id: `exam_group_deleted_${examGroupId}_${Date.now()}`,
-        type: "info",
-        message: `An exam group (ID: ${examGroupId}) has been deleted`,
-        createdAt: new Date(),
-        read: false,
-        meta: {
-          examGroupId,
-          type: "deletion",
-          deletedByUserId: userId ?? null,
-        },
-      });
-    }
+        entity: "exam_group",
+        action: "deleted",
+      },
+    });
 
     return { success: true as const, deletedExamGroupId: examGroupId };
   });

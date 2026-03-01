@@ -5,6 +5,8 @@ import {
   examTypeModel,
 } from "@repo/db/schemas/models/exams";
 import { and, eq, ilike, ne } from "drizzle-orm";
+import { socketService } from "@/services/socketService.js";
+import * as userService from "@/features/user/services/user.service.js";
 
 function normaliseExamTypePayload<T extends Partial<ExamType | ExamTypeT>>(
   data: T,
@@ -40,7 +42,7 @@ async function ensureUniqueName(
   return Boolean(existing);
 }
 
-export async function createExamType(data: ExamType) {
+export async function createExamType(data: ExamType, userId?: number) {
   const { id, createdAt, updatedAt, ...rest } = data as ExamTypeT;
   const payload = normaliseExamTypePayload(rest);
 
@@ -53,6 +55,31 @@ export async function createExamType(data: ExamType) {
   }
 
   const [created] = await db.insert(examTypeModel).values(payload).returning();
+  if (created) {
+    const userName =
+      userId != null
+        ? ((await userService.findById(userId))?.name ?? "Unknown User")
+        : "Unknown User";
+    socketService.emitToStaffAndAdmin("exam_management_update", {
+      entity: "exam_type",
+      action: "created",
+      entityId: created.id,
+      userName,
+      performedByUserId: userId ?? null,
+      message: "Exam type has been created",
+      timestamp: new Date().toISOString(),
+    });
+    socketService.sendNotificationToStaffAndAdmin({
+      id: `exam_type_created_${created.id}_${Date.now()}`,
+      type: "info",
+      userId: userId?.toString(),
+      userName,
+      message: `created exam type: ${created.name}`,
+      createdAt: new Date(),
+      read: false,
+      meta: { examTypeId: created.id, entity: "exam_type", action: "created" },
+    });
+  }
   return created;
 }
 
@@ -71,6 +98,7 @@ export async function findExamTypeById(id: number) {
 export async function updateExamType(
   id: number,
   data: Partial<ExamTypeT> | Partial<ExamType>,
+  userId?: number,
 ) {
   const { id: _, createdAt, updatedAt, ...rest } = data as Partial<ExamTypeT>;
   const payload = normaliseExamTypePayload(rest);
@@ -84,6 +112,31 @@ export async function updateExamType(
     .set(payload)
     .where(eq(examTypeModel.id, id))
     .returning();
+  if (updated) {
+    const userName =
+      userId != null
+        ? ((await userService.findById(userId))?.name ?? "Unknown User")
+        : "Unknown User";
+    socketService.emitToStaffAndAdmin("exam_management_update", {
+      entity: "exam_type",
+      action: "updated",
+      entityId: id,
+      userName,
+      performedByUserId: userId ?? null,
+      message: "Exam type has been updated",
+      timestamp: new Date().toISOString(),
+    });
+    socketService.sendNotificationToStaffAndAdmin({
+      id: `exam_type_updated_${id}_${Date.now()}`,
+      type: "update",
+      userId: userId?.toString(),
+      userName,
+      message: `updated exam type: ${updated.name}`,
+      createdAt: new Date(),
+      read: false,
+      meta: { examTypeId: id, entity: "exam_type", action: "updated" },
+    });
+  }
   return updated ?? null;
 }
 
@@ -95,7 +148,7 @@ export async function deleteExamType(id: number) {
   return deleted ?? null;
 }
 
-export async function deleteExamTypeSafe(id: number) {
+export async function deleteExamTypeSafe(id: number, userId?: number) {
   const [found] = await db
     .select()
     .from(examTypeModel)
@@ -108,6 +161,29 @@ export async function deleteExamTypeSafe(id: number) {
     .returning();
 
   if (deleted) {
+    const userName =
+      userId != null
+        ? ((await userService.findById(userId))?.name ?? "Unknown User")
+        : "Unknown User";
+    socketService.emitToStaffAndAdmin("exam_management_update", {
+      entity: "exam_type",
+      action: "deleted",
+      entityId: id,
+      userName,
+      performedByUserId: userId ?? null,
+      message: "Exam type has been deleted",
+      timestamp: new Date().toISOString(),
+    });
+    socketService.sendNotificationToStaffAndAdmin({
+      id: `exam_type_deleted_${id}_${Date.now()}`,
+      type: "info",
+      userId: userId?.toString(),
+      userName,
+      message: `deleted exam type: ${found.name}`,
+      createdAt: new Date(),
+      read: false,
+      meta: { examTypeId: id, entity: "exam_type", action: "deleted" },
+    });
     return {
       success: true,
       message: "Exam type deleted successfully.",

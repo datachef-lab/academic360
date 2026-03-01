@@ -80,7 +80,8 @@ import { findAcademicYearById } from "@/features/academics/services/academic-yea
 import { findClassById } from "@/features/academics/services/class.service";
 import { getShiftById } from "@/features/academics/controllers/shift.controller";
 import { PaginatedResponse } from "@/utils/PaginatedResponse";
-import { socketService } from "@/services/socketService";
+import { socketService } from "@/services/socketService.js";
+import * as userService from "@/features/user/services/user.service.js";
 import { PaperDto } from "@repo/db/dtos";
 import { io } from "@/app";
 import { enqueueNotification } from "@/services/notificationClient";
@@ -1681,25 +1682,35 @@ export async function createExamAssignment(
 
     if (!exam) throw new Error("Failed to create exam");
 
-    // Emit socket event for exam creation
-    const io = socketService.getIO();
-    if (io) {
-      io.emit("exam_created", {
+    // Emit to staff/admin only with userName for toast and refetch
+    const userName =
+      userId != null
+        ? ((await userService.findById(userId))?.name ?? "Unknown User")
+        : "Unknown User";
+    socketService.emitToStaffAndAdmin("exam_management_update", {
+      entity: "exam",
+      action: "created",
+      entityId: exam.id,
+      userName,
+      performedByUserId: userId ?? null,
+      message: "A new exam has been created",
+      timestamp: new Date().toISOString(),
+    });
+    socketService.sendNotificationToStaffAndAdmin({
+      id: `exam_created_${exam.id}_${Date.now()}`,
+      type: "info",
+      userId: userId?.toString(),
+      userName,
+      message: `created a new exam (ID: ${exam.id})`,
+      createdAt: new Date(),
+      read: false,
+      meta: {
         examId: exam.id,
         type: "creation",
-        message: "A new exam has been created",
-        timestamp: new Date().toISOString(),
-      });
-      // Also emit notification to all admins/staff
-      io.emit("notification", {
-        id: `exam_created_${exam.id}_${Date.now()}`,
-        type: "info",
-        message: `A new exam (ID: ${exam.id}) has been created`,
-        createdAt: new Date(),
-        read: false,
-        meta: { examId: exam.id, type: "creation" },
-      });
-    }
+        entity: "exam",
+        action: "created",
+      },
+    });
 
     // 2. Insert exam rooms (only if locations provided)
     const roomIdToExamRoom = new Map<number, any>();
@@ -2634,25 +2645,31 @@ export async function allotExamRoomsAndStudents(
       await tx.insert(examCandidateModel).values(candidateInserts);
     }
 
-    // Emit socket event for exam update
-    const io = socketService.getIO();
-    if (io) {
-      io.emit("exam_updated", {
-        examId: examId,
-        type: "allotment",
-        message: "Exam rooms and students have been allotted",
-        timestamp: new Date().toISOString(),
-      });
-      // Also emit to all admins/staff
-      io.emit("notification", {
-        id: `exam_update_${examId}_${Date.now()}`,
-        type: "update",
-        message: `Exam ${examId} has been updated with room allotment`,
-        createdAt: new Date(),
-        read: false,
-        meta: { examId, type: "allotment" },
-      });
-    }
+    // Emit to staff/admin only with userName
+    const userName =
+      userId != null
+        ? ((await userService.findById(userId))?.name ?? "Unknown User")
+        : "Unknown User";
+    socketService.emitToStaffAndAdmin("exam_management_update", {
+      entity: "exam",
+      action: "updated",
+      entityId: examId,
+      subType: "allotment",
+      userName,
+      performedByUserId: userId ?? null,
+      message: "Exam rooms and students have been allotted",
+      timestamp: new Date().toISOString(),
+    });
+    socketService.sendNotificationToStaffAndAdmin({
+      id: `exam_update_${examId}_${Date.now()}`,
+      type: "update",
+      userId: userId?.toString(),
+      userName,
+      message: `updated exam ${examId} with room allotment`,
+      createdAt: new Date(),
+      read: false,
+      meta: { examId, type: "allotment", entity: "exam", action: "updated" },
+    });
 
     return {
       examId: examId,
@@ -4890,6 +4907,7 @@ export async function findExamPapersByExamId(examId: number) {
 export async function updateExamSubject(
   id: number,
   givenExamSubject: ExamSubjectDto,
+  userId?: number,
 ): Promise<ExamSubjectDto | null> {
   console.log("givenExamSubject:", givenExamSubject);
   const [foundExamSubject] = await db
@@ -4913,25 +4931,36 @@ export async function updateExamSubject(
     .from(subjectModel)
     .where(eq(subjectModel.id, updatedExamSubject.subjectId));
 
-  // Emit socket event for exam subject update
-  const io = socketService.getIO();
-  if (io) {
-    io.emit("exam_updated", {
+  // Emit to staff/admin only (userId optional for updateExamSubject)
+  const userName =
+    userId != null
+      ? ((await userService.findById(userId))?.name ?? "Unknown User")
+      : "Unknown User";
+  socketService.emitToStaffAndAdmin("exam_management_update", {
+    entity: "exam",
+    action: "updated",
+    entityId: foundExamSubject.examId,
+    subType: "subject_datetime",
+    userName,
+    performedByUserId: userId ?? null,
+    message: "Exam subject date/time has been updated",
+    timestamp: new Date().toISOString(),
+  });
+  socketService.sendNotificationToStaffAndAdmin({
+    id: `exam_update_${foundExamSubject.examId}_${Date.now()}`,
+    type: "update",
+    userId: userId?.toString(),
+    userName,
+    message: `updated exam ${foundExamSubject.examId} subject date/time`,
+    createdAt: new Date(),
+    read: false,
+    meta: {
       examId: foundExamSubject.examId,
       type: "subject_datetime",
-      message: "Exam subject date/time has been updated",
-      timestamp: new Date().toISOString(),
-    });
-    // Also emit notification to all admins/staff
-    io.emit("notification", {
-      id: `exam_update_${foundExamSubject.examId}_${Date.now()}`,
-      type: "update",
-      message: `Exam ${foundExamSubject.examId} subject date/time has been updated`,
-      createdAt: new Date(),
-      read: false,
-      meta: { examId: foundExamSubject.examId, type: "subject_datetime" },
-    });
-  }
+      entity: "exam",
+      action: "updated",
+    },
+  });
 
   return {
     subject,
@@ -5040,25 +5069,36 @@ export async function updateExamAdmitCardDates(
     .set(updateData)
     .where(eq(examModel.examGroupId, foundExamGroup.id));
 
-  // Emit socket event for exam update
-  const io = socketService.getIO();
-  if (io) {
-    io.emit("exam_updated", {
-      examId: examId,
+  // Emit to staff/admin only with userName
+  const userName =
+    userId != null
+      ? ((await userService.findById(userId))?.name ?? "Unknown User")
+      : "Unknown User";
+  socketService.emitToStaffAndAdmin("exam_management_update", {
+    entity: "exam",
+    action: "updated",
+    entityId: examId,
+    subType: "admit_card_dates",
+    userName,
+    performedByUserId: userId ?? null,
+    message: "Exam admit card dates have been updated",
+    timestamp: new Date().toISOString(),
+  });
+  socketService.sendNotificationToStaffAndAdmin({
+    id: `exam_update_${examId}_${Date.now()}`,
+    type: "update",
+    userId: userId?.toString(),
+    userName,
+    message: `updated exam ${examId} admit card dates`,
+    createdAt: new Date(),
+    read: false,
+    meta: {
+      examId,
       type: "admit_card_dates",
-      message: "Exam admit card dates have been updated",
-      timestamp: new Date().toISOString(),
-    });
-    // Also emit notification to all admins/staff
-    io.emit("notification", {
-      id: `exam_update_${examId}_${Date.now()}`,
-      type: "update",
-      message: `Exam ${examId} admit card dates have been updated`,
-      createdAt: new Date(),
-      read: false,
-      meta: { examId, type: "admit_card_dates" },
-    });
-  }
+      entity: "exam",
+      action: "updated",
+    },
+  });
 
   return await findExamGroupById(foundExamGroup.id);
 }
@@ -5131,24 +5171,30 @@ export async function deleteExamByIdIfUpcoming(
       throw new Error("Failed to delete exam.");
     }
 
-    // Emit socket event for exam deletion
-    const io = socketService.getIO();
-    if (io) {
-      io.emit("exam_deleted", {
-        examId,
-        type: "deletion",
-        message: "An exam has been deleted",
-        timestamp: new Date().toISOString(),
-      });
-      io.emit("notification", {
-        id: `exam_deleted_${examId}_${Date.now()}`,
-        type: "info",
-        message: `An exam (ID: ${examId}) has been deleted`,
-        createdAt: new Date(),
-        read: false,
-        meta: { examId, type: "deletion", deletedByUserId: userId ?? null },
-      });
-    }
+    // Emit to staff/admin only with userName
+    const userName =
+      userId != null
+        ? ((await userService.findById(userId))?.name ?? "Unknown User")
+        : "Unknown User";
+    socketService.emitToStaffAndAdmin("exam_management_update", {
+      entity: "exam",
+      action: "deleted",
+      entityId: examId,
+      userName,
+      performedByUserId: userId ?? null,
+      message: "An exam has been deleted",
+      timestamp: new Date().toISOString(),
+    });
+    socketService.sendNotificationToStaffAndAdmin({
+      id: `exam_deleted_${examId}_${Date.now()}`,
+      type: "info",
+      userId: userId?.toString(),
+      userName,
+      message: `deleted exam (ID: ${examId})`,
+      createdAt: new Date(),
+      read: false,
+      meta: { examId, type: "deletion", entity: "exam", action: "deleted" },
+    });
 
     return { success: true as const, deletedExamId: examId };
   });

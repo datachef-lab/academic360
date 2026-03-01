@@ -185,15 +185,12 @@ class SocketService {
       createdAt: notification.createdAt ? new Date(notification.createdAt) : new Date(),
     };
 
-    // Filter out notifications initiated by the current user
-    // Don't show toast if this notification was created by the current user
-    // Compare as strings to handle any type mismatches
-    if (notification.userId && this.userId && String(notification.userId).trim() === String(this.userId).trim()) {
-      console.log("[SocketService] Filtering out self-initiated notification", {
-        notificationUserId: notification.userId,
-        currentUserId: this.userId,
-      });
-      // Still call listeners for UI updates, but don't show toast
+    // Filter out notifications initiated by the current user – do not show toast to the doer
+    // Compare as strings (trimmed) so the user who created/updated/deleted does not see the toast
+    const notificationUserId = notification.userId != null ? String(notification.userId).trim() : "";
+    const currentUserId = this.userId != null ? String(this.userId).trim() : "";
+    if (notificationUserId && currentUserId && notificationUserId === currentUserId) {
+      // Still call listeners for UI updates (e.g. refetch), but do not show toast
       this.notificationListeners.forEach((callback) => callback(typedNotification));
       return;
     }

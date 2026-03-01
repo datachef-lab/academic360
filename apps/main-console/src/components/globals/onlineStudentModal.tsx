@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { StudentDto } from "@repo/db/dtos/user";
 import { Circle, User } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { getStudentImageUrl } from "@/lib/student-image";
 
 /**
  * Batch-related info for a student.
@@ -32,6 +34,7 @@ export function OnlineStudentsModal({ open, onOpenChange, students, loading, isE
   useEffect(() => {
     if (students.length > 0) {
       console.log("📘 Online Students Data:", JSON.stringify(students, null, 2));
+      // console.log("📘 Sample Student:", JSON.stringify(students[0], null, 2));
     }
   }, [students]);
 
@@ -69,6 +72,7 @@ export function OnlineStudentsModal({ open, onOpenChange, students, loading, isE
               <TableHeader className="bg-muted/40">
                 <TableRow>
                   <TableHead className="w-14 text-center">#</TableHead>
+                  <TableHead className="">Name</TableHead>
                   <TableHead>Program</TableHead>
                   <TableHead>Session</TableHead>
                   <TableHead>Shift</TableHead>
@@ -114,9 +118,25 @@ export function OnlineStudentsModal({ open, onOpenChange, students, loading, isE
                   students.map((student, index) => {
                     //   const batch = student.currentBatch as BatchInfo | null;
 
+                    const imageUrl = getStudentImageUrl(student.uid);
+
                     return (
                       <TableRow key={student.id ?? index} className="hover:bg-muted/50 transition">
                         <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                        <TableCell className="">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              {imageUrl ? (
+                                <AvatarImage src={imageUrl} />
+                              ) : (
+                                <AvatarFallback>{(student.name || "").charAt(0) || "?"}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            <div className="truncate">
+                              <span className="block truncate">{student.name ?? "-"}</span>
+                            </div>
+                          </div>
+                        </TableCell>
                         <TableCell>{student.programCourse?.name ?? "-"}</TableCell>
                         <TableCell>{student.currentPromotion?.session?.name ?? "-"}</TableCell>
                         <TableCell>{student.currentPromotion?.shift?.name ?? "-"}</TableCell>

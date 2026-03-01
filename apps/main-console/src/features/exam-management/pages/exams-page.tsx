@@ -424,34 +424,46 @@ const ExamsPage = () => {
     });
   }, [currentPage, itemsPerPage, filters]);
 
-  // Listen for exam creation/update events
+  // Listen for exam management updates (broadcast to staff/admin only; toast shows who did the action)
   React.useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!socket || !isConnected || (user?.type !== "ADMIN" && user?.type !== "STAFF")) return;
 
-    const handleExamCreated = (data: { examId: number; type: string; message: string }) => {
-      console.log("[Exams Page] Exam created:", data);
-      toast.info("A new exam has been created. Refreshing...", {
-        duration: 3000,
-      });
+    const handleExamManagementUpdate = (data: {
+      entity: string;
+      action: string;
+      entityId?: number;
+      userName?: string;
+      performedByUserId?: number | null;
+      message?: string;
+    }) => {
+      if (data.entity !== "exam" && data.entity !== "exam_group") return;
+      // Do not show toast to the user who performed the action (compare with type coercion)
+      const currentId = user?.id != null ? Number(user.id) : null;
+      const performerId = data.performedByUserId != null ? Number(data.performedByUserId) : null;
+      const isSelf = currentId != null && performerId != null && currentId === performerId;
+      const displayName = isSelf ? "You" : data.userName || "Someone";
+      const actionText =
+        data.action === "created"
+          ? "created a new exam"
+          : data.action === "updated"
+            ? "updated an exam"
+            : data.action === "deleted"
+              ? "deleted an exam"
+              : "made changes to exams";
+      if (!isSelf) {
+        toast.info(`${displayName} ${actionText}. Refreshing...`, {
+          duration: 3000,
+        });
+      }
       refetchExams();
     };
 
-    const handleExamUpdated = (data: { examId: number; type: string; message: string }) => {
-      console.log("[Exams Page] Exam updated:", data);
-      toast.info("An exam has been updated. Refreshing...", {
-        duration: 3000,
-      });
-      refetchExams();
-    };
-
-    socket.on("exam_created", handleExamCreated);
-    socket.on("exam_updated", handleExamUpdated);
+    socket.on("exam_management_update", handleExamManagementUpdate);
 
     return () => {
-      socket.off("exam_created", handleExamCreated);
-      socket.off("exam_updated", handleExamUpdated);
+      socket.off("exam_management_update", handleExamManagementUpdate);
     };
-  }, [socket, isConnected, refetchExams]);
+  }, [socket, isConnected, user?.type, user?.id, refetchExams]);
 
   useEffect(() => {
     // Only fetch data when authentication is ready, and only on initial mount
@@ -1847,7 +1859,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.status || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, status: value === "all" ? null : (value as any) })
+                            setFilters({
+                              ...filters,
+                              status: value === "all" ? null : (value as "upcoming" | "recent" | "previous"),
+                            })
                           }
                         >
                           <SelectTrigger id="status">
