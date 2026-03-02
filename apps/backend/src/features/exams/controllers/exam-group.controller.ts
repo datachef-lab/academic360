@@ -113,12 +113,12 @@ export const getExamGroupByStudentIdController = async (
       Number(studentId),
     );
 
-    if (!examGroups || examGroups.content.length === 0) {
-      res
-        .status(404)
-        .json(new ApiError(404, "Exam groups not found for student"));
-      return;
-    }
+    // if (!examGroups || examGroups.content.length === 0) {
+    //   res
+    //     .status(404)
+    //     .json(new ApiError(404, "Exam groups not found for student"));
+    //   return;
+    // }
 
     res
       .status(200)
