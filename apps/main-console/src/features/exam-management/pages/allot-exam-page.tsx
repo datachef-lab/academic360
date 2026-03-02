@@ -21,7 +21,7 @@ import {
   countStudentsForExam,
   countStudentsBreakdownForExam,
 } from "@/services/exam-schedule.service";
-import { fetchExams, fetchExamById } from "@/services/exam.service";
+import { fetchExamGroups, fetchExamById } from "@/services/exam.service";
 import { allotExamRoomsAndStudents, type AllotExamParams } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
 import * as XLSX from "xlsx";
@@ -58,6 +58,7 @@ export default function AllotExamPage() {
   const queryClient = useQueryClient();
 
   // Exam selection
+  const [selectedExamGroupId, setSelectedExamGroupId] = useState<number | null>(null);
   const [selectedExamId, setSelectedExamId] = useState<number | null>(examIdParam ? Number(examIdParam) : null);
   const [selectedExam, setSelectedExam] = useState<ExamDto | null>(null);
 
@@ -95,17 +96,17 @@ export default function AllotExamPage() {
     return true;
   }, [admitCardStartDate, admitCardEndDate]);
 
-  // Fetch all exams for selection
-  const { data: examsData, isLoading: loadingExams } = useQuery(
-    ["exams", "for-allotment"],
+  // Fetch exam groups for selection (each group contains exams)
+  const { data: examGroupsData, isLoading: loadingExamGroups } = useQuery(
+    ["examGroups", "for-allotment"],
     async () => {
-      const data = await fetchExams(1, 1000); // Fetch many exams
+      const data = await fetchExamGroups(1, 1000); // Fetch many exam groups
       return data.content;
     },
     {
       onError: (error) => {
-        console.error("Error fetching exams:", error);
-        toast.error("Failed to load exams");
+        console.error("Error fetching exam groups:", error);
+        toast.error("Failed to load exam groups");
       },
     },
   );
@@ -161,6 +162,10 @@ export default function AllotExamPage() {
     if (fetchedExam) {
       console.log("[ALLOT-EXAM] Exam fetched successfully:", fetchedExam.id);
       setSelectedExam(fetchedExam);
+      // Set exam group from exam when loaded (e.g. from URL param)
+      if (fetchedExam.examGroupId) {
+        setSelectedExamGroupId(fetchedExam.examGroupId);
+      }
       // Set admit card dates if they exist
       if (fetchedExam.admitCardStartDownloadDate) {
         setAdmitCardStartDate(toDatetimeLocal(fetchedExam.admitCardStartDownloadDate));
@@ -638,8 +643,20 @@ export default function AllotExamPage() {
     }
   };
 
+  // Helper to format exam commencement date (dd/mm/yyyy)
+  const formatExamCommencementDate = (date: Date | string | null | undefined): string => {
+    if (!date) return "";
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return "";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   // Reset form function
   const resetForm = () => {
+    setSelectedExamGroupId(null);
     setSelectedExamId(null);
     setSelectedExam(null);
     setGender("ALL");
@@ -776,25 +793,32 @@ export default function AllotExamPage() {
     allotExamMutation.mutate();
   };
 
-  // Filter exams that are available for allotment
-  // Show exams that:
-  // 1. Have NO rooms/locations assigned (never allotted with rooms), AND
-  // 2. Have NO candidates (never allotted without rooms)
-  const examsWithoutRooms =
-    examsData?.filter((exam) => {
-      // Skip exams that already have rooms assigned
-      if (exam.locations && exam.locations.length > 0) {
-        return false;
-      }
+  // Helper: exam is available for allotment if no rooms and no candidates
+  const isExamAvailableForAllotment = (exam: ExamDto) => {
+    if (exam.locations && exam.locations.length > 0) return false;
+    if (exam.candidateCount && exam.candidateCount > 0) return false;
+    return true;
+  };
 
-      // Skip exams that already have candidates allotted (allotted without rooms)
-      if (exam.candidateCount && exam.candidateCount > 0) {
-        return false;
-      }
+  // Exam groups that have at least one exam available for allotment
+  // Also include the selected exam's group (e.g. when opened via URL) so dropdown displays correctly
+  const examGroupsWithAllotableExams = (() => {
+    const withAllotable =
+      examGroupsData?.filter((group) => {
+        const allotableExams = (group.exams || []).filter(isExamAvailableForAllotment);
+        return allotableExams.length > 0;
+      }) || [];
+    if (selectedExamGroupId && !withAllotable.some((g) => g.id === selectedExamGroupId) && examGroupsData) {
+      const selectedGroup = examGroupsData.find((g) => g.id === selectedExamGroupId);
+      if (selectedGroup) return [...withAllotable, selectedGroup];
+    }
+    return withAllotable;
+  })();
 
-      // Include only newly scheduled exams with no allotment yet
-      return true;
-    }) || [];
+  // Exams available for allotment, filtered by selected exam group
+  const examsForSelectedGroup = selectedExamGroupId
+    ? (examGroupsData?.find((g) => g.id === selectedExamGroupId)?.exams || []).filter(isExamAvailableForAllotment)
+    : [];
 
   return (
     <div className="min-h-screen w-full p-7 py-4">
@@ -817,10 +841,53 @@ export default function AllotExamPage() {
             </Button>
           </div>
 
-          {/* Controls Row - Select Exam, Gender, Order By */}
+          {/* Controls Row - Exam Group, Exam, Gender, Order By */}
           <Card className="border-0 shadow-none mb-4">
             <CardContent className="pt-4 pb-4">
               <div className="flex flex-wrap items-end gap-4">
+                <div className="flex-1 min-w-[280px]">
+                  <Label className="font-medium text-gray-700 mb-2 block">Exam Group</Label>
+                  <Select
+                    value={selectedExamGroupId?.toString() || ""}
+                    onValueChange={(val) => {
+                      const id = val ? Number(val) : null;
+                      setSelectedExamGroupId(id);
+                      setSelectedExamId(null);
+                      setSelectedExam(null);
+                      setSelectedRooms([]);
+                      setEnableFoilNumber(false);
+                      setEnableRoomSelection(true);
+                      setExcelFile(null);
+                      setAdmitCardStartDate("");
+                      setAdmitCardEndDate("");
+                    }}
+                    disabled={loadingExamGroups}
+                  >
+                    <SelectTrigger className="h-10 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-left">
+                      <SelectValue placeholder={loadingExamGroups ? "Loading exam groups..." : "Select exam group"} />
+                    </SelectTrigger>
+                    <SelectContent className="text-left">
+                      {examGroupsWithAllotableExams.length === 0 ? (
+                        <div className="px-2 py-1.5 text-sm text-gray-500 text-left">
+                          No exam groups available for allotment
+                        </div>
+                      ) : (
+                        examGroupsWithAllotableExams
+                          .filter((g) => g.id != null)
+                          .map((group) => (
+                            <SelectItem key={group.id!} value={group.id!.toString()} className="text-left">
+                              <div className="flex flex-col py-0.5 text-left">
+                                <span className="font-medium">{group.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatExamCommencementDate(group.examCommencementDate)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex-1 min-w-[300px]">
                   <Label className="font-medium text-gray-700 mb-2 block">Select Exam</Label>
                   <Select
@@ -836,13 +903,13 @@ export default function AllotExamPage() {
                       setAdmitCardStartDate("");
                       setAdmitCardEndDate("");
                     }}
-                    disabled={loadingExams || (loadingExam && !!selectedExamId)}
+                    disabled={loadingExamGroups || !selectedExamGroupId || (loadingExam && !!selectedExamId)}
                   >
-                    <SelectTrigger className="h-10 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                    <SelectTrigger className="h-10 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-left">
                       <SelectValue
                         placeholder={
-                          loadingExams
-                            ? "Loading exams..."
+                          !selectedExamGroupId
+                            ? "Select exam group first"
                             : loadingExam && selectedExamId
                               ? "Loading exam details..."
                               : "Select an exam"
@@ -850,17 +917,33 @@ export default function AllotExamPage() {
                       />
                       {loadingExam && selectedExamId && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
                     </SelectTrigger>
-                    <SelectContent>
-                      {examsWithoutRooms.length === 0 ? (
-                        <div className="px-2 py-1.5 text-sm text-gray-500">No exams available for allotment</div>
+                    <SelectContent className="text-left">
+                      {examsForSelectedGroup.length === 0 ? (
+                        <div className="px-2 py-1.5 text-sm text-gray-500 text-left">
+                          {selectedExamGroupId ? "No exams available for allotment" : "Select exam group first"}
+                        </div>
                       ) : (
-                        examsWithoutRooms
+                        examsForSelectedGroup
                           .filter((exam) => exam.id !== null && exam.id !== undefined)
-                          .map((exam) => (
-                            <SelectItem key={exam.id} value={exam.id!.toString()}>
-                              {exam.examType.name} - {exam.class.name} - {exam.academicYear.year}
-                            </SelectItem>
-                          ))
+                          .map((exam) => {
+                            const examName =
+                              `${exam.examType?.name || ""} - ${exam.class?.name || ""} - ${exam.academicYear?.year || ""}`.trim();
+                            const subjectTypesStr =
+                              exam.examSubjectTypes
+                                ?.map((est) => est.subjectType?.code || est.subjectType?.name || "")
+                                .filter(Boolean)
+                                .join(", ") || "";
+                            return (
+                              <SelectItem key={exam.id} value={exam.id!.toString()} className="text-left">
+                                <div className="flex flex-col py-0.5 text-left">
+                                  <span className="font-medium">{examName}</span>
+                                  {subjectTypesStr && (
+                                    <span className="text-xs text-muted-foreground">{subjectTypesStr}</span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            );
+                          })
                       )}
                     </SelectContent>
                   </Select>
@@ -872,11 +955,11 @@ export default function AllotExamPage() {
                   <Select value={gender || ""} onValueChange={(value) => setGender(value as typeof gender)}>
                     <SelectTrigger
                       id="gender-select"
-                      className="h-10 w-full sm:w-48 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                      className="h-10 w-full sm:w-48 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-left"
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="text-left">
                       <SelectItem value="ALL">All Students</SelectItem>
                       <SelectItem value="MALE">Male Only</SelectItem>
                       <SelectItem value="FEMALE">Female Only</SelectItem>
@@ -891,11 +974,11 @@ export default function AllotExamPage() {
                   <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
                     <SelectTrigger
                       id="order-by-select"
-                      className="h-10 w-full sm:w-52 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                      className="h-10 w-full sm:w-52 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-left"
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="text-left">
                       <SelectItem value="UID">UID</SelectItem>
                       <SelectItem value="CU_REGISTRATION_NUMBER">CU Registration Number</SelectItem>
                       <SelectItem value="CU_ROLL_NUMBER">CU Roll Number</SelectItem>

@@ -24,7 +24,7 @@ import { getAllSubjects } from "@/services/subject.api";
 import { checkDuplicateExam, countStudentsBreakdownForExam } from "@/services/exam-schedule.service";
 import { fetchExamGroups, type ExamFilters } from "@/services/exam.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto, ExamGroupDto } from "@repo/db/index";
+import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto } from "@repo/db/index";
 import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
@@ -270,8 +270,6 @@ export default function ScheduleExamPage() {
   const [examGroupMode, setExamGroupMode] = useState<"new" | "existing">("new");
   const [newGroupName, setNewGroupName] = useState<string>("");
   const [selectedExistingGroupId, setSelectedExistingGroupId] = useState<number | null>(null);
-  const [existingGroups, setExistingGroups] = useState<ExamGroupDto[]>([]);
-  const [loadingExamGroups, setLoadingExamGroups] = useState(false);
 
   // Room and student selection moved to allot-exam-page
   // Excel file upload moved to allot-exam-page
@@ -1433,7 +1431,6 @@ export default function ScheduleExamPage() {
     setNewGroupName("");
     setNewGroupCommencementDate(undefined);
     setSelectedExistingGroupId(null);
-    setExistingGroups([]);
     setExistingGroupFilterDate(undefined);
   };
 
@@ -1517,35 +1514,57 @@ export default function ScheduleExamPage() {
   const [newGroupCommencementDate, setNewGroupCommencementDate] = useState<Date | undefined>(undefined);
   const [existingGroupFilterDate, setExistingGroupFilterDate] = useState<Date | undefined>(undefined);
 
-  // Fetch existing exam groups with date filter
-  const handleFetchExistingGroups = useCallback(async () => {
-    try {
-      setLoadingExamGroups(true);
+  // Auto-fetch existing exam groups when "Select Existing Group" tab is active
+  const shouldFetchExistingGroups = !!(
+    examGroupMode === "existing" &&
+    examType &&
+    semester &&
+    selectedProgramCourses.length > 0
+  );
+
+  const existingGroupFilterDateStr = existingGroupFilterDate
+    ? existingGroupFilterDate.toISOString().split("T")[0]
+    : undefined;
+
+  const { data: existingGroupsData, isLoading: loadingExamGroups } = useQuery(
+    ["existingExamGroups", selectedAcademicYearId, existingGroupFilterDateStr],
+    async () => {
       const filters: ExamFilters = {
-        academicYearId: selectedAcademicYearId,
+        academicYearId: selectedAcademicYearId ?? undefined,
       };
-
-      if (existingGroupFilterDate) {
-        const dateStr = existingGroupFilterDate.toISOString().split("T")[0];
-        filters.dateFrom = dateStr;
-        filters.dateTo = dateStr;
+      if (existingGroupFilterDateStr) {
+        filters.dateFrom = existingGroupFilterDateStr;
+        filters.dateTo = existingGroupFilterDateStr;
       }
-
       const response = await fetchExamGroups(1, 100, filters);
-      const groups = response?.content || [];
-      setExistingGroups(groups);
+      return response?.content || [];
+    },
+    {
+      enabled: shouldFetchExistingGroups,
+      staleTime: 30000,
+      refetchOnWindowFocus: false,
+    },
+  );
 
-      if (groups.length === 0 && existingGroupFilterDate) {
-        toast.info("No exam groups found for the selected date");
-      }
-    } catch (error) {
-      console.error("Error fetching exam groups:", error);
-      toast.error("Failed to fetch exam groups");
-      setExistingGroups([]);
-    } finally {
-      setLoadingExamGroups(false);
+  const existingGroups = existingGroupsData ?? [];
+
+  // Format exam commencement date (dd/mm/yyyy)
+  const formatExamCommencementDate = (date: Date | string | null | undefined): string => {
+    if (!date) return "";
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return "";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // Toast when no groups found for filtered date
+  useEffect(() => {
+    if (!loadingExamGroups && shouldFetchExistingGroups && existingGroups.length === 0 && existingGroupFilterDate) {
+      toast.info("No exam groups found for the selected date");
     }
-  }, [selectedAcademicYearId, existingGroupFilterDate]);
+  }, [loadingExamGroups, shouldFetchExistingGroups, existingGroups.length, existingGroupFilterDate]);
 
   return (
     <div className="min-h-screen w-full p-7 py-4">
@@ -1809,15 +1828,15 @@ export default function ScheduleExamPage() {
             {examType && semester && selectedProgramCourses.length > 0 ? (
               <Card className="border-0 shadow-none">
                 <CardContent className="space-y-4 pb-4 pt-4">
-                  <div className="space-y-3">
-                    <h3 className="text-base font-semibold text-gray-800">Exam Group Selection</h3>
-
-                    <Tabs
-                      value={examGroupMode}
-                      onValueChange={(value) => setExamGroupMode(value as "new" | "existing")}
-                      className="w-full"
-                    >
-                      <TabsList className="grid w-full grid-cols-2">
+                  <Tabs
+                    value={examGroupMode}
+                    onValueChange={(value) => setExamGroupMode(value as "new" | "existing")}
+                    className="w-full"
+                  >
+                    {/* Row 1: Heading left + Tabs right */}
+                    <div className="flex flex-nowrap items-center justify-between gap-4 mb-4">
+                      <h3 className="text-base font-semibold text-gray-800 shrink-0">Exam Group Selection</h3>
+                      <TabsList className="grid grid-cols-2 w-auto shrink-0">
                         <TabsTrigger
                           value="new"
                           className="data-[state=active]:bg-purple-500 data-[state=active]:text-white"
@@ -1831,113 +1850,118 @@ export default function ScheduleExamPage() {
                           Select Existing Group
                         </TabsTrigger>
                       </TabsList>
+                    </div>
 
-                      {/* New Group Tab */}
-                      <TabsContent value="new" className="space-y-4 mt-4">
-                        <div className="space-y-3">
-                          {/* Group Name */}
-                          <div className="flex flex-col gap-2">
-                            <Label className="font-medium text-gray-700">Exam Group Name</Label>
-                            <Textarea
-                              value={newGroupName}
-                              onChange={(e) => setNewGroupName(e.target.value)}
-                              placeholder="Enter exam group name..."
-                              className="min-h-24 resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                            />
-                            <p className="text-xs text-gray-500">
-                              This name will be used to identify the exam group. You can edit it before creating.
-                            </p>
-                          </div>
-
-                          {/* Commencement Date */}
-                          <div className="flex flex-col gap-2">
-                            <Label className="font-medium text-gray-700">Exam Commencement Date</Label>
-                            <DatePicker
-                              value={newGroupCommencementDate}
-                              onSelect={setNewGroupCommencementDate}
-                              className="w-full"
-                            />
-                            <p className="text-xs text-gray-500">Select the date when this exam group starts.</p>
-                          </div>
+                    {/* Row 2: Content full width */}
+                    <TabsContent value="new" className="space-y-4 mt-0">
+                      <div className="space-y-3">
+                        {/* Group Name */}
+                        <div className="flex flex-col gap-2">
+                          <Label className="font-medium text-gray-700">Exam Group Name</Label>
+                          <Textarea
+                            value={newGroupName}
+                            onChange={(e) => setNewGroupName(e.target.value)}
+                            placeholder="Enter exam group name..."
+                            className="min-h-24 resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          />
+                          <p className="text-xs text-gray-500">
+                            This name will be used to identify the exam group. You can edit it before creating.
+                          </p>
                         </div>
-                      </TabsContent>
 
-                      {/* Existing Group Tab */}
-                      <TabsContent value="existing" className="space-y-4 mt-4">
-                        <div className="space-y-3">
-                          {/* Date Filter for Existing Groups */}
-                          <div className="flex flex-col gap-2">
-                            <Label className="font-medium text-gray-700">Filter by Date (Optional)</Label>
-                            <DatePicker
-                              value={existingGroupFilterDate}
-                              onSelect={setExistingGroupFilterDate}
-                              className="w-full"
-                            />
-                            <p className="text-xs text-gray-500">
-                              Leave empty to see all exam groups, or select a date to filter.
-                            </p>
+                        {/* Commencement Date */}
+                        <div className="flex flex-col gap-2">
+                          <Label className="font-medium text-gray-700">Exam Commencement Date</Label>
+                          <DatePicker
+                            value={newGroupCommencementDate}
+                            onSelect={setNewGroupCommencementDate}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-gray-500">Select the date when this exam group starts.</p>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    {/* Existing Group Tab */}
+                    <TabsContent value="existing" className="space-y-4 mt-0">
+                      <div className="space-y-3">
+                        {/* Date Filter for Existing Groups */}
+                        <div className="flex flex-col gap-2">
+                          <Label className="font-medium text-gray-700">Filter by Date (Optional)</Label>
+                          <DatePicker
+                            value={existingGroupFilterDate}
+                            onSelect={setExistingGroupFilterDate}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-gray-500">
+                            Leave empty to see all exam groups, or select a date to filter automatically.
+                          </p>
+                        </div>
+
+                        {/* Existing Groups Selection */}
+                        {loadingExamGroups ? (
+                          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center gap-2 text-sm text-gray-600">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Loading exam groups...
                           </div>
-
-                          {/* Fetch Button */}
-                          <Button
-                            onClick={handleFetchExistingGroups}
-                            disabled={loadingExamGroups}
-                            className="w-full h-10 bg-blue-500 hover:bg-blue-600 text-white font-medium"
-                          >
-                            {loadingExamGroups ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Fetching...
-                              </>
-                            ) : (
-                              "Search Exam Groups"
-                            )}
-                          </Button>
-
-                          {/* Existing Groups Selection */}
-                          {existingGroups.length > 0 ? (
-                            <div className="space-y-2">
+                        ) : existingGroups.length > 0 ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
                               <Label className="font-medium text-gray-700">Available Exam Groups</Label>
-                              <div className="border border-gray-300 rounded-lg overflow-y-auto max-h-64 space-y-2 p-2">
-                                {existingGroups.map((group) => (
-                                  <button
-                                    key={group.id}
-                                    type="button"
-                                    onClick={() => setSelectedExistingGroupId(group.id ?? null)}
-                                    className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
-                                      selectedExistingGroupId === group.id
-                                        ? "border-purple-500 bg-purple-50"
-                                        : "border-gray-300 bg-gray-50 hover:border-purple-300"
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <Checkbox
-                                        checked={selectedExistingGroupId === group.id}
-                                        onCheckedChange={() => setSelectedExistingGroupId(group.id ?? null)}
-                                        className="h-4 w-4"
-                                      />
-                                      <div className="flex-1">
-                                        <p className="font-medium text-sm text-gray-800">{group.name}</p>
+                              <span className="text-sm text-gray-600">
+                                {existingGroups.length} group{existingGroups.length !== 1 ? "s" : ""} found
+                              </span>
+                            </div>
+                            <div className="border border-gray-300 rounded-lg overflow-y-auto max-h-80 space-y-2 p-2">
+                              {existingGroups.map((group) => (
+                                <button
+                                  key={group.id}
+                                  type="button"
+                                  onClick={() => setSelectedExistingGroupId(group.id ?? null)}
+                                  className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
+                                    selectedExistingGroupId === group.id
+                                      ? "border-purple-500 bg-purple-50"
+                                      : "border-gray-300 bg-gray-50 hover:border-purple-300"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      checked={selectedExistingGroupId === group.id}
+                                      onCheckedChange={() => setSelectedExistingGroupId(group.id ?? null)}
+                                      className="h-4 w-4 shrink-0"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-sm text-gray-800">{group.name}</p>
+                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
                                         <p className="text-xs text-gray-600">
                                           {group.exams?.length || 0} exam(s) in this group
                                         </p>
+                                        {group.examCommencementDate && (
+                                          <p className="text-xs text-gray-600">
+                                            Commencement: {formatExamCommencementDate(group.examCommencementDate)}
+                                          </p>
+                                        )}
                                       </div>
                                     </div>
-                                  </button>
-                                ))}
-                              </div>
+                                  </div>
+                                </button>
+                              ))}
                             </div>
-                          ) : (
-                            loadingExamGroups === false && (
-                              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-sm text-gray-600">
-                                {examGroupMode === "existing" && "Click 'Search Exam Groups' to find available groups"}
-                              </div>
-                            )
-                          )}
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="font-medium text-gray-700">Available Exam Groups</Label>
+                              <span className="text-sm text-gray-600">0 groups found</span>
+                            </div>
+                            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-sm text-gray-600">
+                              No exam groups found
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             ) : null}
