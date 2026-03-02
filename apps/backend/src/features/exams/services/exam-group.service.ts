@@ -14,28 +14,59 @@ import {
   promotionModel,
   studentModel,
 } from "@repo/db/schemas";
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import * as examScheduleService from "./exam-schedule.service";
 import { socketService } from "@/services/socketService";
+
+export interface ExamGroupFilters {
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  academicYearId?: number | null;
+}
 
 export async function findAll(
   page: number = 1,
   pageSize: number = 10,
+  filters?: ExamGroupFilters,
 ): Promise<PaginatedResponse<ExamGroupDto>> {
   pageSize = pageSize > 0 ? pageSize : 10;
   const offset = (page - 1) * pageSize;
 
-  // 1️⃣ Get total count
+  // Build where conditions for examCommencementDate filter
+  const whereConditions = [];
+  if (filters?.dateFrom && filters?.dateTo) {
+    whereConditions.push(
+      and(
+        gte(examGroupModel.examCommencementDate, filters.dateFrom),
+        lte(examGroupModel.examCommencementDate, filters.dateTo),
+      )!,
+    );
+  } else if (filters?.dateFrom) {
+    whereConditions.push(
+      gte(examGroupModel.examCommencementDate, filters.dateFrom),
+    );
+  } else if (filters?.dateTo) {
+    whereConditions.push(
+      lte(examGroupModel.examCommencementDate, filters.dateTo),
+    );
+  }
+
+  const whereClause =
+    whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+  // 1️⃣ Get total count with filters
   const [{ totalExamGroups }] = await db
     .select({ totalExamGroups: count() })
-    .from(examGroupModel);
+    .from(examGroupModel)
+    .where(whereClause);
 
   const totalPages = Math.ceil(Number(totalExamGroups) / pageSize);
 
-  // 2️⃣ Get paginated exam groups
+  // 2️⃣ Get paginated exam groups with filters
   const examGroups = await db
     .select()
     .from(examGroupModel)
+    .where(whereClause)
     .limit(pageSize)
     .offset(offset)
     .orderBy(desc(examGroupModel.examCommencementDate));
