@@ -834,7 +834,7 @@
                 class="s4"
                 style="text-align: center; "
               >
-              <%= row.subjectName %>
+              <%= row.subjectName %><% if (row.componentNames && row.componentNames.trim() !== '') { %> - (<%= row.componentNames %>)<% } %>
               </p>
               <p
                 class="s4"

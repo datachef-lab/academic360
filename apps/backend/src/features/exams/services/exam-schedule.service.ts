@@ -3410,6 +3410,7 @@ export async function downloadAdmitCardsAsZip(
       subjectName: paperModel.name,
       subjectCode: paperModel.code,
       programCourse: programCourseModel.name,
+      paperId: examCandidateModel.paperId,
     })
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
@@ -3478,6 +3479,50 @@ export async function downloadAdmitCardsAsZip(
 
     await Promise.all(
       batch.map(async ([uid, studentRows]) => {
+        // Fetch paper components for each row
+        const examRowsWithComponents = await Promise.all(
+          studentRows.map(async (r) => {
+            let componentNames = "";
+            if (r.paperId) {
+              try {
+                const paper = await paperServices.getPaperById(r.paperId);
+                if (
+                  paper?.components &&
+                  Array.isArray(paper.components) &&
+                  paper.components.length > 0
+                ) {
+                  const codes = paper.components
+                    .map(
+                      (comp) =>
+                        comp.examComponent?.code ||
+                        comp.examComponent?.shortName ||
+                        "",
+                    )
+                    .filter(Boolean);
+                  componentNames = codes.join(", ");
+                }
+              } catch (error) {
+                console.error(
+                  `Error fetching paper components for paperId ${r.paperId}:`,
+                  error,
+                );
+              }
+            }
+            return {
+              subjectName: r.subjectName!,
+              subjectCode: r.subjectCode!,
+              componentNames: componentNames || undefined,
+              date: formatExamDateFromTimestamp(r.examStartDate!),
+              time: formatExamTimeFromTimestamps(
+                r.examStartDate!,
+                r.examEndDate!,
+              ),
+              seatNo: r.seatNo!,
+              room: r.roomName!,
+            };
+          }),
+        );
+
         const pdfBuffer =
           await pdfGenerationService.generateExamAdmitCardPdfBuffer({
             semester: studentRows[0]?.semester?.split(" ")[1] ?? "",
@@ -3492,17 +3537,7 @@ export async function downloadAdmitCardsAsZip(
             shiftName: studentRows[0]?.shiftName ?? "",
             qrCodeDataUrl: null,
 
-            examRows: studentRows.map((r) => ({
-              subjectName: r.subjectName!,
-              subjectCode: r.subjectCode!,
-              date: formatExamDateFromTimestamp(r.examStartDate!),
-              time: formatExamTimeFromTimestamps(
-                r.examStartDate!,
-                r.examEndDate!,
-              ),
-              seatNo: r.seatNo!,
-              room: r.roomName!,
-            })),
+            examRows: examRowsWithComponents,
           });
 
         zip.file(`${uid}_admit_card.pdf`, pdfBuffer);
@@ -4632,6 +4667,7 @@ export async function downloadSingleAdmitCard(
       subjectName: paperModel.name,
       subjectCode: paperModel.code,
       programCourse: programCourseModel.name,
+      paperId: examCandidateModel.paperId,
     })
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
@@ -4674,6 +4710,55 @@ export async function downloadSingleAdmitCard(
 
   const studentRows = result;
 
+  // Fetch paper components for each row
+  const examRowsWithComponents = await Promise.all(
+    studentRows.map(async (r) => {
+      let componentNames = "";
+      if (r.paperId) {
+        try {
+          const paper = await paperServices.getPaperById(r.paperId);
+          console.log(
+            `[ADMIT CARD] Paper ${r.paperId} components:`,
+            paper?.components,
+          );
+          if (
+            paper?.components &&
+            Array.isArray(paper.components) &&
+            paper.components.length > 0
+          ) {
+            const codes = paper.components
+              .map(
+                (comp) =>
+                  comp.examComponent?.code ||
+                  comp.examComponent?.shortName ||
+                  "",
+              )
+              .filter(Boolean);
+            componentNames = codes.join(", ");
+            console.log(
+              `[ADMIT CARD] Final component codes for paper ${r.paperId}:`,
+              componentNames,
+            );
+          }
+        } catch (error) {
+          console.error(
+            `Error fetching paper components for paperId ${r.paperId}:`,
+            error,
+          );
+        }
+      }
+      return {
+        subjectName: r.subjectName!,
+        subjectCode: r.subjectCode!,
+        componentNames: componentNames || undefined,
+        date: formatExamDateFromTimestamp(r.examStartDate!),
+        time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
+        seatNo: r.seatNo!,
+        room: r.roomName!,
+      };
+    }),
+  );
+
   const pdfBuffer = await pdfGenerationService.generateExamAdmitCardPdfBuffer({
     semester: studentRows[0]!.semester!.split(" ")[1],
     examType: studentRows[0]!.examType ?? "",
@@ -4687,14 +4772,7 @@ export async function downloadSingleAdmitCard(
     shiftName: studentRows[0]!.shiftName ?? "",
     qrCodeDataUrl: null,
 
-    examRows: studentRows.map((r) => ({
-      subjectName: r.subjectName!,
-      subjectCode: r.subjectCode!,
-      date: formatExamDateFromTimestamp(r.examStartDate!),
-      time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
-      seatNo: r.seatNo!,
-      room: r.roomName!,
-    })),
+    examRows: examRowsWithComponents,
   });
 
   // Track admit card download - increment count by 1 only (not by number of papers)

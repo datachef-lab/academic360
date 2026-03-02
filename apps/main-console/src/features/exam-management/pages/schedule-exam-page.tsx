@@ -29,6 +29,7 @@ import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Room and student interfaces moved to allot-exam-page
 
@@ -402,6 +403,15 @@ export default function ScheduleExamPage() {
     affiliations: loadingAffiliations,
     regulationTypes: loadingRegulationTypes,
   };
+
+  const topFiltersLoading =
+    loading.examTypes ||
+    loading.classes ||
+    loading.programCourses ||
+    loading.shifts ||
+    loading.subjectTypes ||
+    loading.affiliations ||
+    loading.regulationTypes;
 
   // Fetch papers when filters change
   //   const fetchPapers = useCallback(async () => {
@@ -1258,6 +1268,16 @@ export default function ScheduleExamPage() {
   const totalStudentCount = studentCountData?.total ?? 0;
   const studentCountBreakdown = studentCountData?.breakdown ?? [];
 
+  const formatDateWithoutTimezone = (value: Date | null | undefined) => {
+    if (!value) return undefined;
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return undefined;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const assignExamMutation = useMutation({
     mutationFn: async () => {
       // Validate exam group selection
@@ -1382,7 +1402,7 @@ export default function ScheduleExamPage() {
         newGroupName: examGroupMode === "new" ? newGroupName : undefined,
         examCommencementDate:
           examGroupMode === "new" && newGroupCommencementDate
-            ? newGroupCommencementDate.toISOString().split("T")[0]
+            ? formatDateWithoutTimezone(newGroupCommencementDate)
             : undefined,
         selectedExistingGroupId: examGroupMode === "existing" ? selectedExistingGroupId : undefined,
       });
@@ -1560,248 +1580,273 @@ export default function ScheduleExamPage() {
           <div className="mb-4 mt-3 space-y-3">
             <Card className="border-0 shadow-none">
               <CardContent className="space-y-5 pb-4 pt-4">
-                {/* First Row: Academic Year, Affiliation, Regulation, Exam Type */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {/* Academic Year */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Academic Year</Label>
-                    <Select
-                      value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
-                      onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
-                    >
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <SelectValue placeholder="A.Y" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableAcademicYears.map((ay) => (
-                          <SelectItem key={ay.id} value={ay.id?.toString() || ""}>
-                            {ay.year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Affiliation */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Affiliation</Label>
-                    <Select
-                      value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
-                      onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
-                      disabled={loading.affiliations}
-                    >
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <SelectValue placeholder={loading.affiliations ? "Loading..." : "Aff."} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {affiliations.map((aff) => (
-                          <SelectItem key={aff.id} value={aff.id?.toString() || ""}>
-                            {aff.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Regulation Type */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Regulation</Label>
-                    <Select
-                      value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
-                      onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
-                      disabled={loading.regulationTypes}
-                    >
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Reg."} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {regulationTypes.map((reg) => (
-                          <SelectItem key={reg.id} value={reg.id?.toString() || ""}>
-                            {reg.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Exam Type */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Exam Type</Label>
-                    <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <SelectValue placeholder={loading.examTypes ? "Loading..." : "Exam Type"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {examTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id?.toString() || ""}>
-                            {type.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {/* Second Row: Semester, Shift(s), Program Course(s), Subject Category */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {/* Semester */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Semester</Label>
-                    <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <SelectValue placeholder={loading.classes ? "Loading..." : "Semester"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {classes.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id?.toString() || ""}>
-                            {cls.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* Shift(s) */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Shift(s)</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                          disabled={loading.shifts}
-                        >
-                          <span className="text-gray-600">
-                            {loading.shifts
-                              ? "Loading..."
-                              : selectedShifts.length > 0
-                                ? `Select Shifts (${selectedShifts.length})`
-                                : "Select Shifts"}
-                          </span>
-                          <ChevronDown className="w-4 h-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-2" align="start">
-                        <div className="max-h-56 overflow-y-auto space-y-1">
-                          {shifts.map((shift) => (
-                            <button
-                              key={shift.id}
-                              type="button"
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                              onClick={() => shift.id && handleShiftToggle(shift.id)}
-                            >
-                              <Checkbox
-                                checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
-                                onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
-                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                              />
-                              <span className="text-center">{shift.name}</span>
-                            </button>
-                          ))}
+                {topFiltersLoading ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {Array.from({ length: 4 }).map((_, index) => (
+                        <div key={`top-row-1-skeleton-${index}`} className="flex flex-col gap-1">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-8 w-full rounded-md" />
                         </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  {/* Program Course(s) */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Program Course(s)</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                          disabled={
-                            loading.programCourses ||
-                            !selectedAffiliationId ||
-                            !selectedRegulationTypeId ||
-                            getFilteredProgramCourses().length === 0
-                          }
-                        >
-                          <span className="text-gray-600">
-                            {loading.programCourses
-                              ? "Loading..."
-                              : !selectedAffiliationId || !selectedRegulationTypeId
-                                ? "Select affiliation & regulation first"
-                                : getFilteredProgramCourses().length === 0
-                                  ? "No program courses available"
-                                  : selectedProgramCourses.length > 0
-                                    ? `Select Program Courses (${selectedProgramCourses.length})`
-                                    : "Select Program Courses"}
-                          </span>
-                          <ChevronDown className="w-4 h-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-2" align="start">
-                        <div className="max-h-60 overflow-y-auto space-y-1">
-                          {getFilteredProgramCourses().length === 0 ? (
-                            <div className="text-center py-4 text-sm text-gray-500">
-                              No program courses available for selected affiliation and regulation
-                            </div>
-                          ) : (
-                            getFilteredProgramCourses().map((course) => (
-                              <button
-                                key={course.id}
-                                type="button"
-                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                                onClick={() => course.id && handleProgramCourseToggle(course.id)}
-                              >
-                                <Checkbox
-                                  checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
-                                  onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
-                                  className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                />
-                                <span className="text-left">{course.name}</span>
-                              </button>
-                            ))
-                          )}
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {Array.from({ length: 4 }).map((_, index) => (
+                        <div key={`top-row-2-skeleton-${index}`} className="flex flex-col gap-1">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-8 w-full rounded-md" />
                         </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  {/* Subject Category */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Subject Category</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                          disabled={loading.subjectTypes}
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* First Row: Academic Year, Affiliation, Regulation, Exam Type */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {/* Academic Year */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Academic Year</Label>
+                        <Select
+                          value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
+                          onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
                         >
-                          <span className="text-gray-600">
-                            {loading.subjectTypes
-                              ? "Loading..."
-                              : selectedSubjectCategories.length > 0
-                                ? `Select Subject Categories (${selectedSubjectCategories.length})`
-                                : "Select Subject Categories"}
-                          </span>
-                          <ChevronDown className="w-4 h-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-2" align="start">
-                        <div className="max-h-56 overflow-y-auto space-y-1">
-                          {subjectTypes.map((category) => (
-                            <button
-                              key={category.id}
-                              type="button"
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                              onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
+                          <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <SelectValue placeholder="A.Y" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableAcademicYears.map((ay) => (
+                              <SelectItem key={ay.id} value={ay.id?.toString() || ""}>
+                                {ay.year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Affiliation */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Affiliation</Label>
+                        <Select
+                          value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
+                          onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
+                          disabled={loading.affiliations}
+                        >
+                          <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <SelectValue placeholder={loading.affiliations ? "Loading..." : "Select Affiliation"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {affiliations.map((aff) => (
+                              <SelectItem key={aff.id} value={aff.id?.toString() || ""}>
+                                {aff.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Regulation Type */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Regulation</Label>
+                        <Select
+                          value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
+                          onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
+                          disabled={loading.regulationTypes}
+                        >
+                          <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Select Regulation"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {regulationTypes.map((reg) => (
+                              <SelectItem key={reg.id} value={reg.id?.toString() || ""}>
+                                {reg.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Exam Type */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Exam Type</Label>
+                        <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
+                          <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <SelectValue placeholder={loading.examTypes ? "Loading..." : "Exam Type"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {examTypes.map((type) => (
+                              <SelectItem key={type.id} value={type.id?.toString() || ""}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {/* Second Row: Semester, Shift(s), Program Course(s), Subject Category */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {/* Semester */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Semester</Label>
+                        <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
+                          <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <SelectValue placeholder={loading.classes ? "Loading..." : "Semester"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {classes.map((cls) => (
+                              <SelectItem key={cls.id} value={cls.id?.toString() || ""}>
+                                {cls.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* Shift(s) */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Shift(s)</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              disabled={loading.shifts}
                             >
-                              <Checkbox
-                                checked={category.id !== undefined && selectedSubjectCategories.includes(category.id)}
-                                onCheckedChange={() => category.id && handleSubjectCategoryToggle(category.id)}
-                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                              />
-                              <span className="text-left">
-                                {category.code && category.code.trim() ? category.code : category.name}
+                              <span className="text-gray-600">
+                                {loading.shifts
+                                  ? "Loading..."
+                                  : selectedShifts.length > 0
+                                    ? `Select Shifts (${selectedShifts.length})`
+                                    : "Select Shifts"}
                               </span>
-                            </button>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
+                              <ChevronDown className="w-4 h-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-2" align="start">
+                            <div className="max-h-56 overflow-y-auto space-y-1">
+                              {shifts.map((shift) => (
+                                <button
+                                  key={shift.id}
+                                  type="button"
+                                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                  onClick={() => shift.id && handleShiftToggle(shift.id)}
+                                >
+                                  <Checkbox
+                                    checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
+                                    onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
+                                    className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                  />
+                                  <span className="text-center">{shift.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      {/* Program Course(s) */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Program Course(s)</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              disabled={
+                                loading.programCourses ||
+                                !selectedAffiliationId ||
+                                !selectedRegulationTypeId ||
+                                getFilteredProgramCourses().length === 0
+                              }
+                            >
+                              <span className="text-gray-600">
+                                {loading.programCourses
+                                  ? "Loading..."
+                                  : !selectedAffiliationId || !selectedRegulationTypeId
+                                    ? "Select Program Courses"
+                                    : getFilteredProgramCourses().length === 0
+                                      ? "No program courses available"
+                                      : selectedProgramCourses.length > 0
+                                        ? `Select Program Courses (${selectedProgramCourses.length})`
+                                        : "Select Program Courses"}
+                              </span>
+                              <ChevronDown className="w-4 h-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-2" align="start">
+                            <div className="max-h-60 overflow-y-auto space-y-1">
+                              {getFilteredProgramCourses().length === 0 ? (
+                                <div className="text-center py-4 text-sm text-gray-500">
+                                  No program courses available for selected affiliation and regulation
+                                </div>
+                              ) : (
+                                getFilteredProgramCourses().map((course) => (
+                                  <button
+                                    key={course.id}
+                                    type="button"
+                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                    onClick={() => course.id && handleProgramCourseToggle(course.id)}
+                                  >
+                                    <Checkbox
+                                      checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
+                                      onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
+                                      className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                    />
+                                    <span className="text-left">{course.name}</span>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      {/* Subject Category */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Subject Category</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              disabled={loading.subjectTypes}
+                            >
+                              <span className="text-gray-600">
+                                {loading.subjectTypes
+                                  ? "Loading..."
+                                  : selectedSubjectCategories.length > 0
+                                    ? `Select Subject Categories (${selectedSubjectCategories.length})`
+                                    : "Select Subject Categories"}
+                              </span>
+                              <ChevronDown className="w-4 h-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-2" align="start">
+                            <div className="max-h-56 overflow-y-auto space-y-1">
+                              {subjectTypes.map((category) => (
+                                <button
+                                  key={category.id}
+                                  type="button"
+                                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                  onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
+                                >
+                                  <Checkbox
+                                    checked={
+                                      category.id !== undefined && selectedSubjectCategories.includes(category.id)
+                                    }
+                                    onCheckedChange={() => category.id && handleSubjectCategoryToggle(category.id)}
+                                    className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                  />
+                                  <span className="text-left">
+                                    {category.code && category.code.trim() ? category.code : category.name}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -2201,6 +2246,22 @@ export default function ScheduleExamPage() {
                                             </Badge>
                                           )}
                                         </div>
+                                        {paper.components &&
+                                          Array.isArray(paper.components) &&
+                                          paper.components.length > 0 && (
+                                            <span className="text-[11px] text-gray-500 mt-0.5">
+                                              {paper.components
+                                                .map(
+                                                  (comp) =>
+                                                    comp.examComponent?.code ||
+                                                    comp.examComponent?.shortName ||
+                                                    comp.examComponent?.name ||
+                                                    "",
+                                                )
+                                                .filter(Boolean)
+                                                .join(", ")}
+                                            </span>
+                                          )}
                                       </div>
                                     </button>
                                   );

@@ -365,6 +365,7 @@ export class PdfGenerationService {
       seatNo: string;
       subjectName: string;
       subjectCode: string;
+      componentNames?: string;
     }>;
     studentImage?: string;
   }): Promise<Buffer> {
