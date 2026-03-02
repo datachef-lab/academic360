@@ -3439,7 +3439,7 @@ export async function downloadAdmitCardsAsZip(
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
     .where(eq(examGroupModel.id, foundExamGroup.id))
-    .orderBy(asc(examSubjectModel.startTime));
+    .orderBy(asc(examSubjectModel.id), asc(examSubjectModel.startTime));
 
   const zip = new JSZip();
 
@@ -4416,7 +4416,8 @@ export async function downloadAdmitCardTrackingByExamId(
     .leftJoin(examTypeModel, eq(examModel.examTypeId, examTypeModel.id))
     .leftJoin(classModel, eq(examModel.classId, classModel.id))
     .leftJoin(shiftModel, eq(shiftModel.id, promotionModel.shiftId))
-    .where(eq(examGroupModel.id, foundExamGroup.id));
+    .where(eq(examGroupModel.id, foundExamGroup.id))
+    .orderBy(asc(examSubjectModel.id));
 
   if (!result.length) {
     throw new Error("No exam candidates found");
