@@ -11,4 +11,5 @@ export const corsOptions: CorsOptions = {
   },
   credentials: true,
   optionsSuccessStatus: 200,
+  exposedHeaders: ["Content-Disposition"],
 };

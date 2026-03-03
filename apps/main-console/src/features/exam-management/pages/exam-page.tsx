@@ -49,6 +49,7 @@ import {
   fetchExamGroupById,
   fetchExamGroupPapersStatsByExamId,
 } from "@/services/exam-group.service";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ExamPage() {
   const navigate = useNavigate();
@@ -70,6 +71,7 @@ export default function ExamPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingExam, setDeletingExam] = useState(false);
   const [sendAdmitCardDialogOpen, setSendAdmitCardDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [exportProgressOpen, setExportProgressOpen] = useState(false);
   const setIsExporting = useState(false)[1];
@@ -185,20 +187,27 @@ export default function ExamPage() {
 
   useEffect(() => {
     if (examGroupId) {
-      fetchExamGroupById(Number(examGroupId)).then((data) => {
-        setExamGroup(data);
-        // Set admit card dates if they exist
-        if (data.exams[0]?.admitCardStartDownloadDate) {
-          setAdmitCardStartDate(toDatetimeLocal(data.exams[0]?.admitCardStartDownloadDate));
-        }
-        if (data.exams[0]?.admitCardLastDownloadDate) {
-          setAdmitCardEndDate(toDatetimeLocal(data.exams[0]?.admitCardLastDownloadDate));
-        }
-      });
-      fetchExamGroupPapersStatsByExamId(Number(examGroupId)).then((data) => {
-        console.log("ExamPapersWithStats: ", data);
-        setExamPapersWithStats(data);
-      });
+      setLoading(true);
+      Promise.all([fetchExamGroupById(Number(examGroupId)), fetchExamGroupPapersStatsByExamId(Number(examGroupId))])
+        .then(([groupData, statsData]) => {
+          setExamGroup(groupData);
+          // Set admit card dates if they exist
+          if (groupData.exams[0]?.admitCardStartDownloadDate) {
+            setAdmitCardStartDate(toDatetimeLocal(groupData.exams[0]?.admitCardStartDownloadDate));
+          }
+          if (groupData.exams[0]?.admitCardLastDownloadDate) {
+            setAdmitCardEndDate(toDatetimeLocal(groupData.exams[0]?.admitCardLastDownloadDate));
+          }
+          console.log("ExamPapersWithStats: ", statsData);
+          setExamPapersWithStats(statsData);
+        })
+        .catch((error) => {
+          console.error("Error loading exam group:", error);
+          toast.error("Failed to load exam details");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   }, [examGroupId]);
 
@@ -298,9 +307,24 @@ export default function ExamPage() {
       createdAt: new Date(),
     });
 
+    const preferredFileName = examGroup
+      ? (() => {
+          const name = (examGroup.name || "exam")
+            .replace(/[/\\:*?"<>|]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          const date = examGroup.examCommencementDate
+            ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+            : "";
+          return `${name} ${date}.zip`;
+        })()
+      : undefined;
+
     const result = await ExportService.downloadExamAdmitCardsbyExamGroupId(
       Number(examGroupId),
       sessionId, // Pass session ID for Socket.IO tracking
+      preferredFileName,
     );
 
     if (result.success && result.data) {
@@ -345,9 +369,24 @@ export default function ExamPage() {
       createdAt: new Date(),
     });
 
+    const preferredFileName = examGroup
+      ? (() => {
+          const name = (examGroup.name || "exam")
+            .replace(/[/\\:*?"<>|]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          const date = examGroup.examCommencementDate
+            ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+            : "";
+          return `${name} ${date}-attendance-dr-sheets.zip`;
+        })()
+      : undefined;
+
     const result = await ExportService.downloadExamAttendanceSheetsbyExamGroupId(
       Number(examGroupId),
       sessionId, // Pass session ID for Socket.IO tracking
+      preferredFileName,
     );
 
     if (result.success && result.data) {
@@ -585,8 +624,22 @@ export default function ExamPage() {
   const handleDownloadAdmitCardTracking = async () => {
     if (!examGroupId) return;
 
+    const preferredFileName = examGroup
+      ? (() => {
+          const name = (examGroup.name || "exam")
+            .replace(/[/\\:*?"<>|]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          const date = examGroup.examCommencementDate
+            ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+            : "";
+          return `${name} ${date}-admit-card-tracking.xlsx`;
+        })()
+      : undefined;
+
     try {
-      const { downloadUrl, fileName } = await downloadAdmitCardTracking(Number(examGroupId));
+      const { downloadUrl, fileName } = await downloadAdmitCardTracking(Number(examGroupId), preferredFileName);
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = fileName;
@@ -604,7 +657,7 @@ export default function ExamPage() {
   return (
     <>
       <div className="p-4 pb-24">
-        <p className="pb-2">{examGroup?.name}</p>
+        <p className="pb-2">{loading ? <Skeleton className="h-6 w-64" /> : examGroup?.name}</p>
         {/* Page Header */}
         <div className="border">
           {/* Fixed Header */}
@@ -659,67 +712,28 @@ export default function ExamPage() {
             </div>
           </div>
           {/* {JSON.stringify(exam)} */}
-          {examGroup && (
-            <div className="border-b hover:bg-gray-50 group" style={{ minWidth: "950px" }}>
-              <div key={examGroup?.id} className="flex">
-                <div className="flex-shrink-0 p-3 border-r  items-center gap-2 flex flex-col" style={{ width: "15%" }}>
-                  {/* Display exam component names */}
-                  <p>
-                    <Badge variant="outline" className="text-xs border-red-300 text-red-700 bg-red-50">
-                      {examGroup?.exams[0]?.examType.name}
-                    </Badge>
-                  </p>
-                  {examGroup && (
-                    <p className="text-center"> {new Date(examGroup.examCommencementDate).toLocaleDateString("en")}</p>
-                  )}
+          {loading ? (
+            <div className="border-b" style={{ minWidth: "950px" }}>
+              <div className="flex">
+                <div className="flex-shrink-0 p-3 border-r flex items-center gap-2 flex-col" style={{ width: "15%" }}>
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-4 w-20" />
                 </div>
                 <div className="p-3 border-r flex gap-1 flex-col items-center" style={{ width: "45%" }}>
-                  {Array.from(
-                    new Map(
-                      examGroup.exams.flatMap((ep) => ep.examProgramCourses).map((pc) => [pc.programCourse.id, pc]),
-                    ).values(),
-                  ).map((pc, index) => (
-                    <p key={`pc-index-${index}`}>
-                      <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
-                        {pc.programCourse.name}
-                      </Badge>
-                    </p>
-                  ))}
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-4 w-36" />
                 </div>
-
                 <div
-                  className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
+                  className="flex-shrink-0 p-3 border-r flex flex-col gap-2 items-center justify-center"
                   style={{ width: "15%" }}
                 >
-                  {Array.from(
-                    new Map(
-                      examGroup.exams.flatMap((ep) => ep.examShifts).map((esh) => [esh.shift.id, esh.shift]),
-                    ).values(),
-                  ).map((shift) => (
-                    <p key={shift.id}>
-                      <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
-                        {shift.name}
-                      </Badge>
-                    </p>
-                  ))}
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-24" />
                 </div>
-
                 <div className="flex-shrink-0 p-3 border-r flex flex-col justify-center" style={{ width: "15%" }}>
-                  <div className="text-[11px] leading-4 text-slate-700 space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-semibold text-slate-600 whitespace-nowrap">Start</span>
-                      <span className="text-right whitespace-nowrap">
-                        {formatDate(examGroup.exams[0]?.admitCardStartDownloadDate)}{" "}
-                        {formatTime(examGroup.exams[0]?.admitCardStartDownloadDate)}
-                      </span>
-                    </div>
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-semibold text-slate-600 whitespace-nowrap">End</span>
-                      <span className="text-right whitespace-nowrap">
-                        {formatDate(examGroup.exams[0]?.admitCardLastDownloadDate)}{" "}
-                        {formatTime(examGroup.exams[0]?.admitCardLastDownloadDate)}
-                      </span>
-                    </div>
+                  <div className="space-y-2 w-full">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
                   </div>
                 </div>
                 {/* <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
@@ -748,12 +762,89 @@ export default function ExamPage() {
             </div> */}
 
                 <div className="flex-shrink-0 p-3 border-r flex items-center justify-center" style={{ width: "10%" }}>
-                  <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
-                    {examGroup.exams?.[0]?.class.name.split(" ")[1]}
-                  </Badge>
+                  <Skeleton className="h-4 w-16" />
                 </div>
               </div>
             </div>
+          ) : (
+            examGroup && (
+              <div className="border-b hover:bg-gray-50 group" style={{ minWidth: "950px" }}>
+                <div key={examGroup?.id} className="flex">
+                  <div
+                    className="flex-shrink-0 p-3 border-r  items-center gap-2 flex flex-col"
+                    style={{ width: "15%" }}
+                  >
+                    {/* Display exam component names */}
+                    <p>
+                      <Badge variant="outline" className="text-xs border-red-300 text-red-700 bg-red-50">
+                        {examGroup?.exams[0]?.examType.name}
+                      </Badge>
+                    </p>
+                    {examGroup && (
+                      <p className="text-center">
+                        {" "}
+                        {new Date(examGroup.examCommencementDate).toLocaleDateString("en")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="p-3 border-r flex gap-1 flex-col items-center" style={{ width: "45%" }}>
+                    {Array.from(
+                      new Map(
+                        examGroup.exams.flatMap((ep) => ep.examProgramCourses).map((pc) => [pc.programCourse.id, pc]),
+                      ).values(),
+                    ).map((pc, index) => (
+                      <p key={`pc-index-${index}`}>
+                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                          {pc.programCourse.name}
+                        </Badge>
+                      </p>
+                    ))}
+                  </div>
+
+                  <div
+                    className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
+                    style={{ width: "15%" }}
+                  >
+                    {Array.from(
+                      new Map(
+                        examGroup.exams.flatMap((ep) => ep.examShifts).map((esh) => [esh.shift.id, esh.shift]),
+                      ).values(),
+                    ).map((shift) => (
+                      <p key={shift.id}>
+                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                          {shift.name}
+                        </Badge>
+                      </p>
+                    ))}
+                  </div>
+
+                  <div className="flex-shrink-0 p-3 border-r flex flex-col justify-center" style={{ width: "15%" }}>
+                    <div className="text-[11px] leading-4 text-slate-700 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-slate-600 whitespace-nowrap">Start</span>
+                        <span className="text-right whitespace-nowrap">
+                          {formatDate(examGroup.exams[0]?.admitCardStartDownloadDate)}{" "}
+                          {formatTime(examGroup.exams[0]?.admitCardStartDownloadDate)}
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-slate-600 whitespace-nowrap">End</span>
+                        <span className="text-right whitespace-nowrap">
+                          {formatDate(examGroup.exams[0]?.admitCardLastDownloadDate)}{" "}
+                          {formatTime(examGroup.exams[0]?.admitCardLastDownloadDate)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex-shrink-0 p-3 border-r flex items-center justify-center" style={{ width: "10%" }}>
+                    <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                      {examGroup.exams?.[0]?.class.name.split(" ")[1]}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            )
           )}
         </div>
 
@@ -796,9 +887,23 @@ export default function ExamPage() {
                       variant="outline"
                       onClick={async () => {
                         try {
+                          const preferredFileName = examGroup
+                            ? (() => {
+                                const name = (examGroup.name || "exam")
+                                  .replace(/[/\\:*?"<>|]/g, "-")
+                                  .replace(/\s+/g, " ")
+                                  .trim()
+                                  .slice(0, 100);
+                                const date = examGroup.examCommencementDate
+                                  ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+                                  : "";
+                                return `${name} ${date}-candidates.xlsx`;
+                              })()
+                            : undefined;
                           const response = await fetchExamCandidatesByExamIdOrExamGroupId(
                             undefined,
                             Number(examGroupId!),
+                            preferredFileName,
                           );
                           ExportService.downloadFile(response.downloadUrl, response.fileName);
                         } catch (error: any) {

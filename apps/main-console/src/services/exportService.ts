@@ -361,6 +361,7 @@ export class ExportService {
   static async downloadExamAdmitCardsbyExamGroupId(
     examGroupId?: number,
     uploadSessionId?: string,
+    preferredFileName?: string,
   ): Promise<ExportResponse> {
     try {
       const endpoint = `/api/exams/schedule/download-admit-cards?examGroupId=${examGroupId}`;
@@ -400,14 +401,14 @@ export class ExportService {
         }
       }
 
-      // Extract filename from response headers
+      // Extract filename from response headers (requires CORS exposedHeaders: ["Content-Disposition"])
       const contentDisposition = response.headers["content-disposition"];
-      let fileName = `exam-${examGroupId}-admit-cards.zip`;
+      let fileName = preferredFileName || `exam-${examGroupId}-admit-cards.zip`;
 
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
         if (fileNameMatch) {
-          fileName = fileNameMatch[1];
+          fileName = fileNameMatch[1].replace(/%22/g, '"');
         }
       }
 
@@ -484,6 +485,7 @@ export class ExportService {
   static async downloadExamAttendanceSheetsbyExamGroupId(
     examGroupId?: number,
     uploadSessionId?: string,
+    preferredFileName?: string,
   ): Promise<ExportResponse> {
     try {
       const endpoint = `/api/exams/schedule/download-attendance-sheets?examGroupId=${examGroupId}`;
@@ -528,14 +530,14 @@ export class ExportService {
         }
       }
 
-      // Extract filename from response headers
+      // Extract filename from response headers (requires CORS exposedHeaders: ["Content-Disposition"])
       const contentDisposition = response.headers["content-disposition"];
-      let fileName = `exam-${examGroupId}-attendance-sheets.zip`;
+      let fileName = preferredFileName || `exam-${examGroupId}-attendance-sheets.zip`;
 
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
         if (fileNameMatch) {
-          fileName = fileNameMatch[1];
+          fileName = fileNameMatch[1].replace(/%22/g, '"');
         }
       }
 

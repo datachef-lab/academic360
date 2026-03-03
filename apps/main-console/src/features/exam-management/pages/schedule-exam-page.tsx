@@ -24,11 +24,12 @@ import { getAllSubjects } from "@/services/subject.api";
 import { checkDuplicateExam, countStudentsBreakdownForExam } from "@/services/exam-schedule.service";
 import { fetchExamGroups, type ExamFilters } from "@/services/exam.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto, ExamGroupDto } from "@repo/db/index";
+import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto } from "@repo/db/index";
 import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Room and student interfaces moved to allot-exam-page
 
@@ -228,10 +229,11 @@ export default function ScheduleExamPage() {
   // const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
   // const [totalCapacity, setTotalCapacity] = useState(0);
 
-  // Step 3: Exam Schedule - now tracks subject+paper combinations
+  // Step 3: Exam Schedule - now tracks subject+paper+paperComponent combinations
   interface SubjectPaperSchedule {
     subjectId: number;
     paperId: number;
+    paperComponentId: number; // Paper's component matching selected exam component type
     schedule: Schedule;
   }
   const [selectedSubjectPapers, setSelectedSubjectPapers] = useState<SubjectPaperSchedule[]>([]);
@@ -270,8 +272,6 @@ export default function ScheduleExamPage() {
   const [examGroupMode, setExamGroupMode] = useState<"new" | "existing">("new");
   const [newGroupName, setNewGroupName] = useState<string>("");
   const [selectedExistingGroupId, setSelectedExistingGroupId] = useState<number | null>(null);
-  const [existingGroups, setExistingGroups] = useState<ExamGroupDto[]>([]);
-  const [loadingExamGroups, setLoadingExamGroups] = useState(false);
 
   // Room and student selection moved to allot-exam-page
   // Excel file upload moved to allot-exam-page
@@ -402,6 +402,15 @@ export default function ScheduleExamPage() {
     affiliations: loadingAffiliations,
     regulationTypes: loadingRegulationTypes,
   };
+
+  const topFiltersLoading =
+    loading.examTypes ||
+    loading.classes ||
+    loading.programCourses ||
+    loading.shifts ||
+    loading.subjectTypes ||
+    loading.affiliations ||
+    loading.regulationTypes;
 
   // Fetch papers when filters change
   //   const fetchPapers = useCallback(async () => {
@@ -658,20 +667,20 @@ export default function ScheduleExamPage() {
   // NEW FLOW HELPERS
 
   // Get available program courses for selected subjects (from their papers)
-  // Only returns program courses that still have papers that haven't been added
+  // Only returns program courses that still have papers (with selected component) that haven't been added
   const getAvailableProgramCoursesForSubjects = useCallback(
     (subjectIds: number[]): Array<{ id: number; name: string }> => {
-      if (subjectIds.length === 0) return [];
+      if (subjectIds.length === 0 || selectedExamComponent === null) return [];
 
       const addedPaperIds = new Set(selectedSubjectPapers.map((sp) => sp.paperId));
       const programCourseIds = new Set<number>();
 
-      // Get papers for all selected subjects
+      // Get papers for all selected subjects that have the selected component
       subjectIds.forEach((subjectId) => {
         const subjectPapers = getPapersForSubject(subjectId);
         subjectPapers.forEach((paper) => {
-          // Only include program course if the paper hasn't been added yet
-          if (paper.programCourseId && paper.id && !addedPaperIds.has(paper.id)) {
+          const hasComponent = paper.components?.some((c) => c.examComponent?.id === selectedExamComponent) ?? false;
+          if (hasComponent && paper.programCourseId && paper.id && !addedPaperIds.has(paper.id)) {
             programCourseIds.add(paper.programCourseId);
           }
         });
@@ -685,12 +694,13 @@ export default function ScheduleExamPage() {
         .filter((pc): pc is { id: number; name: string } => pc !== null)
         .sort((a, b) => a.name.localeCompare(b.name));
     },
-    [getPapersForSubject, programCourses, selectedSubjectPapers],
+    [getPapersForSubject, programCourses, selectedSubjectPapers, selectedExamComponent],
   );
 
   // Get available papers based on current filters (subjects + component + program courses)
+  // Component is required - papers must have the selected exam component
   const getFilteredPapersForCurrentSelection = useCallback((): PaperDto[] => {
-    if (currentSubjectIds.length === 0) return [];
+    if (currentSubjectIds.length === 0 || selectedExamComponent === null) return [];
 
     // Get papers for all selected subjects
     let filtered: PaperDto[] = [];
@@ -698,16 +708,14 @@ export default function ScheduleExamPage() {
       filtered = [...filtered, ...getPapersForSubject(subjectId)];
     });
 
-    // Filter by selected exam component if one is selected
-    if (selectedExamComponent !== null) {
-      filtered = filtered.filter((paper) => {
-        return (
-          paper.components &&
-          Array.isArray(paper.components) &&
-          paper.components.some((component) => component.examComponent?.id === selectedExamComponent)
-        );
-      });
-    }
+    // Filter by selected exam component (required)
+    filtered = filtered.filter((paper) => {
+      return (
+        paper.components &&
+        Array.isArray(paper.components) &&
+        paper.components.some((component) => component.examComponent?.id === selectedExamComponent)
+      );
+    });
 
     // Filter by selected program courses if any are selected
     if (currentProgramCourseIds.length > 0) {
@@ -782,10 +790,21 @@ export default function ScheduleExamPage() {
     });
   }, [getDistinctSubjects, subjectHasAvailablePapers]);
 
+  // Helper: get paperComponentId for a paper matching the selected exam component
+  const getPaperComponentIdForExamComponent = useCallback((paper: PaperDto, examComponentId: number): number | null => {
+    const component = paper.components?.find((c) => c.examComponent?.id === examComponentId);
+    return component?.id ?? null;
+  }, []);
+
   // Handle adding papers with current date/time settings
   const handleAddPapers = useCallback(() => {
     if (currentSubjectIds.length === 0 || currentPaperIds.length === 0) {
       toast.error("Please select at least one subject and one paper");
+      return;
+    }
+
+    if (selectedExamComponent === null) {
+      toast.error("Please select a component type");
       return;
     }
 
@@ -819,22 +838,34 @@ export default function ScheduleExamPage() {
 
     // Create new subject-paper schedules for each selected paper
     const newSchedules: SubjectPaperSchedule[] = [];
+    const invalidPapers: string[] = [];
 
     currentPaperIds.forEach((paperId) => {
-      // Find which subject this paper belongs to
       const paper = papers.find((p) => p.id === paperId);
-      if (paper && paper.subjectId && currentSubjectIds.includes(paper.subjectId)) {
-        newSchedules.push({
-          subjectId: paper.subjectId,
-          paperId,
-          schedule: {
-            date: currentDate,
-            startTime: currentStartTime,
-            endTime,
-          },
-        });
+      if (!paper || !paper.subjectId || !currentSubjectIds.includes(paper.subjectId)) return;
+
+      const paperComponentId = getPaperComponentIdForExamComponent(paper, selectedExamComponent);
+      if (paperComponentId === null) {
+        invalidPapers.push(paper.name || paper.code || `Paper ${paperId}`);
+        return;
       }
+
+      newSchedules.push({
+        subjectId: paper.subjectId,
+        paperId,
+        paperComponentId,
+        schedule: {
+          date: currentDate,
+          startTime: currentStartTime,
+          endTime,
+        },
+      });
     });
+
+    if (invalidPapers.length > 0) {
+      toast.error(`Paper(s) missing selected component: ${invalidPapers.join(", ")}`);
+      return;
+    }
 
     if (newSchedules.length === 0) {
       toast.error("No valid papers to add");
@@ -857,7 +888,17 @@ export default function ScheduleExamPage() {
     setCurrentDuration("");
 
     toast.success(`Added ${newSchedules.length} paper(s) to exam schedule`);
-  }, [currentSubjectIds, currentPaperIds, currentDate, currentStartTime, currentDuration, calculateEndTime, papers]);
+  }, [
+    currentSubjectIds,
+    currentPaperIds,
+    currentDate,
+    currentStartTime,
+    currentDuration,
+    calculateEndTime,
+    papers,
+    selectedExamComponent,
+    getPaperComponentIdForExamComponent,
+  ]);
 
   // Room selection handlers moved to allot-exam-page
 
@@ -1055,7 +1096,8 @@ export default function ScheduleExamPage() {
 
           examSubjects.push({
             subjectId: subjectPaper.subjectId,
-            paperId: subjectPaper.paperId, // Include paperId
+            paperId: subjectPaper.paperId,
+            paperComponentId: subjectPaper.paperComponentId,
             startTime: new Date(startDateTime),
             endTime: new Date(endDateTime),
             examId: 0,
@@ -1153,6 +1195,7 @@ export default function ScheduleExamPage() {
     selectedShifts,
     selectedSubjectCategories,
     selectedSubjectIds,
+    selectedSubjectPapers,
     subjectSchedules,
     availableAcademicYears,
     classes,
@@ -1258,6 +1301,16 @@ export default function ScheduleExamPage() {
   const totalStudentCount = studentCountData?.total ?? 0;
   const studentCountBreakdown = studentCountData?.breakdown ?? [];
 
+  const formatDateWithoutTimezone = (value: Date | null | undefined) => {
+    if (!value) return undefined;
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return undefined;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const assignExamMutation = useMutation({
     mutationFn: async () => {
       // Validate exam group selection
@@ -1291,6 +1344,7 @@ export default function ScheduleExamPage() {
         examSubjects.push({
           subjectId: subjectPaper.subjectId,
           paperId: subjectPaper.paperId,
+          paperComponentId: subjectPaper.paperComponentId,
           startTime: new Date(startDateTime),
           endTime: new Date(endDateTime),
           examId: 0,
@@ -1382,7 +1436,7 @@ export default function ScheduleExamPage() {
         newGroupName: examGroupMode === "new" ? newGroupName : undefined,
         examCommencementDate:
           examGroupMode === "new" && newGroupCommencementDate
-            ? newGroupCommencementDate.toISOString().split("T")[0]
+            ? formatDateWithoutTimezone(newGroupCommencementDate)
             : undefined,
         selectedExistingGroupId: examGroupMode === "existing" ? selectedExistingGroupId : undefined,
       });
@@ -1403,7 +1457,8 @@ export default function ScheduleExamPage() {
     },
     onError: (error) => {
       console.log("In exam scheduling post api, error:", error);
-      toast.error(`Something went wrong while scheduling exam!`);
+      const message = error instanceof Error ? error.message : "Something went wrong while scheduling exam!";
+      toast.error(message);
     },
   });
 
@@ -1433,7 +1488,6 @@ export default function ScheduleExamPage() {
     setNewGroupName("");
     setNewGroupCommencementDate(undefined);
     setSelectedExistingGroupId(null);
-    setExistingGroups([]);
     setExistingGroupFilterDate(undefined);
   };
 
@@ -1517,35 +1571,57 @@ export default function ScheduleExamPage() {
   const [newGroupCommencementDate, setNewGroupCommencementDate] = useState<Date | undefined>(undefined);
   const [existingGroupFilterDate, setExistingGroupFilterDate] = useState<Date | undefined>(undefined);
 
-  // Fetch existing exam groups with date filter
-  const handleFetchExistingGroups = useCallback(async () => {
-    try {
-      setLoadingExamGroups(true);
+  // Auto-fetch existing exam groups when "Select Existing Group" tab is active
+  const shouldFetchExistingGroups = !!(
+    examGroupMode === "existing" &&
+    examType &&
+    semester &&
+    selectedProgramCourses.length > 0
+  );
+
+  const existingGroupFilterDateStr = existingGroupFilterDate
+    ? existingGroupFilterDate.toISOString().split("T")[0]
+    : undefined;
+
+  const { data: existingGroupsData, isLoading: loadingExamGroups } = useQuery(
+    ["existingExamGroups", selectedAcademicYearId, existingGroupFilterDateStr],
+    async () => {
       const filters: ExamFilters = {
-        academicYearId: selectedAcademicYearId,
+        academicYearId: selectedAcademicYearId ?? undefined,
       };
-
-      if (existingGroupFilterDate) {
-        const dateStr = existingGroupFilterDate.toISOString().split("T")[0];
-        filters.dateFrom = dateStr;
-        filters.dateTo = dateStr;
+      if (existingGroupFilterDateStr) {
+        filters.dateFrom = existingGroupFilterDateStr;
+        filters.dateTo = existingGroupFilterDateStr;
       }
-
       const response = await fetchExamGroups(1, 100, filters);
-      const groups = response?.content || [];
-      setExistingGroups(groups);
+      return response?.content || [];
+    },
+    {
+      enabled: shouldFetchExistingGroups,
+      staleTime: 30000,
+      refetchOnWindowFocus: false,
+    },
+  );
 
-      if (groups.length === 0 && existingGroupFilterDate) {
-        toast.info("No exam groups found for the selected date");
-      }
-    } catch (error) {
-      console.error("Error fetching exam groups:", error);
-      toast.error("Failed to fetch exam groups");
-      setExistingGroups([]);
-    } finally {
-      setLoadingExamGroups(false);
+  const existingGroups = existingGroupsData ?? [];
+
+  // Format exam commencement date (dd/mm/yyyy)
+  const formatExamCommencementDate = (date: Date | string | null | undefined): string => {
+    if (!date) return "";
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return "";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // Toast when no groups found for filtered date
+  useEffect(() => {
+    if (!loadingExamGroups && shouldFetchExistingGroups && existingGroups.length === 0 && existingGroupFilterDate) {
+      toast.info("No exam groups found for the selected date");
     }
-  }, [selectedAcademicYearId, existingGroupFilterDate]);
+  }, [loadingExamGroups, shouldFetchExistingGroups, existingGroups.length, existingGroupFilterDate]);
 
   return (
     <div className="min-h-screen w-full p-7 py-4">
@@ -1560,248 +1636,273 @@ export default function ScheduleExamPage() {
           <div className="mb-4 mt-3 space-y-3">
             <Card className="border-0 shadow-none">
               <CardContent className="space-y-5 pb-4 pt-4">
-                {/* First Row: Academic Year, Affiliation, Regulation, Exam Type */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {/* Academic Year */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Academic Year</Label>
-                    <Select
-                      value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
-                      onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
-                    >
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <SelectValue placeholder="A.Y" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableAcademicYears.map((ay) => (
-                          <SelectItem key={ay.id} value={ay.id?.toString() || ""}>
-                            {ay.year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Affiliation */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Affiliation</Label>
-                    <Select
-                      value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
-                      onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
-                      disabled={loading.affiliations}
-                    >
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <SelectValue placeholder={loading.affiliations ? "Loading..." : "Aff."} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {affiliations.map((aff) => (
-                          <SelectItem key={aff.id} value={aff.id?.toString() || ""}>
-                            {aff.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Regulation Type */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Regulation</Label>
-                    <Select
-                      value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
-                      onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
-                      disabled={loading.regulationTypes}
-                    >
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Reg."} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {regulationTypes.map((reg) => (
-                          <SelectItem key={reg.id} value={reg.id?.toString() || ""}>
-                            {reg.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Exam Type */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Exam Type</Label>
-                    <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <SelectValue placeholder={loading.examTypes ? "Loading..." : "Exam Type"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {examTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id?.toString() || ""}>
-                            {type.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {/* Second Row: Semester, Shift(s), Program Course(s), Subject Category */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {/* Semester */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Semester</Label>
-                    <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
-                      <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                        <SelectValue placeholder={loading.classes ? "Loading..." : "Semester"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {classes.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id?.toString() || ""}>
-                            {cls.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* Shift(s) */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Shift(s)</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                          disabled={loading.shifts}
-                        >
-                          <span className="text-gray-600">
-                            {loading.shifts
-                              ? "Loading..."
-                              : selectedShifts.length > 0
-                                ? `Select Shifts (${selectedShifts.length})`
-                                : "Select Shifts"}
-                          </span>
-                          <ChevronDown className="w-4 h-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-2" align="start">
-                        <div className="max-h-56 overflow-y-auto space-y-1">
-                          {shifts.map((shift) => (
-                            <button
-                              key={shift.id}
-                              type="button"
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                              onClick={() => shift.id && handleShiftToggle(shift.id)}
-                            >
-                              <Checkbox
-                                checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
-                                onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
-                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                              />
-                              <span className="text-center">{shift.name}</span>
-                            </button>
-                          ))}
+                {topFiltersLoading ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {Array.from({ length: 4 }).map((_, index) => (
+                        <div key={`top-row-1-skeleton-${index}`} className="flex flex-col gap-1">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-8 w-full rounded-md" />
                         </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  {/* Program Course(s) */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Program Course(s)</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                          disabled={
-                            loading.programCourses ||
-                            !selectedAffiliationId ||
-                            !selectedRegulationTypeId ||
-                            getFilteredProgramCourses().length === 0
-                          }
-                        >
-                          <span className="text-gray-600">
-                            {loading.programCourses
-                              ? "Loading..."
-                              : !selectedAffiliationId || !selectedRegulationTypeId
-                                ? "Select affiliation & regulation first"
-                                : getFilteredProgramCourses().length === 0
-                                  ? "No program courses available"
-                                  : selectedProgramCourses.length > 0
-                                    ? `Select Program Courses (${selectedProgramCourses.length})`
-                                    : "Select Program Courses"}
-                          </span>
-                          <ChevronDown className="w-4 h-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-2" align="start">
-                        <div className="max-h-60 overflow-y-auto space-y-1">
-                          {getFilteredProgramCourses().length === 0 ? (
-                            <div className="text-center py-4 text-sm text-gray-500">
-                              No program courses available for selected affiliation and regulation
-                            </div>
-                          ) : (
-                            getFilteredProgramCourses().map((course) => (
-                              <button
-                                key={course.id}
-                                type="button"
-                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                                onClick={() => course.id && handleProgramCourseToggle(course.id)}
-                              >
-                                <Checkbox
-                                  checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
-                                  onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
-                                  className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                />
-                                <span className="text-left">{course.name}</span>
-                              </button>
-                            ))
-                          )}
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {Array.from({ length: 4 }).map((_, index) => (
+                        <div key={`top-row-2-skeleton-${index}`} className="flex flex-col gap-1">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-8 w-full rounded-md" />
                         </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  {/* Subject Category */}
-                  <div className="flex flex-col gap-1">
-                    <Label className="font-medium text-gray-700">Subject Category</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                          disabled={loading.subjectTypes}
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* First Row: Academic Year, Affiliation, Regulation, Exam Type */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {/* Academic Year */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Academic Year</Label>
+                        <Select
+                          value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
+                          onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
                         >
-                          <span className="text-gray-600">
-                            {loading.subjectTypes
-                              ? "Loading..."
-                              : selectedSubjectCategories.length > 0
-                                ? `Select Subject Categories (${selectedSubjectCategories.length})`
-                                : "Select Subject Categories"}
-                          </span>
-                          <ChevronDown className="w-4 h-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-2" align="start">
-                        <div className="max-h-56 overflow-y-auto space-y-1">
-                          {subjectTypes.map((category) => (
-                            <button
-                              key={category.id}
-                              type="button"
-                              className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                              onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
+                          <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <SelectValue placeholder="A.Y" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableAcademicYears.map((ay) => (
+                              <SelectItem key={ay.id} value={ay.id?.toString() || ""}>
+                                {ay.year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Affiliation */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Affiliation</Label>
+                        <Select
+                          value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
+                          onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
+                          disabled={loading.affiliations}
+                        >
+                          <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <SelectValue placeholder={loading.affiliations ? "Loading..." : "Select Affiliation"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {affiliations.map((aff) => (
+                              <SelectItem key={aff.id} value={aff.id?.toString() || ""}>
+                                {aff.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Regulation Type */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Regulation</Label>
+                        <Select
+                          value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
+                          onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
+                          disabled={loading.regulationTypes}
+                        >
+                          <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Select Regulation"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {regulationTypes.map((reg) => (
+                              <SelectItem key={reg.id} value={reg.id?.toString() || ""}>
+                                {reg.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Exam Type */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Exam Type</Label>
+                        <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
+                          <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <SelectValue placeholder={loading.examTypes ? "Loading..." : "Exam Type"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {examTypes.map((type) => (
+                              <SelectItem key={type.id} value={type.id?.toString() || ""}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {/* Second Row: Semester, Shift(s), Program Course(s), Subject Category */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      {/* Semester */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Semester</Label>
+                        <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
+                          <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <SelectValue placeholder={loading.classes ? "Loading..." : "Semester"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {classes.map((cls) => (
+                              <SelectItem key={cls.id} value={cls.id?.toString() || ""}>
+                                {cls.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* Shift(s) */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Shift(s)</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              disabled={loading.shifts}
                             >
-                              <Checkbox
-                                checked={category.id !== undefined && selectedSubjectCategories.includes(category.id)}
-                                onCheckedChange={() => category.id && handleSubjectCategoryToggle(category.id)}
-                                className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                              />
-                              <span className="text-left">
-                                {category.code && category.code.trim() ? category.code : category.name}
+                              <span className="text-gray-600">
+                                {loading.shifts
+                                  ? "Loading..."
+                                  : selectedShifts.length > 0
+                                    ? `Select Shifts (${selectedShifts.length})`
+                                    : "Select Shifts"}
                               </span>
-                            </button>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
+                              <ChevronDown className="w-4 h-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-2" align="start">
+                            <div className="max-h-56 overflow-y-auto space-y-1">
+                              {shifts.map((shift) => (
+                                <button
+                                  key={shift.id}
+                                  type="button"
+                                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                  onClick={() => shift.id && handleShiftToggle(shift.id)}
+                                >
+                                  <Checkbox
+                                    checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
+                                    onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
+                                    className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                  />
+                                  <span className="text-center">{shift.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      {/* Program Course(s) */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Program Course(s)</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              disabled={
+                                loading.programCourses ||
+                                !selectedAffiliationId ||
+                                !selectedRegulationTypeId ||
+                                getFilteredProgramCourses().length === 0
+                              }
+                            >
+                              <span className="text-gray-600">
+                                {loading.programCourses
+                                  ? "Loading..."
+                                  : !selectedAffiliationId || !selectedRegulationTypeId
+                                    ? "Select Program Courses"
+                                    : getFilteredProgramCourses().length === 0
+                                      ? "No program courses available"
+                                      : selectedProgramCourses.length > 0
+                                        ? `Select Program Courses (${selectedProgramCourses.length})`
+                                        : "Select Program Courses"}
+                              </span>
+                              <ChevronDown className="w-4 h-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-2" align="start">
+                            <div className="max-h-60 overflow-y-auto space-y-1">
+                              {getFilteredProgramCourses().length === 0 ? (
+                                <div className="text-center py-4 text-sm text-gray-500">
+                                  No program courses available for selected affiliation and regulation
+                                </div>
+                              ) : (
+                                getFilteredProgramCourses().map((course) => (
+                                  <button
+                                    key={course.id}
+                                    type="button"
+                                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                    onClick={() => course.id && handleProgramCourseToggle(course.id)}
+                                  >
+                                    <Checkbox
+                                      checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
+                                      onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
+                                      className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                    />
+                                    <span className="text-left">{course.name}</span>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      {/* Subject Category */}
+                      <div className="flex flex-col gap-1">
+                        <Label className="font-medium text-gray-700">Subject Category</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              disabled={loading.subjectTypes}
+                            >
+                              <span className="text-gray-600">
+                                {loading.subjectTypes
+                                  ? "Loading..."
+                                  : selectedSubjectCategories.length > 0
+                                    ? `Select Subject Categories (${selectedSubjectCategories.length})`
+                                    : "Select Subject Categories"}
+                              </span>
+                              <ChevronDown className="w-4 h-4 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-2" align="start">
+                            <div className="max-h-56 overflow-y-auto space-y-1">
+                              {subjectTypes.map((category) => (
+                                <button
+                                  key={category.id}
+                                  type="button"
+                                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                  onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
+                                >
+                                  <Checkbox
+                                    checked={
+                                      category.id !== undefined && selectedSubjectCategories.includes(category.id)
+                                    }
+                                    onCheckedChange={() => category.id && handleSubjectCategoryToggle(category.id)}
+                                    className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                  />
+                                  <span className="text-left">
+                                    {category.code && category.code.trim() ? category.code : category.name}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -1809,15 +1910,15 @@ export default function ScheduleExamPage() {
             {examType && semester && selectedProgramCourses.length > 0 ? (
               <Card className="border-0 shadow-none">
                 <CardContent className="space-y-4 pb-4 pt-4">
-                  <div className="space-y-3">
-                    <h3 className="text-base font-semibold text-gray-800">Exam Group Selection</h3>
-
-                    <Tabs
-                      value={examGroupMode}
-                      onValueChange={(value) => setExamGroupMode(value as "new" | "existing")}
-                      className="w-full"
-                    >
-                      <TabsList className="grid w-full grid-cols-2">
+                  <Tabs
+                    value={examGroupMode}
+                    onValueChange={(value) => setExamGroupMode(value as "new" | "existing")}
+                    className="w-full"
+                  >
+                    {/* Row 1: Heading left + Tabs right */}
+                    <div className="flex flex-nowrap items-center justify-between gap-4 mb-4">
+                      <h3 className="text-base font-semibold text-gray-800 shrink-0">Exam Group Selection</h3>
+                      <TabsList className="grid grid-cols-2 w-auto shrink-0">
                         <TabsTrigger
                           value="new"
                           className="data-[state=active]:bg-purple-500 data-[state=active]:text-white"
@@ -1831,113 +1932,118 @@ export default function ScheduleExamPage() {
                           Select Existing Group
                         </TabsTrigger>
                       </TabsList>
+                    </div>
 
-                      {/* New Group Tab */}
-                      <TabsContent value="new" className="space-y-4 mt-4">
-                        <div className="space-y-3">
-                          {/* Group Name */}
-                          <div className="flex flex-col gap-2">
-                            <Label className="font-medium text-gray-700">Exam Group Name</Label>
-                            <Textarea
-                              value={newGroupName}
-                              onChange={(e) => setNewGroupName(e.target.value)}
-                              placeholder="Enter exam group name..."
-                              className="min-h-24 resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                            />
-                            <p className="text-xs text-gray-500">
-                              This name will be used to identify the exam group. You can edit it before creating.
-                            </p>
-                          </div>
-
-                          {/* Commencement Date */}
-                          <div className="flex flex-col gap-2">
-                            <Label className="font-medium text-gray-700">Exam Commencement Date</Label>
-                            <DatePicker
-                              value={newGroupCommencementDate}
-                              onSelect={setNewGroupCommencementDate}
-                              className="w-full"
-                            />
-                            <p className="text-xs text-gray-500">Select the date when this exam group starts.</p>
-                          </div>
+                    {/* Row 2: Content full width */}
+                    <TabsContent value="new" className="space-y-4 mt-0">
+                      <div className="space-y-3">
+                        {/* Group Name */}
+                        <div className="flex flex-col gap-2">
+                          <Label className="font-medium text-gray-700">Exam Group Name</Label>
+                          <Textarea
+                            value={newGroupName}
+                            onChange={(e) => setNewGroupName(e.target.value)}
+                            placeholder="Enter exam group name..."
+                            className="min-h-24 resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          />
+                          <p className="text-xs text-gray-500">
+                            This name will be used to identify the exam group. You can edit it before creating.
+                          </p>
                         </div>
-                      </TabsContent>
 
-                      {/* Existing Group Tab */}
-                      <TabsContent value="existing" className="space-y-4 mt-4">
-                        <div className="space-y-3">
-                          {/* Date Filter for Existing Groups */}
-                          <div className="flex flex-col gap-2">
-                            <Label className="font-medium text-gray-700">Filter by Date (Optional)</Label>
-                            <DatePicker
-                              value={existingGroupFilterDate}
-                              onSelect={setExistingGroupFilterDate}
-                              className="w-full"
-                            />
-                            <p className="text-xs text-gray-500">
-                              Leave empty to see all exam groups, or select a date to filter.
-                            </p>
+                        {/* Commencement Date */}
+                        <div className="flex flex-col gap-2">
+                          <Label className="font-medium text-gray-700">Exam Commencement Date</Label>
+                          <DatePicker
+                            value={newGroupCommencementDate}
+                            onSelect={setNewGroupCommencementDate}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-gray-500">Select the date when this exam group starts.</p>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    {/* Existing Group Tab */}
+                    <TabsContent value="existing" className="space-y-4 mt-0">
+                      <div className="space-y-3">
+                        {/* Date Filter for Existing Groups */}
+                        <div className="flex flex-col gap-2">
+                          <Label className="font-medium text-gray-700">Filter by Date (Optional)</Label>
+                          <DatePicker
+                            value={existingGroupFilterDate}
+                            onSelect={setExistingGroupFilterDate}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-gray-500">
+                            Leave empty to see all exam groups, or select a date to filter automatically.
+                          </p>
+                        </div>
+
+                        {/* Existing Groups Selection */}
+                        {loadingExamGroups ? (
+                          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center gap-2 text-sm text-gray-600">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Loading exam groups...
                           </div>
-
-                          {/* Fetch Button */}
-                          <Button
-                            onClick={handleFetchExistingGroups}
-                            disabled={loadingExamGroups}
-                            className="w-full h-10 bg-blue-500 hover:bg-blue-600 text-white font-medium"
-                          >
-                            {loadingExamGroups ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Fetching...
-                              </>
-                            ) : (
-                              "Search Exam Groups"
-                            )}
-                          </Button>
-
-                          {/* Existing Groups Selection */}
-                          {existingGroups.length > 0 ? (
-                            <div className="space-y-2">
+                        ) : existingGroups.length > 0 ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
                               <Label className="font-medium text-gray-700">Available Exam Groups</Label>
-                              <div className="border border-gray-300 rounded-lg overflow-y-auto max-h-64 space-y-2 p-2">
-                                {existingGroups.map((group) => (
-                                  <button
-                                    key={group.id}
-                                    type="button"
-                                    onClick={() => setSelectedExistingGroupId(group.id ?? null)}
-                                    className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
-                                      selectedExistingGroupId === group.id
-                                        ? "border-purple-500 bg-purple-50"
-                                        : "border-gray-300 bg-gray-50 hover:border-purple-300"
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <Checkbox
-                                        checked={selectedExistingGroupId === group.id}
-                                        onCheckedChange={() => setSelectedExistingGroupId(group.id ?? null)}
-                                        className="h-4 w-4"
-                                      />
-                                      <div className="flex-1">
-                                        <p className="font-medium text-sm text-gray-800">{group.name}</p>
+                              <span className="text-sm text-gray-600">
+                                {existingGroups.length} group{existingGroups.length !== 1 ? "s" : ""} found
+                              </span>
+                            </div>
+                            <div className="border border-gray-300 rounded-lg overflow-y-auto max-h-80 space-y-2 p-2">
+                              {existingGroups.map((group) => (
+                                <button
+                                  key={group.id}
+                                  type="button"
+                                  onClick={() => setSelectedExistingGroupId(group.id ?? null)}
+                                  className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
+                                    selectedExistingGroupId === group.id
+                                      ? "border-purple-500 bg-purple-50"
+                                      : "border-gray-300 bg-gray-50 hover:border-purple-300"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      checked={selectedExistingGroupId === group.id}
+                                      onCheckedChange={() => setSelectedExistingGroupId(group.id ?? null)}
+                                      className="h-4 w-4 shrink-0"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-sm text-gray-800">{group.name}</p>
+                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
                                         <p className="text-xs text-gray-600">
                                           {group.exams?.length || 0} exam(s) in this group
                                         </p>
+                                        {group.examCommencementDate && (
+                                          <p className="text-xs text-gray-600">
+                                            Commencement: {formatExamCommencementDate(group.examCommencementDate)}
+                                          </p>
+                                        )}
                                       </div>
                                     </div>
-                                  </button>
-                                ))}
-                              </div>
+                                  </div>
+                                </button>
+                              ))}
                             </div>
-                          ) : (
-                            loadingExamGroups === false && (
-                              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-sm text-gray-600">
-                                {examGroupMode === "existing" && "Click 'Search Exam Groups' to find available groups"}
-                              </div>
-                            )
-                          )}
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="font-medium text-gray-700">Available Exam Groups</Label>
+                              <span className="text-sm text-gray-600">0 groups found</span>
+                            </div>
+                            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-sm text-gray-600">
+                              No exam groups found
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             ) : null}
@@ -2041,27 +2147,26 @@ export default function ScheduleExamPage() {
                           )}
                         </div>
 
-                        {/* Component - Single Select */}
+                        {/* Component - Single Select (required for adding papers) */}
                         <div className="flex flex-col gap-1">
                           <Label className="font-medium text-gray-700">Component</Label>
                           <Select
-                            value={selectedExamComponent?.toString() || "all"}
+                            value={selectedExamComponent?.toString() ?? ""}
                             onValueChange={(value) => {
-                              setSelectedExamComponent(value === "all" ? null : Number(value));
+                              setSelectedExamComponent(Number(value));
                               // Reset paper selection when component changes
                               setCurrentPaperIds([]);
                             }}
                             disabled={loading.examComponents || currentSubjectIds.length === 0}
                           >
                             <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                              <SelectValue placeholder={loading.examComponents ? "Loading..." : "All"} />
+                              <SelectValue placeholder={loading.examComponents ? "Loading..." : "Select component"} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">All</SelectItem>
                               {examComponents
                                 .filter((comp) => !comp.disabled)
                                 .map((comp) => (
-                                  <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
+                                  <SelectItem key={comp.id} value={comp.id?.toString() ?? ""}>
                                     {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
                                   </SelectItem>
                                 ))}
@@ -2201,6 +2306,22 @@ export default function ScheduleExamPage() {
                                             </Badge>
                                           )}
                                         </div>
+                                        {paper.components &&
+                                          Array.isArray(paper.components) &&
+                                          paper.components.length > 0 && (
+                                            <span className="text-[11px] text-gray-500 mt-0.5">
+                                              {paper.components
+                                                .map(
+                                                  (comp) =>
+                                                    comp.examComponent?.code ||
+                                                    comp.examComponent?.shortName ||
+                                                    comp.examComponent?.name ||
+                                                    "",
+                                                )
+                                                .filter(Boolean)
+                                                .join(", ")}
+                                            </span>
+                                          )}
                                       </div>
                                     </button>
                                   );
@@ -2257,6 +2378,7 @@ export default function ScheduleExamPage() {
                             onClick={handleAddPapers}
                             disabled={
                               currentSubjectIds.length === 0 ||
+                              selectedExamComponent === null ||
                               currentPaperIds.length === 0 ||
                               !currentDate ||
                               !currentStartTime ||
@@ -2312,10 +2434,13 @@ export default function ScheduleExamPage() {
                                 <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[20%]">
                                   <div className="font-medium">Paper</div>
                                 </TableHead>
-                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[12%]">
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
                                   <div className="font-medium">Code</div>
                                 </TableHead>
-                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[12%]">
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
+                                  <div className="font-medium">Component</div>
+                                </TableHead>
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
                                   <div className="font-medium">Date</div>
                                 </TableHead>
                                 <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[11%]">
@@ -2329,7 +2454,7 @@ export default function ScheduleExamPage() {
                             <TableBody>
                               {selectedSubjectPapers.length === 0 ? (
                                 <TableRow>
-                                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                                     No papers added yet. Use the form above to add papers to the exam schedule.
                                   </TableCell>
                                 </TableRow>
@@ -2341,10 +2466,15 @@ export default function ScheduleExamPage() {
 
                                   const programCourse = programCourses.find((pc) => pc.id === paper.programCourseId);
                                   const schedule = sp.schedule;
+                                  const paperComponent = paper.components?.find((c) => c.id === sp.paperComponentId);
+                                  const componentName =
+                                    paperComponent?.examComponent?.shortName ||
+                                    paperComponent?.examComponent?.name ||
+                                    "-";
 
                                   return (
                                     <TableRow
-                                      key={`${sp.subjectId}-${sp.paperId}-${index}`}
+                                      key={`${sp.subjectId}-${sp.paperId}-${sp.paperComponentId}-${index}`}
                                       className="border-b border-gray-400"
                                     >
                                       <TableCell className="p-2 text-center border-r border-gray-400">
@@ -2380,6 +2510,14 @@ export default function ScheduleExamPage() {
                                         {paper.code || "-"}
                                       </TableCell>
                                       <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs border-amber-300 text-amber-700 bg-amber-50"
+                                        >
+                                          {componentName}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
                                         {schedule.date ? new Date(schedule.date).toLocaleDateString("en-GB") : "-"}
                                       </TableCell>
                                       <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
@@ -2395,12 +2533,19 @@ export default function ScheduleExamPage() {
                                             setSelectedSubjectPapers((prev) =>
                                               prev.filter(
                                                 (item) =>
-                                                  !(item.subjectId === sp.subjectId && item.paperId === sp.paperId),
+                                                  !(
+                                                    item.subjectId === sp.subjectId &&
+                                                    item.paperId === sp.paperId &&
+                                                    item.paperComponentId === sp.paperComponentId
+                                                  ),
                                               ),
                                             );
                                             // If no more papers for this subject, remove from selectedSubjectIds
                                             const remainingForSubject = selectedSubjectPapers.filter(
-                                              (item) => item.subjectId === sp.subjectId && item.paperId !== sp.paperId,
+                                              (item) =>
+                                                item.subjectId === sp.subjectId &&
+                                                (item.paperId !== sp.paperId ||
+                                                  item.paperComponentId !== sp.paperComponentId),
                                             );
                                             if (remainingForSubject.length === 0) {
                                               setSelectedSubjectIds((prev) => prev.filter((id) => id !== sp.subjectId));

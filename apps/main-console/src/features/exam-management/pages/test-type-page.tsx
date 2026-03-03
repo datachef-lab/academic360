@@ -314,110 +314,109 @@ export default function TestTypePage() {
 
           <div className="overflow-x-auto flex-1" style={{ minHeight: "480px" }}>
             <div className="rounded-md border border-slate-300 h-full max-h-[520px] overflow-y-auto min-w-full">
-              <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
-                <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300 min-w-full">
-                  <div className="flex-shrink-0 basis-[6%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    #
-                  </div>
-                  <div className="flex-shrink-0 basis-[26%] px-3 py-2 border-r border-slate-300 flex items-center">
-                    Name
-                  </div>
-                  <div className="flex-shrink-0 basis-[16%] px-3 py-2 border-r border-slate-300 flex items-center">
-                    Short Name
-                  </div>
-                  <div className="flex-shrink-0 basis-[14%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    Foil Number Required
-                  </div>
-                  <div className="flex-shrink-0 basis-[16%] px-3 py-2 border-r border-slate-300 flex items-center">
-                    Updated On
-                  </div>
-                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    Status
-                  </div>
-                  <div className="flex-shrink-0 basis-[12%] px-3 py-2 flex items-center justify-center">Actions</div>
-                </div>
-              </div>
-
-              <div className="bg-white min-w-full">
-                {loading ? (
-                  <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200 gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading exam types...
-                  </div>
-                ) : filteredExamTypes.length === 0 ? (
-                  <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200">
-                    No exam types match your search.
-                  </div>
-                ) : (
-                  filteredExamTypes.map((examType, index) => (
-                    <div
-                      key={examType.id ?? `${examType.name}-${index}`}
-                      className="flex border-b border-slate-200 hover:bg-muted/40 transition-colors"
-                    >
-                      <div className="flex-shrink-0 basis-[6%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                        {index + 1}
-                      </div>
-                      <div className="flex-shrink-0 basis-[26%] px-3 py-3 border-r border-slate-200 flex flex-col">
-                        <span className="font-medium text-slate-800 truncate" title={examType.name ?? undefined}>
-                          {examType.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">ID: {examType.id ?? "—"}</span>
-                      </div>
-                      <div className="flex-shrink-0 basis-[16%] px-3 py-3 border-r border-slate-200 flex items-center">
-                        {examType.shortName ?? <span className="text-slate-400">—</span>}
-                      </div>
-                      <div className="flex-shrink-0 basis-[14%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            examType.foilNumberRequired ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {examType.foilNumberRequired ? "Yes" : "No"}
-                        </span>
-                      </div>
-                      <div className="flex-shrink-0 basis-[16%] px-3 py-3 border-r border-slate-200 flex items-center">
-                        {formatDate(examType.updatedAt ?? examType.createdAt)}
-                      </div>
-                      <div className="flex-shrink-0 basis-[10%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            examType.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {examType.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </div>
-                      <div className="flex-shrink-0 basis-[12%] px-3 py-3 flex items-center justify-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
-                          onClick={() => {
-                            setSelectedExamType(examType);
-                            setIsFormOpen(true);
-                          }}
-                          disabled={deletingId === examType.id}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="shadow-none"
-                          onClick={() => handleDelete(examType.id!)}
-                          disabled={deletingId === examType.id}
-                        >
-                          {deletingId === examType.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+              <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+                <thead className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
+                  <tr className="text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
+                    <th className="w-[6%] px-3 py-2 border-r border-slate-300 text-center">#</th>
+                    <th className="w-[26%] px-3 py-2 border-r border-slate-300 text-left">Name</th>
+                    <th className="w-[16%] px-3 py-2 border-r border-slate-300 text-left">Short Name</th>
+                    <th className="w-[14%] px-3 py-2 border-r border-slate-300 text-center">Foil Number Required</th>
+                    <th className="w-[16%] px-3 py-2 border-r border-slate-300 text-left">Updated On</th>
+                    <th className="w-[10%] px-3 py-2 border-r border-slate-300 text-center">Status</th>
+                    <th className="w-[12%] px-3 py-2 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading exam types...
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredExamTypes.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
+                        No exam types match your search.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredExamTypes.map((examType, index) => (
+                      <tr
+                        key={examType.id ?? `${examType.name}-${index}`}
+                        className="border-b border-slate-200 hover:bg-muted/40 transition-colors"
+                      >
+                        <td className="px-3 py-3 border-r border-slate-200 text-center">{index + 1}</td>
+                        <td className="px-3 py-3 border-r border-slate-200">
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-medium text-slate-800 truncate" title={examType.name ?? undefined}>
+                              {examType.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">ID: {examType.id ?? "—"}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 border-r border-slate-200">
+                          {examType.shortName ?? <span className="text-slate-400">—</span>}
+                        </td>
+                        <td className="px-3 py-3 border-r border-slate-200 text-center">
+                          <span
+                            className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                              examType.foilNumberRequired
+                                ? "bg-purple-100 text-purple-800"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {examType.foilNumberRequired ? "Yes" : "No"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 border-r border-slate-200">
+                          {formatDate(examType.updatedAt ?? examType.createdAt)}
+                        </td>
+                        <td className="px-3 py-3 border-r border-slate-200 text-center">
+                          <span
+                            className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                              examType.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {examType.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
+                              onClick={() => {
+                                setSelectedExamType(examType);
+                                setIsFormOpen(true);
+                              }}
+                              disabled={deletingId === examType.id}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="shadow-none"
+                              onClick={() => handleDelete(examType.id!)}
+                              disabled={deletingId === examType.id}
+                            >
+                              {deletingId === examType.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </CardContent>

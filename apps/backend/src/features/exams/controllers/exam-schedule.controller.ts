@@ -676,11 +676,23 @@ export const downloadAdmitCardsController = async (
       ? result.zipBuffer
       : Buffer.from(result.zipBuffer);
 
+    // Build filename: exam group name + exam commencement date
+    const examCommencementDate =
+      result.examCommencementDate instanceof Date
+        ? result.examCommencementDate.toISOString().slice(0, 10)
+        : String(result.examCommencementDate || "").slice(0, 10);
+    const sanitizedName = (result.examGroupName || "exam")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const zipFileName = `${sanitizedName} ${examCommencementDate}.zip`;
+
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Length", zipBuffer.length);
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="exam-${examId ?? examGroupId}-subject-admit-cards.zip"`,
+      `attachment; filename="${zipFileName.replace(/"/g, "%22")}"`,
     );
 
     res.send(zipBuffer);
@@ -747,11 +759,23 @@ export const downloadAttendanceSheetsByExamIdController = async (
       ? result.zipBuffer
       : Buffer.from(result.zipBuffer);
 
+    const rawDate = result.examCommencementDate;
+    const examCommencementDate =
+      rawDate != null && typeof rawDate === "object" && "toISOString" in rawDate
+        ? (rawDate as Date).toISOString().slice(0, 10)
+        : String(rawDate ?? "").slice(0, 10);
+    const sanitizedName = (result.examGroupName || "exam")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const zipFileName = `${sanitizedName} ${examCommencementDate}-attendance-dr-sheets.zip`;
+
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Length", zipBuffer.length);
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="exam-${examId ?? examGroupId}-attendance-dr-sheets.zip"`,
+      `attachment; filename="${zipFileName.replace(/"/g, "%22")}"`,
     );
 
     res.send(zipBuffer);
@@ -788,15 +812,27 @@ export const downloadExamCandidatesController = async (
       examGroupId: examGroupIdNum,
     });
 
-    const excelBuffer = await downloadExamCandidatesbyExamId(
+    const result = await downloadExamCandidatesbyExamId(
       examIdNum,
       examGroupIdNum,
     );
 
-    // Ensure excelBuffer is a Buffer
-    const buffer = Buffer.isBuffer(excelBuffer)
-      ? excelBuffer
-      : Buffer.from(excelBuffer as ArrayBuffer);
+    // Ensure buffer is a Buffer
+    const buffer = Buffer.isBuffer(result.buffer)
+      ? result.buffer
+      : Buffer.from(result.buffer);
+
+    const rawDate = result.examCommencementDate;
+    const examCommencementDate =
+      rawDate != null && typeof rawDate === "object" && "toISOString" in rawDate
+        ? (rawDate as Date).toISOString().slice(0, 10)
+        : String(rawDate ?? "").slice(0, 10);
+    const sanitizedName = (result.examGroupName || "exam")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const fileName = `${sanitizedName} ${examCommencementDate}-candidates.xlsx`;
 
     // ✅ IMPORTANT HEADERS
     res.setHeader(
@@ -805,7 +841,7 @@ export const downloadExamCandidatesController = async (
     );
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="exam-${examIdNum ?? examGroupIdNum}-candidates.xlsx"`,
+      `attachment; filename="${fileName.replace(/"/g, "%22")}"`,
     );
 
     // 🚀 Send buffer
@@ -906,10 +942,26 @@ export const downloadAdmitCardTrackingController = async (
       examGroupId: examGroupIdNum,
     });
 
-    const excelBuffer = await downloadAdmitCardTrackingByExamId(
+    const result = await downloadAdmitCardTrackingByExamId(
       examIdNum,
       examGroupIdNum,
     );
+
+    const buffer = Buffer.isBuffer(result.buffer)
+      ? result.buffer
+      : Buffer.from(result.buffer);
+
+    const rawDate = result.examCommencementDate;
+    const examCommencementDate =
+      rawDate != null && typeof rawDate === "object" && "toISOString" in rawDate
+        ? (rawDate as Date).toISOString().slice(0, 10)
+        : String(rawDate ?? "").slice(0, 10);
+    const sanitizedName = (result.examGroupName || "exam")
+      .replace(/[/\\:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+    const fileName = `${sanitizedName} ${examCommencementDate}-admit-card-tracking.xlsx`;
 
     // ✅ IMPORTANT HEADERS
     res.setHeader(
@@ -918,11 +970,11 @@ export const downloadAdmitCardTrackingController = async (
     );
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="exam-${examIdNum ?? examGroupIdNum}-admit-card-tracking.xlsx"`,
+      `attachment; filename="${fileName.replace(/"/g, "%22")}"`,
     );
 
     // 🚀 Send buffer
-    res.send(Buffer.from(excelBuffer));
+    res.send(buffer);
   } catch (error) {
     console.error("[ADMIT-CARD-TRACKING-DOWNLOAD] Error:", error);
     handleError(error, res, next);

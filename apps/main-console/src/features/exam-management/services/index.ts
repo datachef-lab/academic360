@@ -114,9 +114,12 @@ export async function doAssignExam(
 
     console.log("In doAssignExam(), response:", response);
     return response.data;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error assigning exam:", error);
-    throw new Error("Failed to assign exam");
+    const axiosError = error as { response?: { data?: { message?: string }; status?: number } };
+    const backendMessage = axiosError.response?.data?.message;
+    const message = backendMessage || (error instanceof Error ? error.message : "Failed to assign exam");
+    throw new Error(message);
   }
 }
 

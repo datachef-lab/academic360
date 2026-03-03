@@ -101,6 +101,23 @@ export default function ExamPaperRow({
         <div className="mt-1 flex flex-col gap-1">
           <p className="text-xs">
             {examPapersWithStat.paper.name}
+            {(() => {
+              const examSubject = exam.examSubjects.find((es) => es.id === examPapersWithStat.examSubjectId);
+              const matchingComp =
+                examSubject?.paperComponentId != null
+                  ? examPapersWithStat.paper.components?.find((c) => c.id === examSubject.paperComponentId)
+                  : null;
+              const componentLabel = matchingComp
+                ? matchingComp.examComponent?.shortName ||
+                  matchingComp.examComponent?.name ||
+                  matchingComp.examComponent?.code ||
+                  ""
+                : examPapersWithStat.paper.components
+                    ?.map((comp) => comp.examComponent?.name || comp.examComponent?.code || "")
+                    .filter(Boolean)
+                    .join(", ");
+              return componentLabel ? <span className="text-gray-600"> - {componentLabel}</span> : null;
+            })()}
             {!examPapersWithStat.paper.isOptional && <span className="text-red-500">*</span>}
           </p>
           <p>

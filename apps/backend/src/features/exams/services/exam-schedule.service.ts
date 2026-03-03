@@ -6,6 +6,8 @@ import JSZip from "jszip";
 import fs from "fs/promises";
 import * as programCourseServices from "@/features/course-design/services/program-course.service";
 import * as paperServices from "@/features/course-design/services/paper.service";
+import { getPaperComponentById } from "@/features/course-design/services/paper-component.service";
+import { findExamComponentById } from "@/features/course-design/services/exam-component.service";
 import * as shiftService from "@/features/academics/services/shift.service";
 import * as roomServices from "./room.service";
 import { studentModel, userModel } from "@repo/db/schemas/models/user";
@@ -1741,22 +1743,23 @@ export async function createExamAssignment(
       ),
     ]);
 
-    // 4. Insert exam subjects with paperId
-    // Now exam_subject includes paperId, so we need to create one record per subject+paper combination
-    const subjectPaperToExamSubject = new Map<string, number>(); // key: "subjectId|paperId"
+    // 4. Insert exam subjects with paperId and paperComponentId
+    const subjectPaperToExamSubject = new Map<string, number>(); // key: "subjectId|paperId|paperComponentId"
     for (const subj of dto.examSubjects) {
-      const paperId = subj.paperId || null; // paperId is now part of exam_subject
+      const paperId = subj.paperId || null;
+      const paperComponentId = subj.paperComponentId ?? null;
       const [es] = await tx
         .insert(examSubjectModel)
         .values({
           examId: exam.id,
           subjectId: subj.subject.id!,
           paperId: paperId,
+          paperComponentId: paperComponentId,
           startTime: subj.startTime ? new Date(subj.startTime) : new Date(),
           endTime: subj.endTime ? new Date(subj.endTime) : new Date(),
         })
         .returning();
-      const key = `${subj.subject.id!}|${paperId || "null"}`;
+      const key = `${subj.subject.id!}|${paperId || "null"}|${paperComponentId ?? "null"}`;
       subjectPaperToExamSubject.set(key, es.id);
     }
 
@@ -2025,11 +2028,16 @@ export async function createExamAssignment(
 
     // Note: examSubjectId is no longer a single value since we have multiple exam_subjects per subject (one per paper)
     // This is kept for backward compatibility but may not be used
+    const firstSubj = dto.examSubjects[0];
     const examSubjectId =
-      dto.examSubjects.length > 0 && dto.examSubjects[0].paperId
-        ? subjectPaperToExamSubject.get(
-            `${dto.examSubjects[0].subject.id!}|${dto.examSubjects[0].paperId}`,
-          )
+      dto.examSubjects.length > 0 && firstSubj?.paperId
+        ? (subjectPaperToExamSubject.get(
+            `${firstSubj.subject.id!}|${firstSubj.paperId}|${firstSubj.paperComponentId ?? "null"}`,
+          ) ??
+          subjectPaperToExamSubject.get(
+            `${firstSubj.subject.id!}|${firstSubj.paperId}|null`,
+          ) ??
+          null)
         : null;
 
     // 9. Build and insert exam_candidates
@@ -2126,13 +2134,24 @@ export async function createExamAssignment(
             continue;
           }
 
-          // Find exam_subject.id using both subjectId and paperId
-          const examSubjectKey = `${subj.subject.id!}|${paperId}`;
-          const examSubjectId = subjectPaperToExamSubject.get(examSubjectKey);
+          // Only process when this exam subject's paper matches the paper for this subject+type
+          if (subj.paperId !== paperId) {
+            continue;
+          }
 
+          // Find exam_subject.id using subjectId, paperId, and paperComponentId
+          const paperComponentId = subj.paperComponentId ?? null;
+          const examSubjectKey = `${subj.subject.id!}|${paperId}|${paperComponentId ?? "null"}`;
+          let examSubjectId = subjectPaperToExamSubject.get(examSubjectKey);
+          if (!examSubjectId) {
+            // Fallback: try without paperComponentId (backward compatibility)
+            examSubjectId = subjectPaperToExamSubject.get(
+              `${subj.subject.id!}|${paperId}|null`,
+            );
+          }
           if (!examSubjectId) {
             // Try with null paperId as fallback (for backward compatibility)
-            const fallbackKey = `${subj.subject.id!}|null`;
+            const fallbackKey = `${subj.subject.id!}|null|null`;
             const fallbackExamSubjectId =
               subjectPaperToExamSubject.get(fallbackKey);
             if (!fallbackExamSubjectId) {
@@ -2512,10 +2531,10 @@ export async function allotExamRoomsAndStudents(
     );
 
     // 8. Create exam subject and subject type maps
-    // Now exam_subject includes paperId, so we map by subjectId|paperId
-    const subjectPaperToExamSubject = new Map<string, number>(); // key: "subjectId|paperId"
+    // Map by subjectId|paperId|paperComponentId for uniqueness
+    const subjectPaperToExamSubject = new Map<string, number>(); // key: "subjectId|paperId|paperComponentId"
     for (const es of examSubjects) {
-      const key = `${es.subjectId}|${es.paperId || "null"}`;
+      const key = `${es.subjectId}|${es.paperId || "null"}|${es.paperComponentId ?? "null"}`;
       subjectPaperToExamSubject.set(key, es.id);
     }
 
@@ -3364,6 +3383,8 @@ export async function downloadAdmitCardsAsZip(
 ): Promise<{
   zipBuffer: Buffer;
   admitCardCount: number;
+  examGroupName: string;
+  examCommencementDate: string | Date;
 }> {
   if (!examId && !examGroupId) {
     throw new Error("Either examId or examGroupId must be provided");
@@ -3410,6 +3431,8 @@ export async function downloadAdmitCardsAsZip(
       subjectName: paperModel.name,
       subjectCode: paperModel.code,
       programCourse: programCourseModel.name,
+      paperId: examCandidateModel.paperId,
+      paperComponentId: examSubjectModel.paperComponentId,
     })
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
@@ -3473,47 +3496,9 @@ export async function downloadAdmitCardsAsZip(
   const CONCURRENCY = 4; // 🔥 tune this (3–6 ideal for EC2)
   let processed = 0;
 
-  for (let i = 0; i < uidEntries.length; i += CONCURRENCY) {
-    const batch = uidEntries.slice(i, i + CONCURRENCY);
-
-    await Promise.all(
-      batch.map(async ([uid, studentRows]) => {
-        const pdfBuffer =
-          await pdfGenerationService.generateExamAdmitCardPdfBuffer({
-            semester: studentRows[0]?.semester?.split(" ")[1] ?? "",
-            examType: studentRows[0]?.examType ?? "",
-            session: studentRows[0]?.session ?? "",
-            name: studentRows[0]?.name ?? "",
-            cuRollNumber: studentRows[0]?.cuRollNumber,
-            cuRegistrationNumber: studentRows[0]?.cuRegistrationNumber,
-            uid: studentRows[0]?.uid ?? "",
-            phone: studentRows[0]?.phone ?? "",
-            programCourseName: studentRows[0]?.programCourse ?? "",
-            shiftName: studentRows[0]?.shiftName ?? "",
-            qrCodeDataUrl: null,
-
-            examRows: studentRows.map((r) => ({
-              subjectName: r.subjectName!,
-              subjectCode: r.subjectCode!,
-              date: formatExamDateFromTimestamp(r.examStartDate!),
-              time: formatExamTimeFromTimestamps(
-                r.examStartDate!,
-                r.examEndDate!,
-              ),
-              seatNo: r.seatNo!,
-              room: r.roomName!,
-            })),
-          });
-
-        zip.file(`${uid}_admit_card.pdf`, pdfBuffer);
-      }),
-    );
-
-    processed += batch.length;
-    const progress = Math.round((processed / totalUids) * 100);
-
-    // ---------- Progress emit (once per batch) ----------
+  const emitProgress = () => {
     if (io && userId) {
+      const progress = Math.round((processed / totalUids) * 100);
       io.to(`user:${userId}`).emit("download_progress", {
         id: uploadSessionId || `download-${Date.now()}`,
         userId,
@@ -3528,6 +3513,93 @@ export async function downloadAdmitCardsAsZip(
         pdfTotal: totalUids,
       });
     }
+  };
+
+  for (let i = 0; i < uidEntries.length; i += CONCURRENCY) {
+    const batch = uidEntries.slice(i, i + CONCURRENCY);
+
+    await Promise.all(
+      batch.map(async ([uid, studentRows]) => {
+        // Fetch paper components for each row
+        const examRowsWithComponents = await Promise.all(
+          studentRows.map(async (r) => {
+            let componentNames = "";
+            try {
+              if (r.paperComponentId) {
+                const pc = await getPaperComponentById(
+                  r.paperComponentId.toString(),
+                );
+                if (pc) {
+                  const examComp = await findExamComponentById(
+                    pc.examComponentId.toString(),
+                  );
+                  componentNames =
+                    examComp?.code ||
+                    examComp?.shortName ||
+                    examComp?.name ||
+                    "";
+                }
+              } else if (r.paperId) {
+                const paper = await paperServices.getPaperById(r.paperId);
+                if (
+                  paper?.components &&
+                  Array.isArray(paper.components) &&
+                  paper.components.length > 0
+                ) {
+                  const codes = paper.components
+                    .map(
+                      (comp) =>
+                        comp.examComponent?.code ||
+                        comp.examComponent?.shortName ||
+                        "",
+                    )
+                    .filter(Boolean);
+                  componentNames = codes.join(", ");
+                }
+              }
+            } catch (error) {
+              console.error(
+                `Error fetching exam component for paperId ${r.paperId}:`,
+                error,
+              );
+            }
+            return {
+              subjectName: r.subjectName!,
+              subjectCode: r.subjectCode!,
+              componentNames: componentNames || undefined,
+              date: formatExamDateFromTimestamp(r.examStartDate!),
+              time: formatExamTimeFromTimestamps(
+                r.examStartDate!,
+                r.examEndDate!,
+              ),
+              seatNo: r.seatNo!,
+              room: r.roomName!,
+            };
+          }),
+        );
+
+        const pdfBuffer =
+          await pdfGenerationService.generateExamAdmitCardPdfBuffer({
+            semester: studentRows[0]?.semester?.split(" ")[1] ?? "",
+            examType: studentRows[0]?.examType ?? "",
+            session: studentRows[0]?.session ?? "",
+            name: studentRows[0]?.name ?? "",
+            cuRollNumber: studentRows[0]?.cuRollNumber,
+            cuRegistrationNumber: studentRows[0]?.cuRegistrationNumber,
+            uid: studentRows[0]?.uid ?? "",
+            phone: studentRows[0]?.phone ?? "",
+            programCourseName: studentRows[0]?.programCourse ?? "",
+            shiftName: studentRows[0]?.shiftName ?? "",
+            qrCodeDataUrl: null,
+
+            examRows: examRowsWithComponents,
+          });
+
+        zip.file(`${uid}_admit_card.pdf`, pdfBuffer);
+        processed++;
+        emitProgress();
+      }),
+    );
   }
 
   // ---------- ZIP generation ----------
@@ -3550,6 +3622,8 @@ export async function downloadAdmitCardsAsZip(
   return {
     zipBuffer,
     admitCardCount: totalUids,
+    examGroupName: foundExamGroup.name,
+    examCommencementDate: foundExamGroup.examCommencementDate,
   };
 }
 
@@ -3947,7 +4021,12 @@ export async function downloadExamCandidatesbyExamId(
     const sheet = workbook.addWorksheet("No Candidates");
     sheet.addRow(["No exam candidates found"]);
     sheet.getRow(1).font = { bold: true };
-    return await workbook.xlsx.writeBuffer();
+    const buf = await workbook.xlsx.writeBuffer();
+    return {
+      buffer: Buffer.isBuffer(buf) ? buf : Buffer.from(buf),
+      examGroupName: foundExamGroup.name ?? "exam",
+      examCommencementDate: foundExamGroup.examCommencementDate ?? null,
+    };
   }
 
   // =========================
@@ -4100,7 +4179,11 @@ export async function downloadExamCandidatesbyExamId(
   sheet.views = [{ state: "frozen", ySplit: 1 }];
 
   const buffer = await workbook.xlsx.writeBuffer();
-  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  return {
+    buffer: Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer),
+    examGroupName: foundExamGroup.name ?? "exam",
+    examCommencementDate: foundExamGroup.examCommencementDate ?? null,
+  };
 }
 
 // export async function downloadAdmitCardTrackingByExamId(examId?: number, examGroupId?: number) {
@@ -4580,7 +4663,11 @@ export async function downloadAdmitCardTrackingByExamId(
   sheet.views = [{ state: "frozen", ySplit: 1 }];
 
   const buffer = await workbook.xlsx.writeBuffer();
-  return Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  return {
+    buffer: Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer),
+    examGroupName: foundExamGroup.name ?? "exam",
+    examCommencementDate: foundExamGroup.examCommencementDate ?? null,
+  };
 }
 
 export async function downloadSingleAdmitCard(
@@ -4633,6 +4720,8 @@ export async function downloadSingleAdmitCard(
       subjectName: paperModel.name,
       subjectCode: paperModel.code,
       programCourse: programCourseModel.name,
+      paperId: examCandidateModel.paperId,
+      paperComponentId: examSubjectModel.paperComponentId,
     })
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
@@ -4675,6 +4764,56 @@ export async function downloadSingleAdmitCard(
 
   const studentRows = result;
 
+  // Fetch exam component for each row (from exam subject's paperComponentId when available)
+  const examRowsWithComponents = await Promise.all(
+    studentRows.map(async (r) => {
+      let componentNames = "";
+      try {
+        if (r.paperComponentId) {
+          const pc = await getPaperComponentById(r.paperComponentId.toString());
+          if (pc) {
+            const examComp = await findExamComponentById(
+              pc.examComponentId.toString(),
+            );
+            componentNames =
+              examComp?.code || examComp?.shortName || examComp?.name || "";
+          }
+        } else if (r.paperId) {
+          const paper = await paperServices.getPaperById(r.paperId);
+          if (
+            paper?.components &&
+            Array.isArray(paper.components) &&
+            paper.components.length > 0
+          ) {
+            const codes = paper.components
+              .map(
+                (comp) =>
+                  comp.examComponent?.code ||
+                  comp.examComponent?.shortName ||
+                  "",
+              )
+              .filter(Boolean);
+            componentNames = codes.join(", ");
+          }
+        }
+      } catch (error) {
+        console.error(
+          `Error fetching exam component for paperId ${r.paperId}:`,
+          error,
+        );
+      }
+      return {
+        subjectName: r.subjectName!,
+        subjectCode: r.subjectCode!,
+        componentNames: componentNames || undefined,
+        date: formatExamDateFromTimestamp(r.examStartDate!),
+        time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
+        seatNo: r.seatNo!,
+        room: r.roomName!,
+      };
+    }),
+  );
+
   const pdfBuffer = await pdfGenerationService.generateExamAdmitCardPdfBuffer({
     semester: studentRows[0]!.semester!.split(" ")[1],
     examType: studentRows[0]!.examType ?? "",
@@ -4688,14 +4827,7 @@ export async function downloadSingleAdmitCard(
     shiftName: studentRows[0]!.shiftName ?? "",
     qrCodeDataUrl: null,
 
-    examRows: studentRows.map((r) => ({
-      subjectName: r.subjectName!,
-      subjectCode: r.subjectCode!,
-      date: formatExamDateFromTimestamp(r.examStartDate!),
-      time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
-      seatNo: r.seatNo!,
-      room: r.roomName!,
-    })),
+    examRows: examRowsWithComponents,
   });
 
   // Track admit card download - increment count by 1 only (not by number of papers)
@@ -5176,6 +5308,8 @@ export async function fetchExamCandidatesByExamId(examId: number) {
       seatNo: examCandidateModel.seatNumber,
       roomName: roomModel.name,
       programCourse: programCourseModel.name,
+      paperId: examCandidateModel.paperId,
+      paperComponentId: examSubjectModel.paperComponentId,
     })
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
@@ -5230,6 +5364,54 @@ export async function generateAdmitCardBuffers(
   const pdfBuffers: AdmitCardEmailPayload[] = [];
 
   for (const [uid, rows] of uidMap.entries()) {
+    const examRowsWithComponents = await Promise.all(
+      rows.map(async (r) => {
+        let componentNames = "";
+        try {
+          if (r.paperComponentId) {
+            const pc = await getPaperComponentById(
+              r.paperComponentId.toString(),
+            );
+            if (pc) {
+              const examComp = await findExamComponentById(
+                pc.examComponentId.toString(),
+              );
+              componentNames =
+                examComp?.code || examComp?.shortName || examComp?.name || "";
+            }
+          } else {
+            const paper = await paperServices.getPaperById(r.paperId!);
+            if (
+              paper?.components &&
+              Array.isArray(paper.components) &&
+              paper.components.length > 0
+            ) {
+              componentNames = paper.components
+                .map(
+                  (comp) =>
+                    comp.examComponent?.code ||
+                    comp.examComponent?.shortName ||
+                    "",
+                )
+                .filter(Boolean)
+                .join(", ");
+            }
+          }
+        } catch {
+          // ignore
+        }
+        return {
+          subjectName: r.subjectName!,
+          subjectCode: r.subjectCode!,
+          componentNames: componentNames || undefined,
+          date: formatExamDateFromTimestamp(r.examStartDate!),
+          time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
+          seatNo: r.seatNo!,
+          room: r.roomName!,
+        };
+      }),
+    );
+
     const pdfBuffer = await pdfGenerationService.generateExamAdmitCardPdfBuffer(
       {
         semester: rows[0]?.semester!.split(" ")[1] ?? "",
@@ -5243,14 +5425,7 @@ export async function generateAdmitCardBuffers(
         programCourseName: rows[0]?.programCourse ?? "",
         shiftName: rows[0]?.shiftName ?? "",
         qrCodeDataUrl: null,
-        examRows: rows.map((r) => ({
-          subjectName: r.subjectName!,
-          subjectCode: r.subjectCode!,
-          date: formatExamDateFromTimestamp(r.examStartDate!),
-          time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
-          seatNo: r.seatNo!,
-          room: r.roomName!,
-        })),
+        examRows: examRowsWithComponents,
       },
     );
 
@@ -5268,14 +5443,7 @@ export async function generateAdmitCardBuffers(
       cuRegistrationNumber: rows[0]?.cuRegistrationNumber ?? null,
       shiftName: rows[0]?.shiftName ?? "",
 
-      examRows: rows.map((r) => ({
-        subjectName: r.subjectName!,
-        subjectCode: r.subjectCode!,
-        date: formatExamDateFromTimestamp(r.examStartDate!),
-        time: formatExamTimeFromTimestamps(r.examStartDate!, r.examEndDate!),
-        seatNo: r.seatNo!,
-        room: r.roomName!,
-      })),
+      examRows: examRowsWithComponents,
     });
   }
 
@@ -5938,6 +6106,8 @@ export async function downloadAttendanceSheetsByExamId(
 ): Promise<{
   zipBuffer: Buffer;
   roomCount: number;
+  examGroupName: string;
+  examCommencementDate: Date | string | null;
 }> {
   if (!examId && !examGroupId) {
     throw new Error("Either examId or examGroupId must be provided");
@@ -6173,9 +6343,17 @@ export async function downloadAttendanceSheetsByExamId(
 
   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
+  const examGroupName = foundExamGroup.name ?? "exam";
+  const examCommencementDate = foundExamGroup.examCommencementDate as
+    | Date
+    | string
+    | null;
+
   return {
     zipBuffer,
     roomCount: totalRooms,
+    examGroupName,
+    examCommencementDate,
   };
 }
 

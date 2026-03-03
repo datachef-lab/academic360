@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // import { PaperEditModal } from "./paper-edit-modal";
 // import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -144,7 +145,7 @@ const ExamsPage = () => {
   //   const setIsDownloading = React.useState(false)[1];
   //   const setDownloadProgress = React.useState(0)[1];
   const [examGroups, setExamGroups] = useState<ExamGroupDto[]>([]);
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
   //   const [isFormSubmitting, setIsFormSubmitting] = React.useState(false);
 
@@ -417,11 +418,19 @@ const ExamsPage = () => {
 
   // Memoize fetch function to avoid recreating on every render
   const refetchExams = React.useCallback(() => {
-    fetchExamGroups(currentPage, itemsPerPage, filters).then((data) => {
-      setExamGroups(data.content);
-      setTotalPages(data.totalPages);
-      setTotalItems(data.totalElements);
-    });
+    setLoading(true);
+    fetchExamGroups(currentPage, itemsPerPage, filters)
+      .then((data) => {
+        setExamGroups(data.content);
+        setTotalPages(data.totalPages);
+        setTotalItems(data.totalElements);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch exams:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [currentPage, itemsPerPage, filters]);
 
   // Listen for exam creation/update events
@@ -457,12 +466,20 @@ const ExamsPage = () => {
     // Only fetch data when authentication is ready, and only on initial mount
     if (displayFlag && accessToken && !hasInitialized.current) {
       hasInitialized.current = true;
-      fetchExamGroups(currentPage, itemsPerPage, filters).then((data) => {
-        setExamGroups(data.content);
-        setTotalItems(data.totalElements);
-        setTotalPages(data.totalPages);
-        setCurrentPage(data.page);
-      });
+      setLoading(true);
+      fetchExamGroups(currentPage, itemsPerPage, filters)
+        .then((data) => {
+          setExamGroups(data.content);
+          setTotalItems(data.totalElements);
+          setTotalPages(data.totalPages);
+          setCurrentPage(data.page);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch exams on mount:", err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayFlag, accessToken, currentPage, filters]);
@@ -470,12 +487,20 @@ const ExamsPage = () => {
   // Refetch when filters change (after initialization)
   useEffect(() => {
     if (hasInitialized.current && displayFlag && accessToken) {
-      fetchExamGroups(currentPage, itemsPerPage, filters).then((data) => {
-        setExamGroups(data.content);
-        setTotalItems(data.totalElements);
-        setTotalPages(data.totalPages);
-        setCurrentPage(data.page);
-      });
+      setLoading(true);
+      fetchExamGroups(currentPage, itemsPerPage, filters)
+        .then((data) => {
+          setExamGroups(data.content);
+          setTotalItems(data.totalElements);
+          setTotalPages(data.totalPages);
+          setCurrentPage(data.page);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch exams on filters change:", err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, currentPage]);
@@ -2152,8 +2177,69 @@ const ExamsPage = () => {
               {/* Table Body */}
               <div className="bg-white relative">
                 {loading ? (
-                  <div className="flex items-center justify-center p-4 text-center" style={{ minWidth: "1050px" }}>
-                    Loading...
+                  <div className="bg-white" style={{ minWidth: "1050px" }}>
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <div key={index} className="flex border-b" style={{ minWidth: "1050px" }}>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "6%" }}
+                        >
+                          <Skeleton className="h-4 w-8" />
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "11%" }}
+                        >
+                          <Skeleton className="h-4 w-20" />
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "16%" }}
+                        >
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "16%" }}
+                        >
+                          <Skeleton className="h-4 w-28" />
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "11%" }}
+                        >
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "11%" }}
+                        >
+                          <Skeleton className="h-4 w-20" />
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "11%" }}
+                        >
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                        <div
+                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                          style={{ width: "11%" }}
+                        >
+                          <Skeleton className="h-4 w-16" />
+                        </div>
+                        <div className="flex-shrink-0 p-3 flex items-center justify-center" style={{ width: "6%" }}>
+                          <Skeleton className="h-8 w-8 rounded-full" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : examGroups.length === 0 ? (
+                  <div
+                    className="flex items-center justify-center p-6 text-sm text-muted-foreground"
+                    style={{ minWidth: "1050px" }}
+                  >
+                    No exams found.
                   </div>
                 ) : (
                   examGroups.map((examGroup: ExamGroupDto, groupIdx: number) => {

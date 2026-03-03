@@ -8,7 +8,13 @@ export const getAllExamGroupsController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { page = "1", pageSize = "10" } = req.query;
+    const {
+      page = "1",
+      pageSize = "10",
+      dateFrom,
+      dateTo,
+      academicYearId,
+    } = req.query;
 
     const pageNum = Number(page);
     const pageSizeNum = Number(pageSize);
@@ -18,7 +24,20 @@ export const getAllExamGroupsController = async (
       return;
     }
 
-    const result = await examGroupService.findAll(pageNum, pageSizeNum);
+    const filters =
+      dateFrom || dateTo || academicYearId
+        ? {
+            dateFrom: typeof dateFrom === "string" ? dateFrom : null,
+            dateTo: typeof dateTo === "string" ? dateTo : null,
+            academicYearId: academicYearId ? Number(academicYearId) : null,
+          }
+        : undefined;
+
+    const result = await examGroupService.findAll(
+      pageNum,
+      pageSizeNum,
+      filters,
+    );
 
     res
       .status(200)
