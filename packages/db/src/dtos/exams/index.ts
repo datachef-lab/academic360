@@ -38,6 +38,7 @@ export interface ExamSubjectTypeDto extends Omit<ExamSubjectType, "subjectTypeId
 
 export interface ExamSubjectDto extends Omit<ExamSubjectT, "subjectId"> {
     subject: SubjectT;
+    paperComponentId?: number | null;
 }
 
 export interface ExamDto extends Omit<ExamT, "academicYearId" | "examTypeId" | "classId"> {

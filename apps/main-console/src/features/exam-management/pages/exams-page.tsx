@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { FileText, Edit, Filter, X } from "lucide-react";
+import { FileText, Edit, Filter, X, Loader2 } from "lucide-react";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-
 // import { PaperEditModal } from "./paper-edit-modal";
 // import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 // import { toast } from "sonner";
@@ -2111,329 +2109,187 @@ const ExamsPage = () => {
               )}
             </div> */}
           </div>
-          <div className="relative z-50 bg-white" style={{ height: "600px" }}>
-            <div className="overflow-y-auto text-[14px] overflow-x-auto h-full border rounded-md">
-              {/* Fixed Header */}
-              <div className="sticky top-0 z-50 text-gray-500 bg-gray-100 border-b" style={{ minWidth: "950px" }}>
-                <div className="flex">
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "6%" }}
-                  >
-                    Sr. No.
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "11%" }}
-                  >
-                    Exam Type
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "16%" }}
-                  >
-                    Exam Group Name
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "16%" }}
-                  >
-                    Program Courses
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "11%" }}
-                  >
-                    Subjects
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "11%" }}
-                  >
-                    Shift(s)
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "11%" }}
-                  >
-                    Subject Category
-                  </div>
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
-                    style={{ width: "11%" }}
-                  >
-                    Semester
-                  </div>
-
-                  <div
-                    className="flex-shrink-0 text-gray-500 font-bold p-3 flex items-center justify-center"
-                    style={{ width: "6%" }}
-                  >
-                    Actions
-                  </div>
-                </div>
-              </div>
-
-              {/* Table Body */}
-              <div className="bg-white relative">
-                {loading ? (
-                  <div className="bg-white" style={{ minWidth: "1050px" }}>
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <div key={index} className="flex border-b" style={{ minWidth: "1050px" }}>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "6%" }}
-                        >
-                          <Skeleton className="h-4 w-8" />
+          <div className="overflow-x-auto flex-1" style={{ minHeight: "480px" }}>
+            <div className="rounded-md border border-slate-300 h-full max-h-[520px] overflow-y-auto min-w-full">
+              <table className="w-full min-w-[900px] border-collapse text-[14px]" style={{ tableLayout: "fixed" }}>
+                <thead className="sticky top-0 z-[50] bg-slate-100 border-b border-slate-300 shadow-sm">
+                  <tr className="text-xs font-semibold uppercase text-slate-700 border-b border-slate-300">
+                    <th className="w-[6%] px-3 py-3 border-r border-slate-300 text-center">#</th>
+                    <th className="w-[20%] px-3 py-3 border-r border-slate-300 text-center">Exam Group Name</th>
+                    <th className="w-[18%] px-3 py-3 border-r border-slate-300 text-center">Program Courses</th>
+                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">Subjects</th>
+                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">Shift(s)</th>
+                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">Subject Category</th>
+                    <th className="w-[8%] px-3 py-3 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading exams...
                         </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "11%" }}
-                        >
-                          <Skeleton className="h-4 w-20" />
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "16%" }}
-                        >
-                          <Skeleton className="h-4 w-32" />
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "16%" }}
-                        >
-                          <Skeleton className="h-4 w-28" />
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "11%" }}
-                        >
-                          <Skeleton className="h-4 w-24" />
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "11%" }}
-                        >
-                          <Skeleton className="h-4 w-20" />
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "11%" }}
-                        >
-                          <Skeleton className="h-4 w-24" />
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "11%" }}
-                        >
-                          <Skeleton className="h-4 w-16" />
-                        </div>
-                        <div className="flex-shrink-0 p-3 flex items-center justify-center" style={{ width: "6%" }}>
-                          <Skeleton className="h-8 w-8 rounded-full" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : examGroups.length === 0 ? (
-                  <div
-                    className="flex items-center justify-center p-6 text-sm text-muted-foreground"
-                    style={{ minWidth: "1050px" }}
-                  >
-                    No exams found.
-                  </div>
-                ) : (
-                  examGroups.map((examGroup: ExamGroupDto, groupIdx: number) => {
-                    // Extract all distinct exam types from the group
-                    const distinctExamTypeMap = new Map<number, (typeof examGroup.exams)[0]["examType"]>();
-                    examGroup.exams.forEach((exam) => {
-                      distinctExamTypeMap.set(exam.examType.id, exam.examType);
-                    });
-                    const distinctExamTypes = Array.from(distinctExamTypeMap.values());
-
-                    // Extract all distinct program courses from the group
-                    const distinctPCMap = new Map<
-                      number | undefined,
-                      (typeof examGroup.exams)[0]["examProgramCourses"][0]
-                    >();
-                    examGroup.exams.forEach((exam) => {
-                      exam.examProgramCourses.forEach((pc) => {
-                        if (pc.programCourse.id !== undefined) {
-                          distinctPCMap.set(pc.programCourse.id, pc);
-                        }
+                      </td>
+                    </tr>
+                  ) : examGroups.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
+                        No exams found.
+                      </td>
+                    </tr>
+                  ) : (
+                    examGroups.map((examGroup: ExamGroupDto, groupIdx: number) => {
+                      // Extract all distinct program courses from the group
+                      const distinctPCMap = new Map<
+                        number | undefined,
+                        (typeof examGroup.exams)[0]["examProgramCourses"][0]
+                      >();
+                      examGroup.exams.forEach((exam) => {
+                        exam.examProgramCourses.forEach((pc) => {
+                          if (pc.programCourse.id !== undefined) {
+                            distinctPCMap.set(pc.programCourse.id, pc);
+                          }
+                        });
                       });
-                    });
-                    const distinctProgramCourses = Array.from(distinctPCMap.values());
+                      const distinctProgramCourses = Array.from(distinctPCMap.values());
 
-                    // Extract all distinct subjects from the group
-                    const distinctSubjectMap = new Map<
-                      number | undefined,
-                      (typeof examGroup.exams)[0]["examSubjects"][0]
-                    >();
-                    examGroup.exams.forEach((exam) => {
-                      exam.examSubjects.forEach((es) => {
-                        if (es.subject?.id !== undefined) {
-                          distinctSubjectMap.set(es.subject.id, es);
-                        }
+                      // Extract all distinct subjects from the group
+                      const distinctSubjectMap = new Map<
+                        number | undefined,
+                        (typeof examGroup.exams)[0]["examSubjects"][0]
+                      >();
+                      examGroup.exams.forEach((exam) => {
+                        exam.examSubjects.forEach((es) => {
+                          if (es.subject?.id !== undefined) {
+                            distinctSubjectMap.set(es.subject.id, es);
+                          }
+                        });
                       });
-                    });
-                    const distinctSubjects = Array.from(distinctSubjectMap.values());
+                      const distinctSubjects = Array.from(distinctSubjectMap.values());
 
-                    // Extract all distinct shifts from the group
-                    const distinctShiftMap = new Map<
-                      number | undefined,
-                      (typeof examGroup.exams)[0]["examShifts"][0]
-                    >();
-                    examGroup.exams.forEach((exam) => {
-                      exam.examShifts.forEach((esh) => {
-                        if (esh.shift.id !== undefined) {
-                          distinctShiftMap.set(esh.shift.id, esh);
-                        }
+                      // Extract all distinct shifts from the group
+                      const distinctShiftMap = new Map<
+                        number | undefined,
+                        (typeof examGroup.exams)[0]["examShifts"][0]
+                      >();
+                      examGroup.exams.forEach((exam) => {
+                        exam.examShifts.forEach((esh) => {
+                          if (esh.shift.id !== undefined) {
+                            distinctShiftMap.set(esh.shift.id, esh);
+                          }
+                        });
                       });
-                    });
-                    const distinctShifts = Array.from(distinctShiftMap.values());
+                      const distinctShifts = Array.from(distinctShiftMap.values());
 
-                    // Extract all distinct subject types from the group
-                    const distinctSTMap = new Map<
-                      number | undefined,
-                      (typeof examGroup.exams)[0]["examSubjectTypes"][0]
-                    >();
-                    examGroup.exams.forEach((exam) => {
-                      exam.examSubjectTypes.forEach((est) => {
-                        if (est.subjectType?.id !== undefined) {
-                          distinctSTMap.set(est.subjectType.id, est);
-                        }
+                      // Extract all distinct subject types from the group
+                      const distinctSTMap = new Map<
+                        number | undefined,
+                        (typeof examGroup.exams)[0]["examSubjectTypes"][0]
+                      >();
+                      examGroup.exams.forEach((exam) => {
+                        exam.examSubjectTypes.forEach((est) => {
+                          if (est.subjectType?.id !== undefined) {
+                            distinctSTMap.set(est.subjectType.id, est);
+                          }
+                        });
                       });
-                    });
-                    const distinctSubjectTypes = Array.from(distinctSTMap.values());
+                      const distinctSubjectTypes = Array.from(distinctSTMap.values());
 
-                    return (
-                      <div
-                        key={examGroup.id}
-                        className="flex border-b hover:bg-gray-50 group"
-                        style={{ minWidth: "1050px" }}
-                      >
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "6%" }}
+                      return (
+                        <tr
+                          key={examGroup.id}
+                          className="border-b border-slate-200 hover:bg-muted/40 transition-colors"
                         >
-                          {(currentPage - 1) * itemsPerPage + groupIdx + 1}
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r items-center gap-2 flex flex-col"
-                          style={{ width: "11%" }}
-                        >
-                          {/* Display exam types and exam group commencement date */}
-                          <div className="flex flex-col gap-1 items-center w-full">
-                            {distinctExamTypes.map((examType) => (
+                          <td className="px-3 py-3 border-r border-slate-200 text-center align-top">
+                            {(currentPage - 1) * itemsPerPage + groupIdx + 1}
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                            <div className="flex flex-col gap-1">
                               <Badge
-                                key={examType.id}
                                 variant="outline"
-                                className="text-xs border-red-300 text-red-700 bg-red-50"
+                                className="text-xs border-purple-300 text-purple-700 bg-purple-50 w-fit"
                               >
-                                {examType.name}
+                                {examGroup.name}
                               </Badge>
-                            ))}
-                          </div>
-                          <p className="text-center text-xs text-gray-600">
-                            {examGroup.examCommencementDate
-                              ? new Date(examGroup.examCommencementDate).toLocaleDateString()
-                              : "-"}
-                          </p>
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "16%" }}
-                        >
-                          <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-50">
-                            {examGroup.name}
-                          </Badge>
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex gap-1 flex-col items-center"
-                          style={{ width: "16%" }}
-                        >
-                          {distinctProgramCourses.map((pc) => (
-                            <Badge
-                              key={pc.id}
-                              variant="outline"
-                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
-                            >
-                              {pc.programCourse.name}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "11%" }}>
-                          <div className="mt-1 flex flex-col gap-1">
-                            {distinctSubjects.map((es, subjectIndex) => (
-                              <Badge
-                                key={`subject-${es.subject?.id}-${subjectIndex}`}
-                                variant="outline"
-                                className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
-                              >
-                                {es.subject?.name ?? "-"}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex flex-col gap-1 items-center justify-center text-sm font-medium"
-                          style={{ width: "11%" }}
-                        >
-                          {distinctShifts.map((esh) => (
-                            <Badge
-                              key={esh.id}
-                              variant="outline"
-                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
-                            >
-                              {esh.shift.name}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex gap-1 flex-col items-center justify-center"
-                          style={{ width: "11%" }}
-                        >
-                          {distinctSubjectTypes.map((est) => (
-                            <Badge
-                              key={est.id}
-                              variant="outline"
-                              className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
-                            >
-                              {est.subjectType?.code ?? "-"}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div
-                          className="flex-shrink-0 p-3 border-r flex items-center justify-center"
-                          style={{ width: "11%" }}
-                        >
-                          <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
-                            {examGroup.exams[0]?.class.name.split(" ")[1] || "-"}
-                          </Badge>
-                        </div>
-
-                        <div className="flex-shrink-0 p-3 flex items-center justify-center" style={{ width: "6%" }}>
-                          <div className="flex space-x-2">
+                              <span className="text-xs text-muted-foreground text-center">
+                                {examGroup.examCommencementDate
+                                  ? new Date(examGroup.examCommencementDate).toLocaleDateString()
+                                  : "-"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                            <div className="flex flex-col gap-1 items-center">
+                              {distinctProgramCourses.map((pc) => (
+                                <Badge
+                                  key={pc.id}
+                                  variant="outline"
+                                  className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                                >
+                                  {pc.programCourse.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                            <div className="flex flex-col gap-1 items-center">
+                              {distinctSubjects.map((es, subjectIndex) => (
+                                <Badge
+                                  key={`subject-${es.subject?.id}-${subjectIndex}`}
+                                  variant="outline"
+                                  className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                                >
+                                  {es.subject?.name ?? "-"}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                            <div className="flex flex-col gap-1 items-center">
+                              {distinctShifts.map((esh) => (
+                                <Badge
+                                  key={esh.id}
+                                  variant="outline"
+                                  className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                                >
+                                  {esh.shift.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 border-r border-slate-200 align-top">
+                            <div className="flex flex-col gap-1 items-center">
+                              {distinctSubjectTypes.map((est) => (
+                                <Badge
+                                  key={est.id}
+                                  variant="outline"
+                                  className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
+                                >
+                                  {est.subjectType?.code ?? "-"}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-center align-top">
                             <Button
                               variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                //   setIsPaperEditModalOpen(true);
-                                //   setSelectedPaperForEdit(sp);
-                              }}
-                              className="h-5 w-5 p-0"
+                              size="icon"
+                              className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
+                              asChild
                             >
                               <Link to={`${examGroup.id}`}>
                                 <Edit className="h-4 w-4" />
                               </Link>
                             </Button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </CardContent>

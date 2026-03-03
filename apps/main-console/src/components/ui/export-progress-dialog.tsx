@@ -136,6 +136,7 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
     if (progressUpdate?.type === "download_progress") return "Download Progress";
     if (operation?.includes("student_")) return "Upload Progress";
     if (operation === "fee_structure_mapping") return "Fee Structure Progress";
+    if (operation === "fee_group_promotion_bulk_upload") return "Bulk Upload Progress";
     return "Export Progress";
   };
 
@@ -143,6 +144,7 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
     if (progressUpdate?.type === "download_progress") return "Download Steps:";
     if (operation?.includes("student_")) return "Upload Steps:";
     if (operation === "fee_structure_mapping") return "Processing Steps:";
+    if (operation === "fee_group_promotion_bulk_upload") return "Validation & Processing:";
     return "Export Steps:";
   };
 
@@ -174,6 +176,16 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
         { label: "Saving fee structure", done: progress >= 5 || status !== "started" },
         { label: "Finding matching students", done: progress >= 20 || isCompleted },
         { label: "Creating student mappings", done: progress >= 30 || isCompleted },
+        { label: "Completed", done: isCompleted },
+      ];
+    }
+
+    if (operation === "fee_group_promotion_bulk_upload") {
+      return [
+        { label: "Validating Excel file", done: progress >= 5 || status !== "started" },
+        { label: "Verifying students & promotions", done: progress >= 20 || isCompleted },
+        { label: "Verifying fee slabs & categories", done: progress >= 40 || isCompleted },
+        { label: "Creating mappings", done: progress >= 70 || isCompleted },
         { label: "Completed", done: isCompleted },
       ];
     }

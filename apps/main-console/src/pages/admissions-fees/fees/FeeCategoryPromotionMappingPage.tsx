@@ -8,15 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/hooks/UserAvatar";
+import { Textarea } from "@/components/ui/textarea";
 import { useFeeCategories, useFeeGroups } from "@/hooks/useFees";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
 import { FeeGroupPromotionMappingDto } from "@repo/db/dtos/fees";
 import { toast } from "sonner";
-import { NewFeeGroupPromotionMapping, BulkUploadResult } from "@/services/fees-api";
+import { NewFeeGroupPromotionMapping, BulkUploadResult, BulkUploadRow } from "@/services/fees-api";
 import {
   useFeeGroupPromotionMappings,
   useCreateFeeGroupPromotionMapping,
@@ -30,10 +33,13 @@ import { getAcademicYears, getProgramCourses } from "@/services/course-design.ap
 import { getAllReligions } from "@/services/religion.service";
 import { getAllCategories } from "@/services/categories.service";
 import { getAllClasses } from "@/services/classes.service";
+import { findAdminsAndStaff } from "@/services/user";
 import type { Community } from "@/types/enums";
 import axiosInstance from "@/utils/api";
 import { useSocket } from "@/hooks/useSocket";
 import { useAuth } from "@/features/auth/providers/auth-provider";
+import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
+import type { ProgressUpdate } from "@/types/progress";
 
 const FeeGroupPromotionMappingPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
@@ -42,22 +48,28 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [deletingItem, setDeletingItem] = useState<FeeGroupPromotionMappingDto | null>(null);
   const [editingItem, setEditingItem] = useState<FeeGroupPromotionMappingDto | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    feeGroupId: number | null;
+    remarks: string;
+    updatedByUserId: number | null;
+  }>({ feeGroupId: null, remarks: "", updatedByUserId: null });
+  const [adminStaffUsers, setAdminStaffUsers] = useState<
+    { id: number; name: string; email: string; image: string | null; type?: string }[]
+  >([]);
+  const [approvalSearchText, setApprovalSearchText] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [bulkUploadResult, setBulkUploadResult] = useState<BulkUploadResult | null>(null);
-  const [bulkUploadProgress, setBulkUploadProgress] = useState<{
-    processed: number;
-    total: number;
-    percent: number;
-  } | null>(null);
-  const [uploadSessionId] = useState<string>(
-    () => `bulk-upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-  );
+  const [exportProgressOpen, setExportProgressOpen] = useState(false);
+  const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);
+  const [currentOperation, setCurrentOperation] = useState<string | null>(null);
   const { user } = useAuth();
   const userId = (user?.id ?? "").toString();
   const [searchText, setSearchText] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 25;
   const [promotions, setPromotions] = useState<PromotionDto[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [academicYearOptions, setAcademicYearOptions] = useState<string[]>([]);
@@ -67,61 +79,76 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const [religionOptions, setReligionOptions] = useState<string[]>([]);
   const [communityOptions] = useState<Community[]>(["GUJARATI", "NON-GUJARATI"]);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [filters, setFilters] = useState<{
+    academicYear: string;
+    semesterOrClass: string;
+    programCourse: string;
+    shift: string;
+    religion: string;
+    community: string;
+    category: string;
+    feeCategory: string;
+  }>({
+    academicYear: "",
+    semesterOrClass: "",
+    programCourse: "",
+    shift: "",
+    religion: "",
+    community: "",
+    category: "",
+    feeCategory: "",
+  });
   const { showError } = useError();
   const { feeCategories } = useFeeCategories();
   const { feeGroups } = useFeeGroups();
   const { currentAcademicYear } = useAcademicYear();
 
-  // React Query hooks
-  const { data: mappings = [], isLoading: loading, refetch: refetchMappings } = useFeeGroupPromotionMappings();
+  // Only fetch when user has applied at least one filter
+  const hasFilters =
+    !!filters.academicYear ||
+    !!filters.semesterOrClass ||
+    !!filters.programCourse ||
+    !!filters.shift ||
+    !!filters.religion ||
+    !!filters.community ||
+    !!filters.category ||
+    !!filters.feeCategory;
+
+  const {
+    data: mappings = [],
+    isLoading: loading,
+    refetch: refetchMappings,
+  } = useFeeGroupPromotionMappings(10000, hasFilters);
   const createMutation = useCreateFeeGroupPromotionMapping();
   const updateMutation = useUpdateFeeGroupPromotionMapping();
   const deleteMutation = useDeleteFeeGroupPromotionMapping();
   const bulkUploadMutation = useBulkUploadFeeGroupPromotionMappings();
 
-  // Socket connection for bulk upload progress
+  // Socket connection for bulk upload progress (same pattern as reports page)
+  const handleProgressUpdate = useCallback(
+    (data: ProgressUpdate) => {
+      if (currentOperation && data?.meta?.operation && data.meta.operation !== currentOperation) {
+        return;
+      }
+      setCurrentProgressUpdate(data);
+      if (data.status === "completed") {
+        setIsBulkUploading(false);
+        setExportProgressOpen(false);
+        setCurrentOperation(null);
+        refetchMappings();
+      } else if (data.status === "error") {
+        setIsBulkUploading(false);
+        setExportProgressOpen(false);
+        setCurrentOperation(null);
+      }
+    },
+    [currentOperation, refetchMappings],
+  );
+
   const { socket, isConnected } = useSocket({
     userId,
+    onProgressUpdate: handleProgressUpdate,
   });
-
-  // Listen to bulk upload socket events and join room
-  useEffect(() => {
-    if (!socket || !socket.connected) return;
-
-    // Join the upload session room
-    socket.emit("join", uploadSessionId);
-
-    const handleBulkUploadProgress = (data: { processed: number; total: number; percent: number }) => {
-      setBulkUploadProgress(data);
-    };
-
-    const handleBulkUploadDone = (data: { successCount: number }) => {
-      setIsBulkUploading(false);
-      setBulkUploadProgress(null);
-      toast.success(`Bulk upload completed: ${data.successCount} mappings created`);
-      refetchMappings();
-    };
-
-    const handleBulkUploadFailed = (data: { errorCount: number; successCount: number }) => {
-      setIsBulkUploading(false);
-      setBulkUploadProgress(null);
-      toast.error(`Bulk upload completed with errors: ${data.successCount} successful, ${data.errorCount} failed`);
-      if (data.successCount > 0) {
-        refetchMappings();
-      }
-    };
-
-    socket.on("bulk-upload-progress", handleBulkUploadProgress);
-    socket.on("bulk-upload-done", handleBulkUploadDone);
-    socket.on("bulk-upload-failed", handleBulkUploadFailed);
-
-    return () => {
-      socket.off("bulk-upload-progress", handleBulkUploadProgress);
-      socket.off("bulk-upload-done", handleBulkUploadDone);
-      socket.off("bulk-upload-failed", handleBulkUploadFailed);
-      socket.emit("leave", uploadSessionId);
-    };
-  }, [socket, uploadSessionId]);
 
   // Listen for fee group promotion mapping socket events (only for staff/admin)
   useEffect(() => {
@@ -155,25 +182,6 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       socket.off("fee_group_promotion_mapping_deleted", handleFeeGroupPromotionMappingDeleted);
     };
   }, [socket, isConnected, user?.type, refetchMappings]);
-  const [filters, setFilters] = useState<{
-    academicYear: string;
-    semesterOrClass: string;
-    programCourse: string;
-    shift: string;
-    religion: string;
-    community: string;
-    category: string;
-    feeCategory: string;
-  }>({
-    academicYear: "",
-    semesterOrClass: "",
-    programCourse: "",
-    shift: "",
-    religion: "",
-    community: "",
-    category: "",
-    feeCategory: "",
-  });
 
   const [form, setForm] = useState<{
     feeCategoryId: number | undefined;
@@ -185,20 +193,16 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
 
   // Extract unique promotions from mappings
 
-  // When academic year from Redux is available, pre-select it IF it exists
-  // in our filter options and no academic year filter is already applied.
-  useEffect(() => {
-    const year = currentAcademicYear?.year;
-    if (!year) return;
-    if (filters.academicYear) return;
-
-    if (academicYearOptions.includes(year)) {
-      setFilters((prev) => ({
-        ...prev,
-        academicYear: year,
-      }));
-    }
-  }, [currentAcademicYear, filters.academicYear, academicYearOptions]);
+  // Disabled: No data by default - user must apply filters to load data.
+  // Previously auto-applied academic year from currentAcademicYear.
+  // useEffect(() => {
+  //   const year = currentAcademicYear?.year;
+  //   if (!year) return;
+  //   if (filters.academicYear) return;
+  //   if (academicYearOptions.includes(year)) {
+  //     setFilters((prev) => ({ ...prev, academicYear: year }));
+  //   }
+  // }, [currentAcademicYear, filters.academicYear, academicYearOptions]);
 
   // Extract unique promotions from existing mappings
   useEffect(() => {
@@ -469,8 +473,16 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     const templateData = [
       {
         UID: "",
+        "Student Name": "",
+        "Program Course Name": "",
+        "Academic Year": "",
         Semester: "",
-        "Fee Category Name": "",
+        Shift: "",
+        "Fee Slab": "",
+        "Fee Category": "",
+        "Approved By User Email": "",
+        "Approved Timestamp": "",
+        Remarks: "",
       },
     ];
 
@@ -479,85 +491,157 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
 
     // Set column widths
     const colWidths = [
-      { wch: 20 }, // UID
-      { wch: 20 }, // Semester
-      { wch: 30 }, // Fee Category Name
+      { wch: 15 }, // UID
+      { wch: 25 }, // Student Name
+      { wch: 25 }, // Program Course Name
+      { wch: 15 }, // Academic Year
+      { wch: 15 }, // Semester
+      { wch: 15 }, // Shift
+      { wch: 20 }, // Fee Slab
+      { wch: 20 }, // Fee Category
+      { wch: 30 }, // Approved By User Email
+      { wch: 22 }, // Approved Timestamp
+      { wch: 30 }, // Remarks
     ];
     ws["!cols"] = colWidths;
 
-    XLSX.utils.book_append_sheet(wb, ws, "Fee Group Promotion Mapping");
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
     XLSX.writeFile(wb, "fee-group-promotion-mapping-template.xlsx");
   };
+
+  const REQUIRED_BULK_UPLOAD_COLUMNS = [
+    "UID",
+    "Student Name",
+    "Program Course Name",
+    "Academic Year",
+    "Semester",
+    "Shift",
+    "Fee Slab",
+    "Fee Category",
+    "Approved By User Email",
+    "Approved Timestamp",
+  ] as const;
 
   const validateBulkUploadFile = async (
     file: File,
   ): Promise<{
     isValid: boolean;
-    errors: string[];
-    data: Array<{ UID: string; Semester: string; "Fee Category Name": string }>;
+    errors: Array<{ row: number; data: Record<string, string>; error: string }>;
+    missingColumns: string[];
+    data: Array<Record<string, string>>;
   }> => {
-    const errors: string[] = [];
-    const data: Array<{ UID: string; Semester: string; "Fee Category Name": string }> = [];
+    const errors: Array<{ row: number; data: Record<string, string>; error: string }> = [];
+    const missingColumns: string[] = [];
+    const data: Array<Record<string, string>> = [];
 
     try {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const sheetName = workbook.SheetNames?.[0];
-      if (!sheetName) {
-        errors.push("Excel file has no sheets");
-        return { isValid: false, errors, data: [] };
-      }
+      const sheetName = workbook.SheetNames?.[0] ?? "Sheet1";
       const worksheet = workbook.Sheets?.[sheetName];
       if (!worksheet) {
         errors.push("Failed to read worksheet from Excel file");
-        return { isValid: false, errors, data: [] };
+        return { isValid: false, errors, missingColumns, data: [] };
       }
-      const jsonData = XLSX.utils.sheet_to_json<{
-        UID?: string;
-        Semester?: string;
-        "Fee Category Name"?: string;
-      }>(worksheet as XLSX.WorkSheet);
+      const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet as XLSX.WorkSheet);
 
       if (jsonData.length === 0) {
-        errors.push("Excel file is empty");
-        return { isValid: false, errors, data: [] };
+        errors.push({ row: 0, data: {}, error: "Excel file is empty" });
+        return { isValid: false, errors, missingColumns, data: [] };
       }
 
-      // Get all fee category names for validation
-      const feeCategoryNames = new Set(feeCategories?.map((fc) => fc.name.toLowerCase().trim()) || []);
+      // Check required columns exist in first row
+      const firstRowKeys = new Set(Object.keys(jsonData[0] || {}).map((k) => k.toString().trim()));
+      for (const col of REQUIRED_BULK_UPLOAD_COLUMNS) {
+        const found = [...firstRowKeys].some((k) => k.toLowerCase() === col.toLowerCase());
+        if (!found) {
+          missingColumns.push(col);
+        }
+      }
+      if (missingColumns.length > 0) {
+        errors.push({
+          row: 0,
+          data: {},
+          error: `Missing required columns: ${missingColumns.join(", ")}`,
+        });
+        return { isValid: false, errors, missingColumns, data: [] };
+      }
+
+      // Map column names (case-insensitive)
+      const getVal = (row: Record<string, unknown>, key: string): string =>
+        (Object.entries(row).find(([k]) => k.trim().toLowerCase() === key.toLowerCase())?.[1] ?? "").toString().trim();
 
       jsonData.forEach((row, index) => {
-        const rowNumber = index + 2; // +2 because Excel is 1-indexed and we skip header
-        const uid = row.UID?.toString()?.trim();
-        const semester = row.Semester?.toString()?.trim();
-        const feeCategoryName = row["Fee Category Name"]?.toString()?.trim();
+        const rowNumber = index + 2;
+        const uid = getVal(row, "UID");
+        const studentName = getVal(row, "Student Name");
+        const programCourseName = getVal(row, "Program Course Name");
+        const academicYear = getVal(row, "Academic Year");
+        const semester = getVal(row, "Semester");
+        const shift = getVal(row, "Shift");
+        const feeSlab = getVal(row, "Fee Slab");
+        const feeCategory = getVal(row, "Fee Category");
+        const approvedByEmail = getVal(row, "Approved By User Email");
+        const approvedTimestamp = getVal(row, "Approved Timestamp");
+        const remarks = getVal(row, "Remarks");
 
-        if (!uid || !semester || !feeCategoryName) {
-          errors.push(`Row ${rowNumber}: UID, Semester, and Fee Category Name are required (no blanks allowed)`);
-          return;
-        }
+        const missing: string[] = [];
+        if (!uid) missing.push("UID");
+        if (!studentName) missing.push("Student Name");
+        if (!programCourseName) missing.push("Program Course Name");
+        if (!academicYear) missing.push("Academic Year");
+        if (!semester) missing.push("Semester");
+        if (!shift) missing.push("Shift");
+        if (!feeSlab) missing.push("Fee Slab");
+        if (!feeCategory) missing.push("Fee Category");
+        if (!approvedByEmail) missing.push("Approved By User Email");
+        if (!approvedTimestamp) missing.push("Approved Timestamp");
 
-        // Verify fee category exists
-        if (!feeCategoryNames.has(feeCategoryName.toLowerCase().trim())) {
-          errors.push(`Row ${rowNumber}: Fee category "${feeCategoryName}" not found`);
+        if (missing.length > 0) {
+          errors.push({
+            row: rowNumber,
+            data: {
+              UID: uid,
+              "Student Name": studentName,
+              "Program Course Name": programCourseName,
+              "Academic Year": academicYear,
+              Semester: semester,
+              Shift: shift,
+              "Fee Slab": feeSlab,
+              "Fee Category": feeCategory,
+              "Approved By User Email": approvedByEmail,
+              "Approved Timestamp": approvedTimestamp,
+              Remarks: remarks,
+            },
+            error: `Missing required fields: ${missing.join(", ")}`,
+          });
           return;
         }
 
         data.push({
           UID: uid,
+          "Student Name": studentName,
+          "Program Course Name": programCourseName,
+          "Academic Year": academicYear,
           Semester: semester,
-          "Fee Category Name": feeCategoryName,
+          Shift: shift,
+          "Fee Slab": feeSlab,
+          "Fee Category": feeCategory,
+          "Approved By User Email": approvedByEmail,
+          "Approved Timestamp": approvedTimestamp,
+          Remarks: remarks,
         });
       });
 
       return {
         isValid: errors.length === 0,
         errors,
+        missingColumns,
         data,
       };
     } catch (error) {
       errors.push(`Failed to read Excel file: ${error instanceof Error ? error.message : "Unknown error"}`);
-      return { isValid: false, errors, data: [] };
+      return { isValid: false, errors, missingColumns, data: [] };
     }
   };
 
@@ -574,17 +658,21 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       // Validate file
       const validation = await validateBulkUploadFile(bulkUploadFile);
       if (!validation.isValid) {
-        toast.error(`Validation failed: ${validation.errors.length} error(s) found`);
+        const msg =
+          validation.missingColumns.length > 0
+            ? `Missing required columns: ${validation.missingColumns.join(", ")}`
+            : `Validation failed: ${validation.errors.length} error(s) found`;
+        toast.error(msg);
         setBulkUploadResult({
           summary: {
             total: validation.data.length + validation.errors.length,
             successful: 0,
             failed: validation.errors.length,
           },
-          errors: validation.errors.map((error, index) => ({
-            row: index + 2,
-            data: { UID: "", Semester: "", "Fee Category Name": "" },
-            error,
+          errors: validation.errors.map((e) => ({
+            row: e.row,
+            data: e.data as BulkUploadRow,
+            error: e.error,
           })),
           success: [],
         });
@@ -592,10 +680,21 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         return;
       }
 
-      // Upload file with session ID
+      setCurrentOperation("fee_group_promotion_bulk_upload");
+      setExportProgressOpen(true);
+      setCurrentProgressUpdate({
+        id: `bulk_${Date.now()}`,
+        userId,
+        type: "export_progress",
+        message: "Starting bulk upload...",
+        progress: 0,
+        status: "started",
+        createdAt: new Date(),
+        meta: { operation: "fee_group_promotion_bulk_upload" },
+      });
+
       const formData = new FormData();
       formData.append("file", bulkUploadFile);
-      formData.append("uploadSessionId", uploadSessionId);
 
       const response = await axiosInstance.post<{
         status: string;
@@ -610,14 +709,86 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
 
       if (result) {
         setBulkUploadResult(result);
-        // Note: Success/error messages and fetchMappings are handled by socket events
+        if (result.summary.failed > 0 && result.summary.successful > 0) {
+          toast.warning(
+            `Bulk upload completed: ${result.summary.successful} successful, ${result.summary.failed} failed`,
+          );
+        } else if (result.summary.failed === 0) {
+          toast.success(`Bulk upload completed: ${result.summary.successful} mappings created`);
+        }
+        refetchMappings();
       }
     } catch (error) {
       console.error("Error uploading bulk mappings:", error);
       setIsBulkUploading(false);
+      setExportProgressOpen(false);
+      setCurrentOperation(null);
       toast.error(`Bulk upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
-    // Note: setIsBulkUploading(false) is handled by socket events
+  };
+
+  const handleEditClick = (mapping: FeeGroupPromotionMappingDto) => {
+    setEditingItem(mapping);
+    const mappingAny = mapping as { updatedByUserId?: number | null };
+    setEditForm({
+      feeGroupId: mapping.feeGroup?.id ?? null,
+      remarks: mapping.remarks ?? "",
+      updatedByUserId: mappingAny?.updatedByUserId ?? null,
+    });
+    setEditDialogOpen(true);
+  };
+
+  // Load admin/staff users when edit dialog opens
+  useEffect(() => {
+    if (editDialogOpen) {
+      setApprovalSearchText("");
+      findAdminsAndStaff(1, 200).then((users) => {
+        setAdminStaffUsers(
+          users.map((u) => ({
+            id: u.id as number,
+            name: u.name,
+            email: u.email,
+            image: u.image ?? null,
+            type: (u as { type?: string }).type,
+          })),
+        );
+      });
+    }
+  }, [editDialogOpen]);
+
+  const filteredAdminStaffUsers = useMemo(() => {
+    if (!approvalSearchText.trim()) return adminStaffUsers;
+    const q = approvalSearchText.toLowerCase().trim();
+    return adminStaffUsers.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        (u.email?.toLowerCase().includes(q) ?? false) ||
+        (u.type?.toLowerCase().includes(q) ?? false),
+    );
+  }, [adminStaffUsers, approvalSearchText]);
+
+  const handleEditSave = async () => {
+    if (!editingItem?.id || !editForm.feeGroupId) {
+      toast.error("Please select a slab type");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      await updateMutation.mutateAsync({
+        id: editingItem.id,
+        data: {
+          feeGroupId: editForm.feeGroupId,
+          remarks: editForm.remarks || undefined,
+          updatedByUserId: editForm.updatedByUserId ?? undefined,
+        },
+      });
+      setEditDialogOpen(false);
+      setEditingItem(null);
+    } catch {
+      // Error handled by mutation
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const handleDeleteClick = (mapping: FeeGroupPromotionMappingDto) => {
@@ -672,23 +843,6 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       handleClose();
     } catch (error) {
       // Error handling is done in the mutation hooks
-    }
-  };
-
-  // Inline update of fee group for a specific mapping row
-  const handleRowFeeCategoryChange = async (mapping: FeeGroupPromotionMappingDto, newFeeGroupId: number) => {
-    if (!mapping.id) return;
-    if (mapping.feeGroup?.id === newFeeGroupId) return;
-
-    try {
-      await updateMutation.mutateAsync({
-        id: mapping.id,
-        data: {
-          feeGroupId: newFeeGroupId,
-        },
-      });
-    } catch (error) {
-      // Error handling is done in the mutation hook
     }
   };
 
@@ -796,7 +950,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             </div>
           )}
 
-          {loading ? (
+          {loading && hasFilters ? (
             <div className="text-center py-8">Loading mappings...</div>
           ) : (
             <Table className="border rounded-md">
@@ -814,14 +968,23 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   <TableHead>Program Course</TableHead>
                   <TableHead className="text-center">Semester</TableHead>
                   <TableHead>Shift</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Religion</TableHead>
-                  <TableHead>Fee Group</TableHead>
+                  <TableHead>Payment Status</TableHead>
+                  <TableHead>Amount to Pay</TableHead>
+                  <TableHead>Slab Type</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedMappings.length === 0 ? (
+                {!hasFilters ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-12 text-gray-500">
+                      <p className="font-medium">Apply filters to load data</p>
+                      <p className="text-sm mt-1">
+                        Select at least one filter (e.g. Academic Year, Semester) to view student fee group mappings.
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedMappings.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                       No mappings found
@@ -837,8 +1000,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     const semesterParts = typeof rawSemesterName === "string" ? rawSemesterName.split(/\s+/) : [];
                     const semesterName = semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
                     const shiftName = promo.shift?.name || "-";
-                    const categoryName = promo.categoryName || "-";
-                    const religionName = promo.religionName || "-";
+                    const paymentStatus = mapping.paymentStatus ?? "Pending";
+                    const amountToPay = mapping.amountToPay ?? 0;
 
                     const globalIndex = (currentPage - 1) * pageSize + index + 1;
 
@@ -893,34 +1056,32 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          {categoryName !== "-" ? (
-                            <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-50">
-                              {categoryName}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
+                          <Badge
+                            className={
+                              paymentStatus === "Paid"
+                                ? "bg-green-100 text-green-800 border-green-300"
+                                : paymentStatus === "Pending"
+                                  ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                  : "bg-red-100 text-red-800 border-red-300"
+                            }
+                          >
+                            {paymentStatus}
+                          </Badge>
                         </TableCell>
                         <TableCell>
-                          {religionName !== "-" ? (
-                            <Badge variant="outline" className="text-xs border-teal-300 text-teal-700 bg-teal-50">
-                              {religionName}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
+                          <span className="font-semibold text-gray-900">₹{amountToPay.toLocaleString("en-IN")}</span>
                         </TableCell>
                         <TableCell>
                           {mapping.feeGroup?.feeCategory?.name && mapping.feeGroup?.feeSlab?.name ? (
                             <div className="flex items-center gap-1.5 flex-wrap">
+                              <Badge variant="outline" className="text-xs border-pink-300 text-pink-700 bg-pink-50">
+                                {mapping.feeGroup.feeSlab.name}
+                              </Badge>
                               <Badge
                                 variant="outline"
                                 className="text-xs border-purple-300 text-purple-700 bg-purple-50"
                               >
                                 {mapping.feeGroup.feeCategory.name}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs border-pink-300 text-pink-700 bg-pink-50">
-                                {mapping.feeGroup.feeSlab.name}
                               </Badge>
                             </div>
                           ) : mapping.feeCategory?.name ? (
@@ -934,28 +1095,15 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Select
-                              value={mapping.feeGroup?.id?.toString() || mapping.feeCategory?.id?.toString() || ""}
-                              onValueChange={(value) => handleRowFeeCategoryChange(mapping, Number(value))}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => paymentStatus !== "Paid" && handleEditClick(mapping)}
+                              disabled={paymentStatus === "Paid"}
+                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-40 disabled:pointer-events-none"
                             >
-                              {/* Only show edit icon, clicking opens the dropdown */}
-                              <SelectTrigger className="h-8 w-8 p-0 border-0 bg-transparent shadow-none [&>span]:hidden">
-                                <Pencil className="h-4 w-4 text-gray-600" />
-                              </SelectTrigger>
-                              <SelectContent className="min-w-[280px]">
-                                {feeGroups?.map((fg) => (
-                                  <SelectItem key={fg.id} value={fg.id?.toString() || ""} className="cursor-pointer">
-                                    <div className="flex items-center gap-2 py-1 text-sm">
-                                      <span className="w-[140px] text-left truncate">
-                                        {fg.feeCategory?.name || "-"}
-                                      </span>
-                                      <span className="text-gray-400">|</span>
-                                      <span className="flex-1 text-left truncate">{fg.feeSlab?.name || "-"}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                             {canDelete && (
                               <Button
                                 variant="ghost"
@@ -1324,22 +1472,6 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
               </div>
             )}
 
-            {bulkUploadProgress && (
-              <div className="p-3 bg-blue-50 rounded-md">
-                <p className="text-sm font-medium mb-2">Upload Progress:</p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                  <div
-                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                    style={{ width: `${bulkUploadProgress.percent}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-600">
-                  {bulkUploadProgress.processed} of {bulkUploadProgress.total} rows processed (
-                  {bulkUploadProgress.percent}%)
-                </p>
-              </div>
-            )}
-
             {bulkUploadResult && (
               <div className="space-y-2">
                 <div className="p-3 bg-gray-50 rounded-md">
@@ -1404,14 +1536,229 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Fee Group Mapping Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-14 w-14">
+                <AvatarImage
+                  src={
+                    (editingItem?.promotion as { uid?: string } | undefined)?.uid
+                      ? `${import.meta.env.VITE_STUDENT_IMAGE_BASE_URL ?? "https://besc.academic360.app/id-card-generate/api/images?crop=true&uid="}${(editingItem.promotion as { uid: string }).uid}`
+                      : undefined
+                  }
+                />
+                <AvatarFallback className="bg-slate-200 text-slate-700 text-lg">
+                  {(editingItem?.promotion as { studentName?: string } | undefined)?.studentName
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase() || "?"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle className="text-lg">
+                  {editingItem?.promotion && (editingItem.promotion as { studentName?: string }).studentName}
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground">
+                  UID: {editingItem?.promotion && (editingItem.promotion as { uid?: string }).uid}
+                </p>
+                <div className="flex gap-2 mt-1">
+                  <Badge variant="outline" className="text-xs border-teal-300 text-teal-700 bg-teal-50">
+                    {(editingItem?.promotion as { religionName?: string })?.religionName || "—"}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-50">
+                    {(editingItem?.promotion as { categoryName?: string })?.categoryName || "—"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 py-4 overflow-y-auto max-h-[90vh]">
+            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-md text-sm">
+              <div>
+                <span className="text-muted-foreground">Program Course:</span>
+                <p className="font-medium">{editingItem?.promotion?.programCourse?.name ?? "—"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Semester:</span>
+                <p className="font-medium">{editingItem?.promotion?.class?.name ?? "—"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Shift:</span>
+                <p className="font-medium">{editingItem?.promotion?.shift?.name ?? "—"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Amount to Pay:</span>
+                <p className="font-semibold">₹{(editingItem?.amountToPay ?? 0).toLocaleString("en-IN")}</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Slab Type</Label>
+              <Select
+                value={editForm.feeGroupId?.toString() ?? ""}
+                onValueChange={(v) => setEditForm((prev) => ({ ...prev, feeGroupId: v ? Number(v) : null }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select slab type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(() => {
+                    const groups =
+                      feeGroups && feeGroups.length > 0
+                        ? feeGroups
+                        : (() => {
+                            const seen = new Set<number>();
+                            const out: typeof feeGroups = [];
+                            for (const m of mappings) {
+                              if (m.feeGroup?.id && !seen.has(m.feeGroup.id)) {
+                                seen.add(m.feeGroup.id);
+                                out.push(m.feeGroup);
+                              }
+                            }
+                            if (editingItem?.feeGroup?.id && !seen.has(editingItem.feeGroup.id)) {
+                              out.unshift(editingItem.feeGroup);
+                            }
+                            return out;
+                          })();
+                    return groups?.map((fg) => (
+                      <SelectItem key={fg.id} value={fg.id?.toString() ?? ""}>
+                        <div className="flex items-center gap-2">
+                          <span>{fg.feeSlab?.name || "-"}</span>
+                          <span className="text-gray-400">|</span>
+                          <span>{fg.feeCategory?.name || "-"}</span>
+                        </div>
+                      </SelectItem>
+                    ));
+                  })()}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <Label>Approval Details</Label>
+                  <p className="text-xs text-muted-foreground">Select approver (admin/staff)</p>
+                </div>
+                <Input
+                  placeholder="Search by name, email, type..."
+                  value={approvalSearchText}
+                  onChange={(e) => setApprovalSearchText(e.target.value)}
+                  className="max-w-[200px] h-8 text-sm"
+                />
+              </div>
+              <div
+                className="border rounded-md max-h-48 overflow-y-auto divide-y"
+                role="listbox"
+                aria-label="Select approver"
+              >
+                {filteredAdminStaffUsers.length === 0 ? (
+                  <p className="p-3 text-sm text-muted-foreground text-center">
+                    {approvalSearchText ? "No users match your search" : "No users available"}
+                  </p>
+                ) : (
+                  filteredAdminStaffUsers.map((u) => {
+                    const isSelected = editForm.updatedByUserId === u.id;
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={() =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            updatedByUserId: isSelected ? null : u.id,
+                          }))
+                        }
+                        className={`w-full flex items-center gap-3 p-3 text-left transition-colors hover:bg-slate-100 ${
+                          isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "bg-transparent"
+                        }`}
+                      >
+                        <UserAvatar
+                          user={{ name: u.name, image: u.image ?? undefined }}
+                          size="sm"
+                          className="rounded-full shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{u.name}</p>
+                            {u.type && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                                {u.type}
+                              </Badge>
+                            )}
+                          </div>
+                          {u.email && <p className="text-xs text-muted-foreground truncate">{u.email}</p>}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              {editForm.updatedByUserId && editingItem?.updatedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Last updated:{" "}
+                  {new Date(editingItem.updatedAt).toLocaleString("en-GB", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Remarks</Label>
+              <Textarea
+                placeholder="Optional remarks"
+                value={editForm.remarks}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, remarks: e.target.value }))}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSave} disabled={savingEdit}>
+              {savingEdit ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         open={showDeleteModal}
         onOpenChange={setShowDeleteModal}
         onConfirm={handleDeleteConfirm}
         title="Delete Student Fee Category Mapping"
-        itemName={deletingItem?.feeCategory?.name || ""}
-        description={`Are you sure you want to delete the mapping between fee category "${deletingItem?.feeCategory?.name}" and student "${getPromotionDisplayText(deletingItem?.promotion)}"? This action cannot be undone.`}
+        itemName={deletingItem?.feeGroup?.feeCategory?.name || deletingItem?.feeCategory?.name || ""}
+        description={`Are you sure you want to delete the mapping between fee group "${deletingItem?.feeGroup?.feeCategory?.name || deletingItem?.feeCategory?.name}" and student "${getPromotionDisplayText(deletingItem?.promotion)}"? This action cannot be undone.`}
+      />
+
+      {/* Bulk Upload Progress Dialog (socket-driven, like reports page) */}
+      <ExportProgressDialog
+        isOpen={exportProgressOpen}
+        onClose={() => {
+          setExportProgressOpen(false);
+          setCurrentOperation(null);
+        }}
+        progressUpdate={currentProgressUpdate}
       />
     </div>
   );

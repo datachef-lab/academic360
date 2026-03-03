@@ -815,6 +815,7 @@ export interface NewFeeGroupPromotionMapping {
   feeCategoryId?: number;
   feeGroupId?: number;
   promotionId: number;
+  updatedByUserId?: number;
 }
 
 export interface FeeGroupPromotionFilterRequest {
@@ -836,9 +837,9 @@ export interface FilteredFeeGroupPromotionMapping {
 }
 
 export async function getAllFeeGroupPromotionMappings(
-  page: number,
+  limit: number = 10000,
 ): Promise<ApiResponse<FeeGroupPromotionMappingDto[]>> {
-  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings?page=${page}`);
+  const response = await axiosInstance.get(`${BASE_PATH}/group-promotion-mappings?limit=${limit}`);
   return response.data;
 }
 
@@ -888,6 +889,20 @@ export async function getFilteredFeeGroupPromotionMappings(
   return response.data;
 }
 
+export interface BulkUploadRow {
+  UID?: string;
+  "Student Name"?: string;
+  "Program Course Name"?: string;
+  "Academic Year"?: string;
+  Semester?: string;
+  Shift?: string;
+  "Fee Slab"?: string;
+  "Fee Category"?: string;
+  "Approved By User Email"?: string;
+  "Approved Timestamp"?: string;
+  Remarks?: string;
+}
+
 export interface BulkUploadResult {
   summary: {
     total: number;
@@ -896,20 +911,12 @@ export interface BulkUploadResult {
   };
   errors: Array<{
     row: number;
-    data: {
-      UID: string;
-      Semester: string;
-      "Fee Category Name": string;
-    };
+    data: BulkUploadRow;
     error: string;
   }>;
   success: Array<{
     row: number;
-    data: {
-      UID: string;
-      Semester: string;
-      "Fee Category Name": string;
-    };
+    data: BulkUploadRow;
     mappingId: number;
   }>;
 }

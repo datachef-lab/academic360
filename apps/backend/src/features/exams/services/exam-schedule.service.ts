@@ -1757,7 +1757,7 @@ export async function createExamAssignment(
           paperComponentId: paperComponentId,
           startTime: subj.startTime ? new Date(subj.startTime) : new Date(),
           endTime: subj.endTime ? new Date(subj.endTime) : new Date(),
-        })
+        } as any)
         .returning();
       const key = `${subj.subject.id!}|${paperId || "null"}|${paperComponentId ?? "null"}`;
       subjectPaperToExamSubject.set(key, es.id);
@@ -3462,16 +3462,34 @@ export async function downloadAdmitCardsAsZip(
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
     .where(eq(examGroupModel.id, foundExamGroup.id))
-    .orderBy(asc(examSubjectModel.id), asc(examSubjectModel.startTime));
+    .orderBy(asc(examSubjectModel.startTime), asc(examSubjectModel.id));
 
   const zip = new JSZip();
 
-  // ---------- Group by UID ----------
+  // ---------- Group by UID (preserves query order: chronological by exam startTime, then examSubjectId) ----------
   const uidMap = new Map<string, typeof result>();
   for (const row of result) {
     if (!row.uid) continue;
     if (!uidMap.has(row.uid)) uidMap.set(row.uid, []);
     uidMap.get(row.uid)!.push(row);
+  }
+
+  // Ensure each student's papers are in consistent order (chronological by exam schedule)
+  for (const rows of uidMap.values()) {
+    rows.sort((a, b) => {
+      const tA = a.examStartDate
+        ? a.examStartDate instanceof Date
+          ? a.examStartDate.getTime()
+          : new Date(a.examStartDate).getTime()
+        : 0;
+      const tB = b.examStartDate
+        ? b.examStartDate instanceof Date
+          ? b.examStartDate.getTime()
+          : new Date(b.examStartDate).getTime()
+        : 0;
+      if (tA !== tB) return tA - tB;
+      return (a.paperId ?? 0) - (b.paperId ?? 0);
+    });
   }
 
   const totalUids = uidMap.size;
@@ -4756,7 +4774,7 @@ export async function downloadSingleAdmitCard(
         eq(studentModel.id, studentId),
       ),
     )
-    .orderBy(asc(examSubjectModel.startTime));
+    .orderBy(asc(examSubjectModel.startTime), asc(examSubjectModel.id));
 
   if (!result.length) {
     throw new Error("No admit card found for this student");
@@ -5338,7 +5356,7 @@ export async function fetchExamCandidatesByExamId(examId: number) {
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(userModel, eq(userModel.id, studentModel.userId))
     .where(eq(examCandidateModel.examId, examId))
-    .orderBy(asc(examSubjectModel.startTime));
+    .orderBy(asc(examSubjectModel.startTime), asc(examSubjectModel.id));
 
   return result;
 }
@@ -5359,6 +5377,24 @@ export async function generateAdmitCardBuffers(
     if (!row.uid) continue;
     if (!uidMap.has(row.uid)) uidMap.set(row.uid, []);
     uidMap.get(row.uid)!.push(row);
+  }
+
+  // Ensure each student's papers are in consistent order (chronological by exam schedule)
+  for (const rows of uidMap.values()) {
+    rows.sort((a, b) => {
+      const tA = a.examStartDate
+        ? a.examStartDate instanceof Date
+          ? a.examStartDate.getTime()
+          : new Date(a.examStartDate).getTime()
+        : 0;
+      const tB = b.examStartDate
+        ? b.examStartDate instanceof Date
+          ? b.examStartDate.getTime()
+          : new Date(b.examStartDate).getTime()
+        : 0;
+      if (tA !== tB) return tA - tB;
+      return (a.paperId ?? 0) - (b.paperId ?? 0);
+    });
   }
 
   const pdfBuffers: AdmitCardEmailPayload[] = [];

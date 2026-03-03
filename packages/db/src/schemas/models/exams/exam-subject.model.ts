@@ -31,4 +31,4 @@ export const createExamSubjectSchema = createInsertSchema(examSubjectModel);
 
 export type ExamSubject = z.infer<typeof createExamSubjectSchema>;
 
-export type ExamSubjectT = typeof createExamSubjectSchema._type;
+export type ExamSubjectT = z.infer<typeof createExamSubjectSchema>;

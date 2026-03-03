@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Trash2, Loader2, Upload, DoorOpen, Download, ArrowLeft, AlertTriangle, Copy } from "lucide-react";
+import { Users, Trash2, Loader2, Upload, DoorOpen, Download, AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllRooms } from "@/services/room.service";
@@ -830,7 +830,7 @@ export default function AllotExamPage() {
             <p className="text-gray-600 mt-1">Assign rooms and students to scheduled exams</p>
           </div>
           {/* Header with back button */}
-          <div className="mb-6 flex items-center gap-4">
+          {/* <div className="mb-6 flex items-center gap-4">
             <Button
               variant="ghost"
               onClick={() => navigate("/dashboard/exam-management/exams")}
@@ -839,7 +839,7 @@ export default function AllotExamPage() {
               <ArrowLeft className="w-4 h-4" />
               Back to Exams
             </Button>
-          </div>
+          </div> */}
 
           {/* Controls Row - Exam Group, Exam, Gender, Order By */}
           <Card className="border-0 shadow-none mb-4">
@@ -863,7 +863,7 @@ export default function AllotExamPage() {
                     }}
                     disabled={loadingExamGroups}
                   >
-                    <SelectTrigger className="h-10 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-left">
+                    <SelectTrigger className="h-12 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-left [&>span]:min-w-0 [&>span]:truncate [&>span]:block">
                       <SelectValue placeholder={loadingExamGroups ? "Loading exam groups..." : "Select exam group"} />
                     </SelectTrigger>
                     <SelectContent className="text-left">
@@ -905,7 +905,7 @@ export default function AllotExamPage() {
                     }}
                     disabled={loadingExamGroups || !selectedExamGroupId || (loadingExam && !!selectedExamId)}
                   >
-                    <SelectTrigger className="h-10 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-left">
+                    <SelectTrigger className="h-12 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-left [&>span]:min-w-0 [&>span]:truncate [&>span]:block">
                       <SelectValue
                         placeholder={
                           !selectedExamGroupId
@@ -915,7 +915,7 @@ export default function AllotExamPage() {
                               : "Select an exam"
                         }
                       />
-                      {loadingExam && selectedExamId && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
+                      {loadingExam && selectedExamId && <Loader2 className="w-4 h-4 animate-spin ml-2 shrink-0" />}
                     </SelectTrigger>
                     <SelectContent className="text-left">
                       {examsForSelectedGroup.length === 0 ? (
@@ -955,7 +955,7 @@ export default function AllotExamPage() {
                   <Select value={gender || ""} onValueChange={(value) => setGender(value as typeof gender)}>
                     <SelectTrigger
                       id="gender-select"
-                      className="h-10 w-full sm:w-48 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-left"
+                      className="h-12 w-full sm:w-48 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-left"
                     >
                       <SelectValue />
                     </SelectTrigger>
@@ -974,7 +974,7 @@ export default function AllotExamPage() {
                   <Select value={assignBy} onValueChange={(value) => setAssignBy(value as typeof assignBy)}>
                     <SelectTrigger
                       id="order-by-select"
-                      className="h-10 w-full sm:w-52 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-left"
+                      className="h-12 w-full sm:w-52 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-left"
                     >
                       <SelectValue />
                     </SelectTrigger>

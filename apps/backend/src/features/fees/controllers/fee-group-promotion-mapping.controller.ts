@@ -72,13 +72,16 @@ export async function createFeeGroupPromotionMappingHandler(
 }
 
 export async function getAllFeeGroupPromotionMappingsHandler(
-  _req: Request,
+  req: Request,
   res: Response,
 ) {
   try {
-    const rows = await getAllFeeGroupPromotionMappings(
-      +String(_req.params.page),
-    );
+    const limitParam = req.query?.limit ?? req.query?.page;
+    const limit =
+      limitParam && !Number.isNaN(Number(limitParam))
+        ? Number(limitParam)
+        : 10000;
+    const rows = await getAllFeeGroupPromotionMappings(limit);
     return res
       .status(200)
       .json(
