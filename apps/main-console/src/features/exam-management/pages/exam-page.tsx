@@ -307,9 +307,24 @@ export default function ExamPage() {
       createdAt: new Date(),
     });
 
+    const preferredFileName = examGroup
+      ? (() => {
+          const name = (examGroup.name || "exam")
+            .replace(/[/\\:*?"<>|]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          const date = examGroup.examCommencementDate
+            ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+            : "";
+          return `${name} ${date}.zip`;
+        })()
+      : undefined;
+
     const result = await ExportService.downloadExamAdmitCardsbyExamGroupId(
       Number(examGroupId),
       sessionId, // Pass session ID for Socket.IO tracking
+      preferredFileName,
     );
 
     if (result.success && result.data) {
@@ -354,9 +369,24 @@ export default function ExamPage() {
       createdAt: new Date(),
     });
 
+    const preferredFileName = examGroup
+      ? (() => {
+          const name = (examGroup.name || "exam")
+            .replace(/[/\\:*?"<>|]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          const date = examGroup.examCommencementDate
+            ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+            : "";
+          return `${name} ${date}-attendance-dr-sheets.zip`;
+        })()
+      : undefined;
+
     const result = await ExportService.downloadExamAttendanceSheetsbyExamGroupId(
       Number(examGroupId),
       sessionId, // Pass session ID for Socket.IO tracking
+      preferredFileName,
     );
 
     if (result.success && result.data) {
@@ -594,8 +624,22 @@ export default function ExamPage() {
   const handleDownloadAdmitCardTracking = async () => {
     if (!examGroupId) return;
 
+    const preferredFileName = examGroup
+      ? (() => {
+          const name = (examGroup.name || "exam")
+            .replace(/[/\\:*?"<>|]/g, "-")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 100);
+          const date = examGroup.examCommencementDate
+            ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+            : "";
+          return `${name} ${date}-admit-card-tracking.xlsx`;
+        })()
+      : undefined;
+
     try {
-      const { downloadUrl, fileName } = await downloadAdmitCardTracking(Number(examGroupId));
+      const { downloadUrl, fileName } = await downloadAdmitCardTracking(Number(examGroupId), preferredFileName);
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = fileName;
@@ -843,9 +887,23 @@ export default function ExamPage() {
                       variant="outline"
                       onClick={async () => {
                         try {
+                          const preferredFileName = examGroup
+                            ? (() => {
+                                const name = (examGroup.name || "exam")
+                                  .replace(/[/\\:*?"<>|]/g, "-")
+                                  .replace(/\s+/g, " ")
+                                  .trim()
+                                  .slice(0, 100);
+                                const date = examGroup.examCommencementDate
+                                  ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+                                  : "";
+                                return `${name} ${date}-candidates.xlsx`;
+                              })()
+                            : undefined;
                           const response = await fetchExamCandidatesByExamIdOrExamGroupId(
                             undefined,
                             Number(examGroupId!),
+                            preferredFileName,
                           );
                           ExportService.downloadFile(response.downloadUrl, response.fileName);
                         } catch (error: any) {

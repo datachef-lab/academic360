@@ -184,12 +184,12 @@ function LayoutHeader({ pathSegments, setOpen }: { pathSegments: string[]; setOp
         <Button
           variant="outline"
           size="icon"
-          className="relative h-9 w-9 sm:w-full sm:justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
+          className="relative h-9 w-9 sm:h-9 sm:w-full sm:min-w-[8rem] sm:justify-start sm:pl-3 sm:pr-10 md:w-40 lg:w-64 rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none"
           onClick={() => setOpen(true)}
         >
-          <Search className="h-4 w-4 sm:mr-2" />
-          <span className="hidden lg:inline-flex">Search...</span>
-          <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+          <Search className="h-4 w-4 shrink-0 sm:mr-2" />
+          <span className="hidden lg:inline-flex truncate">Search...</span>
+          <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
             <span className="text-xs">⌘</span>K
           </kbd>
         </Button>

@@ -229,10 +229,11 @@ export default function ScheduleExamPage() {
   // const [selectedRooms, setSelectedRooms] = useState<SelectedRoom[]>([]);
   // const [totalCapacity, setTotalCapacity] = useState(0);
 
-  // Step 3: Exam Schedule - now tracks subject+paper combinations
+  // Step 3: Exam Schedule - now tracks subject+paper+paperComponent combinations
   interface SubjectPaperSchedule {
     subjectId: number;
     paperId: number;
+    paperComponentId: number; // Paper's component matching selected exam component type
     schedule: Schedule;
   }
   const [selectedSubjectPapers, setSelectedSubjectPapers] = useState<SubjectPaperSchedule[]>([]);
@@ -666,20 +667,20 @@ export default function ScheduleExamPage() {
   // NEW FLOW HELPERS
 
   // Get available program courses for selected subjects (from their papers)
-  // Only returns program courses that still have papers that haven't been added
+  // Only returns program courses that still have papers (with selected component) that haven't been added
   const getAvailableProgramCoursesForSubjects = useCallback(
     (subjectIds: number[]): Array<{ id: number; name: string }> => {
-      if (subjectIds.length === 0) return [];
+      if (subjectIds.length === 0 || selectedExamComponent === null) return [];
 
       const addedPaperIds = new Set(selectedSubjectPapers.map((sp) => sp.paperId));
       const programCourseIds = new Set<number>();
 
-      // Get papers for all selected subjects
+      // Get papers for all selected subjects that have the selected component
       subjectIds.forEach((subjectId) => {
         const subjectPapers = getPapersForSubject(subjectId);
         subjectPapers.forEach((paper) => {
-          // Only include program course if the paper hasn't been added yet
-          if (paper.programCourseId && paper.id && !addedPaperIds.has(paper.id)) {
+          const hasComponent = paper.components?.some((c) => c.examComponent?.id === selectedExamComponent) ?? false;
+          if (hasComponent && paper.programCourseId && paper.id && !addedPaperIds.has(paper.id)) {
             programCourseIds.add(paper.programCourseId);
           }
         });
@@ -693,12 +694,13 @@ export default function ScheduleExamPage() {
         .filter((pc): pc is { id: number; name: string } => pc !== null)
         .sort((a, b) => a.name.localeCompare(b.name));
     },
-    [getPapersForSubject, programCourses, selectedSubjectPapers],
+    [getPapersForSubject, programCourses, selectedSubjectPapers, selectedExamComponent],
   );
 
   // Get available papers based on current filters (subjects + component + program courses)
+  // Component is required - papers must have the selected exam component
   const getFilteredPapersForCurrentSelection = useCallback((): PaperDto[] => {
-    if (currentSubjectIds.length === 0) return [];
+    if (currentSubjectIds.length === 0 || selectedExamComponent === null) return [];
 
     // Get papers for all selected subjects
     let filtered: PaperDto[] = [];
@@ -706,16 +708,14 @@ export default function ScheduleExamPage() {
       filtered = [...filtered, ...getPapersForSubject(subjectId)];
     });
 
-    // Filter by selected exam component if one is selected
-    if (selectedExamComponent !== null) {
-      filtered = filtered.filter((paper) => {
-        return (
-          paper.components &&
-          Array.isArray(paper.components) &&
-          paper.components.some((component) => component.examComponent?.id === selectedExamComponent)
-        );
-      });
-    }
+    // Filter by selected exam component (required)
+    filtered = filtered.filter((paper) => {
+      return (
+        paper.components &&
+        Array.isArray(paper.components) &&
+        paper.components.some((component) => component.examComponent?.id === selectedExamComponent)
+      );
+    });
 
     // Filter by selected program courses if any are selected
     if (currentProgramCourseIds.length > 0) {
@@ -790,10 +790,21 @@ export default function ScheduleExamPage() {
     });
   }, [getDistinctSubjects, subjectHasAvailablePapers]);
 
+  // Helper: get paperComponentId for a paper matching the selected exam component
+  const getPaperComponentIdForExamComponent = useCallback((paper: PaperDto, examComponentId: number): number | null => {
+    const component = paper.components?.find((c) => c.examComponent?.id === examComponentId);
+    return component?.id ?? null;
+  }, []);
+
   // Handle adding papers with current date/time settings
   const handleAddPapers = useCallback(() => {
     if (currentSubjectIds.length === 0 || currentPaperIds.length === 0) {
       toast.error("Please select at least one subject and one paper");
+      return;
+    }
+
+    if (selectedExamComponent === null) {
+      toast.error("Please select a component type");
       return;
     }
 
@@ -827,22 +838,34 @@ export default function ScheduleExamPage() {
 
     // Create new subject-paper schedules for each selected paper
     const newSchedules: SubjectPaperSchedule[] = [];
+    const invalidPapers: string[] = [];
 
     currentPaperIds.forEach((paperId) => {
-      // Find which subject this paper belongs to
       const paper = papers.find((p) => p.id === paperId);
-      if (paper && paper.subjectId && currentSubjectIds.includes(paper.subjectId)) {
-        newSchedules.push({
-          subjectId: paper.subjectId,
-          paperId,
-          schedule: {
-            date: currentDate,
-            startTime: currentStartTime,
-            endTime,
-          },
-        });
+      if (!paper || !paper.subjectId || !currentSubjectIds.includes(paper.subjectId)) return;
+
+      const paperComponentId = getPaperComponentIdForExamComponent(paper, selectedExamComponent);
+      if (paperComponentId === null) {
+        invalidPapers.push(paper.name || paper.code || `Paper ${paperId}`);
+        return;
       }
+
+      newSchedules.push({
+        subjectId: paper.subjectId,
+        paperId,
+        paperComponentId,
+        schedule: {
+          date: currentDate,
+          startTime: currentStartTime,
+          endTime,
+        },
+      });
     });
+
+    if (invalidPapers.length > 0) {
+      toast.error(`Paper(s) missing selected component: ${invalidPapers.join(", ")}`);
+      return;
+    }
 
     if (newSchedules.length === 0) {
       toast.error("No valid papers to add");
@@ -865,7 +888,17 @@ export default function ScheduleExamPage() {
     setCurrentDuration("");
 
     toast.success(`Added ${newSchedules.length} paper(s) to exam schedule`);
-  }, [currentSubjectIds, currentPaperIds, currentDate, currentStartTime, currentDuration, calculateEndTime, papers]);
+  }, [
+    currentSubjectIds,
+    currentPaperIds,
+    currentDate,
+    currentStartTime,
+    currentDuration,
+    calculateEndTime,
+    papers,
+    selectedExamComponent,
+    getPaperComponentIdForExamComponent,
+  ]);
 
   // Room selection handlers moved to allot-exam-page
 
@@ -1063,7 +1096,8 @@ export default function ScheduleExamPage() {
 
           examSubjects.push({
             subjectId: subjectPaper.subjectId,
-            paperId: subjectPaper.paperId, // Include paperId
+            paperId: subjectPaper.paperId,
+            paperComponentId: subjectPaper.paperComponentId,
             startTime: new Date(startDateTime),
             endTime: new Date(endDateTime),
             examId: 0,
@@ -1161,6 +1195,7 @@ export default function ScheduleExamPage() {
     selectedShifts,
     selectedSubjectCategories,
     selectedSubjectIds,
+    selectedSubjectPapers,
     subjectSchedules,
     availableAcademicYears,
     classes,
@@ -1309,6 +1344,7 @@ export default function ScheduleExamPage() {
         examSubjects.push({
           subjectId: subjectPaper.subjectId,
           paperId: subjectPaper.paperId,
+          paperComponentId: subjectPaper.paperComponentId,
           startTime: new Date(startDateTime),
           endTime: new Date(endDateTime),
           examId: 0,
@@ -1421,7 +1457,8 @@ export default function ScheduleExamPage() {
     },
     onError: (error) => {
       console.log("In exam scheduling post api, error:", error);
-      toast.error(`Something went wrong while scheduling exam!`);
+      const message = error instanceof Error ? error.message : "Something went wrong while scheduling exam!";
+      toast.error(message);
     },
   });
 
@@ -2110,27 +2147,26 @@ export default function ScheduleExamPage() {
                           )}
                         </div>
 
-                        {/* Component - Single Select */}
+                        {/* Component - Single Select (required for adding papers) */}
                         <div className="flex flex-col gap-1">
                           <Label className="font-medium text-gray-700">Component</Label>
                           <Select
-                            value={selectedExamComponent?.toString() || "all"}
+                            value={selectedExamComponent?.toString() ?? ""}
                             onValueChange={(value) => {
-                              setSelectedExamComponent(value === "all" ? null : Number(value));
+                              setSelectedExamComponent(Number(value));
                               // Reset paper selection when component changes
                               setCurrentPaperIds([]);
                             }}
                             disabled={loading.examComponents || currentSubjectIds.length === 0}
                           >
                             <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                              <SelectValue placeholder={loading.examComponents ? "Loading..." : "All"} />
+                              <SelectValue placeholder={loading.examComponents ? "Loading..." : "Select component"} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">All</SelectItem>
                               {examComponents
                                 .filter((comp) => !comp.disabled)
                                 .map((comp) => (
-                                  <SelectItem key={comp.id} value={comp.id?.toString() || "all"}>
+                                  <SelectItem key={comp.id} value={comp.id?.toString() ?? ""}>
                                     {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
                                   </SelectItem>
                                 ))}
@@ -2342,6 +2378,7 @@ export default function ScheduleExamPage() {
                             onClick={handleAddPapers}
                             disabled={
                               currentSubjectIds.length === 0 ||
+                              selectedExamComponent === null ||
                               currentPaperIds.length === 0 ||
                               !currentDate ||
                               !currentStartTime ||
@@ -2397,10 +2434,13 @@ export default function ScheduleExamPage() {
                                 <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[20%]">
                                   <div className="font-medium">Paper</div>
                                 </TableHead>
-                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[12%]">
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
                                   <div className="font-medium">Code</div>
                                 </TableHead>
-                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[12%]">
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
+                                  <div className="font-medium">Component</div>
+                                </TableHead>
+                                <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[10%]">
                                   <div className="font-medium">Date</div>
                                 </TableHead>
                                 <TableHead className="p-2 text-center border-r border-gray-400 bg-gray-100 w-[11%]">
@@ -2414,7 +2454,7 @@ export default function ScheduleExamPage() {
                             <TableBody>
                               {selectedSubjectPapers.length === 0 ? (
                                 <TableRow>
-                                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                                     No papers added yet. Use the form above to add papers to the exam schedule.
                                   </TableCell>
                                 </TableRow>
@@ -2426,10 +2466,15 @@ export default function ScheduleExamPage() {
 
                                   const programCourse = programCourses.find((pc) => pc.id === paper.programCourseId);
                                   const schedule = sp.schedule;
+                                  const paperComponent = paper.components?.find((c) => c.id === sp.paperComponentId);
+                                  const componentName =
+                                    paperComponent?.examComponent?.shortName ||
+                                    paperComponent?.examComponent?.name ||
+                                    "-";
 
                                   return (
                                     <TableRow
-                                      key={`${sp.subjectId}-${sp.paperId}-${index}`}
+                                      key={`${sp.subjectId}-${sp.paperId}-${sp.paperComponentId}-${index}`}
                                       className="border-b border-gray-400"
                                     >
                                       <TableCell className="p-2 text-center border-r border-gray-400">
@@ -2465,6 +2510,14 @@ export default function ScheduleExamPage() {
                                         {paper.code || "-"}
                                       </TableCell>
                                       <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs border-amber-300 text-amber-700 bg-amber-50"
+                                        >
+                                          {componentName}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
                                         {schedule.date ? new Date(schedule.date).toLocaleDateString("en-GB") : "-"}
                                       </TableCell>
                                       <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
@@ -2480,12 +2533,19 @@ export default function ScheduleExamPage() {
                                             setSelectedSubjectPapers((prev) =>
                                               prev.filter(
                                                 (item) =>
-                                                  !(item.subjectId === sp.subjectId && item.paperId === sp.paperId),
+                                                  !(
+                                                    item.subjectId === sp.subjectId &&
+                                                    item.paperId === sp.paperId &&
+                                                    item.paperComponentId === sp.paperComponentId
+                                                  ),
                                               ),
                                             );
                                             // If no more papers for this subject, remove from selectedSubjectIds
                                             const remainingForSubject = selectedSubjectPapers.filter(
-                                              (item) => item.subjectId === sp.subjectId && item.paperId !== sp.paperId,
+                                              (item) =>
+                                                item.subjectId === sp.subjectId &&
+                                                (item.paperId !== sp.paperId ||
+                                                  item.paperComponentId !== sp.paperComponentId),
                                             );
                                             if (remainingForSubject.length === 0) {
                                               setSelectedSubjectIds((prev) => prev.filter((id) => id !== sp.subjectId));

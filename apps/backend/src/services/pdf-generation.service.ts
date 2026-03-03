@@ -133,9 +133,13 @@ export interface CuRegistrationFormData {
   photoUrlDebug?: string;
 }
 
+// Cached admit-card template to avoid disk read per PDF
+let cachedAdmitCardTemplate: string | null = null;
+
 export class PdfGenerationService {
   private static instance: PdfGenerationService;
   private browser: Browser | null = null;
+  private browserLaunchPromise: Promise<Browser> | null = null;
 
   private constructor() {}
 
@@ -147,7 +151,10 @@ export class PdfGenerationService {
   }
 
   private async getBrowser(): Promise<Browser> {
-    if (!this.browser) {
+    if (this.browser) return this.browser;
+    if (this.browserLaunchPromise) return this.browserLaunchPromise;
+
+    this.browserLaunchPromise = (async () => {
       const executablePath = await findChromiumExecutable();
 
       const launchOptions: any = {
@@ -163,14 +170,16 @@ export class PdfGenerationService {
         ],
       };
 
-      // Only set executablePath if we found a valid Chromium installation
       if (executablePath) {
         launchOptions.executablePath = executablePath;
       }
 
       this.browser = await puppeteer.launch(launchOptions);
-    }
-    return this.browser;
+      this.browserLaunchPromise = null;
+      return this.browser;
+    })();
+
+    return this.browserLaunchPromise;
   }
 
   public async generateCuRegistrationPdf(
@@ -394,21 +403,29 @@ export class PdfGenerationService {
         );
       }
 
-      // Read the EJS template
-      const templatePath = path.join(__dirname, "../templates/admit-card.ejs");
-      const templateContent = await fs.readFile(templatePath, "utf-8");
+      // Read and cache the EJS template (avoids disk read per PDF)
+      if (!cachedAdmitCardTemplate) {
+        const templatePath = path.join(
+          __dirname,
+          "../templates/admit-card.ejs",
+        );
+        cachedAdmitCardTemplate = await fs.readFile(templatePath, "utf-8");
+      }
 
       // Render the template with data
-      const htmlContent = ejs.render(templateContent, formData);
+      const htmlContent = ejs.render(cachedAdmitCardTemplate, formData);
 
       // Get browser instance
       const browser = await this.getBrowser();
       const page = await browser.newPage();
 
-      // Set content and wait for resources to load
+      // Set content: use "load" instead of "networkidle0" - networkidle0 waits
+      // for 500ms of no network activity, which can hang on slow external images.
+      // "load" fires when DOM + resources (images) are loaded or failed.
+      const CONTENT_TIMEOUT_MS = 30_000;
       await page.setContent(htmlContent, {
-        waitUntil: "networkidle0",
-        timeout: 0,
+        waitUntil: "load",
+        timeout: CONTENT_TIMEOUT_MS,
       });
 
       // Generate PDF buffer

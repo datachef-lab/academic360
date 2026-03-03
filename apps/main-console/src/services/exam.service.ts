@@ -149,6 +149,7 @@ export async function fetchExamPapersStatsByExamId(id: number): Promise<ExamPape
 export async function fetchExamCandidatesByExamIdOrExamGroupId(
   id?: number,
   examGroupId?: number,
+  preferredFileName?: string,
 ): Promise<{ downloadUrl: string; fileName: string }> {
   try {
     const response = await axiosInstance.get(
@@ -172,12 +173,13 @@ export async function fetchExamCandidatesByExamIdOrExamGroupId(
     const downloadUrl = URL.createObjectURL(blob);
 
     const contentDisposition = response.headers["content-disposition"];
-    let fileName = `exam_${id}-candidates-${new Date().toISOString().split("T")[0]}.xlsx`;
+    let fileName =
+      preferredFileName || `exam_${id ?? examGroupId}-candidates-${new Date().toISOString().split("T")[0]}.xlsx`;
 
     if (contentDisposition) {
       const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
       if (fileNameMatch) {
-        fileName = fileNameMatch[1];
+        fileName = fileNameMatch[1].replace(/%22/g, '"');
       }
     }
 
@@ -231,6 +233,7 @@ export async function deleteExamById(examId: number): Promise<{ examId: number }
 
 export async function downloadAdmitCardTracking(
   examGroupId: number,
+  preferredFileName?: string,
 ): Promise<{ downloadUrl: string; fileName: string }> {
   const response = await axiosInstance.get(
     `/api/exams/schedule/admit-card-tracking/download?examGroupId=${examGroupId}`,
@@ -246,12 +249,13 @@ export async function downloadAdmitCardTracking(
   const downloadUrl = URL.createObjectURL(blob);
 
   const contentDisposition = response.headers["content-disposition"];
-  let fileName = `exam_${examGroupId}-admit-card-tracking-${new Date().toISOString().split("T")[0]}.xlsx`;
+  let fileName =
+    preferredFileName || `exam_${examGroupId}-admit-card-tracking-${new Date().toISOString().split("T")[0]}.xlsx`;
 
   if (contentDisposition) {
     const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
     if (fileNameMatch) {
-      fileName = fileNameMatch[1];
+      fileName = fileNameMatch[1].replace(/%22/g, '"');
     }
   }
 
