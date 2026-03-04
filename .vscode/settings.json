@@ -1,6 +1,13 @@
 {
   "eslint.run": "onSave",
   "eslint.lintTask.enable": true,
+
+  // 🔥 REQUIRED for ESLint v9/v10 flat config
+  "eslint.useFlatConfig": true,
+
+  // 🔥 REQUIRED for monorepos
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+
   "files.watcherExclude": {
     "**/node_modules/**": true,
     "**/dist/**": true,
@@ -13,7 +20,9 @@
     "**/.turbo": true,
     "**/build": true
   },
+
   "typescript.tsserver.maxTsServerMemory": 4096,
+
   "git.pullRebase": false,
   "git.rebaseWhenSync": false,
   "git.confirmSync": false
