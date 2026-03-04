@@ -11,11 +11,15 @@ export async function updateSetting(settingId: number, value: string | File) {
   const formData = new FormData();
   formData.append(typeof value === "string" ? "value" : "file", value);
 
-  const res = await axiosInstance.put<ApiResponse<Settings>>(`/api/v1/settings/${settingId}`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
+  const res = await axiosInstance.put<ApiResponse<Settings>>(
+    `/api/v1/settings/${settingId}`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     },
-  });
+  );
 
   return res.data;
 }

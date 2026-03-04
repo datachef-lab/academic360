@@ -16,10 +16,23 @@ import { CourseTypeForm } from "./course-type-form";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
 import { Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   getCourseTypes,
   createCourseType,
@@ -237,7 +250,9 @@ const CourseTypesPage = () => {
               <Layers className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
               <span className="truncate">Course Types</span>
             </CardTitle>
-            <div className="text-xs sm:text-sm text-muted-foreground mt-1">A list of all course types.</div>
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1">
+              A list of all course types.
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -278,13 +293,16 @@ const CourseTypesPage = () => {
                       <h4 className="font-medium">Upload Results</h4>
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
-                          <span className="font-medium">Total:</span> {bulkUploadResult.summary.total}
+                          <span className="font-medium">Total:</span>{" "}
+                          {bulkUploadResult.summary.total}
                         </div>
                         <div className="text-green-600">
-                          <span className="font-medium">Successful:</span> {bulkUploadResult.summary.successful}
+                          <span className="font-medium">Successful:</span>{" "}
+                          {bulkUploadResult.summary.successful}
                         </div>
                         <div className="text-red-600">
-                          <span className="font-medium">Failed:</span> {bulkUploadResult.summary.failed}
+                          <span className="font-medium">Failed:</span>{" "}
+                          {bulkUploadResult.summary.failed}
                         </div>
                       </div>
 
@@ -292,14 +310,22 @@ const CourseTypesPage = () => {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <h5 className="font-medium text-red-600">Errors:</h5>
-                            <Button variant="outline" size="sm" onClick={handleDownloadFailedData} className="text-xs">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleDownloadFailedData}
+                              className="text-xs"
+                            >
                               <Download className="mr-1 h-3 w-3" />
                               Download Failed Data
                             </Button>
                           </div>
                           <div className="max-h-40 overflow-y-auto space-y-1">
                             {bulkUploadResult.errors.map((error, index) => (
-                              <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
+                              <div
+                                key={index}
+                                className="text-xs p-2 bg-red-50 border border-red-200 rounded"
+                              >
                                 <span className="font-medium">Row {error.row}:</span> {error.error}
                               </div>
                             ))}
@@ -326,14 +352,19 @@ const CourseTypesPage = () => {
             </Button>
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
+                <Button
+                  onClick={handleAddNew}
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+                >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent className="w-[95vw] sm:w-full max-w-lg">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedCourseType ? "Edit Course Type" : "Add New Course Type"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedCourseType ? "Edit Course Type" : "Add New Course Type"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <CourseTypeForm
                   initialData={selectedCourseType}
@@ -360,12 +391,24 @@ const CourseTypesPage = () => {
               <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: "fixed" }}>
                 <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
-                    <TableHead style={{ width: 220, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
-                    <TableHead style={{ width: 200, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Sequence</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
-                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>
+                      ID
+                    </TableHead>
+                    <TableHead style={{ width: 220, background: "#f3f4f6", color: "#374151" }}>
+                      Name
+                    </TableHead>
+                    <TableHead style={{ width: 200, background: "#f3f4f6", color: "#374151" }}>
+                      Short Name
+                    </TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>
+                      Sequence
+                    </TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>
+                      Status
+                    </TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -398,7 +441,9 @@ const CourseTypesPage = () => {
                           {!courseType.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">
+                              Active
+                            </Badge>
                           )}
                         </TableCell>
                         <TableCell style={{ width: 120 }}>

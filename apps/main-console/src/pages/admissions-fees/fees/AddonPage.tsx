@@ -1,7 +1,14 @@
 import React, { useState } from "react";
 import { PlusCircle, Edit, Trash2, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -135,7 +142,8 @@ const AddonPage: React.FC = () => {
       // Error message is already shown by the hook via showError
     } catch (error) {
       console.error("Error deleting addon:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to delete addon. Please try again.";
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete addon. Please try again.";
       toast.error(errorMessage);
       throw error; // Re-throw to prevent modal from closing
     }
@@ -189,7 +197,9 @@ const AddonPage: React.FC = () => {
               </AlertDialogTrigger>
               <AlertDialogContent className="sm:max-w-[500px]">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{editingItem ? "Edit Addon" : "Add New Addon"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {editingItem ? "Edit Addon" : "Add New Addon"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <div className="py-4">
                   <div className="flex flex-col gap-2">
@@ -236,7 +246,11 @@ const AddonPage: React.FC = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
@@ -244,7 +258,9 @@ const AddonPage: React.FC = () => {
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto h-full">
               <Table className="border rounded-md" style={{ tableLayout: "fixed", width: "100%" }}>
-                <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
+                <TableHeader
+                  style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}
+                >
                   <TableRow>
                     <TableHead style={{ width: 60, whiteSpace: "nowrap" }}>Sr. No.</TableHead>
                     <TableHead style={{ width: 400 }}>Addon Name</TableHead>
@@ -265,7 +281,12 @@ const AddonPage: React.FC = () => {
                         <TableCell style={{ width: 400 }}>{row.name}</TableCell>
                         <TableCell style={{ width: 120 }}>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(row)}
+                              className="h-5 w-5 p-0"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button

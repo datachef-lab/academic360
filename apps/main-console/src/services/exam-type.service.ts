@@ -37,7 +37,10 @@ export async function createExamType(payload: Partial<ExamTypeT>): Promise<ApiRe
 }
 
 // Update an exam type
-export async function updateExamType(id: number, payload: Partial<ExamTypeT>): Promise<ApiResponse<ExamTypeT>> {
+export async function updateExamType(
+  id: number,
+  payload: Partial<ExamTypeT>,
+): Promise<ApiResponse<ExamTypeT>> {
   try {
     const response = await axiosInstance.put<ApiResponse<ExamTypeT>>(`${BASE_URL}/${id}`, payload);
     return response.data;

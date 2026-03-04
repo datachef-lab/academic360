@@ -1,8 +1,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 
 const dummyIds = [
   {
@@ -32,7 +45,9 @@ export default function IdCardGeneratorPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>ID Card Generator</CardTitle>
-            <p className="text-gray-500 text-sm mt-1">Generate and download ID cards for admitted students.</p>
+            <p className="text-gray-500 text-sm mt-1">
+              Generate and download ID cards for admitted students.
+            </p>
           </div>
           <Button variant="outline">Generate All</Button>
         </CardHeader>

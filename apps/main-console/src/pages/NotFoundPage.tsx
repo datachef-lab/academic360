@@ -5,9 +5,7 @@ const NotFoundPage: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-gray-100 to-gray-300 text-gray-800">
       <div className="animate-bounce mb-4">
-        <h1 className="text-[10rem] font-bold text-red-500 drop-shadow-lg">
-          404
-        </h1>
+        <h1 className="text-[10rem] font-bold text-red-500 drop-shadow-lg">404</h1>
       </div>
       <h2 className="text-3xl font-bold mt-4 text-gray-700 animate-fade-in">
         Oops! Page Not Found

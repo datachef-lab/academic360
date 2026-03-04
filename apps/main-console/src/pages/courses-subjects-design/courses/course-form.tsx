@@ -103,7 +103,9 @@ export function CourseForm({ initialData, onSubmit, onCancel, isSubmitting }: Co
         <Controller
           name="isActive"
           control={control}
-          render={({ field }) => <Checkbox id="isActive" checked={!!field.value} onCheckedChange={field.onChange} />}
+          render={({ field }) => (
+            <Checkbox id="isActive" checked={!!field.value} onCheckedChange={field.onChange} />
+          )}
         />
         <Label htmlFor="isActive">Active</Label>
       </div>

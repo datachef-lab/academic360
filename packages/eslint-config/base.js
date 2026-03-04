@@ -25,7 +25,6 @@ export default [
 			"no-undef": "warn",
             "no-useless-assignment": "error",
             semi: "error",
-            camelcase: "error",
 			"prefer-const": "error",
         },
     },

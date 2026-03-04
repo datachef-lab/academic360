@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import * as XLSX from "xlsx";
 import { Degree } from "@/types/resources/degree";
 
-type DegreeLevel = typeof degreeLevelType.enumValues[number];
+type DegreeLevel = (typeof degreeLevelType.enumValues)[number];
 
 export type AddDegreeResult = {
   success: boolean;
@@ -49,8 +49,8 @@ export async function uploadDegreesFromFile(formData: FormData): Promise<AddDegr
       existingDegrees.some(
         (existing) =>
           existing.name.toLowerCase() === newDegree.name.toLowerCase() &&
-          existing.level === newDegree.level
-      )
+          existing.level === newDegree.level,
+      ),
     );
 
     if (duplicates.length > 0) {
@@ -62,10 +62,12 @@ export async function uploadDegreesFromFile(formData: FormData): Promise<AddDegr
       };
     }
 
-    await dbPostgres.insert(degree).values(validDegrees.map(d => ({
-      ...d,
-      sequence: d.sequence,
-    })));
+    await dbPostgres.insert(degree).values(
+      validDegrees.map((d) => ({
+        ...d,
+        sequence: d.sequence,
+      })),
+    );
 
     return {
       success: true,
@@ -89,11 +91,7 @@ export async function getAllDegrees() {
 }
 
 export async function getDegreeById(id: number) {
-  const result = await dbPostgres
-    .select()
-    .from(degree)
-    .where(eq(degree.id, id))
-    .limit(1);
+  const result = await dbPostgres.select().from(degree).where(eq(degree.id, id)).limit(1);
   return result[0];
 }
 
@@ -118,8 +116,7 @@ export async function createDegree(data: {
 
     const isDuplicate = existingDegrees.some(
       (degree) =>
-        degree.name.toLowerCase() === data.name.toLowerCase() &&
-        degree.level === data.level
+        degree.name.toLowerCase() === data.name.toLowerCase() && degree.level === data.level,
     );
 
     if (isDuplicate) {
@@ -154,7 +151,7 @@ export async function updateDegree(
     name: string;
     level: string;
     sequence?: number;
-  }
+  },
 ): Promise<AddDegreeResult> {
   try {
     if (!degreeLevelType.enumValues.includes(data.level as any)) {
@@ -174,7 +171,7 @@ export async function updateDegree(
       (degree) =>
         degree.id !== id &&
         degree.name.toLowerCase() === data.name.toLowerCase() &&
-        degree.level === data.level
+        degree.level === data.level,
     );
 
     if (isDuplicate) {

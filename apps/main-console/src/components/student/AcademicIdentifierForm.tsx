@@ -2,10 +2,25 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, CreditCard, Hash, User, BookOpen, FileText, CheckCircle2, RefreshCw } from "lucide-react";
+import {
+  GraduationCap,
+  CreditCard,
+  Hash,
+  User,
+  BookOpen,
+  FileText,
+  CheckCircle2,
+  RefreshCw,
+} from "lucide-react";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Course } from "@/types/course-design/index";
 import { Framework, Shift } from "@/types/enums";
@@ -24,7 +39,10 @@ interface AcademicIdentifierFormProps {
   studentId: number;
 }
 
-export default function AcademicIdentifierForm({ initialData = {}, studentId }: AcademicIdentifierFormProps) {
+export default function AcademicIdentifierForm({
+  initialData = {},
+  studentId,
+}: AcademicIdentifierFormProps) {
   const [formData, setFormData] = useState<Partial<AcademicIdentifier>>({
     studentId,
     framework: null,
@@ -124,7 +142,9 @@ export default function AcademicIdentifierForm({ initialData = {}, studentId }: 
                 </Label>
                 <Select
                   value={formData.framework || ""}
-                  onValueChange={(value: string) => setFormData({ ...formData, framework: value as Framework })}
+                  onValueChange={(value: string) =>
+                    setFormData({ ...formData, framework: value as Framework })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select framework type" />
@@ -147,7 +167,9 @@ export default function AcademicIdentifierForm({ initialData = {}, studentId }: 
                 <Select
                   value={formData.course?.id?.toString() || ""}
                   onValueChange={(value) => {
-                    const selectedCourse = courses.find((course) => course.id?.toString() === value);
+                    const selectedCourse = courses.find(
+                      (course) => course.id?.toString() === value,
+                    );
                     setFormData({ ...formData, course: selectedCourse || null });
                   }}
                 >
@@ -255,7 +277,9 @@ export default function AcademicIdentifierForm({ initialData = {}, studentId }: 
                   <Input
                     id="cuFormNumber"
                     value={formData.cuFormNumber || ""}
-                    onChange={(e) => setFormData({ ...formData, cuFormNumber: e.target.value || null })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, cuFormNumber: e.target.value || null })
+                    }
                     placeholder="Enter CU form number"
                     className="pl-10"
                   />
@@ -267,7 +291,10 @@ export default function AcademicIdentifierForm({ initialData = {}, studentId }: 
             {/* Registration and Roll Number Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="registrationNumber" className="flex items-center gap-2 text-gray-700">
+                <Label
+                  htmlFor="registrationNumber"
+                  className="flex items-center gap-2 text-gray-700"
+                >
                   <User className="w-4 h-4" />
                   Registration Number
                 </Label>
@@ -275,7 +302,9 @@ export default function AcademicIdentifierForm({ initialData = {}, studentId }: 
                   <Input
                     id="registrationNumber"
                     value={formData.registrationNumber || ""}
-                    onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value || null })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, registrationNumber: e.target.value || null })
+                    }
                     placeholder="Enter registration number"
                     className="pl-10"
                   />
@@ -292,7 +321,9 @@ export default function AcademicIdentifierForm({ initialData = {}, studentId }: 
                   <Input
                     id="rollNumber"
                     value={formData.rollNumber || ""}
-                    onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value || null })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, rollNumber: e.target.value || null })
+                    }
                     placeholder="Enter roll number"
                     className="pl-10"
                   />
@@ -329,7 +360,9 @@ export default function AcademicIdentifierForm({ initialData = {}, studentId }: 
                   <Input
                     id="classRollNumber"
                     value={formData.classRollNumber || ""}
-                    onChange={(e) => setFormData({ ...formData, classRollNumber: e.target.value || null })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, classRollNumber: e.target.value || null })
+                    }
                     placeholder="Enter class roll number"
                     className="pl-10"
                   />
@@ -398,14 +431,18 @@ export default function AcademicIdentifierForm({ initialData = {}, studentId }: 
                 <Checkbox
                   id="checkRepeat"
                   checked={formData.checkRepeat}
-                  onCheckedChange={(checked) => setFormData({ ...formData, checkRepeat: checked as boolean })}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, checkRepeat: checked as boolean })
+                  }
                 />
                 <Label htmlFor="checkRepeat" className="flex items-center gap-2 text-gray-700">
                   <RefreshCw className="w-4 h-4" />
                   Check Repeat
                 </Label>
               </div>
-              <p className="text-sm text-gray-500 ml-6">Check this if the student is repeating the course</p>
+              <p className="text-sm text-gray-500 ml-6">
+                Check this if the student is repeating the course
+              </p>
             </div>
 
             {/* Submit Button */}

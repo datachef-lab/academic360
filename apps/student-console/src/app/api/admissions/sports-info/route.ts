@@ -25,7 +25,10 @@ export async function GET(request: NextRequest) {
       const result = await getSportsInfoByAdditionalInfoId(parseInt(additionalInfoId));
       return NextResponse.json(result);
     } else {
-      return NextResponse.json({ error: "Either id or additionalInfoId is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Either id or additionalInfoId is required" },
+        { status: 400 },
+      );
     }
   } catch (error) {
     console.error("Error in GET sports info:", error);

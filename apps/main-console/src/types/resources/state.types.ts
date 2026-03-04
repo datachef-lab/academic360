@@ -1,6 +1,6 @@
 /**
  * State Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the State module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -136,15 +136,15 @@ export interface StateState {
  * Action types for state state management
  */
 export type StateAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_STATES'; payload: State[] }
-  | { type: 'SET_CURRENT_STATE'; payload: State | null }
-  | { type: 'ADD_STATE'; payload: State }
-  | { type: 'UPDATE_STATE'; payload: State }
-  | { type: 'DELETE_STATE'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_STATES"; payload: State[] }
+  | { type: "SET_CURRENT_STATE"; payload: State | null }
+  | { type: "ADD_STATE"; payload: State }
+  | { type: "UPDATE_STATE"; payload: State }
+  | { type: "DELETE_STATE"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -159,7 +159,7 @@ export interface StateTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -177,7 +177,7 @@ export interface StateFilter {
  */
 export interface StateSort {
   field: keyof State;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -208,7 +208,7 @@ export type StateSequence = number | null;
  */
 export const DEFAULT_STATE: CreateStatePayload = {
   countryId: 0,
-  name: '',
+  name: "",
   sequence: null,
   disabled: false,
 };
@@ -217,9 +217,9 @@ export const DEFAULT_STATE: CreateStatePayload = {
  * Default form data for state
  */
 export const DEFAULT_STATE_FORM: StateFormData = {
-  countryId: '',
-  name: '',
-  sequence: '',
+  countryId: "",
+  name: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -227,13 +227,13 @@ export const DEFAULT_STATE_FORM: StateFormData = {
  * Table columns configuration for state
  */
 export const STATE_TABLE_COLUMNS: StateTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'countryId', label: 'Country ID', sortable: true, width: '100px' },
-  { key: 'name', label: 'State Name', sortable: true, filterable: true },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "countryId", label: "Country ID", sortable: true, width: "100px" },
+  { key: "name", label: "State Name", sortable: true, filterable: true },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 // ============================================================================
@@ -246,13 +246,15 @@ export const STATE_TABLE_COLUMNS: StateTableColumn[] = [
 export function isState(obj: object): obj is State {
   return (
     obj &&
-    typeof (obj as State).id === 'number' &&
-    typeof (obj as State).countryId === 'number' &&
-    typeof (obj as State).name === 'string' &&
-    ((obj as State).sequence === null || (obj as State).sequence === undefined || typeof (obj as State).sequence === 'number') &&
-    typeof (obj as State).disabled === 'boolean' &&
-    typeof (obj as State).createdAt === 'string' &&
-    typeof (obj as State).updatedAt === 'string'
+    typeof (obj as State).id === "number" &&
+    typeof (obj as State).countryId === "number" &&
+    typeof (obj as State).name === "string" &&
+    ((obj as State).sequence === null ||
+      (obj as State).sequence === undefined ||
+      typeof (obj as State).sequence === "number") &&
+    typeof (obj as State).disabled === "boolean" &&
+    typeof (obj as State).createdAt === "string" &&
+    typeof (obj as State).updatedAt === "string"
   );
 }
 
@@ -262,10 +264,13 @@ export function isState(obj: object): obj is State {
 export function isCreateStatePayload(obj: object): obj is CreateStatePayload {
   return (
     obj &&
-    typeof (obj as CreateStatePayload).countryId === 'number' &&
-    typeof (obj as CreateStatePayload).name === 'string' &&
-    ((obj as CreateStatePayload).sequence === undefined || (obj as CreateStatePayload).sequence === null || typeof (obj as CreateStatePayload).sequence === 'number') &&
-    ((obj as CreateStatePayload).disabled === undefined || typeof (obj as CreateStatePayload).disabled === 'boolean')
+    typeof (obj as CreateStatePayload).countryId === "number" &&
+    typeof (obj as CreateStatePayload).name === "string" &&
+    ((obj as CreateStatePayload).sequence === undefined ||
+      (obj as CreateStatePayload).sequence === null ||
+      typeof (obj as CreateStatePayload).sequence === "number") &&
+    ((obj as CreateStatePayload).disabled === undefined ||
+      typeof (obj as CreateStatePayload).disabled === "boolean")
   );
 }
 
@@ -275,10 +280,15 @@ export function isCreateStatePayload(obj: object): obj is CreateStatePayload {
 export function isUpdateStatePayload(obj: object): obj is UpdateStatePayload {
   return (
     obj &&
-    ((obj as UpdateStatePayload).countryId === undefined || typeof (obj as UpdateStatePayload).countryId === 'number') &&
-    ((obj as UpdateStatePayload).name === undefined || typeof (obj as UpdateStatePayload).name === 'string') &&
-    ((obj as UpdateStatePayload).sequence === undefined || (obj as UpdateStatePayload).sequence === null || typeof (obj as UpdateStatePayload).sequence === 'number') &&
-    ((obj as UpdateStatePayload).disabled === undefined || typeof (obj as UpdateStatePayload).disabled === 'boolean')
+    ((obj as UpdateStatePayload).countryId === undefined ||
+      typeof (obj as UpdateStatePayload).countryId === "number") &&
+    ((obj as UpdateStatePayload).name === undefined ||
+      typeof (obj as UpdateStatePayload).name === "string") &&
+    ((obj as UpdateStatePayload).sequence === undefined ||
+      (obj as UpdateStatePayload).sequence === null ||
+      typeof (obj as UpdateStatePayload).sequence === "number") &&
+    ((obj as UpdateStatePayload).disabled === undefined ||
+      typeof (obj as UpdateStatePayload).disabled === "boolean")
   );
 }
 
@@ -305,7 +315,7 @@ export function apiDataToFormData(state: State): StateFormData {
   return {
     countryId: state.countryId.toString(),
     name: state.name,
-    sequence: state.sequence?.toString() || '',
+    sequence: state.sequence?.toString() || "",
     disabled: state.disabled,
   };
 }
@@ -352,21 +362,21 @@ export function getStateDisplayName(state: State): string {
  * Get state status text
  */
 export function getStateStatusText(disabled: boolean): string {
-  return disabled ? 'Disabled' : 'Active';
+  return disabled ? "Disabled" : "Active";
 }
 
 /**
  * Get state status color
  */
 export function getStateStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
+  return disabled ? "text-red-600" : "text-green-600";
 }
 
 /**
  * Get state status badge variant
  */
-export function getStateStatusBadge(disabled: boolean): 'destructive' | 'default' {
-  return disabled ? 'destructive' : 'default';
+export function getStateStatusBadge(disabled: boolean): "destructive" | "default" {
+  return disabled ? "destructive" : "default";
 }
 
 /**
@@ -374,7 +384,11 @@ export function getStateStatusBadge(disabled: boolean): 'destructive' | 'default
  */
 export function sortStatesBySequence(states: State[]): State[] {
   return [...states].sort((a, b) => {
-    if ((a.sequence === null || a.sequence === undefined) && (b.sequence === null || b.sequence === undefined)) return 0;
+    if (
+      (a.sequence === null || a.sequence === undefined) &&
+      (b.sequence === null || b.sequence === undefined)
+    )
+      return 0;
     if (a.sequence === null || a.sequence === undefined) return 1;
     if (b.sequence === null || b.sequence === undefined) return -1;
     return (a.sequence ?? 0) - (b.sequence ?? 0);
@@ -385,14 +399,14 @@ export function sortStatesBySequence(states: State[]): State[] {
  * Filter active states
  */
 export function filterActiveStates(states: State[]): State[] {
-  return states.filter(s => !s.disabled);
+  return states.filter((s) => !s.disabled);
 }
 
 /**
  * Filter states by country
  */
 export function filterStatesByCountry(states: State[], countryId: number): State[] {
-  return states.filter(s => s.countryId === countryId);
+  return states.filter((s) => s.countryId === countryId);
 }
 
 /**
@@ -401,4 +415,4 @@ export function filterStatesByCountry(states: State[], countryId: number): State
 export function getStateWithCountryName(state: State): string {
   const countryName = state.country?.name || `Country ${state.countryId}`;
   return `${state.name}, ${countryName}`;
-} 
+}

@@ -7,4 +7,4 @@ export function useApplicationForm() {
     throw new Error("useApplicationForm must be used within an ApplicationFormProvider");
   }
   return context;
-} 
+}

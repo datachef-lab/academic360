@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import type { SubjectType } from "@repo/db/index";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -124,7 +131,12 @@ export const SubjectCategoryForm: React.FC<SubjectCategoryFormProps> = ({
           render={({ field }) => (
             <FormItem className="flex flex-row items-center space-x-2">
               <FormControl>
-                <Checkbox checked={field.value} onCheckedChange={field.onChange} id="disabled" disabled={isLoading} />
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  id="disabled"
+                  disabled={isLoading}
+                />
               </FormControl>
               <FormLabel htmlFor="disabled">Active</FormLabel>
             </FormItem>

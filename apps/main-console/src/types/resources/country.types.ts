@@ -1,6 +1,6 @@
 /**
  * Country Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Country module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Country interface that mirrors the backend model
  */
 export interface Country {
-    readonly id?: number;
+  readonly id?: number;
   name: string;
   sequence?: number | null;
   disabled: boolean;
@@ -120,15 +120,15 @@ export interface CountryState {
  * Action types for country state management
  */
 export type CountryAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_COUNTRIES'; payload: Country[] }
-  | { type: 'SET_CURRENT_COUNTRY'; payload: Country | null }
-  | { type: 'ADD_COUNTRY'; payload: Country }
-  | { type: 'UPDATE_COUNTRY'; payload: Country }
-  | { type: 'DELETE_COUNTRY'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_COUNTRIES"; payload: Country[] }
+  | { type: "SET_CURRENT_COUNTRY"; payload: Country | null }
+  | { type: "ADD_COUNTRY"; payload: Country }
+  | { type: "UPDATE_COUNTRY"; payload: Country }
+  | { type: "DELETE_COUNTRY"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -143,7 +143,7 @@ export interface CountryTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -160,7 +160,7 @@ export interface CountryFilter {
  */
 export interface CountrySort {
   field: keyof Country;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -195,7 +195,7 @@ export type CountryDisabled = boolean;
  * Default values for country
  */
 export const DEFAULT_COUNTRY: CreateCountryPayload = {
-  name: '',
+  name: "",
   sequence: null,
   disabled: false,
 };
@@ -204,8 +204,8 @@ export const DEFAULT_COUNTRY: CreateCountryPayload = {
  * Default form data for country
  */
 export const DEFAULT_COUNTRY_FORM: CountryFormData = {
-  name: '',
-  sequence: '',
+  name: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -213,26 +213,36 @@ export const DEFAULT_COUNTRY_FORM: CountryFormData = {
  * Table columns configuration for country
  */
 export const COUNTRY_TABLE_COLUMNS: CountryTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Country Name', sortable: true, filterable: true },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Country Name", sortable: true, filterable: true },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Common countries for reference
  */
 export const COMMON_COUNTRIES = [
-  'India', 'United States', 'United Kingdom', 'Canada', 'Australia',
-  'Germany', 'France', 'Japan', 'China', 'Brazil', 'Mexico', 'South Africa'
+  "India",
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "Australia",
+  "Germany",
+  "France",
+  "Japan",
+  "China",
+  "Brazil",
+  "Mexico",
+  "South Africa",
 ] as const;
 
 /**
  * Type for common country values
  */
-export type CommonCountry = typeof COMMON_COUNTRIES[number];
+export type CommonCountry = (typeof COMMON_COUNTRIES)[number];
 
 // ============================================================================
 // TYPE GUARDS
@@ -244,12 +254,12 @@ export type CommonCountry = typeof COMMON_COUNTRIES[number];
 export function isCountry(obj: object): obj is Country {
   return (
     obj &&
-    typeof (obj as Country).id === 'number' &&
-    typeof (obj as Country).name === 'string' &&
-    ((obj as Country).sequence === null || typeof (obj as Country).sequence === 'number') &&
-    typeof (obj as Country).disabled === 'boolean' &&
-    typeof (obj as Country).createdAt === 'string' &&
-    typeof (obj as Country).updatedAt === 'string'
+    typeof (obj as Country).id === "number" &&
+    typeof (obj as Country).name === "string" &&
+    ((obj as Country).sequence === null || typeof (obj as Country).sequence === "number") &&
+    typeof (obj as Country).disabled === "boolean" &&
+    typeof (obj as Country).createdAt === "string" &&
+    typeof (obj as Country).updatedAt === "string"
   );
 }
 
@@ -259,9 +269,12 @@ export function isCountry(obj: object): obj is Country {
 export function isCreateCountryPayload(obj: object): obj is CreateCountryPayload {
   return (
     obj &&
-    typeof (obj as CreateCountryPayload).name === 'string' &&
-    ((obj as CreateCountryPayload).sequence === undefined || (obj as CreateCountryPayload).sequence === null || typeof (obj as CreateCountryPayload).sequence === 'number') &&
-    ((obj as CreateCountryPayload).disabled === undefined || typeof (obj as CreateCountryPayload).disabled === 'boolean')
+    typeof (obj as CreateCountryPayload).name === "string" &&
+    ((obj as CreateCountryPayload).sequence === undefined ||
+      (obj as CreateCountryPayload).sequence === null ||
+      typeof (obj as CreateCountryPayload).sequence === "number") &&
+    ((obj as CreateCountryPayload).disabled === undefined ||
+      typeof (obj as CreateCountryPayload).disabled === "boolean")
   );
 }
 
@@ -271,9 +284,13 @@ export function isCreateCountryPayload(obj: object): obj is CreateCountryPayload
 export function isUpdateCountryPayload(obj: object): obj is UpdateCountryPayload {
   return (
     obj &&
-    ((obj as UpdateCountryPayload).name === undefined || typeof (obj as UpdateCountryPayload).name === 'string') &&
-    ((obj as UpdateCountryPayload).sequence === undefined || (obj as UpdateCountryPayload).sequence === null || typeof (obj as UpdateCountryPayload).sequence === 'number') &&
-    ((obj as UpdateCountryPayload).disabled === undefined || typeof (obj as UpdateCountryPayload).disabled === 'boolean')
+    ((obj as UpdateCountryPayload).name === undefined ||
+      typeof (obj as UpdateCountryPayload).name === "string") &&
+    ((obj as UpdateCountryPayload).sequence === undefined ||
+      (obj as UpdateCountryPayload).sequence === null ||
+      typeof (obj as UpdateCountryPayload).sequence === "number") &&
+    ((obj as UpdateCountryPayload).disabled === undefined ||
+      typeof (obj as UpdateCountryPayload).disabled === "boolean")
   );
 }
 
@@ -305,7 +322,7 @@ export function formDataToPayload(formData: CountryFormData): CreateCountryPaylo
 export function apiDataToFormData(country: Country): CountryFormData {
   return {
     name: country.name,
-    sequence: country.sequence?.toString() || '',
+    sequence: country.sequence?.toString() || "",
     disabled: country.disabled,
   };
 }
@@ -328,14 +345,14 @@ export function formatCountryName(name: string): string {
  * Get country status text
  */
 export function getCountryStatusText(disabled: boolean): string {
-  return disabled ? 'Inactive' : 'Active';
+  return disabled ? "Inactive" : "Active";
 }
 
 /**
  * Get country status color
  */
 export function getCountryStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
+  return disabled ? "text-red-600" : "text-green-600";
 }
 
 /**
@@ -343,21 +360,21 @@ export function getCountryStatusColor(disabled: boolean): string {
  */
 export function getCountryFlag(countryName: string): string {
   const flagMap: Record<string, string> = {
-    'India': '🇮🇳',
-    'United States': '🇺🇸',
-    'United Kingdom': '🇬🇧',
-    'Canada': '🇨🇦',
-    'Australia': '🇦🇺',
-    'Germany': '🇩🇪',
-    'France': '🇫🇷',
-    'Japan': '🇯🇵',
-    'China': '🇨🇳',
-    'Brazil': '🇧🇷',
-    'Mexico': '🇲🇽',
-    'South Africa': '🇿🇦',
+    India: "🇮🇳",
+    "United States": "🇺🇸",
+    "United Kingdom": "🇬🇧",
+    Canada: "🇨🇦",
+    Australia: "🇦🇺",
+    Germany: "🇩🇪",
+    France: "🇫🇷",
+    Japan: "🇯🇵",
+    China: "🇨🇳",
+    Brazil: "🇧🇷",
+    Mexico: "🇲🇽",
+    "South Africa": "🇿🇦",
   };
-  
-  return flagMap[countryName] || '🌍';
+
+  return flagMap[countryName] || "🌍";
 }
 
 /**
@@ -366,4 +383,4 @@ export function getCountryFlag(countryName: string): string {
 export function getCountryDisplayName(countryName: string): string {
   const flag = getCountryFlag(countryName);
   return `${flag} ${countryName}`;
-} 
+}

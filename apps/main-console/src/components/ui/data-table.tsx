@@ -14,7 +14,14 @@ import {
   Row,
 } from "@tanstack/react-table";
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { DataTablePagination } from "../globals/DataTablePagination";
 // import { DataTableToolbar } from "../tables/components/DataTableToolBar";
 import { CustomPaginationState } from "../settings/SettingsContent";
@@ -23,7 +30,10 @@ import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { SearchX } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
-export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pageIndex" | "pageSize"> {
+export interface DataTableProps<TData, TValue> extends Omit<
+  PaginationState,
+  "pageIndex" | "pageSize"
+> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   pagination: CustomPaginationState;
@@ -35,7 +45,7 @@ export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pa
   refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<TData[] | undefined, Error>>;
   onRowClick?: (row: Row<TData>) => void;
   viewDataToolbar?: boolean;
-  optionalTools?: React.ReactNode,
+  optionalTools?: React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -44,13 +54,13 @@ export function DataTable<TData, TValue>({
   pagination,
   isLoading,
   setPagination,
-//   searchText,
-//   setSearchText,
+  //   searchText,
+  //   setSearchText,
   viewDataToolbar = true,
   optionalTools,
 
-//   setDataLength,
-//   refetch,
+  //   setDataLength,
+  //   refetch,
   onRowClick,
 }: DataTableProps<TData, TValue>) {
   const location = useLocation();
@@ -68,7 +78,8 @@ export function DataTable<TData, TValue>({
     pageCount: pagination.totalPages,
     onPaginationChange: (updaterOrValue) => {
       setPagination((prev) => {
-        const newState = typeof updaterOrValue === "function" ? updaterOrValue(prev) : updaterOrValue;
+        const newState =
+          typeof updaterOrValue === "function" ? updaterOrValue(prev) : updaterOrValue;
         console.log("Setting new state:", newState);
         return {
           ...prev,
@@ -99,76 +110,74 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-3">
-        <div>
-        {location.pathname !== '/home/downloads' && viewDataToolbar &&  (<>
-        {/* <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} /> */}
-        {optionalTools}
-        </>)}
-        </div>
-          <div className="overflow-x-auto">
-            <Table className="min-w-full text-sm">
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        className="px-4 py-2 text-left font-semibold text-gray-700"
-                        style={{ width: header.getSize() }}
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
+      <div>
+        {location.pathname !== "/home/downloads" && viewDataToolbar && (
+          <>
+            {/* <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} /> */}
+            {optionalTools}
+          </>
+        )}
+      </div>
+      <div className="overflow-x-auto">
+        <Table className="min-w-full text-sm">
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    className="px-4 py-2 text-left font-semibold text-gray-700"
+                    style={{ width: header.getSize() }}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array(pagination.pageSize)
+                .fill(null)
+                .map((_, index) => (
+                  <TableRow key={index}>
+                    {columns.map((_, colIndex) => (
+                      <TableCell key={colIndex} className="px-4 py-2">
+                        <Skeleton className="h-8 w-full rounded-full" />
+                      </TableCell>
                     ))}
                   </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  Array(pagination.pageSize).fill(null).map((_, index) => (
-                    <TableRow key={index}>
-                      {columns.map((_, colIndex) => (
-                        <TableCell
-                          key={colIndex}
-                          className="px-4 py-2"
-                        >
-                          <Skeleton className="h-8 w-full rounded-full" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      className="hover:bg-muted cursor-pointer"
-                      onClick={onRowClick ? () => onRowClick(row) : undefined}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          className="px-4 py-2 text-left"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    <div className="flex items-center justify-center gap-2 text-gray-700">
-                      <SearchX className="h-5 w-5 text-red-600" />
-                      <span>No data available</span>
-                    </div>
-                  </TableCell>
+                ))
+            ) : table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="hover:bg-muted cursor-pointer"
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="px-4 py-2 text-left">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
                 </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="my-3">
-            <DataTablePagination table={table} />
-          </div>
-        </div>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <div className="flex items-center justify-center gap-2 text-gray-700">
+                    <SearchX className="h-5 w-5 text-red-600" />
+                    <span>No data available</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="my-3">
+        <DataTablePagination table={table} />
+      </div>
+    </div>
   );
 }

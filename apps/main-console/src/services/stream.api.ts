@@ -45,9 +45,17 @@ export const updateStream = async (id: number, data: Record<string, unknown>): P
 // Delete stream
 export const deleteStream = async (
   id: number,
-): Promise<{ success: boolean; message?: string; records?: Array<{ type: string; count: number }> }> => {
+): Promise<{
+  success: boolean;
+  message?: string;
+  records?: Array<{ type: string; count: number }>;
+}> => {
   const res = await axiosInstance.delete<
-    ApiResponse<{ success: boolean; message?: string; records?: Array<{ type: string; count: number }> }>
+    ApiResponse<{
+      success: boolean;
+      message?: string;
+      records?: Array<{ type: string; count: number }>;
+    }>
   >(`${BASE}/${id}`);
   return res.data.payload;
 };
@@ -57,10 +65,14 @@ export const bulkUploadStreams = async (file: File): Promise<BulkUploadResult> =
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(`${BASE}/bulk-upload`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(
+    `${BASE}/bulk-upload`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     },
-  });
+  );
   return res.data.payload;
 };

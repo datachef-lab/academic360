@@ -76,7 +76,9 @@ export interface SaveSelectionsResponse {
   errors?: Array<{ field: string; message: string }>;
 }
 
-export async function fetchStudentSubjectSelections(studentId: number): Promise<StudentSubjectSelectionApiResponse> {
+export async function fetchStudentSubjectSelections(
+  studentId: number,
+): Promise<StudentSubjectSelectionApiResponse> {
   const res = await axiosInstance.get<ApiResponse<StudentSubjectSelectionApiResponse>>(
     `/api/subject-selection/students/${studentId}/selections`,
   );
@@ -115,7 +117,10 @@ export async function saveStudentSubjectSelectionsAdmin(
     const maybeAxios = error as {
       response?: {
         status?: number;
-        data?: { payload?: { errors?: Array<{ field: string; message: string }> }; message?: string };
+        data?: {
+          payload?: { errors?: Array<{ field: string; message: string }> };
+          message?: string;
+        };
       };
       message?: string;
     };

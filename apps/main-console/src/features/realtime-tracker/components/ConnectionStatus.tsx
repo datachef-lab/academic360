@@ -10,7 +10,13 @@ interface ConnectionStatusProps {
   onReconnect: () => void;
 }
 
-export function ConnectionStatus({ isConnected, isLoading, error, lastUpdate, onReconnect }: ConnectionStatusProps) {
+export function ConnectionStatus({
+  isConnected,
+  isLoading,
+  error,
+  lastUpdate,
+  onReconnect,
+}: ConnectionStatusProps) {
   const getStatusBadge = () => {
     if (isLoading) {
       return (

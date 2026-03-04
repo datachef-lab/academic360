@@ -139,13 +139,19 @@ export default function ExamWidget({ exams }: ExamWidgetProps) {
             {/* Exam Info */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <h4 className="text-base font-bold text-gray-800">{latestExam.examType?.name || "Exam"}</h4>
+                <h4 className="text-base font-bold text-gray-800">
+                  {latestExam.examType?.name || "Exam"}
+                </h4>
                 {isToday && (
-                  <span className="px-2 py-0.5 text-xs font-medium bg-emerald-500 text-white rounded-full">Today</span>
+                  <span className="px-2 py-0.5 text-xs font-medium bg-emerald-500 text-white rounded-full">
+                    Today
+                  </span>
                 )}
               </div>
 
-              {nextPaper.subject?.name && <p className="text-sm text-gray-600 font-medium">{nextPaper.subject.name}</p>}
+              {nextPaper.subject?.name && (
+                <p className="text-sm text-gray-600 font-medium">{nextPaper.subject.name}</p>
+              )}
 
               <div className="space-y-1 text-xs text-gray-600">
                 <div className="flex items-center gap-1.5">

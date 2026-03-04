@@ -4,9 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -104,7 +117,10 @@ export default function WhitelistedCategoriesPage() {
   );
 
   const filteredAvailableCourses = useMemo(
-    () => availableCourses.filter((c) => c.toLowerCase().includes(availableSearch.trim().toLowerCase())),
+    () =>
+      availableCourses.filter((c) =>
+        c.toLowerCase().includes(availableSearch.trim().toLowerCase()),
+      ),
     [availableCourses, availableSearch],
   );
 
@@ -182,11 +198,15 @@ export default function WhitelistedCategoriesPage() {
                 Whitelisted Categories
               </CardTitle>
               <div className="text-muted-foreground">
-                Configure whitelisted subject categories. Define approved subject categories and their priority levels.
+                Configure whitelisted subject categories. Define approved subject categories and
+                their priority levels.
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={openAddDialog}>
+              <Button
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={openAddDialog}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add
               </Button>
@@ -255,15 +275,22 @@ export default function WhitelistedCategoriesPage() {
                     <TableHead className="bg-gray-100 font-semibold text-gray-900 border-r border-gray-300 w-24">
                       Status
                     </TableHead>
-                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-900 w-24">Actions</TableHead>
+                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-900 w-24">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedCategories.map((category, index) => (
                     <TableRow key={category.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium border-r border-gray-200">{startIndex + index + 1}</TableCell>
+                      <TableCell className="font-medium border-r border-gray-200">
+                        {startIndex + index + 1}
+                      </TableCell>
                       <TableCell className="border-r border-gray-200">
-                        <Badge variant="outline" className="border-purple-500 text-purple-700 bg-purple-50">
+                        <Badge
+                          variant="outline"
+                          className="border-purple-500 text-purple-700 bg-purple-50"
+                        >
                           {category.subjectCategory}
                         </Badge>
                       </TableCell>
@@ -297,10 +324,18 @@ export default function WhitelistedCategoriesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(category)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(category)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -377,7 +412,9 @@ export default function WhitelistedCategoriesPage() {
                     <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleClearAll}>
                       Clear All
                     </Button>
-                    <span className="text-xs text-muted-foreground">{formSelectedCourses.length}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formSelectedCourses.length}
+                    </span>
                   </div>
                 </div>
                 <div className="space-y-2 h-64 overflow-auto">
@@ -387,9 +424,14 @@ export default function WhitelistedCategoriesPage() {
                     </div>
                   ) : (
                     formSelectedCourses.map((course) => (
-                      <div key={course} className="flex items-center justify-between gap-2 border rounded-md p-2">
+                      <div
+                        key={course}
+                        className="flex items-center justify-between gap-2 border rounded-md p-2"
+                      >
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700">{course.split(" - ")[0]}</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            {course.split(" - ")[0]}
+                          </span>
                           {/* <span className="text-xs text-green-700">Selected</span> */}
                         </div>
                         <Button
@@ -418,7 +460,9 @@ export default function WhitelistedCategoriesPage() {
                     >
                       Select All
                     </Button>
-                    <span className="text-xs text-muted-foreground">{filteredAvailableCourses.length}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {filteredAvailableCourses.length}
+                    </span>
                   </div>
                 </div>
                 <div className="mb-2">
@@ -435,9 +479,14 @@ export default function WhitelistedCategoriesPage() {
                     </div>
                   ) : (
                     filteredAvailableCourses.map((course) => (
-                      <div key={course} className="flex items-center justify-between gap-2 border rounded-md p-2">
+                      <div
+                        key={course}
+                        className="flex items-center justify-between gap-2 border rounded-md p-2"
+                      >
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700">{course.split(" - ")[0]}</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            {course.split(" - ")[0]}
+                          </span>
                           {/* <span className="text-xs text-gray-600">Available</span> */}
                         </div>
                         <Button
@@ -458,7 +507,11 @@ export default function WhitelistedCategoriesPage() {
           <DialogFooter className="mt-4 border-t pt-3 z-10">
             <div className="w-full flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Checkbox id="active" checked={formIsActive} onCheckedChange={(v) => setFormIsActive(Boolean(v))} />
+                <Checkbox
+                  id="active"
+                  checked={formIsActive}
+                  onCheckedChange={(v) => setFormIsActive(Boolean(v))}
+                />
                 <Label htmlFor="active">Active</Label>
               </div>
               <div className="flex items-center gap-2">

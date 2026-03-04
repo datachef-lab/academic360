@@ -40,5 +40,5 @@ export default function LanguageMediumPage() {
         />
       </motion.div>
     </div>
-  )
+  );
 }

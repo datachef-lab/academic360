@@ -1,6 +1,6 @@
 /**
  * Transport Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Transport module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,14 +13,14 @@
  * Transport mode enum that mirrors the backend enum
  */
 export enum TransportType {
-  BUS = 'BUS',
-  TRAIN = 'TRAIN',
-  METRO = 'METRO',
-  AUTO = 'AUTO',
-  TAXI = 'TAXI',
-  CYCLE = 'CYCLE',
-  WALKING = 'WALKING',
-  OTHER = 'OTHER'
+  BUS = "BUS",
+  TRAIN = "TRAIN",
+  METRO = "METRO",
+  AUTO = "AUTO",
+  TAXI = "TAXI",
+  CYCLE = "CYCLE",
+  WALKING = "WALKING",
+  OTHER = "OTHER",
 }
 
 // ============================================================================
@@ -148,15 +148,15 @@ export interface TransportState {
  * Action types for transport state management
  */
 export type TransportAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_TRANSPORTS'; payload: Transport[] }
-  | { type: 'SET_CURRENT_TRANSPORT'; payload: Transport | null }
-  | { type: 'ADD_TRANSPORT'; payload: Transport }
-  | { type: 'UPDATE_TRANSPORT'; payload: Transport }
-  | { type: 'DELETE_TRANSPORT'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_TRANSPORTS"; payload: Transport[] }
+  | { type: "SET_CURRENT_TRANSPORT"; payload: Transport | null }
+  | { type: "ADD_TRANSPORT"; payload: Transport }
+  | { type: "UPDATE_TRANSPORT"; payload: Transport }
+  | { type: "DELETE_TRANSPORT"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -171,7 +171,7 @@ export interface TransportTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -189,7 +189,7 @@ export interface TransportFilter {
  */
 export interface TransportSort {
   field: keyof Transport;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -225,39 +225,39 @@ export const DEFAULT_TRANSPORT: CreateTransportPayload = {
  * Default form data for transport
  */
 export const DEFAULT_TRANSPORT_FORM: TransportFormData = {
-  routeName: '',
+  routeName: "",
   mode: TransportType.OTHER,
-  vehicleNumber: '',
-  driverName: '',
-  providerDetails: '',
+  vehicleNumber: "",
+  driverName: "",
+  providerDetails: "",
 };
 
 /**
  * Table columns configuration for transport
  */
 export const TRANSPORT_TABLE_COLUMNS: TransportTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'mode', label: 'Mode', sortable: true, filterable: true, width: '100px' },
-  { key: 'routeName', label: 'Route Name', sortable: true, filterable: true },
-  { key: 'vehicleNumber', label: 'Vehicle Number', sortable: true, width: '150px' },
-  { key: 'driverName', label: 'Driver Name', sortable: true, width: '150px' },
-  { key: 'providerDetails', label: 'Provider Details', sortable: true, width: '150px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "mode", label: "Mode", sortable: true, filterable: true, width: "100px" },
+  { key: "routeName", label: "Route Name", sortable: true, filterable: true },
+  { key: "vehicleNumber", label: "Vehicle Number", sortable: true, width: "150px" },
+  { key: "driverName", label: "Driver Name", sortable: true, width: "150px" },
+  { key: "providerDetails", label: "Provider Details", sortable: true, width: "150px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Transport mode options for forms
  */
 export const TRANSPORT_MODE_OPTIONS = [
-  { value: TransportType.BUS, label: 'Bus', icon: '🚌' },
-  { value: TransportType.TRAIN, label: 'Train', icon: '🚆' },
-  { value: TransportType.METRO, label: 'Metro', icon: '🚇' },
-  { value: TransportType.AUTO, label: 'Auto', icon: '🛺' },
-  { value: TransportType.TAXI, label: 'Taxi', icon: '🚕' },
-  { value: TransportType.CYCLE, label: 'Cycle', icon: '🚲' },
-  { value: TransportType.WALKING, label: 'Walking', icon: '🚶' },
-  { value: TransportType.OTHER, label: 'Other', icon: '🚗' },
+  { value: TransportType.BUS, label: "Bus", icon: "🚌" },
+  { value: TransportType.TRAIN, label: "Train", icon: "🚆" },
+  { value: TransportType.METRO, label: "Metro", icon: "🚇" },
+  { value: TransportType.AUTO, label: "Auto", icon: "🛺" },
+  { value: TransportType.TAXI, label: "Taxi", icon: "🚕" },
+  { value: TransportType.CYCLE, label: "Cycle", icon: "🚲" },
+  { value: TransportType.WALKING, label: "Walking", icon: "🚶" },
+  { value: TransportType.OTHER, label: "Other", icon: "🚗" },
 ] as const;
 
 // ============================================================================
@@ -270,14 +270,22 @@ export const TRANSPORT_MODE_OPTIONS = [
 export function isTransport(obj: object): obj is Transport {
   return (
     obj &&
-    typeof (obj as Transport).id === 'number' &&
-    ((obj as Transport).routeName === null || (obj as Transport).routeName === undefined || typeof (obj as Transport).routeName === 'string') &&
+    typeof (obj as Transport).id === "number" &&
+    ((obj as Transport).routeName === null ||
+      (obj as Transport).routeName === undefined ||
+      typeof (obj as Transport).routeName === "string") &&
     Object.values(TransportType).includes((obj as Transport).mode) &&
-    ((obj as Transport).vehicleNumber === null || (obj as Transport).vehicleNumber === undefined || typeof (obj as Transport).vehicleNumber === 'string') &&
-    ((obj as Transport).driverName === null || (obj as Transport).driverName === undefined || typeof (obj as Transport).driverName === 'string') &&
-    ((obj as Transport).providerDetails === null || (obj as Transport).providerDetails === undefined || typeof (obj as Transport).providerDetails === 'string') &&
-    typeof (obj as Transport).createdAt === 'string' &&
-    typeof (obj as Transport).updatedAt === 'string'
+    ((obj as Transport).vehicleNumber === null ||
+      (obj as Transport).vehicleNumber === undefined ||
+      typeof (obj as Transport).vehicleNumber === "string") &&
+    ((obj as Transport).driverName === null ||
+      (obj as Transport).driverName === undefined ||
+      typeof (obj as Transport).driverName === "string") &&
+    ((obj as Transport).providerDetails === null ||
+      (obj as Transport).providerDetails === undefined ||
+      typeof (obj as Transport).providerDetails === "string") &&
+    typeof (obj as Transport).createdAt === "string" &&
+    typeof (obj as Transport).updatedAt === "string"
   );
 }
 
@@ -287,11 +295,19 @@ export function isTransport(obj: object): obj is Transport {
 export function isCreateTransportPayload(obj: object): obj is CreateTransportPayload {
   return (
     obj &&
-    ((obj as CreateTransportPayload).routeName === undefined || (obj as CreateTransportPayload).routeName === null || typeof (obj as CreateTransportPayload).routeName === 'string') &&
+    ((obj as CreateTransportPayload).routeName === undefined ||
+      (obj as CreateTransportPayload).routeName === null ||
+      typeof (obj as CreateTransportPayload).routeName === "string") &&
     Object.values(TransportType).includes((obj as CreateTransportPayload).mode) &&
-    ((obj as CreateTransportPayload).vehicleNumber === undefined || (obj as CreateTransportPayload).vehicleNumber === null || typeof (obj as CreateTransportPayload).vehicleNumber === 'string') &&
-    ((obj as CreateTransportPayload).driverName === undefined || (obj as CreateTransportPayload).driverName === null || typeof (obj as CreateTransportPayload).driverName === 'string') &&
-    ((obj as CreateTransportPayload).providerDetails === undefined || (obj as CreateTransportPayload).providerDetails === null || typeof (obj as CreateTransportPayload).providerDetails === 'string')
+    ((obj as CreateTransportPayload).vehicleNumber === undefined ||
+      (obj as CreateTransportPayload).vehicleNumber === null ||
+      typeof (obj as CreateTransportPayload).vehicleNumber === "string") &&
+    ((obj as CreateTransportPayload).driverName === undefined ||
+      (obj as CreateTransportPayload).driverName === null ||
+      typeof (obj as CreateTransportPayload).driverName === "string") &&
+    ((obj as CreateTransportPayload).providerDetails === undefined ||
+      (obj as CreateTransportPayload).providerDetails === null ||
+      typeof (obj as CreateTransportPayload).providerDetails === "string")
   );
 }
 
@@ -301,11 +317,22 @@ export function isCreateTransportPayload(obj: object): obj is CreateTransportPay
 export function isUpdateTransportPayload(obj: object): obj is UpdateTransportPayload {
   return (
     obj &&
-    ((obj as UpdateTransportPayload).routeName === undefined || (obj as UpdateTransportPayload).routeName === null || typeof (obj as UpdateTransportPayload).routeName === 'string') &&
-    ((obj as UpdateTransportPayload).mode === undefined || Object.values(TransportType).includes((obj as UpdateTransportPayload).mode as TransportType)) &&
-    ((obj as UpdateTransportPayload).vehicleNumber === undefined || (obj as UpdateTransportPayload).vehicleNumber === null || typeof (obj as UpdateTransportPayload).vehicleNumber === 'string') &&
-    ((obj as UpdateTransportPayload).driverName === undefined || (obj as UpdateTransportPayload).driverName === null || typeof (obj as UpdateTransportPayload).driverName === 'string') &&
-    ((obj as UpdateTransportPayload).providerDetails === undefined || (obj as UpdateTransportPayload).providerDetails === null || typeof (obj as UpdateTransportPayload).providerDetails === 'string')
+    ((obj as UpdateTransportPayload).routeName === undefined ||
+      (obj as UpdateTransportPayload).routeName === null ||
+      typeof (obj as UpdateTransportPayload).routeName === "string") &&
+    ((obj as UpdateTransportPayload).mode === undefined ||
+      Object.values(TransportType).includes(
+        (obj as UpdateTransportPayload).mode as TransportType,
+      )) &&
+    ((obj as UpdateTransportPayload).vehicleNumber === undefined ||
+      (obj as UpdateTransportPayload).vehicleNumber === null ||
+      typeof (obj as UpdateTransportPayload).vehicleNumber === "string") &&
+    ((obj as UpdateTransportPayload).driverName === undefined ||
+      (obj as UpdateTransportPayload).driverName === null ||
+      typeof (obj as UpdateTransportPayload).driverName === "string") &&
+    ((obj as UpdateTransportPayload).providerDetails === undefined ||
+      (obj as UpdateTransportPayload).providerDetails === null ||
+      typeof (obj as UpdateTransportPayload).providerDetails === "string")
   );
 }
 
@@ -338,11 +365,11 @@ export function formDataToPayload(formData: TransportFormData): CreateTransportP
  */
 export function apiDataToFormData(transport: Transport): TransportFormData {
   return {
-    routeName: transport.routeName || '',
+    routeName: transport.routeName || "",
     mode: transport.mode,
-    vehicleNumber: transport.vehicleNumber || '',
-    driverName: transport.driverName || '',
-    providerDetails: transport.providerDetails || '',
+    vehicleNumber: transport.vehicleNumber || "",
+    driverName: transport.driverName || "",
+    providerDetails: transport.providerDetails || "",
   };
 }
 
@@ -386,7 +413,7 @@ export function formatTransportMode(mode: TransportType): string {
  */
 export function getTransportDisplayName(transport: Transport): string {
   const mode = formatTransportMode(transport.mode);
-  const route = transport.routeName ? ` - ${transport.routeName}` : '';
+  const route = transport.routeName ? ` - ${transport.routeName}` : "";
   return `${mode}${route}`;
 }
 
@@ -395,17 +422,17 @@ export function getTransportDisplayName(transport: Transport): string {
  */
 export function getTransportModeIcon(mode: TransportType): string {
   const iconMap: Record<TransportType, string> = {
-    [TransportType.BUS]: '🚌',
-    [TransportType.TRAIN]: '🚆',
-    [TransportType.METRO]: '🚇',
-    [TransportType.AUTO]: '🛺',
-    [TransportType.TAXI]: '🚕',
-    [TransportType.CYCLE]: '🚲',
-    [TransportType.WALKING]: '🚶',
-    [TransportType.OTHER]: '🚗',
+    [TransportType.BUS]: "🚌",
+    [TransportType.TRAIN]: "🚆",
+    [TransportType.METRO]: "🚇",
+    [TransportType.AUTO]: "🛺",
+    [TransportType.TAXI]: "🚕",
+    [TransportType.CYCLE]: "🚲",
+    [TransportType.WALKING]: "🚶",
+    [TransportType.OTHER]: "🚗",
   };
-  
-  return iconMap[mode] || '🚗';
+
+  return iconMap[mode] || "🚗";
 }
 
 /**
@@ -422,24 +449,24 @@ export function getTransportDisplayWithIcon(transport: Transport): string {
  */
 export function getTransportModeColor(mode: TransportType): string {
   const colorMap: Record<TransportType, string> = {
-    [TransportType.BUS]: 'text-blue-600',
-    [TransportType.TRAIN]: 'text-green-600',
-    [TransportType.METRO]: 'text-purple-600',
-    [TransportType.AUTO]: 'text-yellow-600',
-    [TransportType.TAXI]: 'text-orange-600',
-    [TransportType.CYCLE]: 'text-red-600',
-    [TransportType.WALKING]: 'text-gray-600',
-    [TransportType.OTHER]: 'text-gray-500',
+    [TransportType.BUS]: "text-blue-600",
+    [TransportType.TRAIN]: "text-green-600",
+    [TransportType.METRO]: "text-purple-600",
+    [TransportType.AUTO]: "text-yellow-600",
+    [TransportType.TAXI]: "text-orange-600",
+    [TransportType.CYCLE]: "text-red-600",
+    [TransportType.WALKING]: "text-gray-600",
+    [TransportType.OTHER]: "text-gray-500",
   };
-  
-  return colorMap[mode] || 'text-gray-500';
+
+  return colorMap[mode] || "text-gray-500";
 }
 
 /**
  * Filter transports by mode
  */
 export function filterTransportsByMode(transports: Transport[], mode: TransportType): Transport[] {
-  return transports.filter(t => t.mode === mode);
+  return transports.filter((t) => t.mode === mode);
 }
 
 /**
@@ -447,9 +474,10 @@ export function filterTransportsByMode(transports: Transport[], mode: TransportT
  */
 export function searchTransportsByRoute(transports: Transport[], searchTerm: string): Transport[] {
   const term = searchTerm.toLowerCase();
-  return transports.filter(t => 
-    t.routeName?.toLowerCase().includes(term) ||
-    t.driverName?.toLowerCase().includes(term) ||
-    t.vehicleNumber?.toLowerCase().includes(term)
+  return transports.filter(
+    (t) =>
+      t.routeName?.toLowerCase().includes(term) ||
+      t.driverName?.toLowerCase().includes(term) ||
+      t.vehicleNumber?.toLowerCase().includes(term),
   );
-} 
+}

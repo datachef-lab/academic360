@@ -83,7 +83,8 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
     iconBg: STORY_ICON_BGS.indigo,
     icon: CalendarCheck,
     path: "/console/exams",
-    detail: "Internal examination for Mathematics is scheduled for tomorrow. Please ensure you have your admit card.",
+    detail:
+      "Internal examination for Mathematics is scheduled for tomorrow. Please ensure you have your admit card.",
   },
   {
     id: "2",
@@ -105,7 +106,8 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
     iconBg: STORY_ICON_BGS.amber,
     icon: Megaphone,
     path: "/console/notifications",
-    detail: "College will remain closed on 15th Feb for maintenance. Classes will resume on 16th Feb.",
+    detail:
+      "College will remain closed on 15th Feb for maintenance. Classes will resume on 16th Feb.",
   },
   {
     id: "4",
@@ -155,10 +157,25 @@ const MOCK_ACTIVITIES: ActivityItem[] = [
 
 // Quick actions - ONLY items NOT in bottom nav (Study Notes, Fees, Exams, Library are in tabs)
 const QUICK_ACTIONS = [
-  { id: "attendance", label: "Attendance", icon: CalendarCheck, path: "/console/academics/current-status" },
+  {
+    id: "attendance",
+    label: "Attendance",
+    icon: CalendarCheck,
+    path: "/console/academics/current-status",
+  },
   { id: "timetable", label: "Timetable", icon: Calendar, path: "/console/academics" },
-  { id: "cu-exam-form", label: "CU Exam Form Upload", icon: Upload, path: "/console/academics/cu-exam-form-upload" },
-  { id: "cu-registration", label: "Adm. Reg", icon: ClipboardList, path: "/console/academics/adm-registration" },
+  {
+    id: "cu-exam-form",
+    label: "CU Exam Form Upload",
+    icon: Upload,
+    path: "/console/academics/cu-exam-form-upload",
+  },
+  {
+    id: "cu-registration",
+    label: "Adm. Reg",
+    icon: ClipboardList,
+    path: "/console/academics/adm-registration",
+  },
   {
     id: "subject-selection",
     label: "Subject Selection",
@@ -173,9 +190,27 @@ const QUICK_ACTIONS = [
 
 // Recent updates - different from activities (full list view)
 const MOCK_UPDATES = [
-  { id: "1", icon: CalendarCheck, iconBg: "#6366f1", title: "Internal Exam Schedule Announced", time: "Just Now" },
-  { id: "2", icon: FileEdit, iconBg: "#3b82f6", title: "Assignment Due Tomorrow: Marketing", time: "30 mins ago" },
-  { id: "3", icon: BookOpen, iconBg: "#f43f5e", title: "Library Book Return Reminder", time: "1 hour ago" },
+  {
+    id: "1",
+    icon: CalendarCheck,
+    iconBg: "#6366f1",
+    title: "Internal Exam Schedule Announced",
+    time: "Just Now",
+  },
+  {
+    id: "2",
+    icon: FileEdit,
+    iconBg: "#3b82f6",
+    title: "Assignment Due Tomorrow: Marketing",
+    time: "30 mins ago",
+  },
+  {
+    id: "3",
+    icon: BookOpen,
+    iconBg: "#f43f5e",
+    title: "Library Book Return Reminder",
+    time: "1 hour ago",
+  },
 ];
 
 const STORY_SIZE = 52;
@@ -233,7 +268,15 @@ const MOCK_TODAY_SCHEDULE: ScheduleItem[] = [
     type: "workshop",
     icon: Wrench,
   },
-  { id: "8", time: "14:30", endTime: "15:30", title: "English", subtitle: "Room 204", type: "class", icon: BookOpen },
+  {
+    id: "8",
+    time: "14:30",
+    endTime: "15:30",
+    title: "English",
+    subtitle: "Room 204",
+    type: "class",
+    icon: BookOpen,
+  },
 ];
 
 export default function ConsoleScreen() {
@@ -244,7 +287,8 @@ export default function ConsoleScreen() {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   const firstName = user?.name?.split(" ")[0] || "Student";
-  const programName = student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "—";
+  const programName =
+    student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "—";
   const sectionName = student?.currentPromotion?.section?.name || "—";
   const sessionName = student?.currentPromotion?.session?.name || "";
   const semesterLabel = sessionName ? `Semester ${sessionName.replace(/\D/g, "") || "—"}` : "—";
@@ -407,7 +451,13 @@ export default function ConsoleScreen() {
               <Icon size={22} color={isDark ? "#a5b4fc" : "#4f46e5"} />
               <Text
                 numberOfLines={2}
-                style={{ color: theme.text, fontSize: 11, marginTop: 6, fontWeight: "500", textAlign: "center" }}
+                style={{
+                  color: theme.text,
+                  fontSize: 11,
+                  marginTop: 6,
+                  fontWeight: "500",
+                  textAlign: "center",
+                }}
               >
                 {item.label}
               </Text>
@@ -447,10 +497,15 @@ export default function ConsoleScreen() {
                 <Icon size={18} color="#ffffff" />
               </View>
               <View className="flex-1">
-                <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, fontWeight: "500" }}>
+                <Text
+                  numberOfLines={1}
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500" }}
+                >
                   {item.title}
                 </Text>
-                <Text style={{ color: theme.text, opacity: 0.55, fontSize: 12, marginTop: 1 }}>{item.time}</Text>
+                <Text style={{ color: theme.text, opacity: 0.55, fontSize: 12, marginTop: 1 }}>
+                  {item.time}
+                </Text>
               </View>
               <ChevronRight size={18} color={theme.text} style={{ opacity: 0.5 }} />
             </Pressable>
@@ -529,12 +584,17 @@ export default function ConsoleScreen() {
                         {formatTime12h(item.time)}
                       </Text>
                       {item.endTime && (
-                        <Text style={{ color: theme.text, fontSize: 11, opacity: 0.8, marginTop: 2 }}>
+                        <Text
+                          style={{ color: theme.text, fontSize: 11, opacity: 0.8, marginTop: 2 }}
+                        >
                           {formatTime12h(item.endTime)}
                         </Text>
                       )}
                     </View>
-                    <View className="flex-1 flex-row items-center" style={{ marginLeft: 16, minWidth: 0 }}>
+                    <View
+                      className="flex-1 flex-row items-center"
+                      style={{ marginLeft: 16, minWidth: 0 }}
+                    >
                       <View
                         style={{
                           width: 36,
@@ -558,13 +618,25 @@ export default function ConsoleScreen() {
                       >
                         <Icon
                           size={18}
-                          color={isBreak ? "#f59e0b" : isWorkshop ? "#22c55e" : isDark ? "#a5b4fc" : "#4f46e5"}
+                          color={
+                            isBreak
+                              ? "#f59e0b"
+                              : isWorkshop
+                                ? "#22c55e"
+                                : isDark
+                                  ? "#a5b4fc"
+                                  : "#4f46e5"
+                          }
                         />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500" }}>{item.title}</Text>
+                        <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500" }}>
+                          {item.title}
+                        </Text>
                         {item.subtitle && (
-                          <Text style={{ color: theme.text, opacity: 0.65, fontSize: 12, marginTop: 1 }}>
+                          <Text
+                            style={{ color: theme.text, opacity: 0.65, fontSize: 12, marginTop: 1 }}
+                          >
                             {item.subtitle}
                           </Text>
                         )}
@@ -595,7 +667,10 @@ export default function ConsoleScreen() {
         animationType="fade"
         onRequestClose={() => setSelectedActivity(null)}
       >
-        <Pressable className="flex-1 justify-end bg-black/50" onPress={() => setSelectedActivity(null)}>
+        <Pressable
+          className="flex-1 justify-end bg-black/50"
+          onPress={() => setSelectedActivity(null)}
+        >
           <Pressable
             className="rounded-t-2xl p-5 pb-8"
             style={{ backgroundColor: theme.background }}

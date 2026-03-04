@@ -39,7 +39,10 @@ export const useCollegeSettings = (): CollegeSettings => {
         );
 
         if (collegeAbbrevSetting) {
-          console.log("[useCollegeSettings] Found college abbreviation setting:", collegeAbbrevSetting);
+          console.log(
+            "[useCollegeSettings] Found college abbreviation setting:",
+            collegeAbbrevSetting,
+          );
           setName(collegeAbbrevSetting.value || "");
         } else {
           console.warn(

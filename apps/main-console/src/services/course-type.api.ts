@@ -18,7 +18,9 @@ export const getCourseTypeById = async (id: string): Promise<CourseType> => {
   return response.json();
 };
 
-export const createCourseType = async (data: Omit<CourseType, 'id' | 'createdAt' | 'updatedAt'>): Promise<CourseType> => {
+export const createCourseType = async (
+  data: Omit<CourseType, "id" | "createdAt" | "updatedAt">,
+): Promise<CourseType> => {
   const response = await fetch(API_URL, {
     method: "POST",
     headers: {
@@ -32,7 +34,10 @@ export const createCourseType = async (data: Omit<CourseType, 'id' | 'createdAt'
   return response.json();
 };
 
-export const updateCourseType = async (id: string, data: Partial<CourseType>): Promise<CourseType> => {
+export const updateCourseType = async (
+  id: string,
+  data: Partial<CourseType>,
+): Promise<CourseType> => {
   const response = await fetch(`${API_URL}/${id}`, {
     method: "PATCH",
     headers: {

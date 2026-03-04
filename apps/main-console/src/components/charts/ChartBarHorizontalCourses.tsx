@@ -59,10 +59,7 @@ export function ChartBarHorizontalCourses({
               tickMargin={10}
               axisLine={false}
             />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
             <Bar dataKey="students" fill="var(--color-students)" radius={5} />
           </BarChart>
         </ChartContainer>
@@ -77,4 +74,4 @@ export function ChartBarHorizontalCourses({
       </CardFooter>
     </Card>
   );
-} 
+}

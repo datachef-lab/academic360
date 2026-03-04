@@ -34,7 +34,9 @@ export interface CreateCuCorrectionPayload {
   onlineRegistrationDone?: boolean;
 }
 
-export async function getStudentCuCorrectionRequests(studentId: number): Promise<CuRegistrationCorrectionRequestDto[]> {
+export async function getStudentCuCorrectionRequests(
+  studentId: number,
+): Promise<CuRegistrationCorrectionRequestDto[]> {
   const res = await axiosInstance.get<ApiResponse<CuRegistrationCorrectionRequestDto[]>>(
     `${BASE}/student/${studentId}`,
   );
@@ -42,8 +44,12 @@ export async function getStudentCuCorrectionRequests(studentId: number): Promise
   return Array.isArray(p) ? p : [];
 }
 
-export async function getCuCorrectionRequestById(id: number): Promise<CuRegistrationCorrectionRequestDto> {
-  const res = await axiosInstance.get<ApiResponse<CuRegistrationCorrectionRequestDto>>(`${BASE}/${id}`);
+export async function getCuCorrectionRequestById(
+  id: number,
+): Promise<CuRegistrationCorrectionRequestDto> {
+  const res = await axiosInstance.get<ApiResponse<CuRegistrationCorrectionRequestDto>>(
+    `${BASE}/${id}`,
+  );
   return res.data.payload as CuRegistrationCorrectionRequestDto;
 }
 
@@ -58,7 +64,10 @@ export async function updateCuCorrectionRequest(
   id: number,
   data: Partial<CreateCuCorrectionPayload>,
 ): Promise<CuRegistrationCorrectionRequestDto> {
-  const res = await axiosInstance.put<ApiResponse<CuRegistrationCorrectionRequestDto>>(`${BASE}/${id}`, data);
+  const res = await axiosInstance.put<ApiResponse<CuRegistrationCorrectionRequestDto>>(
+    `${BASE}/${id}`,
+    data,
+  );
   return res.data.payload as CuRegistrationCorrectionRequestDto;
 }
 
@@ -67,10 +76,9 @@ export async function submitPersonalInfoDeclaration(data: {
   flags: Record<string, boolean>;
   personalInfo: Record<string, unknown>;
 }) {
-  const res = await axiosInstance.post<ApiResponse<{ correctionRequest: CuRegistrationCorrectionRequestDto }>>(
-    `${BASE}/personal-declaration`,
-    data,
-  );
+  const res = await axiosInstance.post<
+    ApiResponse<{ correctionRequest: CuRegistrationCorrectionRequestDto }>
+  >(`${BASE}/personal-declaration`, data);
   return res.data.payload;
 }
 
@@ -78,25 +86,25 @@ export async function submitAddressInfoDeclaration(data: {
   correctionRequestId: number;
   addressData: Record<string, unknown>;
 }) {
-  const res = await axiosInstance.post<ApiResponse<{ correctionRequest: CuRegistrationCorrectionRequestDto }>>(
-    `${BASE}/address-declaration`,
-    data,
-  );
+  const res = await axiosInstance.post<
+    ApiResponse<{ correctionRequest: CuRegistrationCorrectionRequestDto }>
+  >(`${BASE}/address-declaration`, data);
   return res.data.payload;
 }
 
-export async function submitSubjectsDeclaration(data: { correctionRequestId: number; flags: Record<string, boolean> }) {
-  const res = await axiosInstance.post<ApiResponse<{ correctionRequest: CuRegistrationCorrectionRequestDto }>>(
-    `${BASE}/subjects-declaration`,
-    data,
-  );
+export async function submitSubjectsDeclaration(data: {
+  correctionRequestId: number;
+  flags: Record<string, boolean>;
+}) {
+  const res = await axiosInstance.post<
+    ApiResponse<{ correctionRequest: CuRegistrationCorrectionRequestDto }>
+  >(`${BASE}/subjects-declaration`, data);
   return res.data.payload;
 }
 
 export async function submitDocumentsDeclaration(data: { correctionRequestId: number }) {
-  const res = await axiosInstance.post<ApiResponse<{ correctionRequest: CuRegistrationCorrectionRequestDto }>>(
-    `${BASE}/documents-declaration`,
-    data,
-  );
+  const res = await axiosInstance.post<
+    ApiResponse<{ correctionRequest: CuRegistrationCorrectionRequestDto }>
+  >(`${BASE}/documents-declaration`, data);
   return res.data.payload;
 }

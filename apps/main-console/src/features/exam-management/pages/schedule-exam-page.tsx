@@ -3,11 +3,24 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -16,15 +29,28 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAllExamTypes } from "@/services/exam-type.service";
 import { getAllClasses } from "@/services/classes.service";
-import { getAffiliations, getRegulationTypes, getProgramCourseDtos } from "@/services/course-design.api";
+import {
+  getAffiliations,
+  getRegulationTypes,
+  getProgramCourseDtos,
+} from "@/services/course-design.api";
 import { getAllShifts } from "@/services/academic";
 import { getSubjectTypes, getExamComponents } from "@/services/course-design.api";
 import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
-import { checkDuplicateExam, countStudentsBreakdownForExam } from "@/services/exam-schedule.service";
+import {
+  checkDuplicateExam,
+  countStudentsBreakdownForExam,
+} from "@/services/exam-schedule.service";
 import { fetchExamGroups, type ExamFilters } from "@/services/exam.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
-import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto } from "@repo/db/index";
+import type {
+  PaperDto,
+  ExamDto,
+  ExamSubjectT,
+  ExamRoomDto,
+  ExamProgramCourseDto,
+} from "@repo/db/index";
 import { ExamComponent } from "@/types/course-design";
 import { doAssignExam } from "../services";
 import { Card, CardContent } from "@/components/ui/card";
@@ -313,7 +339,8 @@ export default function ScheduleExamPage() {
       const allPapers: PaperDto[] = [];
       const seenPaperIds = new Set<number>();
       // If no subject categories selected, fetch for all program courses
-      const subjectTypesToUse = selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
+      const subjectTypesToUse =
+        selectedSubjectCategories.length > 0 ? selectedSubjectCategories : [];
 
       // Build all API call promises
       const apiCalls: Promise<{ content?: PaperDto[] }>[] = [];
@@ -564,7 +591,9 @@ export default function ScheduleExamPage() {
         return (
           paper.components &&
           Array.isArray(paper.components) &&
-          paper.components.some((component) => component.examComponent?.id === selectedExamComponent)
+          paper.components.some(
+            (component) => component.examComponent?.id === selectedExamComponent,
+          )
         );
       });
     }
@@ -630,7 +659,9 @@ export default function ScheduleExamPage() {
   };
 
   const handleShiftToggle = (shiftId: number) => {
-    setSelectedShifts((prev) => (prev.includes(shiftId) ? prev.filter((s) => s !== shiftId) : [...prev, shiftId]));
+    setSelectedShifts((prev) =>
+      prev.includes(shiftId) ? prev.filter((s) => s !== shiftId) : [...prev, shiftId],
+    );
   };
 
   const handleSubjectCategoryToggle = (categoryId: number) => {
@@ -679,7 +710,8 @@ export default function ScheduleExamPage() {
       subjectIds.forEach((subjectId) => {
         const subjectPapers = getPapersForSubject(subjectId);
         subjectPapers.forEach((paper) => {
-          const hasComponent = paper.components?.some((c) => c.examComponent?.id === selectedExamComponent) ?? false;
+          const hasComponent =
+            paper.components?.some((c) => c.examComponent?.id === selectedExamComponent) ?? false;
           if (hasComponent && paper.programCourseId && paper.id && !addedPaperIds.has(paper.id)) {
             programCourseIds.add(paper.programCourseId);
           }
@@ -729,7 +761,13 @@ export default function ScheduleExamPage() {
     filtered = filtered.filter((paper) => paper.id && !addedPaperIds.has(paper.id));
 
     return filtered;
-  }, [currentSubjectIds, selectedExamComponent, currentProgramCourseIds, getPapersForSubject, selectedSubjectPapers]);
+  }, [
+    currentSubjectIds,
+    selectedExamComponent,
+    currentProgramCourseIds,
+    getPapersForSubject,
+    selectedSubjectPapers,
+  ]);
 
   // Calculate end time based on start time and duration (in minutes)
   const calculateEndTime = useCallback((startTime: string, durationMinutes: string): string => {
@@ -791,10 +829,13 @@ export default function ScheduleExamPage() {
   }, [getDistinctSubjects, subjectHasAvailablePapers]);
 
   // Helper: get paperComponentId for a paper matching the selected exam component
-  const getPaperComponentIdForExamComponent = useCallback((paper: PaperDto, examComponentId: number): number | null => {
-    const component = paper.components?.find((c) => c.examComponent?.id === examComponentId);
-    return component?.id ?? null;
-  }, []);
+  const getPaperComponentIdForExamComponent = useCallback(
+    (paper: PaperDto, examComponentId: number): number | null => {
+      const component = paper.components?.find((c) => c.examComponent?.id === examComponentId);
+      return component?.id ?? null;
+    },
+    [],
+  );
 
   // Handle adding papers with current date/time settings
   const handleAddPapers = useCallback(() => {
@@ -1014,7 +1055,9 @@ export default function ScheduleExamPage() {
     if (currentSubjectIds.length === 0) return;
 
     // Check which currently selected subjects still have available papers
-    const validSubjectIds = currentSubjectIds.filter((subjectId) => subjectHasAvailablePapers(subjectId));
+    const validSubjectIds = currentSubjectIds.filter((subjectId) =>
+      subjectHasAvailablePapers(subjectId),
+    );
 
     // If some subjects no longer have available papers, remove them
     if (validSubjectIds.length !== currentSubjectIds.length) {
@@ -1039,14 +1082,21 @@ export default function ScheduleExamPage() {
     const availableProgramCourseIds = new Set(availableProgramCourses.map((pc) => pc.id));
 
     // Check which currently selected program courses still have available papers
-    const validProgramCourseIds = currentProgramCourseIds.filter((pcId) => availableProgramCourseIds.has(pcId));
+    const validProgramCourseIds = currentProgramCourseIds.filter((pcId) =>
+      availableProgramCourseIds.has(pcId),
+    );
 
     // If some program courses no longer have available papers, remove them
     if (validProgramCourseIds.length !== currentProgramCourseIds.length) {
       setCurrentProgramCourseIds(validProgramCourseIds);
       setCurrentPaperIds([]); // Reset paper selection
     }
-  }, [selectedSubjectPapers, currentProgramCourseIds, currentSubjectIds, getAvailableProgramCoursesForSubjects]);
+  }, [
+    selectedSubjectPapers,
+    currentProgramCourseIds,
+    currentSubjectIds,
+    getAvailableProgramCoursesForSubjects,
+  ]);
 
   // Real-time duplicate exam check state
   const [duplicateCheckResult, setDuplicateCheckResult] = useState<{
@@ -1229,7 +1279,12 @@ export default function ScheduleExamPage() {
     ],
     async () => {
       // Enable query as soon as class, program courses, and shifts are selected
-      if (!selectedAcademicYearId || !semester || selectedProgramCourses.length === 0 || selectedShifts.length === 0) {
+      if (
+        !selectedAcademicYearId ||
+        !semester ||
+        selectedProgramCourses.length === 0 ||
+        selectedShifts.length === 0
+      ) {
         return { breakdown: [], total: 0 };
       }
 
@@ -1238,7 +1293,9 @@ export default function ScheduleExamPage() {
       if (!classId) return { breakdown: [], total: 0 };
 
       // Get paper IDs - use all selected papers even if schedules aren't complete
-      const paperIds = selectedSubjectPapers.map((sp) => sp.paperId).filter((id): id is number => id !== undefined);
+      const paperIds = selectedSubjectPapers
+        .map((sp) => sp.paperId)
+        .filter((id): id is number => id !== undefined);
 
       // If no papers selected yet, return empty (but query is still enabled for when papers are added)
       if (paperIds.length === 0) return { breakdown: [], total: 0 };
@@ -1292,7 +1349,11 @@ export default function ScheduleExamPage() {
     },
     {
       // Enable as soon as class, program courses, and shifts are selected
-      enabled: !!selectedAcademicYearId && !!semester && selectedProgramCourses.length > 0 && selectedShifts.length > 0,
+      enabled:
+        !!selectedAcademicYearId &&
+        !!semester &&
+        selectedProgramCourses.length > 0 &&
+        selectedShifts.length > 0,
       staleTime: 30000, // Cache for 30 seconds
       refetchOnWindowFocus: false, // Don't refetch on window focus
     },
@@ -1457,7 +1518,8 @@ export default function ScheduleExamPage() {
     },
     onError: (error) => {
       console.log("In exam scheduling post api, error:", error);
-      const message = error instanceof Error ? error.message : "Something went wrong while scheduling exam!";
+      const message =
+        error instanceof Error ? error.message : "Something went wrong while scheduling exam!";
       toast.error(message);
     },
   });
@@ -1535,12 +1597,15 @@ export default function ScheduleExamPage() {
       formattedStreams = `${streamNamesArray[0]} & ${streamNamesArray[1]}`;
     } else if (streamNamesArray.length > 2) {
       formattedStreams =
-        streamNamesArray.slice(0, -1).join(", ") + " & " + streamNamesArray[streamNamesArray.length - 1];
+        streamNamesArray.slice(0, -1).join(", ") +
+        " & " +
+        streamNamesArray[streamNamesArray.length - 1];
     }
 
     const examTypeName = examTypes.find((et) => et.id?.toString() === examType)?.name || "";
 
-    const academicYearName = availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)?.year || "";
+    const academicYearName =
+      availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)?.year || "";
 
     const semesterName = classes.find((c) => c.id?.toString() === semester)?.name || "";
 
@@ -1568,8 +1633,12 @@ export default function ScheduleExamPage() {
   }, [examGroupMode, generateDefaultGroupName]);
 
   // Update DatePicker state type
-  const [newGroupCommencementDate, setNewGroupCommencementDate] = useState<Date | undefined>(undefined);
-  const [existingGroupFilterDate, setExistingGroupFilterDate] = useState<Date | undefined>(undefined);
+  const [newGroupCommencementDate, setNewGroupCommencementDate] = useState<Date | undefined>(
+    undefined,
+  );
+  const [existingGroupFilterDate, setExistingGroupFilterDate] = useState<Date | undefined>(
+    undefined,
+  );
 
   // Auto-fetch existing exam groups when "Select Existing Group" tab is active
   const shouldFetchExistingGroups = !!(
@@ -1618,10 +1687,20 @@ export default function ScheduleExamPage() {
 
   // Toast when no groups found for filtered date
   useEffect(() => {
-    if (!loadingExamGroups && shouldFetchExistingGroups && existingGroups.length === 0 && existingGroupFilterDate) {
+    if (
+      !loadingExamGroups &&
+      shouldFetchExistingGroups &&
+      existingGroups.length === 0 &&
+      existingGroupFilterDate
+    ) {
       toast.info("No exam groups found for the selected date");
     }
-  }, [loadingExamGroups, shouldFetchExistingGroups, existingGroups.length, existingGroupFilterDate]);
+  }, [
+    loadingExamGroups,
+    shouldFetchExistingGroups,
+    existingGroups.length,
+    existingGroupFilterDate,
+  ]);
 
   return (
     <div className="min-h-screen w-full p-7 py-4">
@@ -1664,7 +1743,9 @@ export default function ScheduleExamPage() {
                         <Label className="font-medium text-gray-700">Academic Year</Label>
                         <Select
                           value={selectedAcademicYearId ? selectedAcademicYearId.toString() : ""}
-                          onValueChange={(val) => setSelectedAcademicYearId(val ? Number(val) : null)}
+                          onValueChange={(val) =>
+                            setSelectedAcademicYearId(val ? Number(val) : null)
+                          }
                         >
                           <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                             <SelectValue placeholder="A.Y" />
@@ -1684,11 +1765,17 @@ export default function ScheduleExamPage() {
                         <Label className="font-medium text-gray-700">Affiliation</Label>
                         <Select
                           value={selectedAffiliationId ? selectedAffiliationId.toString() : ""}
-                          onValueChange={(val) => setSelectedAffiliationId(val ? Number(val) : null)}
+                          onValueChange={(val) =>
+                            setSelectedAffiliationId(val ? Number(val) : null)
+                          }
                           disabled={loading.affiliations}
                         >
                           <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue placeholder={loading.affiliations ? "Loading..." : "Select Affiliation"} />
+                            <SelectValue
+                              placeholder={
+                                loading.affiliations ? "Loading..." : "Select Affiliation"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {affiliations.map((aff) => (
@@ -1704,12 +1791,20 @@ export default function ScheduleExamPage() {
                       <div className="flex flex-col gap-1">
                         <Label className="font-medium text-gray-700">Regulation</Label>
                         <Select
-                          value={selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""}
-                          onValueChange={(val) => setSelectedRegulationTypeId(val ? Number(val) : null)}
+                          value={
+                            selectedRegulationTypeId ? selectedRegulationTypeId.toString() : ""
+                          }
+                          onValueChange={(val) =>
+                            setSelectedRegulationTypeId(val ? Number(val) : null)
+                          }
                           disabled={loading.regulationTypes}
                         >
                           <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue placeholder={loading.regulationTypes ? "Loading..." : "Select Regulation"} />
+                            <SelectValue
+                              placeholder={
+                                loading.regulationTypes ? "Loading..." : "Select Regulation"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {regulationTypes.map((reg) => (
@@ -1724,9 +1819,15 @@ export default function ScheduleExamPage() {
                       {/* Exam Type */}
                       <div className="flex flex-col gap-1">
                         <Label className="font-medium text-gray-700">Exam Type</Label>
-                        <Select value={examType} onValueChange={setExamType} disabled={loading.examTypes}>
+                        <Select
+                          value={examType}
+                          onValueChange={setExamType}
+                          disabled={loading.examTypes}
+                        >
                           <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue placeholder={loading.examTypes ? "Loading..." : "Exam Type"} />
+                            <SelectValue
+                              placeholder={loading.examTypes ? "Loading..." : "Exam Type"}
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {examTypes.map((type) => (
@@ -1743,9 +1844,15 @@ export default function ScheduleExamPage() {
                       {/* Semester */}
                       <div className="flex flex-col gap-1">
                         <Label className="font-medium text-gray-700">Semester</Label>
-                        <Select value={semester} onValueChange={setSemester} disabled={loading.classes}>
+                        <Select
+                          value={semester}
+                          onValueChange={setSemester}
+                          disabled={loading.classes}
+                        >
                           <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                            <SelectValue placeholder={loading.classes ? "Loading..." : "Semester"} />
+                            <SelectValue
+                              placeholder={loading.classes ? "Loading..." : "Semester"}
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {classes.map((cls) => (
@@ -1786,7 +1893,9 @@ export default function ScheduleExamPage() {
                                   onClick={() => shift.id && handleShiftToggle(shift.id)}
                                 >
                                   <Checkbox
-                                    checked={shift.id !== undefined && selectedShifts.includes(shift.id)}
+                                    checked={
+                                      shift.id !== undefined && selectedShifts.includes(shift.id)
+                                    }
                                     onCheckedChange={() => shift.id && handleShiftToggle(shift.id)}
                                     className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                   />
@@ -1831,7 +1940,8 @@ export default function ScheduleExamPage() {
                             <div className="max-h-60 overflow-y-auto space-y-1">
                               {getFilteredProgramCourses().length === 0 ? (
                                 <div className="text-center py-4 text-sm text-gray-500">
-                                  No program courses available for selected affiliation and regulation
+                                  No program courses available for selected affiliation and
+                                  regulation
                                 </div>
                               ) : (
                                 getFilteredProgramCourses().map((course) => (
@@ -1839,11 +1949,18 @@ export default function ScheduleExamPage() {
                                     key={course.id}
                                     type="button"
                                     className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                                    onClick={() => course.id && handleProgramCourseToggle(course.id)}
+                                    onClick={() =>
+                                      course.id && handleProgramCourseToggle(course.id)
+                                    }
                                   >
                                     <Checkbox
-                                      checked={course.id !== undefined && selectedProgramCourses.includes(course.id)}
-                                      onCheckedChange={() => course.id && handleProgramCourseToggle(course.id)}
+                                      checked={
+                                        course.id !== undefined &&
+                                        selectedProgramCourses.includes(course.id)
+                                      }
+                                      onCheckedChange={() =>
+                                        course.id && handleProgramCourseToggle(course.id)
+                                      }
                                       className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                     />
                                     <span className="text-left">{course.name}</span>
@@ -1882,17 +1999,24 @@ export default function ScheduleExamPage() {
                                   key={category.id}
                                   type="button"
                                   className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                                  onClick={() => category.id && handleSubjectCategoryToggle(category.id)}
+                                  onClick={() =>
+                                    category.id && handleSubjectCategoryToggle(category.id)
+                                  }
                                 >
                                   <Checkbox
                                     checked={
-                                      category.id !== undefined && selectedSubjectCategories.includes(category.id)
+                                      category.id !== undefined &&
+                                      selectedSubjectCategories.includes(category.id)
                                     }
-                                    onCheckedChange={() => category.id && handleSubjectCategoryToggle(category.id)}
+                                    onCheckedChange={() =>
+                                      category.id && handleSubjectCategoryToggle(category.id)
+                                    }
                                     className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                   />
                                   <span className="text-left">
-                                    {category.code && category.code.trim() ? category.code : category.name}
+                                    {category.code && category.code.trim()
+                                      ? category.code
+                                      : category.name}
                                   </span>
                                 </button>
                               ))}
@@ -1917,7 +2041,9 @@ export default function ScheduleExamPage() {
                   >
                     {/* Row 1: Heading left + Tabs right */}
                     <div className="flex flex-nowrap items-center justify-between gap-4 mb-4">
-                      <h3 className="text-base font-semibold text-gray-800 shrink-0">Exam Group Selection</h3>
+                      <h3 className="text-base font-semibold text-gray-800 shrink-0">
+                        Exam Group Selection
+                      </h3>
                       <TabsList className="grid grid-cols-2 w-auto shrink-0">
                         <TabsTrigger
                           value="new"
@@ -1947,19 +2073,24 @@ export default function ScheduleExamPage() {
                             className="min-h-24 resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                           />
                           <p className="text-xs text-gray-500">
-                            This name will be used to identify the exam group. You can edit it before creating.
+                            This name will be used to identify the exam group. You can edit it
+                            before creating.
                           </p>
                         </div>
 
                         {/* Commencement Date */}
                         <div className="flex flex-col gap-2">
-                          <Label className="font-medium text-gray-700">Exam Commencement Date</Label>
+                          <Label className="font-medium text-gray-700">
+                            Exam Commencement Date
+                          </Label>
                           <DatePicker
                             value={newGroupCommencementDate}
                             onSelect={setNewGroupCommencementDate}
                             className="w-full"
                           />
-                          <p className="text-xs text-gray-500">Select the date when this exam group starts.</p>
+                          <p className="text-xs text-gray-500">
+                            Select the date when this exam group starts.
+                          </p>
                         </div>
                       </div>
                     </TabsContent>
@@ -1969,14 +2100,17 @@ export default function ScheduleExamPage() {
                       <div className="space-y-3">
                         {/* Date Filter for Existing Groups */}
                         <div className="flex flex-col gap-2">
-                          <Label className="font-medium text-gray-700">Filter by Date (Optional)</Label>
+                          <Label className="font-medium text-gray-700">
+                            Filter by Date (Optional)
+                          </Label>
                           <DatePicker
                             value={existingGroupFilterDate}
                             onSelect={setExistingGroupFilterDate}
                             className="w-full"
                           />
                           <p className="text-xs text-gray-500">
-                            Leave empty to see all exam groups, or select a date to filter automatically.
+                            Leave empty to see all exam groups, or select a date to filter
+                            automatically.
                           </p>
                         </div>
 
@@ -1989,9 +2123,12 @@ export default function ScheduleExamPage() {
                         ) : existingGroups.length > 0 ? (
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                              <Label className="font-medium text-gray-700">Available Exam Groups</Label>
+                              <Label className="font-medium text-gray-700">
+                                Available Exam Groups
+                              </Label>
                               <span className="text-sm text-gray-600">
-                                {existingGroups.length} group{existingGroups.length !== 1 ? "s" : ""} found
+                                {existingGroups.length} group
+                                {existingGroups.length !== 1 ? "s" : ""} found
                               </span>
                             </div>
                             <div className="border border-gray-300 rounded-lg overflow-y-auto max-h-80 space-y-2 p-2">
@@ -2009,18 +2146,23 @@ export default function ScheduleExamPage() {
                                   <div className="flex items-center gap-2">
                                     <Checkbox
                                       checked={selectedExistingGroupId === group.id}
-                                      onCheckedChange={() => setSelectedExistingGroupId(group.id ?? null)}
+                                      onCheckedChange={() =>
+                                        setSelectedExistingGroupId(group.id ?? null)
+                                      }
                                       className="h-4 w-4 shrink-0"
                                     />
                                     <div className="flex-1 min-w-0">
-                                      <p className="font-medium text-sm text-gray-800">{group.name}</p>
+                                      <p className="font-medium text-sm text-gray-800">
+                                        {group.name}
+                                      </p>
                                       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
                                         <p className="text-xs text-gray-600">
                                           {group.exams?.length || 0} exam(s) in this group
                                         </p>
                                         {group.examCommencementDate && (
                                           <p className="text-xs text-gray-600">
-                                            Commencement: {formatExamCommencementDate(group.examCommencementDate)}
+                                            Commencement:{" "}
+                                            {formatExamCommencementDate(group.examCommencementDate)}
                                           </p>
                                         )}
                                       </div>
@@ -2033,7 +2175,9 @@ export default function ScheduleExamPage() {
                         ) : (
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                              <Label className="font-medium text-gray-700">Available Exam Groups</Label>
+                              <Label className="font-medium text-gray-700">
+                                Available Exam Groups
+                              </Label>
                               <span className="text-sm text-gray-600">0 groups found</span>
                             </div>
                             <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-sm text-gray-600">
@@ -2080,10 +2224,14 @@ export default function ScheduleExamPage() {
                                 <Button
                                   variant="outline"
                                   className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                  disabled={getDistinctSubjects().length === 0 || getAvailableSubjects().length === 0}
+                                  disabled={
+                                    getDistinctSubjects().length === 0 ||
+                                    getAvailableSubjects().length === 0
+                                  }
                                 >
                                   <span className="text-gray-600 truncate">
-                                    {getAvailableSubjects().length === 0 && getDistinctSubjects().length > 0
+                                    {getAvailableSubjects().length === 0 &&
+                                    getDistinctSubjects().length > 0
                                       ? "All papers added"
                                       : currentSubjectIds.length > 0
                                         ? `${currentSubjectIds.length} subject(s)`
@@ -2132,9 +2280,13 @@ export default function ScheduleExamPage() {
                                           />
                                           <span className="text-sm text-left flex-1">
                                             {subject.subjectCode ? (
-                                              <span className="text-gray-700 font-medium">{subject.subjectCode}</span>
+                                              <span className="text-gray-700 font-medium">
+                                                {subject.subjectCode}
+                                              </span>
                                             ) : (
-                                              <span className="text-gray-500">{subject.subjectName}</span>
+                                              <span className="text-gray-500">
+                                                {subject.subjectName}
+                                              </span>
                                             )}
                                           </span>
                                         </button>
@@ -2160,14 +2312,20 @@ export default function ScheduleExamPage() {
                             disabled={loading.examComponents || currentSubjectIds.length === 0}
                           >
                             <SelectTrigger className="h-8 w-full focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                              <SelectValue placeholder={loading.examComponents ? "Loading..." : "Select component"} />
+                              <SelectValue
+                                placeholder={
+                                  loading.examComponents ? "Loading..." : "Select component"
+                                }
+                              />
                             </SelectTrigger>
                             <SelectContent>
                               {examComponents
                                 .filter((comp) => !comp.disabled)
                                 .map((comp) => (
                                   <SelectItem key={comp.id} value={comp.id?.toString() ?? ""}>
-                                    {comp.shortName && comp.shortName.trim() ? comp.shortName : comp.name}
+                                    {comp.shortName && comp.shortName.trim()
+                                      ? comp.shortName
+                                      : comp.name}
                                   </SelectItem>
                                 ))}
                             </SelectContent>
@@ -2184,13 +2342,15 @@ export default function ScheduleExamPage() {
                                 className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                 disabled={
                                   currentSubjectIds.length === 0 ||
-                                  getAvailableProgramCoursesForSubjects(currentSubjectIds).length === 0
+                                  getAvailableProgramCoursesForSubjects(currentSubjectIds)
+                                    .length === 0
                                 }
                               >
                                 <span className="text-gray-600 truncate">
                                   {currentSubjectIds.length === 0
                                     ? "Select subjects first"
-                                    : getAvailableProgramCoursesForSubjects(currentSubjectIds).length === 0
+                                    : getAvailableProgramCoursesForSubjects(currentSubjectIds)
+                                          .length === 0
                                       ? "All papers added"
                                       : currentProgramCourseIds.length > 0
                                         ? `${currentProgramCourseIds.length} selected`
@@ -2201,37 +2361,44 @@ export default function ScheduleExamPage() {
                             </PopoverTrigger>
                             <PopoverContent className="w-80 p-2" align="start">
                               <div className="max-h-60 overflow-y-auto space-y-1">
-                                {getAvailableProgramCoursesForSubjects(currentSubjectIds).length === 0 ? (
+                                {getAvailableProgramCoursesForSubjects(currentSubjectIds).length ===
+                                0 ? (
                                   <div className="px-2 py-4 text-center text-sm text-gray-500">
                                     All papers have been added
                                   </div>
                                 ) : (
-                                  getAvailableProgramCoursesForSubjects(currentSubjectIds).map((pc) => (
-                                    <button
-                                      key={pc.id}
-                                      type="button"
-                                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
-                                      onClick={() => {
-                                        setCurrentProgramCourseIds((prev) =>
-                                          prev.includes(pc.id) ? prev.filter((id) => id !== pc.id) : [...prev, pc.id],
-                                        );
-                                        // Reset paper selection when program courses change
-                                        setCurrentPaperIds([]);
-                                      }}
-                                    >
-                                      <Checkbox
-                                        checked={currentProgramCourseIds.includes(pc.id)}
-                                        onCheckedChange={() => {
+                                  getAvailableProgramCoursesForSubjects(currentSubjectIds).map(
+                                    (pc) => (
+                                      <button
+                                        key={pc.id}
+                                        type="button"
+                                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100"
+                                        onClick={() => {
                                           setCurrentProgramCourseIds((prev) =>
-                                            prev.includes(pc.id) ? prev.filter((id) => id !== pc.id) : [...prev, pc.id],
+                                            prev.includes(pc.id)
+                                              ? prev.filter((id) => id !== pc.id)
+                                              : [...prev, pc.id],
                                           );
+                                          // Reset paper selection when program courses change
                                           setCurrentPaperIds([]);
                                         }}
-                                        className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                      />
-                                      <span className="text-left text-sm">{pc.name}</span>
-                                    </button>
-                                  ))
+                                      >
+                                        <Checkbox
+                                          checked={currentProgramCourseIds.includes(pc.id)}
+                                          onCheckedChange={() => {
+                                            setCurrentProgramCourseIds((prev) =>
+                                              prev.includes(pc.id)
+                                                ? prev.filter((id) => id !== pc.id)
+                                                : [...prev, pc.id],
+                                            );
+                                            setCurrentPaperIds([]);
+                                          }}
+                                          className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                        />
+                                        <span className="text-left text-sm">{pc.name}</span>
+                                      </button>
+                                    ),
+                                  )
                                 )}
                               </div>
                             </PopoverContent>
@@ -2247,7 +2414,8 @@ export default function ScheduleExamPage() {
                                 variant="outline"
                                 className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                 disabled={
-                                  currentSubjectIds.length === 0 || getFilteredPapersForCurrentSelection().length === 0
+                                  currentSubjectIds.length === 0 ||
+                                  getFilteredPapersForCurrentSelection().length === 0
                                 }
                               >
                                 <span className="text-gray-600 truncate">
@@ -2292,7 +2460,9 @@ export default function ScheduleExamPage() {
                                         className="h-3.5 w-3.5 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                       />
                                       <div className="flex flex-col items-start flex-1 text-left">
-                                        <span className="text-sm font-medium">{paper.name || "Unnamed Paper"}</span>
+                                        <span className="text-sm font-medium">
+                                          {paper.name || "Unnamed Paper"}
+                                        </span>
                                         <div className="flex items-center gap-2">
                                           <span className="text-xs text-gray-500 font-mono">
                                             {paper.code || "No code"}
@@ -2342,7 +2512,9 @@ export default function ScheduleExamPage() {
                             value={currentDate}
                             onChange={(e) => setCurrentDate(e.target.value)}
                             className="h-8 w-full"
-                            disabled={currentSubjectIds.length === 0 || currentPaperIds.length === 0}
+                            disabled={
+                              currentSubjectIds.length === 0 || currentPaperIds.length === 0
+                            }
                           />
                         </div>
 
@@ -2354,7 +2526,9 @@ export default function ScheduleExamPage() {
                             value={currentStartTime}
                             onChange={(e) => setCurrentStartTime(e.target.value)}
                             className="h-8 w-full"
-                            disabled={currentSubjectIds.length === 0 || currentPaperIds.length === 0}
+                            disabled={
+                              currentSubjectIds.length === 0 || currentPaperIds.length === 0
+                            }
                           />
                         </div>
 
@@ -2368,7 +2542,9 @@ export default function ScheduleExamPage() {
                             onChange={(e) => setCurrentDuration(e.target.value)}
                             placeholder="e.g., 180"
                             className="h-8 w-full"
-                            disabled={currentSubjectIds.length === 0 || currentPaperIds.length === 0}
+                            disabled={
+                              currentSubjectIds.length === 0 || currentPaperIds.length === 0
+                            }
                           />
                         </div>
 
@@ -2395,7 +2571,8 @@ export default function ScheduleExamPage() {
                       {currentPaperIds.length > 0 && (
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
                           <div className="text-sm text-blue-800">
-                            <span className="font-semibold">{currentPaperIds.length}</span> paper(s) will be added
+                            <span className="font-semibold">{currentPaperIds.length}</span> paper(s)
+                            will be added
                             {currentDate && currentStartTime && currentDuration && (
                               <>
                                 <span> on </span>
@@ -2403,10 +2580,14 @@ export default function ScheduleExamPage() {
                                   {new Date(currentDate).toLocaleDateString("en-GB")}
                                 </span>
                                 <span> from </span>
-                                <span className="font-mono font-semibold">{formatTimeToAMPM(currentStartTime)}</span>
+                                <span className="font-mono font-semibold">
+                                  {formatTimeToAMPM(currentStartTime)}
+                                </span>
                                 <span> to </span>
                                 <span className="font-mono font-semibold">
-                                  {formatTimeToAMPM(calculateEndTime(currentStartTime, currentDuration)) || "Invalid"}
+                                  {formatTimeToAMPM(
+                                    calculateEndTime(currentStartTime, currentDuration),
+                                  ) || "Invalid"}
                                 </span>
                               </>
                             )}
@@ -2417,7 +2598,9 @@ export default function ScheduleExamPage() {
                     {/* Added Papers Table */}
                     <div className="w-full flex-shrink-0 mt-4">
                       <div className="rounded-lg overflow-hidden">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Scheduled Exam Papers</h3>
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                          Scheduled Exam Papers
+                        </h3>
                         <div className="border border-gray-400 rounded-lg overflow-hidden">
                           <Table>
                             <TableHeader>
@@ -2454,8 +2637,12 @@ export default function ScheduleExamPage() {
                             <TableBody>
                               {selectedSubjectPapers.length === 0 ? (
                                 <TableRow>
-                                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                                    No papers added yet. Use the form above to add papers to the exam schedule.
+                                  <TableCell
+                                    colSpan={9}
+                                    className="text-center py-8 text-muted-foreground"
+                                  >
+                                    No papers added yet. Use the form above to add papers to the
+                                    exam schedule.
                                   </TableCell>
                                 </TableRow>
                               ) : (
@@ -2464,9 +2651,13 @@ export default function ScheduleExamPage() {
                                   const subject = subjects.find((s) => s.id === sp.subjectId);
                                   if (!paper || !subject) return null;
 
-                                  const programCourse = programCourses.find((pc) => pc.id === paper.programCourseId);
+                                  const programCourse = programCourses.find(
+                                    (pc) => pc.id === paper.programCourseId,
+                                  );
                                   const schedule = sp.schedule;
-                                  const paperComponent = paper.components?.find((c) => c.id === sp.paperComponentId);
+                                  const paperComponent = paper.components?.find(
+                                    (c) => c.id === sp.paperComponentId,
+                                  );
                                   const componentName =
                                     paperComponent?.examComponent?.shortName ||
                                     paperComponent?.examComponent?.name ||
@@ -2503,7 +2694,9 @@ export default function ScheduleExamPage() {
                                       <TableCell className="p-2 text-center border-r border-gray-400">
                                         <span className="text-sm font-medium">
                                           {paper.name || "Unnamed Paper"}
-                                          {paper.isOptional === false && <span className="text-red-500 ml-1">*</span>}
+                                          {paper.isOptional === false && (
+                                            <span className="text-red-500 ml-1">*</span>
+                                          )}
                                         </span>
                                       </TableCell>
                                       <TableCell className="p-2 text-center border-r border-gray-400 text-sm font-mono">
@@ -2518,7 +2711,9 @@ export default function ScheduleExamPage() {
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
-                                        {schedule.date ? new Date(schedule.date).toLocaleDateString("en-GB") : "-"}
+                                        {schedule.date
+                                          ? new Date(schedule.date).toLocaleDateString("en-GB")
+                                          : "-"}
                                       </TableCell>
                                       <TableCell className="p-2 text-center border-r border-gray-400 text-sm">
                                         {schedule.startTime && schedule.endTime
@@ -2541,14 +2736,17 @@ export default function ScheduleExamPage() {
                                               ),
                                             );
                                             // If no more papers for this subject, remove from selectedSubjectIds
-                                            const remainingForSubject = selectedSubjectPapers.filter(
-                                              (item) =>
-                                                item.subjectId === sp.subjectId &&
-                                                (item.paperId !== sp.paperId ||
-                                                  item.paperComponentId !== sp.paperComponentId),
-                                            );
+                                            const remainingForSubject =
+                                              selectedSubjectPapers.filter(
+                                                (item) =>
+                                                  item.subjectId === sp.subjectId &&
+                                                  (item.paperId !== sp.paperId ||
+                                                    item.paperComponentId !== sp.paperComponentId),
+                                              );
                                             if (remainingForSubject.length === 0) {
-                                              setSelectedSubjectIds((prev) => prev.filter((id) => id !== sp.subjectId));
+                                              setSelectedSubjectIds((prev) =>
+                                                prev.filter((id) => id !== sp.subjectId),
+                                              );
                                             }
                                           }}
                                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
@@ -2572,10 +2770,12 @@ export default function ScheduleExamPage() {
               <div className="p-8 text-center">
                 <div className="flex flex-col items-center justify-center space-y-3">
                   <AlertCircle className="w-12 h-12 text-gray-400" />
-                  <h3 className="text-lg font-semibold text-gray-700">Complete the Basic Information First</h3>
+                  <h3 className="text-lg font-semibold text-gray-700">
+                    Complete the Basic Information First
+                  </h3>
                   <p className="text-sm text-gray-500 max-w-md">
-                    Please select all required fields above (Exam Type, Semester, Program Courses, Shifts, and Subject
-                    Categories) to proceed with scheduling exam papers.
+                    Please select all required fields above (Exam Type, Semester, Program Courses,
+                    Shifts, and Subject Categories) to proceed with scheduling exam papers.
                   </p>
                 </div>
               </div>
@@ -2594,7 +2794,9 @@ export default function ScheduleExamPage() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-blue-900">{Number(totalStudentCount) || 0}</span>
+                        <span className="text-2xl font-bold text-blue-900">
+                          {Number(totalStudentCount) || 0}
+                        </span>
                         <span className="text-sm text-blue-700">students</span>
                       </div>
                     )}
@@ -2604,7 +2806,10 @@ export default function ScheduleExamPage() {
                   {(() => {
                     // Show actual data when available
                     // Transform data into table format: rows = program courses, columns = shifts
-                    if (!Array.isArray(studentCountBreakdown) || studentCountBreakdown.length === 0) {
+                    if (
+                      !Array.isArray(studentCountBreakdown) ||
+                      studentCountBreakdown.length === 0
+                    ) {
                       // Build empty table structure based on selected program courses and shifts
                       const sortedProgramCourses = selectedProgramCourses
                         .map((pcId) => {
@@ -2626,7 +2831,9 @@ export default function ScheduleExamPage() {
 
                       return (
                         <div className="mt-3 pt-3 border-t border-blue-200">
-                          <p className="text-xs font-medium text-blue-800 mb-3">Breakdown by Program Course & Shift:</p>
+                          <p className="text-xs font-medium text-blue-800 mb-3">
+                            Breakdown by Program Course & Shift:
+                          </p>
                           <div className="overflow-x-auto">
                             <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
                               <thead>
@@ -2711,13 +2918,15 @@ export default function ScheduleExamPage() {
                     });
 
                     // Sort program courses by name
-                    const sortedProgramCourses = Array.from(programCourseMap.entries()).sort((a, b) =>
-                      a[1].name.localeCompare(b[1].name),
+                    const sortedProgramCourses = Array.from(programCourseMap.entries()).sort(
+                      (a, b) => a[1].name.localeCompare(b[1].name),
                     );
 
                     return (
                       <div className="mt-3 pt-3 border-t border-blue-200">
-                        <p className="text-xs font-medium text-blue-800 mb-3">Breakdown by Program Course & Shift:</p>
+                        <p className="text-xs font-medium text-blue-800 mb-3">
+                          Breakdown by Program Course & Shift:
+                        </p>
                         <div className="overflow-x-auto">
                           <table className="w-full border-collapse bg-white rounded-lg border border-blue-200">
                             <thead>
@@ -2770,7 +2979,8 @@ export default function ScheduleExamPage() {
                   {totalStudentCount === 0 && !loadingStudentCount && (
                     <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
                       <p className="text-xs text-yellow-800">
-                        ⚠️ No eligible students found. Please check your filters (Program Courses, Shifts, Subjects).
+                        ⚠️ No eligible students found. Please check your filters (Program Courses,
+                        Shifts, Subjects).
                       </p>
                     </div>
                   )}
@@ -2791,7 +3001,9 @@ export default function ScheduleExamPage() {
                   <div className="mt-6 p-5 bg-red-50 border-2 border-red-400 rounded-lg flex items-start gap-4 shadow-lg">
                     <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5 animate-pulse" />
                     <div className="flex-1">
-                      <p className="font-bold text-red-900 text-base mb-2">⚠️ Duplicate Exam Detected</p>
+                      <p className="font-bold text-red-900 text-base mb-2">
+                        ⚠️ Duplicate Exam Detected
+                      </p>
                       <p className="text-sm text-red-800 font-medium mb-3">
                         {duplicateCheckResult.message ||
                           `An exam with the same configuration already exists${duplicateCheckResult.duplicateExamId ? ` (Exam ID: ${duplicateCheckResult.duplicateExamId})` : ""}. Please modify your selections to create a unique exam.`}
@@ -2827,7 +3039,12 @@ export default function ScheduleExamPage() {
                   <div className="mt-2 p-2 bg-gray-100 border border-gray-300 rounded text-xs">
                     <p>Duplicate Check Status: ✅ Ready</p>
                     {duplicateCheckResult && (
-                      <p>Result: {duplicateCheckResult.isDuplicate ? "🔴 Duplicate Found" : "✅ No Duplicate"}</p>
+                      <p>
+                        Result:{" "}
+                        {duplicateCheckResult.isDuplicate
+                          ? "🔴 Duplicate Found"
+                          : "✅ No Duplicate"}
+                      </p>
                     )}
                   </div>
                 )}

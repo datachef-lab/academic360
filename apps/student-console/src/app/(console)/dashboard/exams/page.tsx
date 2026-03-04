@@ -9,16 +9,28 @@ import { toast } from "sonner";
 
 // Work around strict shadcn typings with proper type extensions
 const TabsFixed = Tabs as React.ComponentType<
-  React.ComponentProps<typeof Tabs> & { children?: React.ReactNode; className?: string; defaultValue?: string }
+  React.ComponentProps<typeof Tabs> & {
+    children?: React.ReactNode;
+    className?: string;
+    defaultValue?: string;
+  }
 >;
 const TabsListFixed = TabsList as React.ComponentType<
   React.ComponentProps<typeof TabsList> & { children?: React.ReactNode; className?: string }
 >;
 const TabsTriggerFixed = TabsTrigger as React.ComponentType<
-  React.ComponentProps<typeof TabsTrigger> & { children?: React.ReactNode; value?: string; className?: string }
+  React.ComponentProps<typeof TabsTrigger> & {
+    children?: React.ReactNode;
+    value?: string;
+    className?: string;
+  }
 >;
 const TabsContentFixed = TabsContent as React.ComponentType<
-  React.ComponentProps<typeof TabsContent> & { children?: React.ReactNode; value?: string; className?: string }
+  React.ComponentProps<typeof TabsContent> & {
+    children?: React.ReactNode;
+    value?: string;
+    className?: string;
+  }
 >;
 import { useStudent } from "@/providers/student-provider";
 import { format, parseISO } from "date-fns";
@@ -211,7 +223,9 @@ export default function ExamsContent() {
         const socketModule = await import("socket.io-client");
         // Use the same backend URL as API calls from NEXT_PUBLIC_API_URL
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "http://localhost:3000";
 
         // Wrap URL parsing in try-catch for better error handling
         let parsed: URL;
@@ -511,7 +525,8 @@ export default function ExamsContent() {
     const styles = variantStyles[variant];
 
     // Icon based on variant
-    const Icon = variant === "completed" ? FileText : variant === "today" ? GraduationCap : Calendar;
+    const Icon =
+      variant === "completed" ? FileText : variant === "today" ? GraduationCap : Calendar;
 
     // Determine which paper to display based on variant
     const getRelevantPaper = () => {
@@ -556,7 +571,9 @@ export default function ExamsContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: index * 0.1 }}
       >
-        <Card className={`shadow-md hover:shadow-lg transition-all overflow-hidden group ${styles.border}`}>
+        <Card
+          className={`shadow-md hover:shadow-lg transition-all overflow-hidden group ${styles.border}`}
+        >
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-start gap-4 w-full md:w-auto">
@@ -620,7 +637,9 @@ export default function ExamsContent() {
                 <GraduationCap size={36} className="text-white drop-shadow-md" />
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">Exams Dashboard</h1>
+                <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">
+                  Exams Dashboard
+                </h1>
                 <p className="text-blue-50 text-lg drop-shadow max-w-2xl">
                   Track your examinations and academic performance
                 </p>
@@ -689,7 +708,9 @@ export default function ExamsContent() {
                           ...new Set(
                             examGroups
                               .flatMap((e) => e.exams)
-                              .flatMap((exam) => exam.examSubjects.map((es) => es.subject?.name).filter(Boolean)),
+                              .flatMap((exam) =>
+                                exam.examSubjects.map((es) => es.subject?.name).filter(Boolean),
+                              ),
                           ),
                         ].length
                       }
@@ -750,8 +771,8 @@ export default function ExamsContent() {
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-700 mb-2">No Exams Found</h3>
               <p className="text-gray-500 max-w-md mx-auto">
-                We couldn&apos;t find any exams for your account. If you believe this is an error, please contact the
-                administrative staff.
+                We couldn&apos;t find any exams for your account. If you believe this is an error,
+                please contact the administrative staff.
               </p>
             </div>
           ) : (
@@ -798,13 +819,18 @@ export default function ExamsContent() {
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-blue-800">Important Notice</h3>
-                        <p className="text-blue-700">Please arrive 15 minutes prior to the start time of all exams.</p>
+                        <p className="text-blue-700">
+                          Please arrive 15 minutes prior to the start time of all exams.
+                        </p>
                       </div>
                     </div>
                     {Array.from(
                       new Map(
                         upcomingExams
-                          .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
+                          .filter(
+                            (exam) =>
+                              selectedSemester === "all" || exam.class.name === selectedSemester,
+                          )
                           .map((exam) => [exam.examGroupId, exam]),
                       ).values(),
                     ).map((exam, index) => (
@@ -829,7 +855,9 @@ export default function ExamsContent() {
                   <div className="text-center py-8 bg-emerald-50/50 rounded-lg">
                     <Clock className="h-12 w-12 mx-auto text-emerald-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-700 mb-2">No Exams Today</h3>
-                    <p className="text-gray-500 max-w-md mx-auto">You don&apos;t have any exams scheduled for today.</p>
+                    <p className="text-gray-500 max-w-md mx-auto">
+                      You don&apos;t have any exams scheduled for today.
+                    </p>
                   </div>
                 ) : (
                   <>
@@ -839,8 +867,12 @@ export default function ExamsContent() {
                         <Clock className="w-5 h-5 text-amber-600" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-amber-800">Today&apos;s Reminder</h3>
-                        <p className="text-amber-700">Please arrive 15 minutes prior to the start time of all exams.</p>
+                        <h3 className="text-sm font-medium text-amber-800">
+                          Today&apos;s Reminder
+                        </h3>
+                        <p className="text-amber-700">
+                          Please arrive 15 minutes prior to the start time of all exams.
+                        </p>
                       </div>
                     </div>
 
@@ -852,7 +884,9 @@ export default function ExamsContent() {
                             <Clock className="w-5 h-5 text-emerald-600" />
                           </div>
                           <div>
-                            <h3 className="text-sm font-medium text-emerald-800">Total Exam Time Today</h3>
+                            <h3 className="text-sm font-medium text-emerald-800">
+                              Total Exam Time Today
+                            </h3>
                             <p className="text-lg font-bold text-emerald-600">
                               {formatMinutesToHoursMinutes(getTotalTodayExamDuration())}
                             </p>
@@ -869,7 +903,10 @@ export default function ExamsContent() {
                     {Array.from(
                       new Map(
                         recentExams
-                          .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
+                          .filter(
+                            (exam) =>
+                              selectedSemester === "all" || exam.class.name === selectedSemester,
+                          )
                           .map((exam) => [exam.examGroupId, exam]),
                       ).values(),
                     ).map((exam, index) => {
@@ -907,7 +944,9 @@ export default function ExamsContent() {
                     return (
                       <div className="text-center py-8 bg-gray-50 rounded-lg">
                         <History className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-700 mb-2">No Completed Exams</h3>
+                        <h3 className="text-lg font-medium text-gray-700 mb-2">
+                          No Completed Exams
+                        </h3>
                         <p className="text-gray-500 max-w-md mx-auto">
                           You don&apos;t have any completed exam records.
                         </p>

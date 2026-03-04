@@ -74,21 +74,33 @@ const DocumentIssuanceHomePage = () => {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">ID</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Name</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Student ID</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                        ID
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                        Name
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                        Student ID
+                      </th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
                         CU Registration Number
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Semester</th>
-                      <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">Action</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">
+                        Semester
+                      </th>
+                      <th className="px-6 py-4 text-center text-sm font-semibold text-gray-700">
+                        Action
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {filteredStudents.map((student, index) => (
                       <tr key={student.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 text-sm text-gray-900">{index + 1}</td>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{student.name}</td>
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                          {student.name}
+                        </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{student.uid}</td>
                         <td className="px-6 py-4 text-sm text-gray-600">{student.reg}</td>
                         <td className="px-6 py-4 text-sm text-gray-600">{student.semester}</td>

@@ -12,8 +12,8 @@ export default function ClassCard({ class_ }: ClassCardProps) {
     status === "Ongoing"
       ? "bg-green-500 text-white border-green-600" // More colorful green
       : status === "Upcoming"
-      ? "bg-blue-500 text-white border-blue-600" // More colorful blue
-      : "bg-gray-500 text-white border-gray-600"; // Darker gray
+        ? "bg-blue-500 text-white border-blue-600" // More colorful blue
+        : "bg-gray-500 text-white border-gray-600"; // Darker gray
 
   return (
     <tr

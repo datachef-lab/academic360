@@ -3,12 +3,31 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Link2, Trash2, Upload, Download, Loader2, Pencil } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -154,19 +173,31 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   useEffect(() => {
     if (!socket || !isConnected || (user?.type !== "ADMIN" && user?.type !== "STAFF")) return;
 
-    const handleFeeGroupPromotionMappingCreated = (data: { mappingId: number; type: string; message: string }) => {
+    const handleFeeGroupPromotionMappingCreated = (data: {
+      mappingId: number;
+      type: string;
+      message: string;
+    }) => {
       console.log("[Fee Group Promotion Mapping Page] Mapping created:", data);
       // Silently refresh UI without showing toast
       refetchMappings();
     };
 
-    const handleFeeGroupPromotionMappingUpdated = (data: { mappingId: number; type: string; message: string }) => {
+    const handleFeeGroupPromotionMappingUpdated = (data: {
+      mappingId: number;
+      type: string;
+      message: string;
+    }) => {
       console.log("[Fee Group Promotion Mapping Page] Mapping updated:", data);
       // Silently refresh UI without showing toast
       refetchMappings();
     };
 
-    const handleFeeGroupPromotionMappingDeleted = (data: { mappingId: number; type: string; message: string }) => {
+    const handleFeeGroupPromotionMappingDeleted = (data: {
+      mappingId: number;
+      type: string;
+      message: string;
+    }) => {
       console.log("[Fee Group Promotion Mapping Page] Mapping deleted:", data);
       // Silently refresh UI without showing toast
       refetchMappings();
@@ -231,7 +262,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         const academicYears = await getAcademicYears();
         if (Array.isArray(academicYears)) {
           setAcademicYearOptions(
-            academicYears.map((y: any) => y.year || y.name).filter((v: unknown): v is string => typeof v === "string"),
+            academicYears
+              .map((y: any) => y.year || y.name)
+              .filter((v: unknown): v is string => typeof v === "string"),
           );
         }
 
@@ -239,7 +272,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         const classes = await getAllClasses();
         if (Array.isArray(classes)) {
           setSemesterOrClassOptions(
-            classes.map((c: any) => c.name).filter((v: unknown): v is string => typeof v === "string"),
+            classes
+              .map((c: any) => c.name)
+              .filter((v: unknown): v is string => typeof v === "string"),
           );
         }
 
@@ -247,7 +282,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         const programCourses = await getProgramCourses();
         if (Array.isArray(programCourses)) {
           setProgramCourseOptions(
-            programCourses.map((pc: any) => pc.name).filter((v: unknown): v is string => typeof v === "string"),
+            programCourses
+              .map((pc: any) => pc.name)
+              .filter((v: unknown): v is string => typeof v === "string"),
           );
         }
 
@@ -258,13 +295,19 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           : Array.isArray(shiftsResponse.data)
             ? shiftsResponse.data
             : [];
-        setShiftOptions(shiftsData.map((s: any) => s.name).filter((v: unknown): v is string => typeof v === "string"));
+        setShiftOptions(
+          shiftsData
+            .map((s: any) => s.name)
+            .filter((v: unknown): v is string => typeof v === "string"),
+        );
 
         // Religions
         const religions = await getAllReligions();
         if (Array.isArray(religions)) {
           setReligionOptions(
-            religions.map((r: any) => r.name).filter((v: unknown): v is string => typeof v === "string"),
+            religions
+              .map((r: any) => r.name)
+              .filter((v: unknown): v is string => typeof v === "string"),
           );
         }
 
@@ -272,7 +315,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         const categories = await getAllCategories();
         if (Array.isArray(categories)) {
           setCategoryOptions(
-            categories.map((c: any) => c.name).filter((v: unknown): v is string => typeof v === "string"),
+            categories
+              .map((c: any) => c.name)
+              .filter((v: unknown): v is string => typeof v === "string"),
           );
         }
 
@@ -321,9 +366,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     });
 
     return {
-      academicYears: academicYearOptions.length > 0 ? academicYearOptions : Array.from(academicYears),
-      semestersOrClasses: semesterOrClassOptions.length > 0 ? semesterOrClassOptions : Array.from(semestersOrClasses),
-      programCourses: programCourseOptions.length > 0 ? programCourseOptions : Array.from(programCourses),
+      academicYears:
+        academicYearOptions.length > 0 ? academicYearOptions : Array.from(academicYears),
+      semestersOrClasses:
+        semesterOrClassOptions.length > 0 ? semesterOrClassOptions : Array.from(semestersOrClasses),
+      programCourses:
+        programCourseOptions.length > 0 ? programCourseOptions : Array.from(programCourses),
       religions: religionOptions.length > 0 ? religionOptions : Array.from(religions),
       communities: communityOptions.length > 0 ? communityOptions : Array.from(communities),
       categories: categoryOptions.length > 0 ? categoryOptions : Array.from(categories),
@@ -395,7 +443,11 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       const shiftName = (promo.shift?.name || "").toLowerCase();
       const categoryName = (promo.categoryName || "").toLowerCase();
       const religionName = (promo.religionName || "").toLowerCase();
-      const feeCategoryName = (mapping.feeGroup?.feeCategory?.name || mapping.feeCategory?.name || "").toLowerCase();
+      const feeCategoryName = (
+        mapping.feeGroup?.feeCategory?.name ||
+        mapping.feeCategory?.name ||
+        ""
+      ).toLowerCase();
       const feeSlabName = (mapping.feeGroup?.feeSlab?.name || "").toLowerCase();
       const mappingId = mapping.id?.toString() || "";
 
@@ -418,13 +470,19 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
 
   const totalPages = Math.max(1, Math.ceil(filteredMappings.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const paginatedMappings = filteredMappings.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedMappings = filteredMappings.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   const allSelectedOnPage =
-    paginatedMappings.length > 0 && paginatedMappings.every((m) => m.id && selectedIds.includes(m.id));
+    paginatedMappings.length > 0 &&
+    paginatedMappings.every((m) => m.id && selectedIds.includes(m.id));
 
   const toggleSelectAllOnPage = (checked: boolean | string) => {
-    const idsOnPage = paginatedMappings.map((m) => m.id).filter((id): id is number => typeof id === "number");
+    const idsOnPage = paginatedMappings
+      .map((m) => m.id)
+      .filter((id): id is number => typeof id === "number");
 
     if (!idsOnPage.length) return;
 
@@ -543,7 +601,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         errors.push("Failed to read worksheet from Excel file");
         return { isValid: false, errors, missingColumns, data: [] };
       }
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet as XLSX.WorkSheet);
+      const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+        worksheet as XLSX.WorkSheet,
+      );
 
       if (jsonData.length === 0) {
         errors.push({ row: 0, data: {}, error: "Excel file is empty" });
@@ -569,7 +629,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
 
       // Map column names (case-insensitive)
       const getVal = (row: Record<string, unknown>, key: string): string =>
-        (Object.entries(row).find(([k]) => k.trim().toLowerCase() === key.toLowerCase())?.[1] ?? "").toString().trim();
+        (Object.entries(row).find(([k]) => k.trim().toLowerCase() === key.toLowerCase())?.[1] ?? "")
+          .toString()
+          .trim();
 
       jsonData.forEach((row, index) => {
         const rowNumber = index + 2;
@@ -640,7 +702,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         data,
       };
     } catch (error) {
-      errors.push(`Failed to read Excel file: ${error instanceof Error ? error.message : "Unknown error"}`);
+      errors.push(
+        `Failed to read Excel file: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
       return { isValid: false, errors, missingColumns, data: [] };
     }
   };
@@ -723,7 +787,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       setIsBulkUploading(false);
       setExportProgressOpen(false);
       setCurrentOperation(null);
-      toast.error(`Bulk upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Bulk upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   };
 
@@ -817,7 +883,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     // Check for duplicate mapping
     const existingMapping = mappings.find(
       (m) =>
-        m.feeCategory?.id === form.feeCategoryId && m.promotion?.id === form.promotionId && m.id !== editingItem?.id,
+        m.feeCategory?.id === form.feeCategoryId &&
+        m.promotion?.id === form.promotionId &&
+        m.id !== editingItem?.id,
     );
 
     if (existingMapping) {
@@ -860,7 +928,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                 Configure mappings between students (by class/UID/roll) and fee groups
               </p>
             </div>
-            <Button onClick={() => setShowBulkUploadModal(true)} className="flex items-center gap-2">
+            <Button
+              onClick={() => setShowBulkUploadModal(true)}
+              className="flex items-center gap-2"
+            >
               <Upload className="h-4 w-4" />
               Upload Bulk Mapping
             </Button>
@@ -869,7 +940,11 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         <CardContent>
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
             <div className="flex items-center gap-2 w-full md:w-auto">
-              <Button variant="outline" onClick={() => setShowFilterModal(true)} className="w-full md:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilterModal(true)}
+                className="w-full md:w-auto"
+              >
                 Filters
               </Button>
 
@@ -892,7 +967,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   </Badge>
                 )}
                 {filters.programCourse && (
-                  <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50 flex items-center gap-1">
+                  <Badge
+                    variant="outline"
+                    className="border-blue-300 text-blue-700 bg-blue-50 flex items-center gap-1"
+                  >
                     {filters.programCourse}
                   </Badge>
                 )}
@@ -913,12 +991,18 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   </Badge>
                 )}
                 {filters.religion && (
-                  <Badge variant="outline" className="border-teal-300 text-teal-700 bg-teal-50 flex items-center gap-1">
+                  <Badge
+                    variant="outline"
+                    className="border-teal-300 text-teal-700 bg-teal-50 flex items-center gap-1"
+                  >
                     Rel: {filters.religion}
                   </Badge>
                 )}
                 {filters.community && (
-                  <Badge variant="outline" className="border-rose-300 text-rose-700 bg-rose-50 flex items-center gap-1">
+                  <Badge
+                    variant="outline"
+                    className="border-rose-300 text-rose-700 bg-rose-50 flex items-center gap-1"
+                  >
                     {filters.community}
                   </Badge>
                 )}
@@ -944,8 +1028,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             <div className="mb-2 flex items-center justify-between text-sm text-gray-700">
               <span>
                 <span className="font-semibold">{selectedIds.length}</span> row
-                {selectedIds.length > 1 ? "s" : ""} selected. You can apply a fee category in bulk from here (bulk
-                action UI to be wired).
+                {selectedIds.length > 1 ? "s" : ""} selected. You can apply a fee category in bulk
+                from here (bulk action UI to be wired).
               </span>
             </div>
           )}
@@ -980,7 +1064,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     <TableCell colSpan={10} className="text-center py-12 text-gray-500">
                       <p className="font-medium">Apply filters to load data</p>
                       <p className="text-sm mt-1">
-                        Select at least one filter (e.g. Academic Year, Semester) to view student fee group mappings.
+                        Select at least one filter (e.g. Academic Year, Semester) to view student
+                        fee group mappings.
                       </p>
                     </TableCell>
                   </TableRow>
@@ -997,8 +1082,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     const uid = promo.uid || promo.studentUid || "";
                     const programCourseName = promo.programCourse?.name || "-";
                     const rawSemesterName = promo.class?.name || "-";
-                    const semesterParts = typeof rawSemesterName === "string" ? rawSemesterName.split(/\s+/) : [];
-                    const semesterName = semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
+                    const semesterParts =
+                      typeof rawSemesterName === "string" ? rawSemesterName.split(/\s+/) : [];
+                    const semesterName =
+                      semesterParts.length > 1 ? semesterParts[1] : rawSemesterName;
                     const shiftName = promo.shift?.name || "-";
                     const paymentStatus = mapping.paymentStatus ?? "Pending";
                     const amountToPay = mapping.amountToPay ?? 0;
@@ -1006,7 +1093,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     const globalIndex = (currentPage - 1) * pageSize + index + 1;
 
                     const promotionId = promo.id as number | undefined;
-                    const mappingCountForPromotion = promotionId ? (promotionMappingCounts.get(promotionId) ?? 0) : 0;
+                    const mappingCountForPromotion = promotionId
+                      ? (promotionMappingCounts.get(promotionId) ?? 0)
+                      : 0;
                     const canDelete = mappingCountForPromotion > 1;
 
                     return (
@@ -1027,7 +1116,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           {programCourseName !== "-" ? (
-                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                            >
                               {programCourseName}
                             </Badge>
                           ) : (
@@ -1036,7 +1128,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                         </TableCell>
                         <TableCell className="text-center">
                           {semesterName !== "-" ? (
-                            <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                            >
                               {semesterName}
                             </Badge>
                           ) : (
@@ -1069,12 +1164,18 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className="font-semibold text-gray-900">₹{amountToPay.toLocaleString("en-IN")}</span>
+                          <span className="font-semibold text-gray-900">
+                            ₹{amountToPay.toLocaleString("en-IN")}
+                          </span>
                         </TableCell>
                         <TableCell>
-                          {mapping.feeGroup?.feeCategory?.name && mapping.feeGroup?.feeSlab?.name ? (
+                          {mapping.feeGroup?.feeCategory?.name &&
+                          mapping.feeGroup?.feeSlab?.name ? (
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <Badge variant="outline" className="text-xs border-pink-300 text-pink-700 bg-pink-50">
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-pink-300 text-pink-700 bg-pink-50"
+                              >
                                 {mapping.feeGroup.feeSlab.name}
                               </Badge>
                               <Badge
@@ -1086,7 +1187,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                             </div>
                           ) : mapping.feeCategory?.name ? (
                             // Fallback for old structure if feeGroup is not available
-                            <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-purple-300 text-purple-700 bg-purple-50"
+                            >
                               {mapping.feeCategory.name}
                             </Badge>
                           ) : (
@@ -1129,8 +1233,10 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
               <div>
                 Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{" "}
-                <span className="font-medium">{Math.min(currentPage * pageSize, filteredMappings.length)}</span> of{" "}
-                <span className="font-medium">{filteredMappings.length}</span> students
+                <span className="font-medium">
+                  {Math.min(currentPage * pageSize, filteredMappings.length)}
+                </span>{" "}
+                of <span className="font-medium">{filteredMappings.length}</span> students
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -1457,12 +1563,18 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   }}
                   className="flex-1"
                 />
-                <Button variant="outline" onClick={handleDownloadTemplate} className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadTemplate}
+                  className="flex items-center gap-2"
+                >
                   <Download className="h-4 w-4" />
                   Template
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">Excel file must contain columns: UID, Semester, Fee Category Name</p>
+              <p className="text-xs text-gray-500">
+                Excel file must contain columns: UID, Semester, Fee Category Name
+              </p>
             </div>
 
             {bulkUploadFile && (
@@ -1481,10 +1593,12 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                       Total: <span className="font-semibold">{bulkUploadResult.summary.total}</span>
                     </p>
                     <p className="text-green-600">
-                      Successful: <span className="font-semibold">{bulkUploadResult.summary.successful}</span>
+                      Successful:{" "}
+                      <span className="font-semibold">{bulkUploadResult.summary.successful}</span>
                     </p>
                     <p className="text-red-600">
-                      Failed: <span className="font-semibold">{bulkUploadResult.summary.failed}</span>
+                      Failed:{" "}
+                      <span className="font-semibold">{bulkUploadResult.summary.failed}</span>
                     </p>
                   </div>
                 </div>
@@ -1560,16 +1674,23 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
               </Avatar>
               <div>
                 <DialogTitle className="text-lg">
-                  {editingItem?.promotion && (editingItem.promotion as { studentName?: string }).studentName}
+                  {editingItem?.promotion &&
+                    (editingItem.promotion as { studentName?: string }).studentName}
                 </DialogTitle>
                 <p className="text-sm text-muted-foreground">
                   UID: {editingItem?.promotion && (editingItem.promotion as { uid?: string }).uid}
                 </p>
                 <div className="flex gap-2 mt-1">
-                  <Badge variant="outline" className="text-xs border-teal-300 text-teal-700 bg-teal-50">
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-teal-300 text-teal-700 bg-teal-50"
+                  >
                     {(editingItem?.promotion as { religionName?: string })?.religionName || "—"}
                   </Badge>
-                  <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-50">
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-purple-300 text-purple-700 bg-purple-50"
+                  >
                     {(editingItem?.promotion as { categoryName?: string })?.categoryName || "—"}
                   </Badge>
                 </div>
@@ -1592,14 +1713,18 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
               </div>
               <div>
                 <span className="text-muted-foreground">Amount to Pay:</span>
-                <p className="font-semibold">₹{(editingItem?.amountToPay ?? 0).toLocaleString("en-IN")}</p>
+                <p className="font-semibold">
+                  ₹{(editingItem?.amountToPay ?? 0).toLocaleString("en-IN")}
+                </p>
               </div>
             </div>
             <div className="space-y-2">
               <Label>Slab Type</Label>
               <Select
                 value={editForm.feeGroupId?.toString() ?? ""}
-                onValueChange={(v) => setEditForm((prev) => ({ ...prev, feeGroupId: v ? Number(v) : null }))}
+                onValueChange={(v) =>
+                  setEditForm((prev) => ({ ...prev, feeGroupId: v ? Number(v) : null }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select slab type" />
@@ -1686,12 +1811,17 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium truncate">{u.name}</p>
                             {u.type && (
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] px-1.5 py-0 h-4 shrink-0"
+                              >
                                 {u.type}
                               </Badge>
                             )}
                           </div>
-                          {u.email && <p className="text-xs text-muted-foreground truncate">{u.email}</p>}
+                          {u.email && (
+                            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                          )}
                         </div>
                       </button>
                     );
@@ -1747,7 +1877,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         onOpenChange={setShowDeleteModal}
         onConfirm={handleDeleteConfirm}
         title="Delete Student Fee Category Mapping"
-        itemName={deletingItem?.feeGroup?.feeCategory?.name || deletingItem?.feeCategory?.name || ""}
+        itemName={
+          deletingItem?.feeGroup?.feeCategory?.name || deletingItem?.feeCategory?.name || ""
+        }
         description={`Are you sure you want to delete the mapping between fee group "${deletingItem?.feeGroup?.feeCategory?.name || deletingItem?.feeCategory?.name}" and student "${getPromotionDisplayText(deletingItem?.promotion)}"? This action cannot be undone.`}
       />
 

@@ -2,9 +2,31 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/DatePicker";
-import { CheckCircle2, Calendar, User, Mail, MapPin, Globe, Cross, Fingerprint, Languages, Building2, Home, UserCog, Book, School, Clock } from "lucide-react";
+import {
+  CheckCircle2,
+  Calendar,
+  User,
+  Mail,
+  MapPin,
+  Globe,
+  Cross,
+  Fingerprint,
+  Languages,
+  Building2,
+  Home,
+  UserCog,
+  Book,
+  School,
+  Clock,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -77,16 +99,16 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
     }
   };
 
-//   const createAddress = (data: Partial<Address>): Address => ({
-//     addressLine: data.addressLine || null,
-//     city: data.city || null,
-//     state: data.state || null,
-//     country: data.country || null,
-//     landmark: data.landmark || null,
-//     localityType: data.localityType || null,
-//     phone: data.phone || null,
-//     pincode: data.pincode || null,
-//   });
+  //   const createAddress = (data: Partial<Address>): Address => ({
+  //     addressLine: data.addressLine || null,
+  //     city: data.city || null,
+  //     state: data.state || null,
+  //     country: data.country || null,
+  //     landmark: data.landmark || null,
+  //     localityType: data.localityType || null,
+  //     phone: data.phone || null,
+  //     pincode: data.pincode || null,
+  //   });
 
   const createNationality = (name: string): Nationality => ({
     name,
@@ -99,16 +121,14 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
     name,
     sequence: null,
     disabled: false,
-
   });
 
   const createCategory = (name: string): Category => ({
     name,
-    code: '',
+    code: "",
     documentRequired: false,
     sequence: null,
     disabled: false,
-   
   });
 
   const createLanguageMedium = (name: string): LanguageMedium => ({
@@ -155,7 +175,9 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
             <div className="relative">
               <Select
                 value={studentData.community || undefined}
-                onValueChange={(value) => setStudentData({ ...studentData, community: value as Community })}
+                onValueChange={(value) =>
+                  setStudentData({ ...studentData, community: value as Community })
+                }
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select community" />
@@ -201,7 +223,9 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
             <div className="relative">
               <Select
                 value={studentData.framework || undefined}
-                onValueChange={(value) => setStudentData({ ...studentData, framework: value as Framework })}
+                onValueChange={(value) =>
+                  setStudentData({ ...studentData, framework: value as Framework })
+                }
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select framework" />
@@ -250,7 +274,9 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                 id="lastPassedYear"
                 type="number"
                 value={studentData.lastPassedYear || ""}
-                onChange={(e) => setStudentData({ ...studentData, lastPassedYear: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setStudentData({ ...studentData, lastPassedYear: parseInt(e.target.value) })
+                }
                 placeholder="Enter last passed year"
                 className="pl-10"
               />
@@ -279,7 +305,9 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
               <Checkbox
                 id="handicapped"
                 checked={studentData.handicapped}
-                onCheckedChange={(checked) => setStudentData({ ...studentData, handicapped: checked as boolean })}
+                onCheckedChange={(checked) =>
+                  setStudentData({ ...studentData, handicapped: checked as boolean })
+                }
               />
               <Label htmlFor="handicapped" className="text-gray-700">
                 Handicapped
@@ -307,7 +335,9 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
               <Input
                 id="aadhaarCardNumber"
                 value={personalDetails.aadhaarCardNumber || ""}
-                onChange={(e) => setPersonalDetails({ ...personalDetails, aadhaarCardNumber: e.target.value })}
+                onChange={(e) =>
+                  setPersonalDetails({ ...personalDetails, aadhaarCardNumber: e.target.value })
+                }
                 placeholder="Enter Aadhaar card number"
                 className="pl-10"
               />
@@ -324,7 +354,9 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
             <div className="relative">
               <DatePicker
                 value={personalDetails.dateOfBirth || undefined}
-                onSelect={(date) => setPersonalDetails({ ...personalDetails, dateOfBirth: date || null })}
+                onSelect={(date) =>
+                  setPersonalDetails({ ...personalDetails, dateOfBirth: date || null })
+                }
                 className="w-full pl-10"
               />
               <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -340,7 +372,9 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
             <div className="relative">
               <Select
                 value={personalDetails.gender || undefined}
-                onValueChange={(value) => setPersonalDetails({ ...personalDetails, gender: value as Gender })}
+                onValueChange={(value) =>
+                  setPersonalDetails({ ...personalDetails, gender: value as Gender })
+                }
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select gender" />
@@ -365,10 +399,12 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
               <Input
                 id="nationality"
                 value={personalDetails.nationality?.name || ""}
-                onChange={(e) => setPersonalDetails({ 
-                  ...personalDetails, 
-                  nationality: e.target.value ? createNationality(e.target.value) : null 
-                })}
+                onChange={(e) =>
+                  setPersonalDetails({
+                    ...personalDetails,
+                    nationality: e.target.value ? createNationality(e.target.value) : null,
+                  })
+                }
                 placeholder="Enter nationality"
                 className="pl-10"
               />
@@ -386,10 +422,12 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
               <Input
                 id="religion"
                 value={personalDetails.religion?.name || ""}
-                onChange={(e) => setPersonalDetails({ 
-                  ...personalDetails, 
-                  religion: e.target.value ? createReligion(e.target.value) : null 
-                })}
+                onChange={(e) =>
+                  setPersonalDetails({
+                    ...personalDetails,
+                    religion: e.target.value ? createReligion(e.target.value) : null,
+                  })
+                }
                 placeholder="Enter religion"
                 className="pl-10"
               />
@@ -407,10 +445,12 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
               <Input
                 id="category"
                 value={personalDetails.category?.name || ""}
-                onChange={(e) => setPersonalDetails({ 
-                  ...personalDetails, 
-                  category: e.target.value ? createCategory(e.target.value) : null 
-                })}
+                onChange={(e) =>
+                  setPersonalDetails({
+                    ...personalDetails,
+                    category: e.target.value ? createCategory(e.target.value) : null,
+                  })
+                }
                 placeholder="Enter category"
                 className="pl-10"
               />
@@ -428,10 +468,12 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
               <Input
                 id="motherTongue"
                 value={personalDetails.motherTongue?.name || ""}
-                onChange={(e) => setPersonalDetails({ 
-                  ...personalDetails, 
-                  motherTongue: e.target.value ? createLanguageMedium(e.target.value) : null 
-                })}
+                onChange={(e) =>
+                  setPersonalDetails({
+                    ...personalDetails,
+                    motherTongue: e.target.value ? createLanguageMedium(e.target.value) : null,
+                  })
+                }
                 placeholder="Enter mother tongue"
                 className="pl-10"
               />
@@ -469,7 +511,9 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                 id="alternativeEmail"
                 type="email"
                 value={personalDetails.alternativeEmail || ""}
-                onChange={(e) => setPersonalDetails({ ...personalDetails, alternativeEmail: e.target.value })}
+                onChange={(e) =>
+                  setPersonalDetails({ ...personalDetails, alternativeEmail: e.target.value })
+                }
                 placeholder="Enter alternative email"
                 className="pl-10"
               />
@@ -486,7 +530,9 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
             <div className="relative">
               <Select
                 value={personalDetails.disability}
-                onValueChange={(value: Disability) => setPersonalDetails({ ...personalDetails, disability: value })}
+                onValueChange={(value: Disability) =>
+                  setPersonalDetails({ ...personalDetails, disability: value })
+                }
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select disability" />
@@ -522,13 +568,13 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                 <Input
                   id="mailingAddress"
                   value={personalDetails.mailingAddress?.addressLine || ""}
-                //   onChange={(e) => setPersonalDetails({ 
-                //     ...personalDetails, 
-                //     mailingAddress: createAddress({ 
-                //       ...personalDetails.mailingAddress, 
-                //       addressLine: e.target.value 
-                //     }) 
-                //   })}
+                  //   onChange={(e) => setPersonalDetails({
+                  //     ...personalDetails,
+                  //     mailingAddress: createAddress({
+                  //       ...personalDetails.mailingAddress,
+                  //       addressLine: e.target.value
+                  //     })
+                  //   })}
                   placeholder="Enter mailing address"
                   className="pl-10"
                 />
@@ -545,13 +591,13 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                 <Input
                   id="mailingCity"
                   value={personalDetails.mailingAddress?.cityId || ""}
-                //   onChange={(e) => setPersonalDetails({ 
-                //     ...personalDetails, 
-                //     mailingAddress: createAddress({ 
-                //       ...personalDetails.mailingAddress, 
-                //       city: e.target.value 
-                //     }) 
-                //   })}
+                  //   onChange={(e) => setPersonalDetails({
+                  //     ...personalDetails,
+                  //     mailingAddress: createAddress({
+                  //       ...personalDetails.mailingAddress,
+                  //       city: e.target.value
+                  //     })
+                  //   })}
                   placeholder="Enter mailing city"
                   className="pl-10"
                 />
@@ -568,13 +614,13 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                 <Input
                   id="mailingState"
                   value={personalDetails.mailingAddress?.stateId || ""}
-                //   onChange={(e) => setPersonalDetails({ 
-                //     ...personalDetails, 
-                //     mailingAddress: createAddress({ 
-                //       ...personalDetails.mailingAddress, 
-                //       state: e.target.value 
-                //     }) 
-                //   })}
+                  //   onChange={(e) => setPersonalDetails({
+                  //     ...personalDetails,
+                  //     mailingAddress: createAddress({
+                  //       ...personalDetails.mailingAddress,
+                  //       state: e.target.value
+                  //     })
+                  //   })}
                   placeholder="Enter mailing state"
                   className="pl-10"
                 />
@@ -591,13 +637,13 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                 <Input
                   id="mailingPincode"
                   value={personalDetails.mailingAddress?.pincode || ""}
-                //   onChange={(e) => setPersonalDetails({ 
-                //     ...personalDetails, 
-                //     mailingAddress: createAddress({ 
-                //       ...personalDetails.mailingAddress, 
-                //       pincode: e.target.value 
-                //     }) 
-                //   })}
+                  //   onChange={(e) => setPersonalDetails({
+                  //     ...personalDetails,
+                  //     mailingAddress: createAddress({
+                  //       ...personalDetails.mailingAddress,
+                  //       pincode: e.target.value
+                  //     })
+                  //   })}
                   placeholder="Enter mailing pincode"
                   className="pl-10"
                 />
@@ -637,13 +683,13 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                 <Input
                   id="residentialAddress"
                   value={personalDetails.residentialAddress?.addressLine || ""}
-                //   onChange={(e) => setPersonalDetails({ 
-                //     ...personalDetails, 
-                //     residentialAddress: createAddress({ 
-                //       ...personalDetails.residentialAddress, 
-                //       addressLine: e.target.value 
-                //     }) 
-                //   })}
+                  //   onChange={(e) => setPersonalDetails({
+                  //     ...personalDetails,
+                  //     residentialAddress: createAddress({
+                  //       ...personalDetails.residentialAddress,
+                  //       addressLine: e.target.value
+                  //     })
+                  //   })}
                   placeholder="Enter residential address"
                   className="pl-10"
                   disabled={sameAsMailing}
@@ -661,13 +707,13 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                 <Input
                   id="residentialCity"
                   value={personalDetails.residentialAddress?.cityId || ""}
-                //   onChange={(e) => setPersonalDetails({ 
-                //     ...personalDetails, 
-                //     residentialAddress: createAddress({ 
-                //       ...personalDetails.residentialAddress, 
-                //       city: e.target.value 
-                //     }) 
-                //   })}
+                  //   onChange={(e) => setPersonalDetails({
+                  //     ...personalDetails,
+                  //     residentialAddress: createAddress({
+                  //       ...personalDetails.residentialAddress,
+                  //       city: e.target.value
+                  //     })
+                  //   })}
                   placeholder="Enter residential city"
                   className="pl-10"
                   disabled={sameAsMailing}
@@ -685,13 +731,13 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                 <Input
                   id="residentialState"
                   value={personalDetails.residentialAddress?.stateId || ""}
-                //   onChange={(e) => setPersonalDetails({ 
-                //     ...personalDetails, 
-                //     residentialAddress: createAddress({ 
-                //       ...personalDetails.residentialAddress, 
-                //       state: e.target.value 
-                //     }) 
-                //   })}
+                  //   onChange={(e) => setPersonalDetails({
+                  //     ...personalDetails,
+                  //     residentialAddress: createAddress({
+                  //       ...personalDetails.residentialAddress,
+                  //       state: e.target.value
+                  //     })
+                  //   })}
                   placeholder="Enter residential state"
                   className="pl-10"
                   disabled={sameAsMailing}
@@ -709,13 +755,13 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                 <Input
                   id="residentialPincode"
                   value={personalDetails.residentialAddress?.pincode || ""}
-                //   onChange={(e) => setPersonalDetails({ 
-                //     ...personalDetails, 
-                //     residentialAddress: createAddress({ 
-                //       ...personalDetails.residentialAddress, 
-                //       pincode: e.target.value 
-                //     }) 
-                //   })}
+                  //   onChange={(e) => setPersonalDetails({
+                  //     ...personalDetails,
+                  //     residentialAddress: createAddress({
+                  //       ...personalDetails.residentialAddress,
+                  //       pincode: e.target.value
+                  //     })
+                  //   })}
                   placeholder="Enter residential pincode"
                   className="pl-10"
                   disabled={sameAsMailing}
@@ -749,4 +795,4 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
       </div>
     </div>
   );
-} 
+}

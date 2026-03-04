@@ -1,18 +1,12 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { 
-  Briefcase, 
-  Hash as HashIcon,
-  Calendar,
-  Clock,
-  Eye,
-  EyeOff,
-  Edit,
-} from 'lucide-react';
+import { Briefcase, Hash as HashIcon, Calendar, Clock, Eye, EyeOff, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Occupation } from "@/types/resources/occupation.types";
 import { Button } from "@/components/ui/button";
 
-export const occupationColumns = (onEditRow?: (rowData: Occupation) => void): ColumnDef<Occupation>[] => [
+export const occupationColumns = (
+  onEditRow?: (rowData: Occupation) => void,
+): ColumnDef<Occupation>[] => [
   {
     accessorKey: "name",
     header: () => (
@@ -44,8 +38,11 @@ export const occupationColumns = (onEditRow?: (rowData: Occupation) => void): Co
       const sequence = row.original.sequence;
       return (
         <div className="flex items-center justify-center">
-          <Badge variant="outline" className="px-2.5 py-1.5 text-xs bg-blue-50 text-blue-700 drop-shadow-md border-none font-mono">
-            {sequence || '-'}
+          <Badge
+            variant="outline"
+            className="px-2.5 py-1.5 text-xs bg-blue-50 text-blue-700 drop-shadow-md border-none font-mono"
+          >
+            {sequence || "-"}
           </Badge>
         </div>
       );
@@ -62,9 +59,9 @@ export const occupationColumns = (onEditRow?: (rowData: Occupation) => void): Co
     cell: ({ row }) => {
       const isDisabled = row.original.disabled;
       return (
-        <Badge 
-          variant="outline" 
-          className={`px-2.5 py-1 drop-shadow-md border-none text-xs ${isDisabled ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}
+        <Badge
+          variant="outline"
+          className={`px-2.5 py-1 drop-shadow-md border-none text-xs ${isDisabled ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}
         >
           <div className="flex items-center gap-1">
             {isDisabled ? (
@@ -124,7 +121,12 @@ export const occupationColumns = (onEditRow?: (rowData: Occupation) => void): Co
       const rowData = row.original;
       return (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEditRow && onEditRow(rowData)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => onEditRow && onEditRow(rowData)}
+          >
             <Edit className="h-4 w-4" />
             <span className="sr-only">Edit</span>
           </Button>

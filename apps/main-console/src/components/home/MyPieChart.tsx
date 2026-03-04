@@ -17,14 +17,7 @@ const overallPercentageData = [
   { name: "MCOM", value: 78.8 },
 ];
 
-const COLORS = [
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff7300",
-  "#0088fe",
-  "#a83232",
-];
+const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#0088fe", "#a83232"];
 
 export function MyPieChart() {
   return (
@@ -47,10 +40,7 @@ export function MyPieChart() {
             label
           >
             {overallPercentageData.map((_, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip />

@@ -1,6 +1,6 @@
 /**
  * Pickup Point Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Pickup Point module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Pickup Point interface that mirrors the backend model
  */
 export interface PickupPoint {
-    readonly id?: number;
+  readonly id?: number;
   name?: string | null;
   createdAt?: string; // ISO date string
   updatedAt?: string; // ISO date string
@@ -110,15 +110,15 @@ export interface PickupPointState {
  * Action types for pickup point state management
  */
 export type PickupPointAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_PICKUP_POINTS'; payload: PickupPoint[] }
-  | { type: 'SET_CURRENT_PICKUP_POINT'; payload: PickupPoint | null }
-  | { type: 'ADD_PICKUP_POINT'; payload: PickupPoint }
-  | { type: 'UPDATE_PICKUP_POINT'; payload: PickupPoint }
-  | { type: 'DELETE_PICKUP_POINT'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_PICKUP_POINTS"; payload: PickupPoint[] }
+  | { type: "SET_CURRENT_PICKUP_POINT"; payload: PickupPoint | null }
+  | { type: "ADD_PICKUP_POINT"; payload: PickupPoint }
+  | { type: "UPDATE_PICKUP_POINT"; payload: PickupPoint }
+  | { type: "DELETE_PICKUP_POINT"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -133,7 +133,7 @@ export interface PickupPointTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -149,7 +149,7 @@ export interface PickupPointFilter {
  */
 export interface PickupPointSort {
   field: keyof PickupPoint;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -174,39 +174,49 @@ export type PickupPointName = string | null;
  * Default values for pickup point
  */
 export const DEFAULT_PICKUP_POINT: CreatePickupPointPayload = {
-  name: '',
+  name: "",
 };
 
 /**
  * Default form data for pickup point
  */
 export const DEFAULT_PICKUP_POINT_FORM: PickupPointFormData = {
-  name: '',
+  name: "",
 };
 
 /**
  * Table columns configuration for pickup point
  */
 export const PICKUP_POINT_TABLE_COLUMNS: PickupPointTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Pickup Point Name', sortable: true, filterable: true },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Pickup Point Name", sortable: true, filterable: true },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Common pickup points for reference
  */
 export const COMMON_PICKUP_POINTS = [
-  'Main Campus', 'City Center', 'Airport', 'Bus Station', 'Train Station',
-  'Shopping Mall', 'Downtown', 'Suburban Center', 'Industrial Area',
-  'Residential Area', 'University Campus', 'Hospital', 'Government Office'
+  "Main Campus",
+  "City Center",
+  "Airport",
+  "Bus Station",
+  "Train Station",
+  "Shopping Mall",
+  "Downtown",
+  "Suburban Center",
+  "Industrial Area",
+  "Residential Area",
+  "University Campus",
+  "Hospital",
+  "Government Office",
 ] as const;
 
 /**
  * Type for common pickup point values
  */
-export type CommonPickupPoint = typeof COMMON_PICKUP_POINTS[number];
+export type CommonPickupPoint = (typeof COMMON_PICKUP_POINTS)[number];
 
 // ============================================================================
 // TYPE GUARDS
@@ -218,10 +228,10 @@ export type CommonPickupPoint = typeof COMMON_PICKUP_POINTS[number];
 export function isPickupPoint(obj: object): obj is PickupPoint {
   return (
     obj &&
-    typeof (obj as PickupPoint).id === 'number' &&
-    ((obj as PickupPoint).name === null || typeof (obj as PickupPoint).name === 'string') &&
-    typeof (obj as PickupPoint).createdAt === 'string' &&
-    typeof (obj as PickupPoint).updatedAt === 'string'
+    typeof (obj as PickupPoint).id === "number" &&
+    ((obj as PickupPoint).name === null || typeof (obj as PickupPoint).name === "string") &&
+    typeof (obj as PickupPoint).createdAt === "string" &&
+    typeof (obj as PickupPoint).updatedAt === "string"
   );
 }
 
@@ -231,7 +241,9 @@ export function isPickupPoint(obj: object): obj is PickupPoint {
 export function isCreatePickupPointPayload(obj: object): obj is CreatePickupPointPayload {
   return (
     obj &&
-    ((obj as CreatePickupPointPayload).name === undefined || (obj as CreatePickupPointPayload).name === null || typeof (obj as CreatePickupPointPayload).name === 'string')
+    ((obj as CreatePickupPointPayload).name === undefined ||
+      (obj as CreatePickupPointPayload).name === null ||
+      typeof (obj as CreatePickupPointPayload).name === "string")
   );
 }
 
@@ -241,7 +253,9 @@ export function isCreatePickupPointPayload(obj: object): obj is CreatePickupPoin
 export function isUpdatePickupPointPayload(obj: object): obj is UpdatePickupPointPayload {
   return (
     obj &&
-    ((obj as UpdatePickupPointPayload).name === undefined || (obj as UpdatePickupPointPayload).name === null || typeof (obj as UpdatePickupPointPayload).name === 'string')
+    ((obj as UpdatePickupPointPayload).name === undefined ||
+      (obj as UpdatePickupPointPayload).name === null ||
+      typeof (obj as UpdatePickupPointPayload).name === "string")
   );
 }
 
@@ -270,7 +284,7 @@ export function formDataToPayload(formData: PickupPointFormData): CreatePickupPo
  */
 export function apiDataToFormData(pickupPoint: PickupPoint): PickupPointFormData {
   return {
-    name: pickupPoint.name || '',
+    name: pickupPoint.name || "",
   };
 }
 
@@ -285,7 +299,7 @@ export function validatePickupPointName(name: string): boolean {
  * Format pickup point name for display
  */
 export function formatPickupPointName(name: string | null): string {
-  return name?.trim() || 'Unnamed Pickup Point';
+  return name?.trim() || "Unnamed Pickup Point";
 }
 
 /**
@@ -299,25 +313,25 @@ export function getPickupPointDisplayName(pickupPoint: PickupPoint): string {
  * Get pickup point icon (basic implementation)
  */
 export function getPickupPointIcon(pickupPointName: string | null): string {
-  if (!pickupPointName) return '📍';
-  
+  if (!pickupPointName) return "📍";
+
   const iconMap: Record<string, string> = {
-    'Main Campus': '🏫',
-    'City Center': '🏙️',
-    'Airport': '✈️',
-    'Bus Station': '🚌',
-    'Train Station': '🚆',
-    'Shopping Mall': '🛍️',
-    'Downtown': '🏢',
-    'Suburban Center': '🏘️',
-    'Industrial Area': '🏭',
-    'Residential Area': '🏠',
-    'University Campus': '🎓',
-    'Hospital': '🏥',
-    'Government Office': '🏛️',
+    "Main Campus": "🏫",
+    "City Center": "🏙️",
+    Airport: "✈️",
+    "Bus Station": "🚌",
+    "Train Station": "🚆",
+    "Shopping Mall": "🛍️",
+    Downtown: "🏢",
+    "Suburban Center": "🏘️",
+    "Industrial Area": "🏭",
+    "Residential Area": "🏠",
+    "University Campus": "🎓",
+    Hospital: "🏥",
+    "Government Office": "🏛️",
   };
-  
-  return iconMap[pickupPointName] || '📍';
+
+  return iconMap[pickupPointName] || "📍";
 }
 
 /**
@@ -333,25 +347,25 @@ export function getPickupPointDisplayWithIcon(pickupPoint: PickupPoint): string 
  * Get pickup point category (basic categorization)
  */
 export function getPickupPointCategory(pickupPointName: string | null): string {
-  if (!pickupPointName) return 'Other';
-  
+  if (!pickupPointName) return "Other";
+
   const categoryMap: Record<string, string> = {
-    'Main Campus': 'Educational',
-    'University Campus': 'Educational',
-    'City Center': 'Commercial',
-    'Shopping Mall': 'Commercial',
-    'Downtown': 'Commercial',
-    'Airport': 'Transportation',
-    'Bus Station': 'Transportation',
-    'Train Station': 'Transportation',
-    'Suburban Center': 'Residential',
-    'Residential Area': 'Residential',
-    'Industrial Area': 'Industrial',
-    'Hospital': 'Healthcare',
-    'Government Office': 'Government',
+    "Main Campus": "Educational",
+    "University Campus": "Educational",
+    "City Center": "Commercial",
+    "Shopping Mall": "Commercial",
+    Downtown: "Commercial",
+    Airport: "Transportation",
+    "Bus Station": "Transportation",
+    "Train Station": "Transportation",
+    "Suburban Center": "Residential",
+    "Residential Area": "Residential",
+    "Industrial Area": "Industrial",
+    Hospital: "Healthcare",
+    "Government Office": "Government",
   };
-  
-  return categoryMap[pickupPointName] || 'Other';
+
+  return categoryMap[pickupPointName] || "Other";
 }
 
 /**
@@ -359,15 +373,15 @@ export function getPickupPointCategory(pickupPointName: string | null): string {
  */
 export function getPickupPointCategoryColor(category: string): string {
   const colorMap: Record<string, string> = {
-    'Educational': 'text-blue-600',
-    'Commercial': 'text-green-600',
-    'Transportation': 'text-purple-600',
-    'Residential': 'text-orange-600',
-    'Industrial': 'text-gray-600',
-    'Healthcare': 'text-red-600',
-    'Government': 'text-indigo-600',
-    'Other': 'text-gray-500',
+    Educational: "text-blue-600",
+    Commercial: "text-green-600",
+    Transportation: "text-purple-600",
+    Residential: "text-orange-600",
+    Industrial: "text-gray-600",
+    Healthcare: "text-red-600",
+    Government: "text-indigo-600",
+    Other: "text-gray-500",
   };
-  
-  return colorMap[category] || 'text-gray-500';
-} 
+
+  return colorMap[category] || "text-gray-500";
+}

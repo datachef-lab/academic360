@@ -83,7 +83,7 @@ export default function DegreePage() {
     try {
       // Simulate upload progress
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
+        setUploadProgress((prev) => {
           if (prev >= 90) {
             clearInterval(progressInterval);
             return prev;
@@ -108,7 +108,7 @@ export default function DegreePage() {
         });
         setSelectedFile(null);
         if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+          fileInputRef.current.value = "";
         }
         await fetchDegrees();
       } else {
@@ -169,22 +169,20 @@ export default function DegreePage() {
       </div>
       <div className="flex justify-between pr-6">
         <div className="flex gap-2 mb-4">
-          <Input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
+          <Input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
             onChange={handleFileSelect}
             accept=".xlsx,.xls"
           />
           <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
             Choose File
           </Button>
-          {selectedFile && (
-            <span className="text-sm text-gray-600">{selectedFile.name}</span>
-          )}
-          <Button 
-            variant="default" 
-            onClick={handleUploadFile} 
+          {selectedFile && <span className="text-sm text-gray-600">{selectedFile.name}</span>}
+          <Button
+            variant="default"
+            onClick={handleUploadFile}
             disabled={!selectedFile || isUploading}
             className="relative"
           >

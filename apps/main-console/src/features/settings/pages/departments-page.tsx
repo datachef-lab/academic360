@@ -95,10 +95,14 @@ export default function DepartmentsPage() {
                       <div className="space-y-4">
                         <div className="flex items-center gap-4">
                           <Avatar className="h-16 w-16">
-                            <AvatarImage src={`https://ui-avatars.com/api/?name=${editData.name}`} />
+                            <AvatarImage
+                              src={`https://ui-avatars.com/api/?name=${editData.name}`}
+                            />
                             <AvatarFallback>{editData.name.charAt(0)}</AvatarFallback>
                           </Avatar>
-                          <div className="text-sm text-muted-foreground">{editData.description}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {editData.description}
+                          </div>
                         </div>
                         <div className="grid gap-4">
                           <div>

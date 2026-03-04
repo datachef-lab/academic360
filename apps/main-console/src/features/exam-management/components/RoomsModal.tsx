@@ -10,7 +10,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
 interface RoomsModalProps {
@@ -47,7 +54,9 @@ export function RoomsModal({
               <DoorOpen className="w-5 h-5 text-purple-500" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-semibold text-gray-900">Select Rooms</DialogTitle>
+              <DialogTitle className="text-lg font-semibold text-gray-900">
+                Select Rooms
+              </DialogTitle>
               <DialogDescription className="text-sm text-gray-600">
                 Choose rooms and optionally override capacity
               </DialogDescription>
@@ -58,14 +67,30 @@ export function RoomsModal({
           <Table>
             <TableHeader className="bg-purple-50 sticky top-0">
               <TableRow>
-                <TableHead className="w-16 text-xs font-semibold text-gray-600 uppercase">Select</TableHead>
-                <TableHead className="w-16 text-xs font-semibold text-gray-600 uppercase">Sr.</TableHead>
-                <TableHead className="text-xs font-semibold text-gray-600 uppercase">Floor</TableHead>
-                <TableHead className="text-xs font-semibold text-gray-600 uppercase">Room</TableHead>
-                <TableHead className="text-xs font-semibold text-gray-600 uppercase">Benches</TableHead>
-                <TableHead className="text-xs font-semibold text-gray-600 uppercase">Capacity</TableHead>
-                <TableHead className="text-xs font-semibold text-gray-600 uppercase">Default/Bench</TableHead>
-                <TableHead className="text-xs font-semibold text-gray-600 uppercase">Override</TableHead>
+                <TableHead className="w-16 text-xs font-semibold text-gray-600 uppercase">
+                  Select
+                </TableHead>
+                <TableHead className="w-16 text-xs font-semibold text-gray-600 uppercase">
+                  Sr.
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-gray-600 uppercase">
+                  Floor
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-gray-600 uppercase">
+                  Room
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-gray-600 uppercase">
+                  Benches
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-gray-600 uppercase">
+                  Capacity
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-gray-600 uppercase">
+                  Default/Bench
+                </TableHead>
+                <TableHead className="text-xs font-semibold text-gray-600 uppercase">
+                  Override
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -98,7 +123,10 @@ export function RoomsModal({
                     </TableCell>
                     <TableCell className="text-gray-900">{benches}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="bg-purple-100 text-purple-500 hover:bg-purple-100">
+                      <Badge
+                        variant="secondary"
+                        className="bg-purple-100 text-purple-500 hover:bg-purple-100"
+                      >
                         {capacity}
                       </Badge>
                     </TableCell>
@@ -120,10 +148,15 @@ export function RoomsModal({
         </div>
         <DialogFooter className="flex items-center justify-between p-5 border-t border-purple-200 bg-purple-50">
           <p className="text-sm text-gray-600">
-            <span className="font-medium text-gray-900">{tempSelectedRooms.length}</span> room(s) selected
+            <span className="font-medium text-gray-900">{tempSelectedRooms.length}</span> room(s)
+            selected
           </p>
           <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={onClose} className="border-purple-200 text-gray-900 hover:bg-purple-50">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="border-purple-200 text-gray-900 hover:bg-purple-50"
+            >
               Cancel
             </Button>
             <Button onClick={onApply} className="bg-purple-500 text-white hover:bg-purple-600">

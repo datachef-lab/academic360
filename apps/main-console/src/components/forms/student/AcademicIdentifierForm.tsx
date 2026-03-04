@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  CheckCircle2, 
-  User, 
-  Hash, 
-  GraduationCap
-} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CheckCircle2, User, Hash, GraduationCap } from "lucide-react";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
 
 interface AcademicIdentifierFormProps {
@@ -16,7 +17,10 @@ interface AcademicIdentifierFormProps {
   initialData?: Partial<AcademicIdentifier>;
 }
 
-export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: AcademicIdentifierFormProps) {
+export default function AcademicIdentifierForm({
+  onSubmit,
+  initialData = {},
+}: AcademicIdentifierFormProps) {
   const [formData, setFormData] = useState<AcademicIdentifier>({
     studentId: initialData.studentId || 0,
     framework: initialData.framework || null,
@@ -24,7 +28,7 @@ export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: A
     course: initialData.course || null,
     shift: null,
     // pr: initialData.degreeProgramme || null,
-    
+
     cuFormNumber: initialData.cuFormNumber || null,
     uid: initialData.uid || null,
     oldUid: initialData.oldUid || null,
@@ -274,4 +278,4 @@ export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: A
       </div>
     </div>
   );
-} 
+}

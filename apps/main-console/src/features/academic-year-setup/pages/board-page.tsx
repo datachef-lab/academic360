@@ -3,7 +3,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Download, Edit, GraduationCap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -13,7 +20,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { boardService, type BoardDto } from "@/services/board.service";
@@ -37,7 +50,10 @@ const BoardTableRow = React.memo(
     pageSize: number;
   }) => (
     <TableRow className="group">
-      <TableCell className="text-center" style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+      <TableCell
+        className="text-center"
+        style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+      >
         {(currentPage - 1) * pageSize + index + 1}.
       </TableCell>
       <TableCell
@@ -51,8 +67,13 @@ const BoardTableRow = React.memo(
       >
         {board.name ? <div className="text-sm leading-tight">{board.name}</div> : "-"}
       </TableCell>
-      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>{board.code ?? "-"}</TableCell>
-      <TableCell className="text-center" style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+      <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+        {board.code ?? "-"}
+      </TableCell>
+      <TableCell
+        className="text-center"
+        style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+      >
         {board.passingMarks ?? "-"}
       </TableCell>
       <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
@@ -267,7 +288,10 @@ export default function BoardPage() {
   React.useEffect(() => {
     (async () => {
       try {
-        const [degrees, addresses] = await Promise.all([degreeService.getAll(), addressService.getAll()]);
+        const [degrees, addresses] = await Promise.all([
+          degreeService.getAll(),
+          addressService.getAll(),
+        ]);
         // Map Degree[] to DegreeDto[] by converting disabled to isActive
         const degreeDtos: DegreeDto[] = degrees.map((degree) => ({
           id: degree.id!,
@@ -299,7 +323,12 @@ export default function BoardPage() {
 
         if (!isMounted) return;
 
-        const result = await boardService.getAllBoards(currentPage, pageSize, searchText, selectedDegreeId);
+        const result = await boardService.getAllBoards(
+          currentPage,
+          pageSize,
+          searchText,
+          selectedDegreeId,
+        );
 
         if (!isMounted) return; // Prevent state updates if component unmounted
 
@@ -426,12 +455,17 @@ export default function BoardPage() {
               <GraduationCap className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400" />
               Boards
             </CardTitle>
-            <div className="text-sm sm:text-base text-muted-foreground mt-1">Manage board configuration.</div>
+            <div className="text-sm sm:text-base text-muted-foreground mt-1">
+              Manage board configuration.
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
+                <Button
+                  onClick={handleAddNew}
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+                >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Add Board</span>
                   <span className="sm:hidden">Add</span>
@@ -439,7 +473,9 @@ export default function BoardPage() {
               </AlertDialogTrigger>
               <AlertDialogContent className="w-[95vw] sm:w-full max-w-2xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedBoard ? "Edit Board" : "Add New Board"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedBoard ? "Edit Board" : "Add New Board"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <BoardForm
                   degreeOptions={degreeOptions}
@@ -451,7 +487,11 @@ export default function BoardPage() {
                 />
               </AlertDialogContent>
             </AlertDialog>
-            <Button variant="outline" className="flex items-center gap-2 flex-shrink-0" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 flex-shrink-0"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Download</span>
             </Button>
@@ -468,7 +508,9 @@ export default function BoardPage() {
               />
               <Select
                 value={selectedDegreeId?.toString() || "all"}
-                onValueChange={(value) => setSelectedDegreeId(value === "all" ? undefined : parseInt(value))}
+                onValueChange={(value) =>
+                  setSelectedDegreeId(value === "all" ? undefined : parseInt(value))
+                }
               >
                 <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filter by Degree" />
@@ -655,8 +697,8 @@ export default function BoardPage() {
             <div className="mt-4 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
               <div className="text-xs sm:text-sm text-gray-600">
                 <span className="hidden sm:inline">
-                  Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of{" "}
-                  {totalItems} results
+                  Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                  {Math.min(currentPage * pageSize, totalItems)} of {totalItems} results
                 </span>
                 <span className="sm:hidden">
                   Page {currentPage} of {Math.ceil(totalItems / pageSize)} ({totalItems} total)
@@ -675,7 +717,9 @@ export default function BoardPage() {
                 </Button>
                 <div className="flex items-center gap-1 overflow-x-auto">
                   {Array.from({ length: Math.min(5, Math.ceil(totalItems / pageSize)) }, (_, i) => {
-                    const pageNum = Math.max(1, Math.min(Math.ceil(totalItems / pageSize) - 4, currentPage - 2)) + i;
+                    const pageNum =
+                      Math.max(1, Math.min(Math.ceil(totalItems / pageSize) - 4, currentPage - 2)) +
+                      i;
                     if (pageNum > Math.ceil(totalItems / pageSize)) return null;
                     return (
                       <Button
@@ -693,7 +737,9 @@ export default function BoardPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage((prev) => Math.min(Math.ceil(totalItems / pageSize), prev + 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(Math.ceil(totalItems / pageSize), prev + 1))
+                  }
                   disabled={currentPage === Math.ceil(totalItems / pageSize)}
                   className="flex-shrink-0"
                 >

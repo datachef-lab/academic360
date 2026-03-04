@@ -21,7 +21,17 @@ import {
   AttendanceLineChart,
   EventParticipationStackedBar,
 } from "../components/charts-demo";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
 import { FaRupeeSign } from "react-icons/fa";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 // import { ChartBarStacked } from './ChartBarStacked';
@@ -78,7 +88,11 @@ function StatCard({
   );
 }
 
-function QuickActions({ actions }: { actions: { label: string; icon: React.ReactNode; onClick?: () => void }[] }) {
+function QuickActions({
+  actions,
+}: {
+  actions: { label: string; icon: React.ReactNode; onClick?: () => void }[];
+}) {
   return (
     <Card className="p-4">
       <CardTitle className="mb-2 text-base font-semibold flex items-center gap-2">
@@ -597,7 +611,14 @@ function StudentDonutChart() {
         >
           0
         </text>
-        <text x="50%" y="65%" textAnchor="middle" dominantBaseline="middle" fontSize="14" fill="#888">
+        <text
+          x="50%"
+          y="65%"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize="14"
+          fill="#888"
+        >
           Active
         </text>
       </PieChart>
@@ -646,7 +667,10 @@ function AttendanceYearBarChart() {
         <Tooltip />
         <Bar dataKey="attendance">
           {attendanceYearData.map((_, idx) => (
-            <Cell key={`cell-${idx}`} fill={attendanceBarColors[idx % attendanceBarColors.length]} />
+            <Cell
+              key={`cell-${idx}`}
+              fill={attendanceBarColors[idx % attendanceBarColors.length]}
+            />
           ))}
         </Bar>
       </BarChart>

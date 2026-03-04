@@ -1,5 +1,15 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { BookOpen, Users, Award, Settings, BarChart3, FileText, Shield, Database, Star } from "lucide-react";
+import {
+  BookOpen,
+  Users,
+  Award,
+  Settings,
+  BarChart3,
+  FileText,
+  Shield,
+  Database,
+  Star,
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { AcademicYearSelector } from "@/components/academic-year";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
@@ -94,7 +104,9 @@ export default function AcademicYearSetupPage() {
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Academic Year Setup</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                Academic Year Setup
+              </h1>
               <p className="text-sm sm:text-base text-gray-600">
                 Configure and manage your academic year settings, courses, and admission processes
               </p>
@@ -135,7 +147,9 @@ export default function AcademicYearSetupPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">{stat.title}</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
+                      {stat.title}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -147,7 +161,9 @@ export default function AcademicYearSetupPage() {
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center gap-2 mb-4 sm:mb-6">
             <Settings className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Academic Setup Modules</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              Academic Setup Modules
+            </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {featureCards.map((card, index) => (
@@ -160,7 +176,9 @@ export default function AcademicYearSetupPage() {
                   {/* Header with Icon and Status */}
                   <div className="p-4 sm:p-6 pb-3 sm:pb-4">
                     <div className="flex items-start justify-between mb-3 sm:mb-4">
-                      <div className={`p-2 sm:p-3 rounded-lg ${card.color.replace("50", "100")} shadow-sm`}>
+                      <div
+                        className={`p-2 sm:p-3 rounded-lg ${card.color.replace("50", "100")} shadow-sm`}
+                      >
                         <card.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.iconColor}`} />
                       </div>
                       <span
@@ -182,7 +200,9 @@ export default function AcademicYearSetupPage() {
                       {card.title}
                     </CardTitle>
 
-                    <p className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">{card.items}</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">
+                      {card.items}
+                    </p>
                   </div>
 
                   {/* Illustration Section */}

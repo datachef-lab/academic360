@@ -13,7 +13,8 @@ import {
 export const feeGroupPromotionMappingKeys = {
   all: ["fee-group-promotion-mappings", "v2"] as const,
   lists: () => [...feeGroupPromotionMappingKeys.all, "list"] as const,
-  list: (filters?: Record<string, unknown>) => [...feeGroupPromotionMappingKeys.lists(), filters] as const,
+  list: (filters?: Record<string, unknown>) =>
+    [...feeGroupPromotionMappingKeys.lists(), filters] as const,
   details: () => [...feeGroupPromotionMappingKeys.all, "detail"] as const,
   detail: (id: number) => [...feeGroupPromotionMappingKeys.details(), id] as const,
 };
@@ -68,7 +69,13 @@ export const useUpdateFeeGroupPromotionMapping = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<NewFeeGroupPromotionMapping> }) => {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Partial<NewFeeGroupPromotionMapping>;
+    }) => {
       const response = await updateFeeGroupPromotionMapping(id, data);
       return response.payload;
     },

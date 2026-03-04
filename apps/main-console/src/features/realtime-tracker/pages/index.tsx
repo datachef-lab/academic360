@@ -68,7 +68,8 @@ export default function RealTimeTrackerPage() {
     if (Array.isArray(sessions) && sessions.length > 0 && !filters.sessionId) {
       // Find current session or first session
       const currentSession =
-        (sessions as Session[]).find((s: Session) => s.isCurrentSession) || (sessions as Session[])[0];
+        (sessions as Session[]).find((s: Session) => s.isCurrentSession) ||
+        (sessions as Session[])[0];
       if (currentSession && currentSession.id) {
         newFilters.sessionId = currentSession.id;
       }
@@ -85,10 +86,16 @@ export default function RealTimeTrackerPage() {
 
   // Set session when academic year changes
   useEffect(() => {
-    if (currentAcademicYear?.id && Array.isArray(sessions) && sessions.length > 0 && !filters.sessionId) {
+    if (
+      currentAcademicYear?.id &&
+      Array.isArray(sessions) &&
+      sessions.length > 0 &&
+      !filters.sessionId
+    ) {
       // Find current session or first session for this academic year
       const currentSession =
-        (sessions as Session[]).find((s: Session) => s.isCurrentSession) || (sessions as Session[])[0];
+        (sessions as Session[]).find((s: Session) => s.isCurrentSession) ||
+        (sessions as Session[])[0];
       if (currentSession && currentSession.id) {
         setFilters((prev) => ({
           ...prev,
@@ -184,8 +191,12 @@ export default function RealTimeTrackerPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <Activity className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-600 mb-2">Authentication Required</h2>
-            <p className="text-sm sm:text-base text-gray-500">Please log in to access the real-time tracker.</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-600 mb-2">
+              Authentication Required
+            </h2>
+            <p className="text-sm sm:text-base text-gray-500">
+              Please log in to access the real-time tracker.
+            </p>
           </div>
         </div>
       </div>
@@ -224,7 +235,9 @@ export default function RealTimeTrackerPage() {
                       <span className="text-xs font-medium text-blue-800">Admin/Staff Online</span>
                     </div>
                     <span className="text-xs sm:text-sm font-bold text-blue-800">
-                      {isConnected && (user?.type === "ADMIN" || user?.type === "STAFF") ? "1" : "0"}
+                      {isConnected && (user?.type === "ADMIN" || user?.type === "STAFF")
+                        ? "1"
+                        : "0"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
@@ -272,8 +285,12 @@ export default function RealTimeTrackerPage() {
             <div className="flex items-center justify-center min-h-[400px] p-4">
               <div className="text-center">
                 <Activity className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-base sm:text-lg font-semibold text-gray-600 mb-2">No Data Available</h3>
-                <p className="text-xs sm:text-sm text-gray-500">Real-time data will appear here once available</p>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-600 mb-2">
+                  No Data Available
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Real-time data will appear here once available
+                </p>
               </div>
             </div>
           )}

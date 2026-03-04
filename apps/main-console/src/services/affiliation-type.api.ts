@@ -33,7 +33,9 @@ export const getAffiliationTypeById = async (id: string): Promise<AffiliationTyp
   return response.json();
 };
 
-export const createAffiliationType = async (data: AffiliationTypeData): Promise<AffiliationType> => {
+export const createAffiliationType = async (
+  data: AffiliationTypeData,
+): Promise<AffiliationType> => {
   const response = await fetch(API_URL, {
     method: "POST",
     headers: {
@@ -47,7 +49,10 @@ export const createAffiliationType = async (data: AffiliationTypeData): Promise<
   return response.json();
 };
 
-export const updateAffiliationType = async (id: string, data: Partial<AffiliationTypeData>): Promise<AffiliationType> => {
+export const updateAffiliationType = async (
+  id: string,
+  data: Partial<AffiliationTypeData>,
+): Promise<AffiliationType> => {
   const response = await fetch(`${API_URL}/${id}`, {
     method: "PATCH",
     headers: {

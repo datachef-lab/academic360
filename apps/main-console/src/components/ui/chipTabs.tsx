@@ -32,13 +32,19 @@ export const ChipTabs = ({
 
   // Ensure selected tab exists in tabs
   if (!tabs.includes(selected)) {
-    console.warn(`ChipTabs: selected tab "${selected}" not found in tabs array. Defaulting to first tab.`);
+    console.warn(
+      `ChipTabs: selected tab "${selected}" not found in tabs array. Defaulting to first tab.`,
+    );
     setSelected(tabs[0] ?? "");
     return null;
   }
 
   return (
-    <div role="tablist" aria-label="Navigation tabs" className={`flex flex-wrap items-center gap-2 ${className}`}>
+    <div
+      role="tablist"
+      aria-label="Navigation tabs"
+      className={`flex flex-wrap items-center gap-2 ${className}`}
+    >
       {tabs.map((tab) => (
         <Chip
           key={tab}

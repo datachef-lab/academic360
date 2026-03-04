@@ -16,14 +16,18 @@ export async function getAllSubjects(): Promise<ApiResponse<SubjectMetadata[]>> 
 }
 
 // Get subjects by filters
-export async function getSubjectMetadataByFilters(filters: FiltersProps): Promise<ApiResponse<SubjectMetadata[]>> {
+export async function getSubjectMetadataByFilters(
+  filters: FiltersProps,
+): Promise<ApiResponse<SubjectMetadata[]>> {
   const response = await axiosInstance.post(`/api/subject-metadatas/filters`, filters);
   console.log(response.data);
   return response.data;
 }
 
 // Add a new subject
-export async function addSubject(newSubject: SubjectMetadata): Promise<ApiResponse<SubjectMetadata>> {
+export async function addSubject(
+  newSubject: SubjectMetadata,
+): Promise<ApiResponse<SubjectMetadata>> {
   const response = await axiosInstance.post(`/api/subject-metadatas`, newSubject);
   return response.data;
 }

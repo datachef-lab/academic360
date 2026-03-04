@@ -1,12 +1,8 @@
-
 import { motion } from "framer-motion";
 import AnimatedBackground from "./AnimatedBackground";
 import SocialLinks from "./SocialLinks";
 
-
 const Index = () => {
-
-
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -40,7 +36,7 @@ const Index = () => {
   return (
     <div className=" bg-gradient-to-br from-purple-50 to-white">
       <AnimatedBackground />
-      
+
       <div className="min-h-screen relative flex flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8 overflow-hidden">
         <motion.div
           variants={containerVariants}
@@ -81,19 +77,17 @@ const Index = () => {
                 </svg>
               </div>
             </motion.div>
-            
-            <motion.h1 
-              
-              className="text-4xl  sm:text-6xl md:text-7xl font-display   py-6 font-bold text-purple-900 tracking-tight  bg-clip-text text-transparent bg-gradient-to-r from-purple-700 via-purple-500 to-purple-800"
-            >
+
+            <motion.h1 className="text-4xl  sm:text-6xl md:text-7xl font-display   py-6 font-bold text-purple-900 tracking-tight  bg-clip-text text-transparent bg-gradient-to-r from-purple-700 via-purple-500 to-purple-800">
               Coming Soon
             </motion.h1>
-            
-            <motion.p 
+
+            <motion.p
               variants={itemVariants}
               className="max-w-2xl mx-auto  text-lg sm:text-xl text-purple-700 opacity-90 mb-10"
             >
-              We are working hard to bring you something amazing. Stay tuned for exciting new features and experiences.
+              We are working hard to bring you something amazing. Stay tuned for exciting new
+              features and experiences.
             </motion.p>
 
             {/* Interactive Elements Section - Removed the subscription form */}
@@ -107,37 +101,41 @@ const Index = () => {
                 description: "Experience our sleek, modern interface that's built for ease of use.",
                 gradient: "from-purple-400 to-purple-600",
                 delay: 0.1,
-                rotation: -3
+                rotation: -3,
               },
               {
                 title: "Smart Features",
                 description: "Powerful tools designed to enhance your productivity and workflow.",
                 gradient: "from-indigo-500 to-indigo-700",
                 delay: 0.1,
-                rotation: 0
+                rotation: 0,
               },
               {
                 title: "Seamless Experience",
                 description: "Everything works together harmoniously across all your devices.",
                 gradient: "from-violet-500 to-violet-700",
                 delay: 0.1,
-                rotation: 3
-              }
+                rotation: 3,
+              },
             ].map((feature) => (
               <motion.div
                 key={feature.title}
                 initial={{ opacity: 0, y: 20, rotate: feature.rotation }}
                 animate={{ opacity: 1, y: 0, rotate: feature.rotation }}
                 transition={{ delay: 1 + feature.delay, duration: 0.3 }}
-                whileHover={{ 
-                  scale: 1.03, 
+                whileHover={{
+                  scale: 1.03,
                   rotate: 0,
-                  transition: { duration: 0.2 } 
+                  transition: { duration: 0.2 },
                 }}
                 className="bg-white/30 backdrop-blur-md rounded-2xl p-6 shadow-xl border   flex flex-col h-full"
               >
-                <div className={`h-2 w-16 mb-4 rounded-full bg-gradient-to-r ${feature.gradient}`}></div>
-                <h3 className="text-xl font-display font-bold text-purple-900 mb-3">{feature.title}</h3>
+                <div
+                  className={`h-2 w-16 mb-4 rounded-full bg-gradient-to-r ${feature.gradient}`}
+                ></div>
+                <h3 className="text-xl font-display font-bold text-purple-900 mb-3">
+                  {feature.title}
+                </h3>
                 <p className="text-purple-700/90 text-sm">{feature.description}</p>
               </motion.div>
             ))}
@@ -149,7 +147,7 @@ const Index = () => {
           </motion.div>
 
           {/* Footer */}
-          <motion.div 
+          <motion.div
             variants={itemVariants}
             className="text-center text-sm text-purple-600/60 mt-4"
           >
@@ -158,21 +156,24 @@ const Index = () => {
         </motion.div>
 
         {/* Animated Elements */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.5, duration: 1 }}
           className="absolute top-5 left-5 sm:top-8 sm:left-8 w-20 h-20 sm:w-32 sm:h-32 bg-gradient-to-r from-purple-400/30 to-indigo-400/30 rounded-full blur-xl"
         />
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.8, duration: 1 }}
           className="absolute bottom-5 right-5 sm:bottom-8 sm:right-8 w-24 h-24 sm:w-36 sm:h-36 bg-gradient-to-r from-violet-400/30 to-purple-400/30 rounded-full blur-xl"
         />
-        
+
         <div className="absolute top-16 -left-24 w-64 h-64 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float hidden md:block"></div>
-        <div className="absolute -bottom-8 -right-20 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float hidden md:block" style={{ animationDelay: "-5s" }}></div>
+        <div
+          className="absolute -bottom-8 -right-20 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float hidden md:block"
+          style={{ animationDelay: "-5s" }}
+        ></div>
       </div>
     </div>
   );

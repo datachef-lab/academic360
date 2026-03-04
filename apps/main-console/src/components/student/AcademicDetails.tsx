@@ -1,7 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import type { AdmissionAcademicInfoDto, StudentAcademicSubjectsDto } from "@repo/db/dtos/admissions";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type {
+  AdmissionAcademicInfoDto,
+  StudentAcademicSubjectsDto,
+} from "@repo/db/dtos/admissions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -50,7 +59,10 @@ function updateAddress(
 ): AdmissionAcademicInfoDto {
   const current = (prev.lastSchoolAddress ?? {}) as LastSchoolAddressLoose;
   const nextAddr = updater(current);
-  return { ...(prev as AdmissionAcademicInfoDto), lastSchoolAddress: nextAddr } as AdmissionAcademicInfoDto;
+  return {
+    ...(prev as AdmissionAcademicInfoDto),
+    lastSchoolAddress: nextAddr,
+  } as AdmissionAcademicInfoDto;
 }
 
 function Field({
@@ -113,7 +125,11 @@ function Field({
   );
 }
 
-export default function AcademicDetails({ studentAcademicDetails, studentId, userId }: AcademicDetailsProps) {
+export default function AcademicDetails({
+  studentAcademicDetails,
+  studentId,
+  userId,
+}: AcademicDetailsProps) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<AdmissionAcademicInfoDto | null>(studentAcademicDetails ?? null);
   const subjects: StudentAcademicSubjectsDto[] = useMemo(() => {
@@ -339,10 +355,16 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
   };
 
   const handleInputChange = (key: string, value: string | number | boolean) => {
-    setForm((prev) => (prev ? ({ ...(prev as object), [key]: value } as unknown as AdmissionAcademicInfoDto) : prev));
+    setForm((prev) =>
+      prev ? ({ ...(prev as object), [key]: value } as unknown as AdmissionAcademicInfoDto) : prev,
+    );
   };
 
-  const handleSubjectChangeById = (subjectId: number | undefined, field: string, value: string | number | boolean) => {
+  const handleSubjectChangeById = (
+    subjectId: number | undefined,
+    field: string,
+    value: string | number | boolean,
+  ) => {
     setForm((prev) => {
       if (!prev) return prev;
       const nextSubjects = [...(prev.subjects ?? [])];
@@ -353,12 +375,17 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
       const current = { ...(nextSubjects[targetIndex] ?? {}) } as Record<string, unknown>;
       if (field === "boardSubjectId") {
         const currBs =
-          (current as unknown as { boardSubject?: { id?: number; name?: string | null } }).boardSubject ?? {};
-        (current as unknown as { boardSubject: { id?: number; name?: string | null } }).boardSubject = {
+          (current as unknown as { boardSubject?: { id?: number; name?: string | null } })
+            .boardSubject ?? {};
+        (
+          current as unknown as { boardSubject: { id?: number; name?: string | null } }
+        ).boardSubject = {
           ...currBs,
           id: Number(value),
         };
-        (current as unknown as { boardSubjectId?: number }).boardSubjectId = Number(value) as number;
+        (current as unknown as { boardSubjectId?: number }).boardSubjectId = Number(
+          value,
+        ) as number;
       } else if (field === "gradeName") {
         (current as unknown as { grade: { name?: string } }).grade = { name: String(value) };
       } else {
@@ -368,7 +395,9 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
       // Auto-calc total marks when theory or practical marks change
       if (field === "theoryMarks" || field === "practicalMarks") {
         const theory = Number((current as unknown as { theoryMarks?: number }).theoryMarks ?? 0);
-        const practical = Number((current as unknown as { practicalMarks?: number }).practicalMarks ?? 0);
+        const practical = Number(
+          (current as unknown as { practicalMarks?: number }).practicalMarks ?? 0,
+        );
         (current as unknown as { totalMarks?: number }).totalMarks = theory + practical;
       }
 
@@ -380,19 +409,23 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
       );
       const bs = boardSubjects.find((b) => Number(b.id) === bsId);
       const theory = Number((current as unknown as { theoryMarks?: number }).theoryMarks ?? 0);
-      const practical = Number((current as unknown as { practicalMarks?: number }).practicalMarks ?? 0);
+      const practical = Number(
+        (current as unknown as { practicalMarks?: number }).practicalMarks ?? 0,
+      );
       const total = Number((current as unknown as { totalMarks?: number }).totalMarks ?? 0);
 
       // If the subject has practical passing marks, student must meet both components;
       // else fall back to total >= (theory pass + practical pass)
       const hasTheoryRule = Number.isFinite(Number(bs?.passingMarksTheory ?? NaN));
       const hasPracRule = Number.isFinite(Number(bs?.passingMarksPractical ?? NaN));
-      const requiredTotal = Number(bs?.passingMarksTheory ?? 0) + Number(bs?.passingMarksPractical ?? 0);
+      const requiredTotal =
+        Number(bs?.passingMarksTheory ?? 0) + Number(bs?.passingMarksPractical ?? 0);
 
       if (hasTheoryRule || hasPracRule) {
         const pass =
           hasTheoryRule && hasPracRule
-            ? theory >= Number(bs?.passingMarksTheory ?? 0) && practical >= Number(bs?.passingMarksPractical ?? 0)
+            ? theory >= Number(bs?.passingMarksTheory ?? 0) &&
+              practical >= Number(bs?.passingMarksPractical ?? 0)
             : total >= requiredTotal;
         (current as unknown as { resultStatus?: string }).resultStatus = pass ? "PASS" : "FAIL";
       }
@@ -455,7 +488,9 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
     <Card className="max-w-5xl mx-auto my-6 shadow border bg-white py-3">
       <CardHeader className="relative pb-0">
         <div className="absolute left-6 top-0 h-1 w-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full" />
-        <CardTitle className="pl-6 pt-3 text-xl font-semibold text-gray-800">Academic Details</CardTitle>
+        <CardTitle className="pl-6 pt-3 text-xl font-semibold text-gray-800">
+          Academic Details
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 [&_label]:text-xs [&_label]:text-gray-600">
         <div className="flex justify-end">
@@ -472,8 +507,10 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                 applicationFormId: null, // Student reference academic info has null applicationFormId
                 studentId: studentId || userId, // Set studentId for student reference
                 boardId: (f.board?.id ??
-                  (original as unknown as { boardId?: number; boardUniversityId?: number }).boardId ??
-                  (original as unknown as { boardUniversityId?: number }).boardUniversityId) as number,
+                  (original as unknown as { boardId?: number; boardUniversityId?: number })
+                    .boardId ??
+                  (original as unknown as { boardUniversityId?: number })
+                    .boardUniversityId) as number,
                 boardResultStatus: (
                   ((f as unknown as { boardResultStatus?: string }).boardResultStatus ??
                     original.boardResultStatus ??
@@ -482,8 +519,8 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                 languageMediumId: f.languageMedium?.id ?? original.languageMediumId!,
                 yearOfPassing: ((f as unknown as { yearOfPassing?: number }).yearOfPassing ??
                   original.yearOfPassing) as number,
-                isRegisteredForUGInCU: ((f as unknown as { isRegisteredForUGInCU?: boolean }).isRegisteredForUGInCU ??
-                  original.isRegisteredForUGInCU) as boolean,
+                isRegisteredForUGInCU: ((f as unknown as { isRegisteredForUGInCU?: boolean })
+                  .isRegisteredForUGInCU ?? original.isRegisteredForUGInCU) as boolean,
                 cuRegistrationNumber:
                   (f as unknown as { cuRegistrationNumber?: string }).cuRegistrationNumber ??
                   original.cuRegistrationNumber ??
@@ -495,13 +532,18 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                       previouslyRegisteredCourseId?: number;
                     }
                   ).previouslyRegisteredProgramCourseId ??
-                  (original as unknown as { previouslyRegisteredCourseId?: number }).previouslyRegisteredCourseId) as
+                  (original as unknown as { previouslyRegisteredCourseId?: number })
+                    .previouslyRegisteredCourseId) as number | null,
+                previousInstituteId: (f.previousInstitute?.id ??
+                  (
+                    original as unknown as {
+                      previousInstituteId?: number;
+                      previousCollegeId?: number;
+                    }
+                  ).previousInstituteId ??
+                  (original as unknown as { previousCollegeId?: number }).previousCollegeId) as
                   | number
                   | null,
-                previousInstituteId: (f.previousInstitute?.id ??
-                  (original as unknown as { previousInstituteId?: number; previousCollegeId?: number })
-                    .previousInstituteId ??
-                  (original as unknown as { previousCollegeId?: number }).previousCollegeId) as number | null,
                 otherPreviouslyRegisteredProgramCourse: ((
                   f as unknown as {
                     otherPreviouslyRegisteredProgramCourse?: string;
@@ -517,20 +559,37 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                   (original as unknown as { otherPreviouslyRegisteredCourse?: string })
                     .otherPreviouslyRegisteredCourse ??
                   null) as string | null,
-                otherPreviousInstitute: ((f as unknown as { otherPreviousInstitute?: string; otherCollege?: string })
-                  .otherPreviousInstitute ??
-                  (original as unknown as { otherPreviousInstitute?: string; otherCollege?: string })
-                    .otherPreviousInstitute ??
+                otherPreviousInstitute: ((
+                  f as unknown as { otherPreviousInstitute?: string; otherCollege?: string }
+                ).otherPreviousInstitute ??
+                  (
+                    original as unknown as {
+                      otherPreviousInstitute?: string;
+                      otherCollege?: string;
+                    }
+                  ).otherPreviousInstitute ??
                   (original as unknown as { otherCollege?: string }).otherCollege ??
                   null) as string | null,
-                rollNumber: (f as unknown as { rollNumber?: string }).rollNumber ?? original.rollNumber ?? null,
+                rollNumber:
+                  (f as unknown as { rollNumber?: string }).rollNumber ??
+                  original.rollNumber ??
+                  null,
                 registrationNumber:
                   (f as unknown as { registrationNumber?: string }).registrationNumber ??
                   (original as unknown as { registrationNumber?: string }).registrationNumber ??
                   null,
-                schoolNumber: (f as unknown as { schoolNumber?: string }).schoolNumber ?? original.schoolNumber ?? null,
-                centerNumber: (f as unknown as { centerNumber?: string }).centerNumber ?? original.centerNumber ?? null,
-                admitCardId: (f as unknown as { admitCardId?: string }).admitCardId ?? original.admitCardId ?? null,
+                schoolNumber:
+                  (f as unknown as { schoolNumber?: string }).schoolNumber ??
+                  original.schoolNumber ??
+                  null,
+                centerNumber:
+                  (f as unknown as { centerNumber?: string }).centerNumber ??
+                  original.centerNumber ??
+                  null,
+                admitCardId:
+                  (f as unknown as { admitCardId?: string }).admitCardId ??
+                  original.admitCardId ??
+                  null,
                 lastSchoolName:
                   (f as unknown as { lastSchoolName?: string }).lastSchoolName ??
                   (original as unknown as { lastSchoolName?: string }).lastSchoolName ??
@@ -559,10 +618,11 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                   (original as unknown as { specializationId?: number }).specializationId ??
                   null,
                 // Add missing fields
-                percentageOfMarks: ((f as unknown as { percentageOfMarks?: number }).percentageOfMarks ??
-                  original.percentageOfMarks) as number | null,
+                percentageOfMarks: ((f as unknown as { percentageOfMarks?: number })
+                  .percentageOfMarks ?? original.percentageOfMarks) as number | null,
                 lastSchoolAddress: f.lastSchoolAddress ?? original.lastSchoolAddress ?? null,
-                studiedUpToClass: ((f as unknown as { studiedUpToClass?: number }).studiedUpToClass ??
+                studiedUpToClass: ((f as unknown as { studiedUpToClass?: number })
+                  .studiedUpToClass ??
                   (original as unknown as { studiedUpToClass?: number }).studiedUpToClass ??
                   null) as number | null,
                 bestOfFour: ((f as unknown as { bestOfFour?: number }).bestOfFour ??
@@ -575,8 +635,11 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
 
               if (Array.isArray((form as AdmissionAcademicInfoDto).subjects)) {
                 payload.subjects = (form as AdmissionAcademicInfoDto).subjects!.map((s) => {
-                  const subject = s as unknown as StudentAcademicSubjectsDto & { boardSubjectId?: number };
-                  const bsId = subject.boardSubjectId ?? (subject.boardSubject?.id as number | undefined);
+                  const subject = s as unknown as StudentAcademicSubjectsDto & {
+                    boardSubjectId?: number;
+                  };
+                  const bsId =
+                    subject.boardSubjectId ?? (subject.boardSubject?.id as number | undefined);
                   const normalized: StudentAcademicSubjectsDto = {
                     ...(subject as unknown as StudentAcademicSubjectsDto),
                   };
@@ -586,13 +649,18 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
               }
 
               try {
-                const res = await updateAcademicInfo(Number(payload.id), payload as AdmissionAcademicInfoDto);
+                const res = await updateAcademicInfo(
+                  Number(payload.id),
+                  payload as AdmissionAcademicInfoDto,
+                );
                 // Update local form state with server response (prevents manual refresh)
                 const updated = (res as unknown as { payload?: AdmissionAcademicInfoDto })?.payload;
                 if (updated) setForm(updated);
                 // Revalidate relevant caches so StudentPage and other tabs reflect latest
                 queryClient.invalidateQueries({ queryKey: ["user-profile", userId || studentId] });
-                queryClient.invalidateQueries({ queryKey: ["student", String(studentId || userId || "")] });
+                queryClient.invalidateQueries({
+                  queryKey: ["student", String(studentId || userId || "")],
+                });
                 toast({
                   title: "Academic details updated",
                   description: "Academic info and subjects saved successfully.",
@@ -618,7 +686,9 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
               }}
             >
               <SelectTrigger className="h-10 text-sm">
-                <SelectValue placeholder={(info?.board as { name?: string } | null)?.name || "Select board"} />
+                <SelectValue
+                  placeholder={(info?.board as { name?: string } | null)?.name || "Select board"}
+                />
               </SelectTrigger>
               <SelectContent>
                 {boards.map((b) => (
@@ -667,7 +737,10 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Registration Number</Label>
             <Input
-              value={(info as unknown as { registrationNumber?: string } | null)?.registrationNumber ?? ""}
+              value={
+                (info as unknown as { registrationNumber?: string } | null)?.registrationNumber ??
+                ""
+              }
               onChange={(e) => handleInputChange("registrationNumber", e.target.value)}
               className="h-10"
             />
@@ -692,7 +765,9 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Studied Up To Class</Label>
             <Input
-              value={(info as unknown as { studiedUpToClass?: number } | null)?.studiedUpToClass ?? ""}
+              value={
+                (info as unknown as { studiedUpToClass?: number } | null)?.studiedUpToClass ?? ""
+              }
               type="number"
               onChange={(e) => handleInputChange("studiedUpToClass", Number(e.target.value))}
               className="h-10"
@@ -721,7 +796,8 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
             <Label className="text-xs text-gray-600">Is Registered For UG in CU</Label>
             <Select
               value={
-                ((info as unknown as { isRegisteredForUGInCU?: boolean } | null)?.isRegisteredForUGInCU ?? false)
+                ((info as unknown as { isRegisteredForUGInCU?: boolean } | null)
+                  ?.isRegisteredForUGInCU ?? false)
                   ? "yes"
                   : "no"
               }
@@ -757,7 +833,8 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
               <SelectTrigger className="h-10 text-sm">
                 <SelectValue
                   placeholder={
-                    (info as unknown as { specializationName?: string })?.specializationName ?? "Select specialization"
+                    (info as unknown as { specializationName?: string })?.specializationName ??
+                    "Select specialization"
                   }
                 />
               </SelectTrigger>
@@ -808,7 +885,8 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
               <SelectTrigger className="h-10 text-sm">
                 <SelectValue
                   placeholder={
-                    (info as unknown as { languageMediumName?: string })?.languageMediumName ?? "Select language medium"
+                    (info as unknown as { languageMediumName?: string })?.languageMediumName ??
+                    "Select language medium"
                   }
                 />
               </SelectTrigger>
@@ -849,7 +927,11 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
               )}
               onValueChange={(val) => {
                 const selected = programCourses.find((p) => String(p.id) === val);
-                handleSelectChange("previouslyRegisteredProgramCourse", Number(val), selected?.name);
+                handleSelectChange(
+                  "previouslyRegisteredProgramCourse",
+                  Number(val),
+                  selected?.name,
+                );
               }}
             >
               <SelectTrigger className="h-10 text-sm">
@@ -885,8 +967,8 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
               <SelectTrigger className="h-10 text-sm">
                 <SelectValue
                   placeholder={
-                    (info as unknown as { previousInstituteName?: string } | null)?.previousInstituteName ??
-                    "Select institute"
+                    (info as unknown as { previousInstituteName?: string } | null)
+                      ?.previousInstituteName ?? "Select institute"
                   }
                 />
               </SelectTrigger>
@@ -915,7 +997,10 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                 onChange={(e) =>
                   setForm((prev) =>
                     prev
-                      ? updateAddress(prev as FormWithAddress, (a) => ({ ...a, addressLine: e.target.value }))
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          addressLine: e.target.value,
+                        }))
                       : prev,
                   )
                 }
@@ -928,7 +1013,12 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                 value={(info as FormWithAddress | null)?.lastSchoolAddress?.landmark ?? ""}
                 onChange={(e) =>
                   setForm((prev) =>
-                    prev ? updateAddress(prev as FormWithAddress, (a) => ({ ...a, landmark: e.target.value })) : prev,
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          landmark: e.target.value,
+                        }))
+                      : prev,
                   )
                 }
                 className="h-10"
@@ -961,13 +1051,18 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
             <div className="flex flex-col gap-1">
               <Label className="text-xs text-gray-600">Country</Label>
               <Select
-                value={String((info as FormWithAddress | null)?.lastSchoolAddress?.country?.id ?? "")}
+                value={String(
+                  (info as FormWithAddress | null)?.lastSchoolAddress?.country?.id ?? "",
+                )}
                 onValueChange={(val) =>
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
                           ...a,
-                          country: { id: Number(val), name: countries.find((c) => String(c.id) === val)?.name || "" },
+                          country: {
+                            id: Number(val),
+                            name: countries.find((c) => String(c.id) === val)?.name || "",
+                          },
                         }))
                       : prev,
                   )
@@ -975,7 +1070,10 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
               >
                 <SelectTrigger className="h-10 text-sm">
                   <SelectValue
-                    placeholder={(info as FormWithAddress | null)?.lastSchoolAddress?.country?.name ?? "Select country"}
+                    placeholder={
+                      (info as FormWithAddress | null)?.lastSchoolAddress?.country?.name ??
+                      "Select country"
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -996,7 +1094,10 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
                           ...a,
-                          state: { id: Number(val), name: states.find((s) => String(s.id) === val)?.name || "" },
+                          state: {
+                            id: Number(val),
+                            name: states.find((s) => String(s.id) === val)?.name || "",
+                          },
                         }))
                       : prev,
                   )
@@ -1004,7 +1105,10 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
               >
                 <SelectTrigger className="h-10 text-sm">
                   <SelectValue
-                    placeholder={(info as FormWithAddress | null)?.lastSchoolAddress?.state?.name ?? "Select state"}
+                    placeholder={
+                      (info as FormWithAddress | null)?.lastSchoolAddress?.state?.name ??
+                      "Select state"
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -1025,7 +1129,10 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
                           ...a,
-                          city: { id: Number(val), name: cities.find((c) => String(c.id) === val)?.name || "" },
+                          city: {
+                            id: Number(val),
+                            name: cities.find((c) => String(c.id) === val)?.name || "",
+                          },
                         }))
                       : prev,
                   )
@@ -1033,7 +1140,10 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
               >
                 <SelectTrigger className="h-10 text-sm">
                   <SelectValue
-                    placeholder={(info as FormWithAddress | null)?.lastSchoolAddress?.city?.name ?? "Select city"}
+                    placeholder={
+                      (info as FormWithAddress | null)?.lastSchoolAddress?.city?.name ??
+                      "Select city"
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -1049,14 +1159,18 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
               <Label className="text-xs text-gray-600">District</Label>
               <Select
                 value={String(
-                  ((info as FormWithAddress | null)?.lastSchoolAddress?.district as NamedRef | null)?.id ?? "",
+                  ((info as FormWithAddress | null)?.lastSchoolAddress?.district as NamedRef | null)
+                    ?.id ?? "",
                 )}
                 onValueChange={(val) =>
                   setForm((prev) =>
                     prev
                       ? updateAddress(prev as FormWithAddress, (a) => ({
                           ...a,
-                          district: { id: Number(val), name: districts.find((d) => String(d.id) === val)?.name || "" },
+                          district: {
+                            id: Number(val),
+                            name: districts.find((d) => String(d.id) === val)?.name || "",
+                          },
                         }))
                       : prev,
                   )
@@ -1065,8 +1179,10 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                 <SelectTrigger className="h-10 text-sm">
                   <SelectValue
                     placeholder={
-                      ((info as FormWithAddress | null)?.lastSchoolAddress?.district as NamedRef | null)?.name ??
-                      "Select district"
+                      (
+                        (info as FormWithAddress | null)?.lastSchoolAddress
+                          ?.district as NamedRef | null
+                      )?.name ?? "Select district"
                     }
                   />
                 </SelectTrigger>
@@ -1085,7 +1201,12 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                 value={(info as FormWithAddress | null)?.lastSchoolAddress?.pincode ?? ""}
                 onChange={(e) =>
                   setForm((prev) =>
-                    prev ? updateAddress(prev as FormWithAddress, (a) => ({ ...a, pincode: e.target.value })) : prev,
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          pincode: e.target.value,
+                        }))
+                      : prev,
                   )
                 }
                 className="h-10"
@@ -1097,7 +1218,12 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                 value={(info as FormWithAddress | null)?.lastSchoolAddress?.phone ?? ""}
                 onChange={(e) =>
                   setForm((prev) =>
-                    prev ? updateAddress(prev as FormWithAddress, (a) => ({ ...a, phone: e.target.value })) : prev,
+                    prev
+                      ? updateAddress(prev as FormWithAddress, (a) => ({
+                          ...a,
+                          phone: e.target.value,
+                        }))
+                      : prev,
                   )
                 }
                 className="h-10"
@@ -1150,7 +1276,11 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                           }
                         >
                           <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder={s.boardSubject?.boardSubjectName?.name ?? "Select subject"} />
+                            <SelectValue
+                              placeholder={
+                                s.boardSubject?.boardSubjectName?.name ?? "Select subject"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {boardSubjects.map((bs) => (
@@ -1163,7 +1293,9 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                       </td>
                       <td className="px-3 py-2 text-gray-700">
                         <Input
-                          value={(s as unknown as { theoryMarks?: number } | null)?.theoryMarks ?? ""}
+                          value={
+                            (s as unknown as { theoryMarks?: number } | null)?.theoryMarks ?? ""
+                          }
                           type="number"
                           min={0}
                           max={100}
@@ -1179,7 +1311,10 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                       </td>
                       <td className="px-3 py-2 text-gray-700">
                         <Input
-                          value={(s as unknown as { practicalMarks?: number } | null)?.practicalMarks ?? ""}
+                          value={
+                            (s as unknown as { practicalMarks?: number } | null)?.practicalMarks ??
+                            ""
+                          }
                           type="number"
                           min={0}
                           max={100}
@@ -1197,11 +1332,13 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                         {(() => {
                           const bsId = Number(
                             (s as unknown as { boardSubjectId?: number }).boardSubjectId ??
-                              (s as unknown as { boardSubject?: { id?: number } }).boardSubject?.id ??
+                              (s as unknown as { boardSubject?: { id?: number } }).boardSubject
+                                ?.id ??
                               0,
                           );
                           const bs = boardSubjects.find((b) => Number(b.id) === bsId);
-                          const fullMarks = Number(bs?.fullMarksTheory ?? 0) + Number(bs?.fullMarksPractical ?? 0);
+                          const fullMarks =
+                            Number(bs?.fullMarksTheory ?? 0) + Number(bs?.fullMarksPractical ?? 0);
                           return Number.isFinite(fullMarks) && fullMarks > 0 ? fullMarks : "-";
                         })()}
                       </td>
@@ -1223,9 +1360,16 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                       </td>
                       <td className="px-3 py-2 text-gray-700">
                         <Select
-                          value={(s as unknown as { grade?: { name?: string } } | null)?.grade?.name ?? ""}
+                          value={
+                            (s as unknown as { grade?: { name?: string } } | null)?.grade?.name ??
+                            ""
+                          }
                           onValueChange={(val) =>
-                            handleSubjectChangeById((s as unknown as { id?: number })?.id, "gradeName", val)
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "gradeName",
+                              val,
+                            )
                           }
                         >
                           <SelectTrigger className="h-8 text-sm">
@@ -1242,9 +1386,15 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                       </td>
                       <td className="px-3 py-2 text-gray-700">
                         <Select
-                          value={(s as unknown as { resultStatus?: string } | null)?.resultStatus ?? ""}
+                          value={
+                            (s as unknown as { resultStatus?: string } | null)?.resultStatus ?? ""
+                          }
                           onValueChange={(val) =>
-                            handleSubjectChangeById((s as unknown as { id?: number })?.id, "resultStatus", val)
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "resultStatus",
+                              val,
+                            )
                           }
                         >
                           <SelectTrigger className="h-8 text-sm">

@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import {
-  ChevronUp,
-  ChevronDown,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +14,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import CreateAdmissionDialog from "./components/create-admission-dialog";
 import AdmissionsStats from "./components/admissions-stats";
-import AdmissionConfigureDialog from './components/AdmissionConfigureDialog';
+import AdmissionConfigureDialog from "./components/AdmissionConfigureDialog";
 import { getCourses } from "./action";
 import { Course, AcademicYear } from "@/db/schema";
 
@@ -77,9 +71,7 @@ export default function AdmissionsPage() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(
-        `/api/admissions?page=${currentPage}&size=${itemsPerPage}`
-      );
+      const response = await fetch(`/api/admissions?page=${currentPage}&size=${itemsPerPage}`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -109,9 +101,9 @@ export default function AdmissionsPage() {
   useEffect(() => {
     fetchData();
     // Fetch academic years
-    fetch('/api/academic-years')
-      .then(res => res.json())
-      .then(json => {
+    fetch("/api/academic-years")
+      .then((res) => res.json())
+      .then((json) => {
         if (json.success) {
           setAllAcademicYears(json.data);
           if (json.data.length > 0) setNewAdmissionAcademicYearId(json.data[0].id);
@@ -121,9 +113,7 @@ export default function AdmissionsPage() {
 
   const filteredData = useMemo(() => {
     if (!searchTerm) return data;
-    return data.filter((item) =>
-      item.admissionYear.toString().includes(searchTerm)
-    );
+    return data.filter((item) => item.admissionYear.toString().includes(searchTerm));
   }, [data, searchTerm]);
 
   const sortedData = useMemo(() => {
@@ -132,15 +122,15 @@ export default function AdmissionsPage() {
       sortableItems.sort((a, b) => {
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
-        
-        if (typeof aValue === 'number' && typeof bValue === 'number') {
+
+        if (typeof aValue === "number" && typeof bValue === "number") {
           if (aValue < bValue) {
             return sortConfig.direction === "asc" ? -1 : 1;
           }
           if (aValue > bValue) {
             return sortConfig.direction === "asc" ? 1 : -1;
           }
-        } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+        } else if (typeof aValue === "string" && typeof bValue === "string") {
           if (aValue < bValue) {
             return sortConfig.direction === "asc" ? -1 : 1;
           }
@@ -240,9 +230,7 @@ export default function AdmissionsPage() {
         throw new Error("Failed to update admission status");
       }
 
-      toast.success(
-        `Admission ${admission.isClosed ? "opened" : "closed"} successfully`
-      );
+      toast.success(`Admission ${admission.isClosed ? "opened" : "closed"} successfully`);
       fetchData(); // Refresh the data
     } catch (error) {
       console.error("Error updating admission status:", error);
@@ -257,19 +245,19 @@ export default function AdmissionsPage() {
     try {
       const academicYearId = newAdmissionAcademicYearId;
       if (!academicYearId) {
-        toast.error('Please select an academic year');
+        toast.error("Please select an academic year");
         return;
       }
-      const response = await fetch('/api/admissions', {
-        method: 'POST',
+      const response = await fetch("/api/admissions", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           academicYearId,
           courseIds,
           startDate,
-          endDate
+          endDate,
         }),
       });
       const data = await response.json();
@@ -336,7 +324,9 @@ export default function AdmissionsPage() {
             open={isCreateDialogOpen}
             setOpen={setIsCreateDialogOpen}
             onCreate={handleCreateAdmission}
-            academicYears={allAcademicYears.filter(y => typeof y.id === 'number').map(y => ({ id: y.id as number, year: y.year }))}
+            academicYears={allAcademicYears
+              .filter((y) => typeof y.id === "number")
+              .map((y) => ({ id: y.id as number, year: y.year }))}
             academicYearId={newAdmissionAcademicYearId}
             onAcademicYearChange={setNewAdmissionAcademicYearId}
           />
@@ -393,10 +383,7 @@ export default function AdmissionsPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {sortedData.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-gray-50 transition-colors duration-150"
-                  >
+                  <tr key={item.id} className="hover:bg-gray-50 transition-colors duration-150">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                       {(currentPage - 1) * itemsPerPage + index + 1}
                     </td>
@@ -412,9 +399,7 @@ export default function AdmissionsPage() {
                         <span className="ml-2 text-xs text-gray-500">
                           (
                           {item.totalApplications > 0
-                            ? Math.round(
-                                (item.totalPayments / item.totalApplications) * 100
-                              )
+                            ? Math.round((item.totalPayments / item.totalApplications) * 100)
                             : "0"}
                           %)
                         </span>
@@ -426,19 +411,14 @@ export default function AdmissionsPage() {
                         <span className="ml-2 text-xs text-gray-500">
                           (
                           {item.totalApplications > 0
-                            ? Math.round(
-                                (item.totalDrafts / item.totalApplications) * 100
-                              )
+                            ? Math.round((item.totalDrafts / item.totalApplications) * 100)
                             : "0"}
                           %)
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap space-x-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleView(item.admissionYear)}
-                      >
+                      <Button size="sm" onClick={() => handleView(item.admissionYear)}>
                         View Details
                       </Button>
                       <Button
@@ -479,15 +459,11 @@ export default function AdmissionsPage() {
                   <div>
                     <p className="text-sm text-gray-700">
                       Showing{" "}
-                      <span className="font-medium">
-                        {(currentPage - 1) * itemsPerPage + 1}
-                      </span>{" "}
-                      to{" "}
+                      <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
                       <span className="font-medium">
                         {Math.min(currentPage * itemsPerPage, totalItems)}
                       </span>{" "}
-                      of <span className="font-medium">{totalItems}</span>{" "}
-                      results
+                      of <span className="font-medium">{totalItems}</span> results
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -569,17 +545,18 @@ export default function AdmissionsPage() {
             <DialogTitle>Confirm Action</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p>Are you sure you want to {data.find(a => a.admissionYear === selectedYear)?.isClosed ? 'open' : 'close'} the admission for year {selectedYear}?</p>
+            <p>
+              Are you sure you want to{" "}
+              {data.find((a) => a.admissionYear === selectedYear)?.isClosed ? "open" : "close"} the
+              admission for year {selectedYear}?
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={confirmCloseAdmission}
-              disabled={toggleAdmCloseLoading}
-            >
-              {toggleAdmCloseLoading ? 'Processing...' : 'Confirm'}
+            <Button onClick={confirmCloseAdmission} disabled={toggleAdmCloseLoading}>
+              {toggleAdmCloseLoading ? "Processing..." : "Confirm"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -592,7 +569,9 @@ export default function AdmissionsPage() {
           admissionId={selectedAdmission.id}
           allCourses={allCourses}
           refetchData={fetchData}
-          allAcademicYears={allAcademicYears.filter(y => typeof y.id === 'number').map(y => ({ id: y.id as number, year: y.year }))}
+          allAcademicYears={allAcademicYears
+            .filter((y) => typeof y.id === "number")
+            .map((y) => ({ id: y.id as number, year: y.year }))}
         />
       )}
     </div>

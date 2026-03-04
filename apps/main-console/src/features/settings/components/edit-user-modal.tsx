@@ -1,6 +1,12 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -132,7 +138,9 @@ export default function EditUserModal({ onUpdate, user }: Props) {
                   id="type"
                   className="border rounded-md p-2"
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as User["type"] })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, type: e.target.value as User["type"] })
+                  }
                 >
                   {["ADMIN", "FACULTY", "STAFF", "STUDENT", "PARENTS"].map((role) => (
                     <option key={role} value={role}>

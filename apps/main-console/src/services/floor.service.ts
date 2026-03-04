@@ -37,7 +37,10 @@ export async function createFloor(payload: Partial<FloorT>): Promise<ApiResponse
 }
 
 // Update a floor
-export async function updateFloor(id: number, payload: Partial<FloorT>): Promise<ApiResponse<FloorT>> {
+export async function updateFloor(
+  id: number,
+  payload: Partial<FloorT>,
+): Promise<ApiResponse<FloorT>> {
   try {
     const response = await axiosInstance.put<ApiResponse<FloorT>>(`${BASE_URL}/${id}`, payload);
     return response.data;

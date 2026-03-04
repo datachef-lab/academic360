@@ -31,7 +31,9 @@ export default function SubjectSelectionInstructions({
           backgroundColor: "#fffbeb",
         }}
       >
-        <Text style={{ fontSize: 14, fontWeight: "700", color: "#92400e", marginBottom: 8 }}>Important Warnings</Text>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: "#92400e", marginBottom: 8 }}>
+          Important Warnings
+        </Text>
         <View style={{ gap: 4 }}>
           <Text style={{ fontSize: 13, color: "#b45309", lineHeight: 20 }}>
             1. Ensure all required fields are completed before submission.
@@ -68,21 +70,26 @@ export default function SubjectSelectionInstructions({
           </Text>
           {isBcomProgram ? (
             <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: "#1e40af" }}>For B.Com (H & G) Students:</Text>
-              <Text style={{ fontSize: 13, color: "#1d4ed8", lineHeight: 20 }}>
-                • Choose one Minor subject from Semester III through Semester VI: E-Business or Marketing.
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#1e40af" }}>
+                For B.Com (H & G) Students:
               </Text>
               <Text style={{ fontSize: 13, color: "#1d4ed8", lineHeight: 20 }}>
-                • The corresponding papers for Semester III are Fundamentals of Information System (E-Business) and
-                Consumer Behaviour (Marketing).
+                • Choose one Minor subject from Semester III through Semester VI: E-Business or
+                Marketing.
+              </Text>
+              <Text style={{ fontSize: 13, color: "#1d4ed8", lineHeight: 20 }}>
+                • The corresponding papers for Semester III are Fundamentals of Information System
+                (E-Business) and Consumer Behaviour (Marketing).
               </Text>
             </View>
           ) : (
             <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: "#1e40af" }}>For B.A. & B.Sc. Students:</Text>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#1e40af" }}>
+                For B.A. & B.Sc. Students:
+              </Text>
               <Text style={{ fontSize: 13, color: "#1d4ed8", lineHeight: 20 }}>
-                • Choose two distinct Minor subjects - Minor I (Studied in Semesters I & II) & Minor II (Studied in
-                Semesters III & IV).
+                • Choose two distinct Minor subjects - Minor I (Studied in Semesters I & II) & Minor
+                II (Studied in Semesters III & IV).
               </Text>
               <Text style={{ fontSize: 13, color: "#1d4ed8", lineHeight: 20 }}>
                 • You will choose either Minor I or Minor II for Semesters V & VI respectively.
@@ -112,9 +119,12 @@ export default function SubjectSelectionInstructions({
             </Text>
           ) : (
             <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>For B.A. & B.Sc. Students:</Text>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>
+                For B.A. & B.Sc. Students:
+              </Text>
               <Text style={{ fontSize: 13, color: "#15803d", lineHeight: 20 }}>
-                • You must select a different IDC subject for each of the three semesters (I, II, & III).
+                • You must select a different IDC subject for each of the three semesters (I, II, &
+                III).
               </Text>
               <Text style={{ fontSize: 13, color: "#15803d", lineHeight: 20 }}>
                 • The three IDC subjects chosen cannot be the same as your Major or Minor subjects.
@@ -144,12 +154,16 @@ export default function SubjectSelectionInstructions({
             </Text>
           ) : (
             <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: "#6b21a8" }}>For B.A. & B.Sc. (Hons.):</Text>
-              <Text style={{ fontSize: 13, color: "#7c3aed", lineHeight: 20 }}>
-                • You'll study Compulsory English in Semesters I & II named as AEC 1 and AEC 2 respectively.
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#6b21a8" }}>
+                For B.A. & B.Sc. (Hons.):
               </Text>
               <Text style={{ fontSize: 13, color: "#7c3aed", lineHeight: 20 }}>
-                • For Semesters III & IV, you must choose one subject to study across both semesters.
+                • You'll study Compulsory English in Semesters I & II named as AEC 1 and AEC 2
+                respectively.
+              </Text>
+              <Text style={{ fontSize: 13, color: "#7c3aed", lineHeight: 20 }}>
+                • For Semesters III & IV, you must choose one subject to study across both
+                semesters.
               </Text>
             </View>
           )}
@@ -172,7 +186,9 @@ export default function SubjectSelectionInstructions({
           </Text>
           <View style={{ gap: 8 }}>
             <View>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: "#9a3412", marginBottom: 4 }}>Semester I</Text>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#9a3412", marginBottom: 4 }}>
+                Semester I
+              </Text>
               <Text style={{ fontSize: 13, color: "#c2410c", lineHeight: 20, marginLeft: 8 }}>
                 B.Com/ B.A./B.Sc. students are required to study:
               </Text>
@@ -184,11 +200,21 @@ export default function SubjectSelectionInstructions({
               </Text>
             </View>
             <View>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: "#9a3412", marginBottom: 4 }}>Semester II</Text>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: "#9a3412", marginBottom: 4 }}>
+                Semester II
+              </Text>
               <Text style={{ fontSize: 13, color: "#c2410c", lineHeight: 20, marginLeft: 8 }}>
                 B.Com/ B.A./B.Sc. students will continue to study Environmental Studies (ENVS).
               </Text>
-              <Text style={{ fontSize: 13, color: "#c2410c", lineHeight: 20, marginLeft: 8, marginTop: 4 }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: "#c2410c",
+                  lineHeight: 20,
+                  marginLeft: 8,
+                  marginTop: 4,
+                }}
+              >
                 Additionally,
               </Text>
               <Text style={{ fontSize: 13, color: "#c2410c", lineHeight: 20, marginLeft: 16 }}>
@@ -230,8 +256,12 @@ export default function SubjectSelectionInstructions({
             }}
           />
           <View>
-            <Text style={{ fontSize: 14, fontWeight: "700", color: "#374151" }}>Important Notes & Guide</Text>
-            <Text style={{ fontSize: 12, color: "#6b7280" }}>Essential information for subject selection</Text>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: "#374151" }}>
+              Important Notes & Guide
+            </Text>
+            <Text style={{ fontSize: 12, color: "#6b7280" }}>
+              Essential information for subject selection
+            </Text>
           </View>
         </View>
       </View>

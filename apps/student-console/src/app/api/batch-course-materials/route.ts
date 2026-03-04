@@ -21,7 +21,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "No valid subject IDs provided" }, { status: 400 });
     }
 
-    console.log(`Processing batch request for ${subjectIds.length} subjects: ${subjectIds.join(", ")}`);
+    console.log(
+      `Processing batch request for ${subjectIds.length} subjects: ${subjectIds.join(", ")}`,
+    );
     const materials = await findCourseMaterialsBySubjects(subjectIds);
 
     return NextResponse.json(materials);

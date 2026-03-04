@@ -61,22 +61,22 @@ const LibFineManagement: React.FC = () => {
   return (
     <div className="w-full max-w-[1200px] mx-auto p-6 border rounded-md border-gray-500 space-y-6">
       <h1 className="text-3xl font-bold text-center text-blue-600">📋 Fine Management</h1>
-      
+
       <Tabs defaultValue="summary" className="  w-full">
-      <TabsList className="grid border h-auto shadow-sm w-full grid-cols-3  ">
-          <TabsTrigger value="summary"  >
+        <TabsList className="grid border h-auto shadow-sm w-full grid-cols-3  ">
+          <TabsTrigger value="summary">
             <FileText size={18} /> Summary
           </TabsTrigger>
-          <TabsTrigger value="overdue" >
+          <TabsTrigger value="overdue">
             <CheckCircle size={18} /> Overdue Books
           </TabsTrigger>
-          <TabsTrigger value="payment" >
+          <TabsTrigger value="payment">
             <CreditCard size={18} /> Payment
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary">
-        <Card>
+          <Card>
             <CardContent className="p-4 space-y-3">
               <h2 className="text-xl font-semibold">Total Outstanding Fine: ₹200</h2>
               <p className="text-gray-600  dark:text-gray-400">Breakdown by book:</p>
@@ -84,9 +84,15 @@ const LibFineManagement: React.FC = () => {
                 <li>Book 1 - ₹50 (5 days overdue)</li>
                 <li>Book 2 - ₹150 (15 days overdue)</li>
               </ul>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Fine policy: ₹10 per day after due date.</p>
-              <p className="text-gray-700 dark:text-gray-300">If fines are not paid within 30 days, further borrowing privileges may be suspended.</p>
-              <p className="text-gray-700 dark:text-gray-300">For any queries, contact the library administration.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Fine policy: ₹10 per day after due date.
+              </p>
+              <p className="text-gray-700 dark:text-gray-300">
+                If fines are not paid within 30 days, further borrowing privileges may be suspended.
+              </p>
+              <p className="text-gray-700 dark:text-gray-300">
+                For any queries, contact the library administration.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>

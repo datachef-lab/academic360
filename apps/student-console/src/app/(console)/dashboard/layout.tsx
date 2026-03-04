@@ -15,7 +15,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { StudentProvider, useStudent } from "@/providers/student-provider";
 
 import { House, User } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -165,7 +171,9 @@ export default function DashboardLayout({
               // alt={user?.name || "User"}
               // className="h-10 w-10 rounded-full border border-gray-200 ring-1 ring-gray-100 bg-gradient-to-br from-indigo-500 to-violet-500 text-white flex items-center justify-center text-sm font-semibold shadow-sm hover:ring-indigo-200 transition"
               >
-                <AvatarImage src={user?.payload?.uid ? getStudentImageUrl(user.payload.uid) : undefined} />
+                <AvatarImage
+                  src={user?.payload?.uid ? getStudentImageUrl(user.payload.uid) : undefined}
+                />
               </Avatar>
               {/* {(() => {
                 const initials = (user?.name || "U")

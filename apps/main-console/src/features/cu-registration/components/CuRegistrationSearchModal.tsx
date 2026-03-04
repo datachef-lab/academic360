@@ -44,7 +44,12 @@ export function CuRegistrationSearchModal({ open, onOpenChange }: CuRegistration
 
   const { refetch: getSearchStudent, isLoading } = useQuery({
     queryKey: ["CuRegistrationSearchStudent", debouncePagination],
-    queryFn: () => getSearchedStudents(searchQuery, debouncePagination.pageIndex + 1, debouncePagination.pageSize),
+    queryFn: () =>
+      getSearchedStudents(
+        searchQuery,
+        debouncePagination.pageIndex + 1,
+        debouncePagination.pageSize,
+      ),
     enabled: false,
   });
 
@@ -110,7 +115,11 @@ export function CuRegistrationSearchModal({ open, onOpenChange }: CuRegistration
                   disabled={!searchQuery.trim() || isLoading}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-purple-600 hover:bg-purple-700 rounded-lg px-4"
                 >
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -128,7 +137,9 @@ export function CuRegistrationSearchModal({ open, onOpenChange }: CuRegistration
                       <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-2xl"></div>
                       <Users className="h-20 w-20 mb-4 text-purple-200 relative z-10" />
                     </div>
-                    <p className="text-center text-2xl text-white font-semibold">Search for Students</p>
+                    <p className="text-center text-2xl text-white font-semibold">
+                      Search for Students
+                    </p>
                     <p className="text-center text-base text-purple-100 mt-2">
                       Enter UID, Roll Number, or Name to find students
                     </p>
@@ -160,8 +171,12 @@ export function CuRegistrationSearchModal({ open, onOpenChange }: CuRegistration
                       <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-2xl"></div>
                       <UserRoundSearch className="h-20 w-20 mb-4 text-purple-200 relative z-10" />
                     </div>
-                    <p className="text-center text-2xl text-white font-semibold">No students found</p>
-                    <p className="text-center text-base text-purple-100 mt-2">Try adjusting your search criteria</p>
+                    <p className="text-center text-2xl text-white font-semibold">
+                      No students found
+                    </p>
+                    <p className="text-center text-base text-purple-100 mt-2">
+                      Try adjusting your search criteria
+                    </p>
                   </motion.div>
                 ) : (
                   <motion.div

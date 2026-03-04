@@ -14,7 +14,10 @@ export interface ApiResponse<T> {
   message: string;
 }
 
-export async function login(credential: { email: string; password: string }): Promise<ApiResponse<LoginPayload>> {
+export async function login(credential: {
+  email: string;
+  password: string;
+}): Promise<ApiResponse<LoginPayload>> {
   const response = await axiosInstance.post<ApiResponse<LoginPayload>>("/auth/login", credential, {
     withCredentials: true,
   });
@@ -23,7 +26,9 @@ export async function login(credential: { email: string; password: string }): Pr
 
 export async function sendOtpRequest(
   email: string,
-): Promise<ApiResponse<{ message: string; expiresIn: string; sentTo: { email: boolean; whatsapp: boolean } }>> {
+): Promise<
+  ApiResponse<{ message: string; expiresIn: string; sentTo: { email: boolean; whatsapp: boolean } }>
+> {
   const response = await axiosInstance.post("/auth/otp/send-email", { email });
   return response.data;
 }
@@ -32,7 +37,11 @@ export async function verifyOtpAndLogin(
   email: string,
   otp: string,
 ): Promise<ApiResponse<{ accessToken: string; user: UserDto; refreshToken?: string }>> {
-  const response = await axiosInstance.post("/auth/otp/verify", { email, otp }, { withCredentials: true });
+  const response = await axiosInstance.post(
+    "/auth/otp/verify",
+    { email, otp },
+    { withCredentials: true },
+  );
   return response.data;
 }
 

@@ -1,6 +1,12 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +21,16 @@ interface ExportProgressDialogProps {
 
 type StepItem = { label: string; done: boolean };
 
-export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: ExportProgressDialogProps) {
+export function ExportProgressDialog({
+  isOpen,
+  onClose,
+  progressUpdate,
+}: ExportProgressDialogProps) {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<"started" | "in_progress" | "completed" | "error">("started");
+  const [status, setStatus] = useState<"started" | "in_progress" | "completed" | "error">(
+    "started",
+  );
   const [fileName, setFileName] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [stage, setStage] = useState<string>("");
@@ -227,7 +239,9 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
             {getDialogTitle()}
             {getStatusBadge()}
           </DialogTitle>
-          <DialogDescription className="sr-only">{message || "Export progress dialog"}</DialogDescription>
+          <DialogDescription className="sr-only">
+            {message || "Export progress dialog"}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -267,14 +281,16 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
                     <span className="font-medium capitalize">{stage.replace("_", " ")}</span>
                   </div>
                 )}
-                {pdfCount !== undefined && pdfTotal !== undefined && progressUpdate?.stage === "downloading_pdfs" && (
-                  <div className="flex justify-between">
-                    <span>PDFs Downloaded:</span>
-                    <span className="font-medium">
-                      {pdfCount} of {pdfTotal}
-                    </span>
-                  </div>
-                )}
+                {pdfCount !== undefined &&
+                  pdfTotal !== undefined &&
+                  progressUpdate?.stage === "downloading_pdfs" && (
+                    <div className="flex justify-between">
+                      <span>PDFs Downloaded:</span>
+                      <span className="font-medium">
+                        {pdfCount} of {pdfTotal}
+                      </span>
+                    </div>
+                  )}
                 {documentsCount !== undefined &&
                   documentsTotal !== undefined &&
                   progressUpdate?.stage === "downloading_documents" && (
@@ -313,7 +329,9 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
                   key={s.label}
                   className={`flex items-center gap-2 ${s.done ? "text-green-600" : "text-slate-400"}`}
                 >
-                  <div className={`w-2 h-2 rounded-full ${s.done ? "bg-green-600" : "bg-slate-300"}`} />
+                  <div
+                    className={`w-2 h-2 rounded-full ${s.done ? "bg-green-600" : "bg-slate-300"}`}
+                  />
                   {s.label}
                 </div>
               ))}

@@ -20,7 +20,12 @@ export default function DottedSeparator({
   const isHorizontal = direction === "horizontal";
 
   return (
-    <div className={cn(isHorizontal ? "w-full flex items-center" : "h-full flex flex-col items-center", className)}>
+    <div
+      className={cn(
+        isHorizontal ? "w-full flex items-center" : "h-full flex flex-col items-center",
+        className,
+      )}
+    >
       <div
         className={isHorizontal ? "flex-grow" : "flex-grow-0"}
         style={{

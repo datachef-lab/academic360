@@ -4,7 +4,9 @@ import { FeesSlab, FeesSlabMapping, FeesStructureDto, CreateFeesStructureDto } f
 import { Plus, Trash2 } from "lucide-react";
 
 // Type predicate to distinguish CreateFeesStructureDto
-function isCreateFeesStructureDto(obj: CreateFeesStructureDto | FeesStructureDto): obj is CreateFeesStructureDto {
+function isCreateFeesStructureDto(
+  obj: CreateFeesStructureDto | FeesStructureDto,
+): obj is CreateFeesStructureDto {
   return "courses" in obj && Array.isArray((obj as CreateFeesStructureDto).courses);
 }
 
@@ -28,7 +30,9 @@ export function SlabCreation<T extends CreateFeesStructureDto | FeesStructureDto
   // Remove default population useEffect here
   useEffect(() => {
     // Only show slabs not already used in feesSlabMappings
-    const tmpSlabOptions = slabs.filter((slb) => !feesSlabMappings.some((ele) => ele.feesSlabId === slb.id));
+    const tmpSlabOptions = slabs.filter(
+      (slb) => !feesSlabMappings.some((ele) => ele.feesSlabId === slb.id),
+    );
     setSlabOptions(tmpSlabOptions);
   }, [slabs, feesSlabMappings]);
 
@@ -68,7 +72,9 @@ export function SlabCreation<T extends CreateFeesStructureDto | FeesStructureDto
         } as T;
       }
     });
-    const tmpSlabOptions = slabs.filter((slb) => !feesSlabMappings.find((ele) => ele.feesSlabId != slb.id));
+    const tmpSlabOptions = slabs.filter(
+      (slb) => !feesSlabMappings.find((ele) => ele.feesSlabId != slb.id),
+    );
     setSlabOptions(tmpSlabOptions);
   };
 
@@ -212,7 +218,9 @@ export function SlabCreation<T extends CreateFeesStructureDto | FeesStructureDto
                     min={0}
                     max={100}
                     value={getConcessionRate(feesSlabMapping.feesSlabId)}
-                    onChange={(value) => handleConcessionChange(feesSlabMapping.feesSlabId!, value || 0)}
+                    onChange={(value) =>
+                      handleConcessionChange(feesSlabMapping.feesSlabId!, value || 0)
+                    }
                     formatter={(value) => `${value}%`}
                     parser={(value) => Number(value?.replace("%", "") || "")}
                     className="w-40"

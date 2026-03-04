@@ -90,7 +90,10 @@ export interface Instalment {
   updatedAt?: Date;
 }
 
-export type CreateFeesStructureDto = Omit<FeesStructureDto, "course"> & { courses: Course[]; semester?: number | null };
+export type CreateFeesStructureDto = Omit<FeesStructureDto, "course"> & {
+  courses: Course[];
+  semester?: number | null;
+};
 
 export interface FeesStructureDto {
   readonly id?: number;

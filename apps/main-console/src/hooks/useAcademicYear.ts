@@ -94,7 +94,10 @@ export const useAcademicYear = () => {
       return;
     }
 
-    console.log("Academic Year Hook: Loading academic years with token:", accessToken ? "Present" : "Missing");
+    console.log(
+      "Academic Year Hook: Loading academic years with token:",
+      accessToken ? "Present" : "Missing",
+    );
     setLoadingState(true);
     try {
       const response = await getAllAcademicYears();
@@ -116,7 +119,14 @@ export const useAcademicYear = () => {
     } finally {
       setLoadingState(false);
     }
-  }, [accessToken, setAvailableYears, setCurrentYear, setLoadingState, setErrorState, currentAcademicYear]);
+  }, [
+    accessToken,
+    setAvailableYears,
+    setCurrentYear,
+    setLoadingState,
+    setErrorState,
+    currentAcademicYear,
+  ]);
 
   const switchToAcademicYear = useCallback(
     async (academicYear: AcademicYear) => {

@@ -1,15 +1,38 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileText, Users, Clock, BarChart3, FileImage, Upload, AlertTriangle, Copy } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Download,
+  FileText,
+  Users,
+  Clock,
+  BarChart3,
+  FileImage,
+  Upload,
+  AlertTriangle,
+  Copy,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ExportService } from "@/services/exportService";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useSocket } from "@/hooks/useSocket";
 import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
 import { ProgressUpdate } from "@/types/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { getRegulationTypes } from "@/services/course-design.api";
 import type { RegulationType } from "@repo/db/index";
@@ -120,7 +143,10 @@ export default function ReportsPage() {
   }, [availableAcademicYears.length, loadAcademicYears]);
 
   const selectedAcademicYear = useMemo(
-    () => availableAcademicYears.find((year) => year.isCurrentYear) || availableAcademicYears[0] || null,
+    () =>
+      availableAcademicYears.find((year) => year.isCurrentYear) ||
+      availableAcademicYears[0] ||
+      null,
     [availableAcademicYears],
   );
   const selectedAcademicYearId = selectedAcademicYear?.id?.toString() || "";
@@ -231,7 +257,13 @@ export default function ReportsPage() {
 
     const uidCandidates = ["uid"];
     const rollCandidates = ["cu roll number", "cu roll no", "cu roll no.", "cu roll"];
-    const regCandidates = ["cu registration number", "cu reg number", "cu registration no", "cu reg no", "cu reg no."];
+    const regCandidates = [
+      "cu registration number",
+      "cu reg number",
+      "cu registration no",
+      "cu reg no",
+      "cu reg no.",
+    ];
 
     const findIndex = (cands: string[]) => headers.findIndex((h) => cands.includes(h));
 
@@ -267,7 +299,10 @@ export default function ReportsPage() {
 
       const normUid = uid.toLowerCase();
       if (seen.has(normUid)) {
-        return { ok: false, message: `Duplicate UID found: "${uid}" (row ${r + 1}). Please remove duplicates.` };
+        return {
+          ok: false,
+          message: `Duplicate UID found: "${uid}" (row ${r + 1}). Please remove duplicates.`,
+        };
       }
       seen.add(normUid);
     }
@@ -284,7 +319,14 @@ export default function ReportsPage() {
     const headerRow = matrix[0] || [];
     const headers = headerRow.map(normalizeHeaderKey);
 
-    const uidHeaderCandidates = ["uid", "student uid", "student_uid", "codenumber", "code", "code number"];
+    const uidHeaderCandidates = [
+      "uid",
+      "student uid",
+      "student_uid",
+      "codenumber",
+      "code",
+      "code number",
+    ];
     const uidIdx = headers.findIndex((h) => uidHeaderCandidates.includes(h));
     if (uidIdx === -1) {
       return {
@@ -368,7 +410,10 @@ export default function ReportsPage() {
     toast.success("Student import completed.");
   };
 
-  const handleExcelFileSelected = async (reportId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExcelFileSelected = async (
+    reportId: string,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     // allow selecting the same file again
     e.target.value = "";
@@ -506,7 +551,9 @@ export default function ReportsPage() {
     }
   };
 
-  const downloadCuRegistrationDocuments = async (downloadType: "combined" | "pdfs" | "documents") => {
+  const downloadCuRegistrationDocuments = async (
+    downloadType: "combined" | "pdfs" | "documents",
+  ) => {
     // Validate selections
     if (!selectedAcademicYearId || !selectedRegulationType) {
       toast.error("Please select both Academic Year and Regulation Type");
@@ -676,7 +723,9 @@ export default function ReportsPage() {
       createdAt: new Date(),
     });
 
-    const result = await ExportService.exportStudentSubjectsInventory(Number(selectedAcademicYearId));
+    const result = await ExportService.exportStudentSubjectsInventory(
+      Number(selectedAcademicYearId),
+    );
 
     if (result.success && result.data) {
       ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
@@ -751,7 +800,8 @@ export default function ReportsPage() {
       name: "Student Detailed Report",
       description: "Download student personal, program, and address information",
       icon: <Users className="h-5 w-5 text-green-600" />,
-      downloadFunction: () => handleDownload("student-detailed-report", downloadStudentDetailedReport),
+      downloadFunction: () =>
+        handleDownload("student-detailed-report", downloadStudentDetailedReport),
       requiresAcademicYear: true,
       requiresRegulation: false,
     },
@@ -771,7 +821,8 @@ export default function ReportsPage() {
       name: "Student's 12th Subjects Report",
       description: "Download students' XII subjects, marks, and related data",
       icon: <FileText className="h-5 w-5 text-teal-600" />,
-      downloadFunction: () => handleDownload("student-academic-subjects-report", downloadStudentAcademicSubjectsReport),
+      downloadFunction: () =>
+        handleDownload("student-academic-subjects-report", downloadStudentAcademicSubjectsReport),
       requiresAcademicYear: true,
       requiresRegulation: false,
     },
@@ -793,7 +844,10 @@ export default function ReportsPage() {
       description: "Download university subject inventory per student for selected academic year",
       icon: <Users className="h-5 w-5 text-cyan-600" />,
       downloadFunction: () =>
-        handleDownload("student-university-subjects-report", downloadStudentUniversitySubjectsReport),
+        handleDownload(
+          "student-university-subjects-report",
+          downloadStudentUniversitySubjectsReport,
+        ),
       requiresAcademicYear: true,
       requiresRegulation: false,
     },
@@ -813,7 +867,8 @@ export default function ReportsPage() {
       name: "CU Registration PDFs Only",
       description: "Download only generated CU registration PDF forms as ZIP file",
       icon: <FileText className="h-5 w-5 text-orange-600" />,
-      downloadFunction: () => handleDownload("cu-registration-pdfs", () => downloadCuRegistrationDocuments("pdfs")),
+      downloadFunction: () =>
+        handleDownload("cu-registration-pdfs", () => downloadCuRegistrationDocuments("pdfs")),
       requiresAcademicYear: true,
       requiresRegulation: true,
     },
@@ -824,7 +879,9 @@ export default function ReportsPage() {
       description: "Download only uploaded documents (marksheets, certificates, etc.) as ZIP file",
       icon: <FileImage className="h-5 w-5 text-indigo-600" />,
       downloadFunction: () =>
-        handleDownload("cu-registration-documents", () => downloadCuRegistrationDocuments("documents")),
+        handleDownload("cu-registration-documents", () =>
+          downloadCuRegistrationDocuments("documents"),
+        ),
       requiresAcademicYear: true,
       requiresRegulation: true,
     },
@@ -848,7 +905,8 @@ export default function ReportsPage() {
       name: "Exam Form Submitted Report",
       description: "Export list of students who have submitted exam form with their details.",
       icon: <FileText className="h-5 w-5 text-emerald-700" />,
-      downloadFunction: () => handleDownload("exam-form-submission-report", downloadPromotionStudentsReport),
+      downloadFunction: () =>
+        handleDownload("exam-form-submission-report", downloadPromotionStudentsReport),
       requiresAcademicYear: false,
       requiresRegulation: false,
     },
@@ -876,7 +934,9 @@ export default function ReportsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Reports</h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-2">Download various reports and analytics</p>
+          <p className="text-sm sm:text-base text-slate-600 mt-2">
+            Download various reports and analytics
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-slate-600" />
@@ -889,14 +949,24 @@ export default function ReportsPage() {
         <Table className="w-full min-w-[900px]">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[6%] border border-slate-200 text-xs sm:text-sm">Sr. No.</TableHead>
-              <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm">Domain</TableHead>
-              <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm">Report</TableHead>
+              <TableHead className="w-[6%] border border-slate-200 text-xs sm:text-sm">
+                Sr. No.
+              </TableHead>
+              <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm">
+                Domain
+              </TableHead>
+              <TableHead className="w-[23%] border border-slate-200 text-xs sm:text-sm">
+                Report
+              </TableHead>
               <TableHead className="w-[23%] sm:w-80 lg:w-[360px] border border-slate-200 text-xs sm:text-sm">
                 Description
               </TableHead>
-              <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm">Filters</TableHead>
-              <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm">Actions</TableHead>
+              <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm">
+                Filters
+              </TableHead>
+              <TableHead className="w-[14%] border border-slate-200 text-xs sm:text-sm">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -933,7 +1003,9 @@ export default function ReportsPage() {
                     <div className="flex items-center gap-2 sm:gap-3">
                       <div className="flex-shrink-0">{report.icon}</div>
                       <div className="min-w-0">
-                        <div className="font-semibold text-slate-800 text-xs sm:text-sm ">{report.name}</div>
+                        <div className="font-semibold text-slate-800 text-xs sm:text-sm ">
+                          {report.name}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -944,7 +1016,10 @@ export default function ReportsPage() {
                     {report.requiresRegulation ? (
                       <div className="space-y-2">
                         <div className="space-y-1">
-                          <Select value={selectedRegulationType} onValueChange={setSelectedRegulationType}>
+                          <Select
+                            value={selectedRegulationType}
+                            onValueChange={setSelectedRegulationType}
+                          >
                             <SelectTrigger className="w-full h-8 text-xs">
                               <SelectValue placeholder="Select Type" />
                             </SelectTrigger>
@@ -1017,7 +1092,10 @@ export default function ReportsPage() {
       />
 
       {/* CU Roll/Reg Validation Dialog (missing headers) */}
-      <AlertDialog open={cuRollRegValidationDialogOpen} onOpenChange={setCuRollRegValidationDialogOpen}>
+      <AlertDialog
+        open={cuRollRegValidationDialogOpen}
+        onOpenChange={setCuRollRegValidationDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-red-700">
@@ -1063,7 +1141,10 @@ export default function ReportsPage() {
               <div className="max-h-44 overflow-y-auto rounded border border-red-100 bg-white p-2">
                 <ul className="space-y-1 text-xs text-slate-700">
                   {cuRollRegMissingHeaders.map((h) => (
-                    <li key={h} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-slate-50">
+                    <li
+                      key={h}
+                      className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-slate-50"
+                    >
                       <span className="font-mono">{h}</span>
                       <Button
                         type="button"
@@ -1099,8 +1180,8 @@ export default function ReportsPage() {
               Some student UIDs already exist
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-700">
-              The uploaded Excel contains UIDs that already exist in the system. Please remove these UIDs from the Excel
-              and re-upload.
+              The uploaded Excel contains UIDs that already exist in the system. Please remove these
+              UIDs from the Excel and re-upload.
               <span className="block mt-2 font-medium text-red-700">
                 Updating/resetting existing student details from this import is not allowed.
               </span>

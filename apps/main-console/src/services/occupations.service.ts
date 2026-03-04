@@ -7,7 +7,7 @@ import {
   MultipleOccupationResponse,
 } from "@/types/resources/occupation.types";
 
-const BASE_URL = '/api/occupations';
+const BASE_URL = "/api/occupations";
 
 export async function getAllOccupations(): Promise<Occupation[]> {
   const response = await axiosInstance.get<MultipleOccupationResponse>(BASE_URL);
@@ -24,7 +24,10 @@ export async function createOccupation(payload: CreateOccupationPayload): Promis
   return response.data.data;
 }
 
-export async function updateOccupation(id: number, payload: UpdateOccupationPayload): Promise<Occupation> {
+export async function updateOccupation(
+  id: number,
+  payload: UpdateOccupationPayload,
+): Promise<Occupation> {
   const response = await axiosInstance.put<SingleOccupationResponse>(`${BASE_URL}/${id}`, payload);
   return response.data.data;
 }
@@ -39,4 +42,4 @@ export const occupationService = {
   createOccupation,
   updateOccupation,
   deleteOccupation,
-}; 
+};

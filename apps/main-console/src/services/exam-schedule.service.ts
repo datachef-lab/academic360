@@ -81,9 +81,13 @@ export async function countStudentsBreakdownForExam(
 
   // If no file, send as JSON for better parsing
   if (!file) {
-    const response = await axiosInstance.post("/api/exams/schedule/count-students-breakdown", params, {
-      headers: { "Content-Type": "application/json" },
-    });
+    const response = await axiosInstance.post(
+      "/api/exams/schedule/count-students-breakdown",
+      params,
+      {
+        headers: { "Content-Type": "application/json" },
+      },
+    );
     return response.data;
   }
 
@@ -99,9 +103,13 @@ export async function countStudentsBreakdownForExam(
   formData.append("combinations", JSON.stringify(params.combinations));
   formData.append("file", file);
 
-  const response = await axiosInstance.post("/api/exams/schedule/count-students-breakdown", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  const response = await axiosInstance.post(
+    "/api/exams/schedule/count-students-breakdown",
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
+  );
 
   return response.data;
 }
@@ -191,7 +199,9 @@ export interface CheckDuplicateExamResponse {
   message?: string;
 }
 
-export async function checkDuplicateExam(dto: ExamDto): Promise<ApiResponse<CheckDuplicateExamResponse>> {
+export async function checkDuplicateExam(
+  dto: ExamDto,
+): Promise<ApiResponse<CheckDuplicateExamResponse>> {
   try {
     const response = await axiosInstance.post<ApiResponse<CheckDuplicateExamResponse>>(
       "/api/exams/schedule/check-duplicate",
@@ -228,7 +238,9 @@ export interface GetEligibleRoomsResponse {
   }>;
 }
 
-export async function getEligibleRooms(params: GetEligibleRoomsParams): Promise<ApiResponse<GetEligibleRoomsResponse>> {
+export async function getEligibleRooms(
+  params: GetEligibleRoomsParams,
+): Promise<ApiResponse<GetEligibleRoomsResponse>> {
   try {
     const response = await axiosInstance.post<ApiResponse<GetEligibleRoomsResponse>>(
       "/api/exams/schedule/eligible-rooms",

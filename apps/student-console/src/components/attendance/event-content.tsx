@@ -18,11 +18,7 @@ export default function EventContent({ mockData }: EventContentProps) {
           </h2>
           <div className="space-y-4">
             {mockData.collegeEvents.map((event, index) => (
-              <EventCard
-                key={`event-${index}`}
-                event={event}
-                mockData={mockData}
-              />
+              <EventCard key={`event-${index}`} event={event} mockData={mockData} />
             ))}
           </div>
         </div>

@@ -123,8 +123,15 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         }
 
         // Auto-populate existing selections if they exist
-        if (hasExisting && resp.actualStudentSelections && resp.actualStudentSelections.length > 0) {
-          console.log("🔍 Main Console - Auto-populating existing selections:", resp.actualStudentSelections);
+        if (
+          hasExisting &&
+          resp.actualStudentSelections &&
+          resp.actualStudentSelections.length > 0
+        ) {
+          console.log(
+            "🔍 Main Console - Auto-populating existing selections:",
+            resp.actualStudentSelections,
+          );
 
           // Transform and populate form fields with existing selections
           for (const selection of resp.actualStudentSelections) {
@@ -187,7 +194,14 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
         // Derive groups
         const getLabel = (p: PaperDto) => p?.subject?.name || "";
-        const romanMap: Record<string, string> = { "1": "I", "2": "II", "3": "III", "4": "IV", "5": "V", "6": "VI" };
+        const romanMap: Record<string, string> = {
+          "1": "I",
+          "2": "II",
+          "3": "III",
+          "4": "IV",
+          "5": "V",
+          "6": "VI",
+        };
         const extractSemesterRoman = (name?: string | null): string => {
           if (!name) return "";
           const upper = String(name).toUpperCase();
@@ -206,21 +220,35 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           (n ?? "").toUpperCase().includes("INTER DISCIPLINARY") ||
           (c ?? "").toUpperCase() === "IDC";
         const isAEC = (n: string, c?: string | null) =>
-          (n ?? "").toUpperCase().includes("ABILITY ENHANCEMENT") || (c ?? "").toUpperCase() === "AEC";
+          (n ?? "").toUpperCase().includes("ABILITY ENHANCEMENT") ||
+          (c ?? "").toUpperCase() === "AEC";
         const isCVAC = (n: string, c?: string | null) =>
-          (n ?? "").toUpperCase().includes("COMMON VALUE ADDED") || (c ?? "").toUpperCase() === "CVAC";
+          (n ?? "").toUpperCase().includes("COMMON VALUE ADDED") ||
+          (c ?? "").toUpperCase() === "CVAC";
 
-        const minorGroup = groups.find((g) => isMinor(g.subjectType?.name || "", g.subjectType?.code || ""));
-        const idcGroup = groups.find((g) => isIDC(g.subjectType?.name || "", g.subjectType?.code || ""));
-        const aecGroup = groups.find((g) => isAEC(g.subjectType?.name || "", g.subjectType?.code || ""));
-        const cvacGroup = groups.find((g) => isCVAC(g.subjectType?.name || "", g.subjectType?.code || ""));
+        const minorGroup = groups.find((g) =>
+          isMinor(g.subjectType?.name || "", g.subjectType?.code || ""),
+        );
+        const idcGroup = groups.find((g) =>
+          isIDC(g.subjectType?.name || "", g.subjectType?.code || ""),
+        );
+        const aecGroup = groups.find((g) =>
+          isAEC(g.subjectType?.name || "", g.subjectType?.code || ""),
+        );
+        const cvacGroup = groups.find((g) =>
+          isCVAC(g.subjectType?.name || "", g.subjectType?.code || ""),
+        );
 
         const dedupe = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)));
 
         // Minor I: semesters I & II
-        const minorSem1And2 = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "I") || isSem(p, "II"));
+        const minorSem1And2 = (minorGroup?.paperOptions || []).filter(
+          (p) => isSem(p, "I") || isSem(p, "II"),
+        );
         // Minor II: semesters III & IV
-        const minorSem3And4 = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "III") || isSem(p, "IV"));
+        const minorSem3And4 = (minorGroup?.paperOptions || []).filter(
+          (p) => isSem(p, "III") || isSem(p, "IV"),
+        );
         // Minor III: semester III only (for BCOM programs)
         const minorSem3Only = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
 
@@ -230,7 +258,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         const idcSem3Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
 
         // AEC: semesters III & IV
-        const aec3Papers = (aecGroup?.paperOptions || []).filter((p) => isSem(p, "III") || isSem(p, "IV"));
+        const aec3Papers = (aecGroup?.paperOptions || []).filter(
+          (p) => isSem(p, "III") || isSem(p, "IV"),
+        );
 
         // CVAC 4: semester II
         const cvac4Papers = (cvacGroup?.paperOptions || []).filter((p) => isSem(p, "II"));
@@ -263,9 +293,18 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
         // Debug: Log detailed semester breakdown for Minor subjects
         console.log("Detailed Minor semester breakdown:", {
-          minorSem1And2: minorSem1And2.map((p) => ({ name: p.subject?.name, semester: getSemesterRoman(p) })),
-          minorSem3And4: minorSem3And4.map((p) => ({ name: p.subject?.name, semester: getSemesterRoman(p) })),
-          minorSem3Only: minorSem3Only.map((p) => ({ name: p.subject?.name, semester: getSemesterRoman(p) })),
+          minorSem1And2: minorSem1And2.map((p) => ({
+            name: p.subject?.name,
+            semester: getSemesterRoman(p),
+          })),
+          minorSem3And4: minorSem3And4.map((p) => ({
+            name: p.subject?.name,
+            semester: getSemesterRoman(p),
+          })),
+          minorSem3Only: minorSem3Only.map((p) => ({
+            name: p.subject?.name,
+            semester: getSemesterRoman(p),
+          })),
         });
 
         // Debug: Log which Minor options will be displayed
@@ -273,8 +312,10 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           hasMinor1: hasActualOptions(admissionMinor1Subjects),
           hasMinor2: hasActualOptions(admissionMinor2Subjects),
           hasMinor3: hasActualOptions(admissionMinor3Subjects),
-          willShowMinor2: hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects),
-          willShowMinor3: !hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects),
+          willShowMinor2:
+            hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects),
+          willShowMinor3:
+            !hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects),
           minor1Subjects: admissionMinor1Subjects,
           minor2Subjects: admissionMinor2Subjects,
           minor3Subjects: admissionMinor3Subjects,
@@ -288,7 +329,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
             .map(getLabel),
         );
         const autoMinor3List = dedupe(
-          (minorGroup?.paperOptions || []).filter((p) => isAutoAssigned(p) && isSem(p, "III")).map(getLabel),
+          (minorGroup?.paperOptions || [])
+            .filter((p) => isAutoAssigned(p) && isSem(p, "III"))
+            .map(getLabel),
         );
         setAutoMinor1(firstOrEmpty(autoMinor1List) || "");
         setAutoMinor3(firstOrEmpty(autoMinor3List) || "");
@@ -310,8 +353,14 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           String(s || "")
             .trim()
             .toUpperCase();
-        const rgMap: Record<string, { semesters: string[]; cannotCombineWith: Set<string>; categoryCode: string }> = {};
-        const rgById: Record<number, { semesters: string[]; cannotCombineIds: Set<number>; categoryCode: string }> = {};
+        const rgMap: Record<
+          string,
+          { semesters: string[]; cannotCombineWith: Set<string>; categoryCode: string }
+        > = {};
+        const rgById: Record<
+          number,
+          { semesters: string[]; cannotCombineIds: Set<number>; categoryCode: string }
+        > = {};
         const catFlags: Record<string, boolean> = {};
         for (const rg of rgs) {
           const target = rg.subject?.name || "";
@@ -329,7 +378,11 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           const targetKey = norm(target);
           // Merge multiple RGs per target/category and enforce symmetry
           if (!rgMap[targetKey]) {
-            rgMap[targetKey] = { semesters, cannotCombineWith: new Set<string>(), categoryCode: code };
+            rgMap[targetKey] = {
+              semesters,
+              cannotCombineWith: new Set<string>(),
+              categoryCode: code,
+            };
           }
           for (const c of cannot) rgMap[targetKey].cannotCombineWith.add(c);
 
@@ -432,16 +485,28 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
     const shouldAskForCvac = hasActualOptions(availableCvacOptions);
 
     // Required field validation - create individual error messages
-    if (hasActualOptions(admissionMinor1Subjects) && !minor1) newErrors.push("Minor I subject is required");
+    if (hasActualOptions(admissionMinor1Subjects) && !minor1)
+      newErrors.push("Minor I subject is required");
     // Minor II is only required when Minor I is available (traditional programs)
-    if (hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) && !minor2)
+    if (
+      hasActualOptions(admissionMinor1Subjects) &&
+      hasActualOptions(admissionMinor2Subjects) &&
+      !minor2
+    )
       newErrors.push("Minor II subject is required");
     // Minor III is only required when Minor I is not available (BCOM programs)
-    if (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) && !minor3)
+    if (
+      !hasActualOptions(admissionMinor1Subjects) &&
+      hasActualOptions(admissionMinor3Subjects) &&
+      !minor3
+    )
       newErrors.push("Minor subject is required");
-    if (hasActualOptions(availableIdcSem1Subjects) && !idc1) newErrors.push("IDC 1 subject is required");
-    if (hasActualOptions(availableIdcSem2Subjects) && !idc2) newErrors.push("IDC 2 subject is required");
-    if (hasActualOptions(availableIdcSem3Subjects) && !idc3) newErrors.push("IDC 3 subject is required");
+    if (hasActualOptions(availableIdcSem1Subjects) && !idc1)
+      newErrors.push("IDC 1 subject is required");
+    if (hasActualOptions(availableIdcSem2Subjects) && !idc2)
+      newErrors.push("IDC 2 subject is required");
+    if (hasActualOptions(availableIdcSem3Subjects) && !idc3)
+      newErrors.push("IDC 3 subject is required");
     if (shouldAskForAec && !aec3) newErrors.push("AEC 3 subject is required");
     if (shouldAskForCvac && !cvac4) newErrors.push("CVAC 4 subject is required");
 
@@ -487,7 +552,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
     // Auto-assigned subject must be present validation
     if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1 && minor3 !== autoMinor1) {
-      newErrors.push(`${autoMinor1} is mandatory and must be selected in one of the Minor subjects`);
+      newErrors.push(
+        `${autoMinor1} is mandatory and must be selected in one of the Minor subjects`,
+      );
     }
     // Minor III auto-assignment is only required when Minor III is displayed
     if (
@@ -515,7 +582,10 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
     }
 
     // Move auto-assigned subject (e.g., Mathematics) to the other Minor when it is replaced
-    if (autoMinor1 && (fieldType === "minor1" || fieldType === "minor2" || fieldType === "minor3")) {
+    if (
+      autoMinor1 &&
+      (fieldType === "minor1" || fieldType === "minor2" || fieldType === "minor3")
+    ) {
       if (fieldType === "minor1" && minor1 === autoMinor1 && value !== autoMinor1) {
         if (minor2 !== autoMinor1) setMinor2(autoMinor1);
         else if (minor3 !== autoMinor1) setMinor3(autoMinor1);
@@ -796,7 +866,8 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         // Play success sound
         try {
           const audioContext = new (
-            window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+            window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
           )();
 
           // Create a more distinctive "success" sound with two quick beeps
@@ -825,7 +896,10 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           console.log("Could not play success sound:", error);
         }
       } else {
-        setSaveError("Validation failed: " + (result.errors?.map((e) => e.message).join(", ") || "Unknown error"));
+        setSaveError(
+          "Validation failed: " +
+            (result.errors?.map((e) => e.message).join(", ") || "Unknown error"),
+        );
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Failed to save selections";
@@ -838,14 +912,20 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
   // Filter out Minor subjects from IDC options (per list)
   const getFilteredIdcOptions = (sourceList: string[], currentIdcValue: string) => {
     return sourceList.filter((subject) => {
-      const uniqueWithinIdc = subject === currentIdcValue || (subject !== idc1 && subject !== idc2 && subject !== idc3);
+      const uniqueWithinIdc =
+        subject === currentIdcValue || (subject !== idc1 && subject !== idc2 && subject !== idc3);
       const notSameAsMinor = subject !== minor1 && subject !== minor2;
       return uniqueWithinIdc && notSameAsMinor;
     });
   };
 
   const getFilteredByCategory = useCallback(
-    (sourceList: string[], currentValue: string, categoryCode: string, contextSemester?: string | string[]) => {
+    (
+      sourceList: string[],
+      currentValue: string,
+      categoryCode: string,
+      contextSemester?: string | string[],
+    ) => {
       const norm = (s: string) =>
         String(s || "")
           .trim()
@@ -902,7 +982,18 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         return true;
       });
     },
-    [restrictedCategories, restrictedBySubject, minor1, minor2, minor3, idc1, idc2, idc3, aec3, cvac4],
+    [
+      restrictedCategories,
+      restrictedBySubject,
+      minor1,
+      minor2,
+      minor3,
+      idc1,
+      idc2,
+      idc3,
+      aec3,
+      cvac4,
+    ],
   );
 
   // Auto-assign the other Minor with the mandatory auto-assigned subject when one is selected
@@ -916,7 +1007,10 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         }
       }
       // Check if Minor III is available (BCOM programs)
-      else if (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects)) {
+      else if (
+        !hasActualOptions(admissionMinor1Subjects) &&
+        hasActualOptions(admissionMinor3Subjects)
+      ) {
         const options = getFilteredByCategory(admissionMinor3Subjects, minor3, "MN", ["III"]);
         if (options.includes(autoMinor1) && autoMinor1 !== minor1) {
           setMinor3(autoMinor1);
@@ -963,7 +1057,10 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         }
       }
       // Check if Minor III is available (BCOM programs)
-      else if (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects)) {
+      else if (
+        !hasActualOptions(admissionMinor1Subjects) &&
+        hasActualOptions(admissionMinor3Subjects)
+      ) {
         const minor3Options = getFilteredByCategory(admissionMinor3Subjects, minor3, "MN", ["III"]);
         if (minor3Options.includes(autoMinor1)) {
           setMinor3(autoMinor1);
@@ -1022,7 +1119,11 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
   );
 
   // Helper function to convert subject arrays to combobox format with a reset placeholder
-  const convertToComboboxData = (subjects: string[], excludeValues: string[] = [], selectLabel: string = "Select") => {
+  const convertToComboboxData = (
+    subjects: string[],
+    excludeValues: string[] = [],
+    selectLabel: string = "Select",
+  ) => {
     const options = subjects
       .filter((subject) => !excludeValues.includes(subject))
       .map((subject) => ({ value: subject, label: subject }));
@@ -1090,15 +1191,23 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
               className={`grid grid-cols-1 gap-6 ${
                 // Dynamic grid based on available Minor options
                 (hasActualOptions(admissionMinor1Subjects) ? 1 : 0) +
-                  (hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) ? 1 : 0) +
-                  (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) ? 1 : 0) ===
+                  (hasActualOptions(admissionMinor1Subjects) &&
+                  hasActualOptions(admissionMinor2Subjects)
+                    ? 1
+                    : 0) +
+                  (!hasActualOptions(admissionMinor1Subjects) &&
+                  hasActualOptions(admissionMinor3Subjects)
+                    ? 1
+                    : 0) ===
                 3
                   ? "lg:grid-cols-3"
                   : (hasActualOptions(admissionMinor1Subjects) ? 1 : 0) +
-                        (hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects)
+                        (hasActualOptions(admissionMinor1Subjects) &&
+                        hasActualOptions(admissionMinor2Subjects)
                           ? 1
                           : 0) +
-                        (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects)
+                        (!hasActualOptions(admissionMinor1Subjects) &&
+                        hasActualOptions(admissionMinor3Subjects)
                           ? 1
                           : 0) ===
                       2
@@ -1115,13 +1224,21 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
               ) : (
                 <>
                   {hasActualOptions(admissionMinor1Subjects) && (
-                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                      <label className="text-base font-medium text-gray-700">{getDynamicLabel("MN", "I")}</label>
+                    <div
+                      className="space-y-2 min-h-[84px]"
+                      onClick={() => handleFieldFocus("minor")}
+                    >
+                      <label className="text-base font-medium text-gray-700">
+                        {getDynamicLabel("MN", "I")}
+                      </label>
                       <Combobox
                         dataArr={convertToComboboxData(
                           preserveAecIfPresent(
                             admissionMinor1Subjects,
-                            getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
+                            getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", [
+                              "I",
+                              "II",
+                            ]),
                           ),
                           getGlobalExcludes(minor1),
                         )}
@@ -1134,44 +1251,59 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
                   )}
 
                   {/* Minor II: Only show when Minor I is available (traditional programs) */}
-                  {hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) && (
-                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                      <label className="text-base font-medium text-gray-700">{getDynamicLabel("MN", "III")}</label>
-                      <Combobox
-                        dataArr={convertToComboboxData(
-                          preserveAecIfPresent(
-                            admissionMinor2Subjects,
-                            getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
-                          ),
-                          getGlobalExcludes(minor2),
-                        )}
-                        value={minor2}
-                        onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
-                        placeholder="Select Minor II"
-                        className="w-full"
-                      />
-                    </div>
-                  )}
+                  {hasActualOptions(admissionMinor1Subjects) &&
+                    hasActualOptions(admissionMinor2Subjects) && (
+                      <div
+                        className="space-y-2 min-h-[84px]"
+                        onClick={() => handleFieldFocus("minor")}
+                      >
+                        <label className="text-base font-medium text-gray-700">
+                          {getDynamicLabel("MN", "III")}
+                        </label>
+                        <Combobox
+                          dataArr={convertToComboboxData(
+                            preserveAecIfPresent(
+                              admissionMinor2Subjects,
+                              getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", [
+                                "III",
+                                "IV",
+                              ]),
+                            ),
+                            getGlobalExcludes(minor2),
+                          )}
+                          value={minor2}
+                          onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
+                          placeholder="Select Minor II"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
 
                   {/* Minor III: Show when Minor I is not available (BCOM programs) */}
-                  {!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) && (
-                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                      <label className="text-base font-medium text-gray-700">Minor (Semester III to VI)</label>
-                      <Combobox
-                        dataArr={convertToComboboxData(
-                          preserveAecIfPresent(
-                            admissionMinor3Subjects,
-                            getFilteredByCategory(admissionMinor3Subjects, minor3, "MN", ["III"]),
-                          ),
-                          getGlobalExcludes(minor3),
-                        )}
-                        value={minor3}
-                        onChange={(value) => handleFieldChange(setMinor3, value, "minor3")}
-                        placeholder="Select Minor"
-                        className="w-full"
-                      />
-                    </div>
-                  )}
+                  {!hasActualOptions(admissionMinor1Subjects) &&
+                    hasActualOptions(admissionMinor3Subjects) && (
+                      <div
+                        className="space-y-2 min-h-[84px]"
+                        onClick={() => handleFieldFocus("minor")}
+                      >
+                        <label className="text-base font-medium text-gray-700">
+                          Minor (Semester III to VI)
+                        </label>
+                        <Combobox
+                          dataArr={convertToComboboxData(
+                            preserveAecIfPresent(
+                              admissionMinor3Subjects,
+                              getFilteredByCategory(admissionMinor3Subjects, minor3, "MN", ["III"]),
+                            ),
+                            getGlobalExcludes(minor3),
+                          )}
+                          value={minor3}
+                          onChange={(value) => handleFieldChange(setMinor3, value, "minor3")}
+                          placeholder="Select Minor"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
                 </>
               )}
             </div>
@@ -1180,7 +1312,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
               <LoadingDropdown label={getDynamicLabel("AEC")} />
             ) : hasActualOptions(availableAecSubjects) ? (
               <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
-                <label className="text-base font-medium text-gray-700">{getDynamicLabel("AEC")}</label>
+                <label className="text-base font-medium text-gray-700">
+                  {getDynamicLabel("AEC")}
+                </label>
                 <Combobox
                   dataArr={convertToComboboxData(availableAecSubjects)}
                   value={aec3}
@@ -1203,7 +1337,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
                 <>
                   {hasActualOptions(availableIdcSem1Subjects) && (
                     <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                      <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "I")}</label>
+                      <label className="text-base font-medium text-gray-700">
+                        {getDynamicLabel("IDC", "I")}
+                      </label>
                       <Combobox
                         dataArr={convertToComboboxData(
                           preserveAecIfPresent(
@@ -1227,7 +1363,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
                   {hasActualOptions(availableIdcSem2Subjects) && (
                     <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                      <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "II")}</label>
+                      <label className="text-base font-medium text-gray-700">
+                        {getDynamicLabel("IDC", "II")}
+                      </label>
                       <Combobox
                         dataArr={convertToComboboxData(
                           preserveAecIfPresent(
@@ -1251,7 +1389,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
                   {hasActualOptions(availableIdcSem3Subjects) && (
                     <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                      <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "III")}</label>
+                      <label className="text-base font-medium text-gray-700">
+                        {getDynamicLabel("IDC", "III")}
+                      </label>
                       <Combobox
                         dataArr={convertToComboboxData(
                           preserveAecIfPresent(
@@ -1281,7 +1421,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
               <LoadingDropdown label={getDynamicLabel("CVAC")} />
             ) : hasActualOptions(availableCvacOptions) ? (
               <div className="space-y-2">
-                <label className="text-base font-medium text-gray-700">{getDynamicLabel("CVAC")}</label>
+                <label className="text-base font-medium text-gray-700">
+                  {getDynamicLabel("CVAC")}
+                </label>
                 <Combobox
                   dataArr={convertToComboboxData(availableCvacOptions, getGlobalExcludes(cvac4))}
                   value={cvac4}
@@ -1300,9 +1442,16 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
             <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg">
               <div className="flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
-                <span className="text-base font-medium">Subject selections saved successfully!</span>
+                <span className="text-base font-medium">
+                  Subject selections saved successfully!
+                </span>
               </div>
             </div>
           )}
@@ -1318,7 +1467,9 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
           {/* Reason for Change (Admin only) */}
           <div className="space-y-2">
-            <label className="text-base font-medium text-gray-700">Reason for Change/Update (Optional)</label>
+            <label className="text-base font-medium text-gray-700">
+              Reason for Change/Update (Optional)
+            </label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -1330,7 +1481,10 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
           {/* Inline errors */}
           {errors.length > 0 && (
-            <div id="form-error" className="mt-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
+            <div
+              id="form-error"
+              className="mt-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg"
+            >
               <ul className="list-disc list-inside space-y-1 text-base">
                 {errors.map((error, index) => (
                   <li key={index}>{error}</li>
@@ -1343,11 +1497,12 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
           {minorMismatch && (
             <div className="mt-4 p-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg">
               <div>
-                The current Minor I and II subject combination is different from the one selected at the time of
-                admission.
+                The current Minor I and II subject combination is different from the one selected at
+                the time of admission.
               </div>
               <div className="mt-1 text-base">
-                Previously saved: <span className="font-semibold">{earlierMinorSelections[0] || "-"}</span> and{" "}
+                Previously saved:{" "}
+                <span className="font-semibold">{earlierMinorSelections[0] || "-"}</span> and{" "}
                 <span className="font-semibold">{earlierMinorSelections[1] || "-"}</span>
               </div>
             </div>
@@ -1361,7 +1516,11 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm text-base flex items-center gap-2"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {saving ? "Saving..." : hasExistingSelections ? "Update Selections" : "Save Selections"}
+              {saving
+                ? "Saving..."
+                : hasExistingSelections
+                  ? "Update Selections"
+                  : "Save Selections"}
             </button>
           </div>
         </div>

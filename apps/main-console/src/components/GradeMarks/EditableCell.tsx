@@ -10,13 +10,13 @@ interface EditableCellProps {
   disabled?: boolean;
 }
 
-export const EditableCell = ({ 
-  value, 
-  onChange, 
-  type = "text", 
+export const EditableCell = ({
+  value,
+  onChange,
+  type = "text",
   className = "",
   max,
-  disabled = false
+  disabled = false,
 }: EditableCellProps) => {
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -41,7 +41,7 @@ export const EditableCell = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let newValue: string | number = e.target.value;
-    
+
     if (type === "number") {
       if (newValue === "") {
         newValue = 0;
@@ -55,7 +55,7 @@ export const EditableCell = ({
         }
       }
     }
-    
+
     setInputValue(newValue);
   };
 
@@ -78,12 +78,12 @@ export const EditableCell = ({
   };
 
   return (
-    <div 
+    <div
       className={cn(
         "min-h-[24px] w-full py-1 px-2   rounded",
         disabled ? "cursor-default" : "cursor-text",
         editing ? "bg-blue-50" : "",
-        className
+        className,
       )}
       onDoubleClick={handleDoubleClick}
     >

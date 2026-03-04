@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import axiosInstance from "@/utils/api";
 import { DataTable } from "@/components/ui/data-table";
-import { useQuery, RefetchOptions, QueryObserverResult, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  RefetchOptions,
+  QueryObserverResult,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { User } from "@/types/user/user";
 import { ApiResponse } from "@/types/api-response";
 import { PaginatedResponse } from "@/types/pagination";
@@ -174,97 +179,182 @@ const getOptionalToolsConfig = (settingLabel: string) => {
         { icon: UserPlus, label: "Add User", action: "add-user", variant: "default" },
         { icon: FileUp, label: "Import Users", action: "import-users", variant: "outline" },
         { icon: FileDown, label: "Export Users", action: "export-users", variant: "outline" },
-        { icon: Download, label: "Download Template", action: "download-template", variant: "secondary" },
+        {
+          icon: Download,
+          label: "Download Template",
+          action: "download-template",
+          variant: "secondary",
+        },
       ],
     },
     "Board Universities": {
       buttons: [
-        { icon: Plus, label: "Add Board/University", action: "add-board-university", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-board-university", variant: "outline" },
+        {
+          icon: Plus,
+          label: "Add Board/University",
+          action: "add-board-university",
+          variant: "default",
+        },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-board-university",
+          variant: "outline",
+        },
       ],
     },
     Institutions: {
       buttons: [
         { icon: Plus, label: "Add Institution", action: "add-institution", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-institutions", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-institutions",
+          variant: "outline",
+        },
       ],
     },
     Categories: {
       buttons: [
         { icon: Plus, label: "Add Category", action: "add-category", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-categories", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-categories",
+          variant: "outline",
+        },
       ],
     },
     Degree: {
       buttons: [
         { icon: Plus, label: "Add Degree", action: "add-degree", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-degrees", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-degrees",
+          variant: "outline",
+        },
       ],
     },
     Religion: {
       buttons: [
         { icon: Plus, label: "Add Religion", action: "add-religion", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-religions", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-religions",
+          variant: "outline",
+        },
       ],
     },
     "Language Medium": {
       buttons: [
         { icon: Plus, label: "Add Language", action: "add-language", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-languages", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-languages",
+          variant: "outline",
+        },
       ],
     },
     Documents: {
       buttons: [
         { icon: Plus, label: "Add Document", action: "add-document", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-documents", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-documents",
+          variant: "outline",
+        },
       ],
     },
     "Blood Groups": {
       buttons: [
         { icon: Plus, label: "Add Blood Group", action: "add-blood-group", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-blood-groups", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-blood-groups",
+          variant: "outline",
+        },
       ],
     },
     Occupation: {
       buttons: [
         { icon: Plus, label: "Add Occupation", action: "add-occupation", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-occupations", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-occupations",
+          variant: "outline",
+        },
       ],
     },
     Qualifications: {
       buttons: [
         { icon: Plus, label: "Add Qualification", action: "add-qualification", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-qualifications", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-qualifications",
+          variant: "outline",
+        },
       ],
     },
     Nationality: {
       buttons: [
         { icon: Plus, label: "Add Nationality", action: "add-nationality", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-nationalities", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-nationalities",
+          variant: "outline",
+        },
       ],
     },
     Country: {
       buttons: [
         { icon: Plus, label: "Add Country", action: "add-country", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-countries", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-countries",
+          variant: "outline",
+        },
       ],
     },
     State: {
       buttons: [
         { icon: Plus, label: "Add State", action: "add-state", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-states", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-states",
+          variant: "outline",
+        },
       ],
     },
     City: {
       buttons: [
         { icon: Plus, label: "Add City", action: "add-city", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-cities", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-cities",
+          variant: "outline",
+        },
       ],
     },
     "Annual Income": {
       buttons: [
         { icon: Plus, label: "Add Income Range", action: "add-income-range", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-income-ranges", variant: "outline" },
+        {
+          icon: Download,
+          label: "Download All",
+          action: "download-all-income-ranges",
+          variant: "outline",
+        },
       ],
     },
   };
@@ -281,11 +371,18 @@ const getOptionalToolsConfig = (settingLabel: string) => {
 };
 
 // Utility to flatten any object to Record<string, string | number | boolean | null>
-function toFormData(obj: SettingsRow | undefined): Record<string, string | number | boolean | null> | undefined {
+function toFormData(
+  obj: SettingsRow | undefined,
+): Record<string, string | number | boolean | null> | undefined {
   if (!obj) return undefined;
   const result: Record<string, string | number | boolean | null> = {};
   Object.entries(obj).forEach(([key, value]) => {
-    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null) {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean" ||
+      value === null
+    ) {
       result[key] = value;
     }
   });
@@ -332,7 +429,10 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
   }, [activeSetting.label]);
 
   const { isLoading: isFetchingDefault } = useQuery({
-    queryKey: [activeSetting.label, { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
+    queryKey: [
+      activeSetting.label,
+      { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize },
+    ],
     queryFn: async () => {
       const { data, columns: tableCol } = await fetchData(
         {
@@ -540,7 +640,10 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
       action: "edit-entity",
       settingType: activeSetting.label,
       editData: rowData,
-      editId: typeof (rowData as { id?: number }).id === "number" ? (rowData as { id?: number }).id : undefined,
+      editId:
+        typeof (rowData as { id?: number }).id === "number"
+          ? (rowData as { id?: number }).id
+          : undefined,
     });
   };
 
@@ -556,7 +659,11 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
         pagination={pagination}
         setPagination={setPagination}
         setDataLength={setDataLength}
-        refetch={refetch as (options?: RefetchOptions) => Promise<QueryObserverResult<unknown[] | undefined, Error>>}
+        refetch={
+          refetch as (
+            options?: RefetchOptions,
+          ) => Promise<QueryObserverResult<unknown[] | undefined, Error>>
+        }
       />
 
       {/* Dynamic Modal */}
@@ -572,7 +679,10 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
           closeModal();
           // Invalidate the main data query to refetch data
           queryClient.invalidateQueries({
-            queryKey: [activeSetting.label, { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
+            queryKey: [
+              activeSetting.label,
+              { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize },
+            ],
           });
         }}
       />

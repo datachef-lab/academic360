@@ -25,7 +25,9 @@ export const columns = ({ onEdit, onToggleStatus }: ColumnsProps): ColumnDef<Lan
     id: "select",
     header: ({ table }) => (
       <Checkbox
-        checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+        checked={
+          table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
         onCheckedChange={(value: boolean) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
       />
@@ -44,7 +46,10 @@ export const columns = ({ onEdit, onToggleStatus }: ColumnsProps): ColumnDef<Lan
     accessorKey: "name",
     header: ({ column }) => {
       return (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
           Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
@@ -56,7 +61,11 @@ export const columns = ({ onEdit, onToggleStatus }: ColumnsProps): ColumnDef<Lan
     header: "Status",
     cell: ({ row }) => {
       const isDisabled = row.getValue("disabled");
-      return <Badge variant={!isDisabled ? "default" : "destructive"}>{!isDisabled ? "Active" : "Inactive"}</Badge>;
+      return (
+        <Badge variant={!isDisabled ? "default" : "destructive"}>
+          {!isDisabled ? "Active" : "Inactive"}
+        </Badge>
+      );
     },
   },
   {
@@ -75,7 +84,9 @@ export const columns = ({ onEdit, onToggleStatus }: ColumnsProps): ColumnDef<Lan
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(languageMedium.id))}>
+            <DropdownMenuItem
+              onClick={() => navigator.clipboard.writeText(String(languageMedium.id))}
+            >
               Copy Language Medium ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />

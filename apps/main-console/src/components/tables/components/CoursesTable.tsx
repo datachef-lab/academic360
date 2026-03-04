@@ -1,13 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
   getPaginationRowModel,
-} from '@tanstack/react-table';
-import { ChevronLeft, ChevronRight, Trash2, Edit, Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+} from "@tanstack/react-table";
+import { ChevronLeft, ChevronRight, Trash2, Edit, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import {
   Table,
@@ -17,13 +17,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 // Import Course type from service
 // import { Course } from '@/services/course-api';
-import { Course } from '@/types/course-design';
+import { Course } from "@/types/course-design";
 
 interface CoursesTableProps {
   courses: Course[];
@@ -35,74 +41,76 @@ interface CoursesTableProps {
 
 const columnHelper = createColumnHelper<Course>();
 
-const CoursesTable: React.FC<CoursesTableProps> = ({ 
-  courses, 
-  onDelete, 
-  onEdit, 
+const CoursesTable: React.FC<CoursesTableProps> = ({
+  courses,
+  onDelete,
+  onEdit,
   canDelete = false,
-  canEdit = false
+  canEdit = false,
 }) => {
   const navigate = useNavigate();
   const columns = useMemo(
     () => [
-      columnHelper.accessor('name', {
-        header: 'Course Name',
-        cell: info => <span className="font-medium">{info.getValue()}</span>,
+      columnHelper.accessor("name", {
+        header: "Course Name",
+        cell: (info) => <span className="font-medium">{info.getValue()}</span>,
       }),
-      columnHelper.accessor('shortName', {
-        header: 'Short Name',
-        cell: info => <span>{info.getValue() || 'N/A'}</span>,
+      columnHelper.accessor("shortName", {
+        header: "Short Name",
+        cell: (info) => <span>{info.getValue() || "N/A"}</span>,
       }),
-      
-      columnHelper.accessor(row => row?.degree?.name, {
-        id: 'degree',
-        header: 'Degree',
-        cell: info => (
+
+      columnHelper.accessor((row) => row?.degree?.name, {
+        id: "degree",
+        header: "Degree",
+        cell: (info) => (
           <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-            {info.getValue() || 'N/A'}
+            {info.getValue() || "N/A"}
           </Badge>
         ),
       }),
-      ...(canEdit || canDelete ? [
-        columnHelper.display({
-          id: 'actions',
-          header: 'Actions',
-          cell: ({ row }) => (
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate(`/dashboard/courses-subjects/${row.original.id}`)}
-                className="text-purple-500 hover:text-purple-700 hover:bg-purple-50"
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              {canEdit && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => onEdit && onEdit(row.original)}
-                  className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              )}
-              {canDelete && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => onDelete && onDelete(row.original.id!)}
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          ),
-        })
-      ] : []),
+      ...(canEdit || canDelete
+        ? [
+            columnHelper.display({
+              id: "actions",
+              header: "Actions",
+              cell: ({ row }) => (
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate(`/dashboard/courses-subjects/${row.original.id}`)}
+                    className="text-purple-500 hover:text-purple-700 hover:bg-purple-50"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit && onEdit(row.original)}
+                      className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete && onDelete(row.original.id!)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ),
+            }),
+          ]
+        : []),
     ],
-    [onDelete, onEdit, canDelete, canEdit, navigate]
+    [onDelete, onEdit, canDelete, canEdit, navigate],
   );
 
   const table = useReactTable({
@@ -123,14 +131,11 @@ const CoursesTable: React.FC<CoursesTableProps> = ({
         <div className="max-h-[400px] overflow-y-auto overflow-x-auto custom-scrollbar">
           <Table className="min-w-full border">
             <TableHeader>
-              {table.getHeaderGroups().map(headerGroup => (
+              {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
+                  {headerGroup.headers.map((header) => (
                     <TableHead key={header.id} className="sticky top-0 z-10 bg-white border-b p-4">
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                      {flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -138,9 +143,9 @@ const CoursesTable: React.FC<CoursesTableProps> = ({
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows.length > 0 ? (
-                table.getRowModel().rows.map(row => (
+                table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
-                    {row.getVisibleCells().map(cell => (
+                    {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="border-b p-4">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
@@ -206,4 +211,4 @@ const CoursesTable: React.FC<CoursesTableProps> = ({
   );
 };
 
-export default CoursesTable; 
+export default CoursesTable;

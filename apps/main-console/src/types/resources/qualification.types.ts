@@ -1,6 +1,6 @@
 /**
  * Qualification Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Qualification module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Qualification interface that mirrors the backend model
  */
 export interface Qualification {
-    readonly id?: number;
+  readonly id?: number;
   name: string;
   sequence?: number | null;
   disabled: boolean;
@@ -120,15 +120,15 @@ export interface QualificationState {
  * Action types for qualification state management
  */
 export type QualificationAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_QUALIFICATIONS'; payload: Qualification[] }
-  | { type: 'SET_CURRENT_QUALIFICATION'; payload: Qualification | null }
-  | { type: 'ADD_QUALIFICATION'; payload: Qualification }
-  | { type: 'UPDATE_QUALIFICATION'; payload: Qualification }
-  | { type: 'DELETE_QUALIFICATION'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_QUALIFICATIONS"; payload: Qualification[] }
+  | { type: "SET_CURRENT_QUALIFICATION"; payload: Qualification | null }
+  | { type: "ADD_QUALIFICATION"; payload: Qualification }
+  | { type: "UPDATE_QUALIFICATION"; payload: Qualification }
+  | { type: "DELETE_QUALIFICATION"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -143,7 +143,7 @@ export interface QualificationTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -160,7 +160,7 @@ export interface QualificationFilter {
  */
 export interface QualificationSort {
   field: keyof Qualification;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -190,7 +190,7 @@ export type QualificationSequence = number | null;
  * Default values for qualification
  */
 export const DEFAULT_QUALIFICATION: CreateQualificationPayload = {
-  name: '',
+  name: "",
   sequence: null,
   disabled: false,
 };
@@ -199,8 +199,8 @@ export const DEFAULT_QUALIFICATION: CreateQualificationPayload = {
  * Default form data for qualification
  */
 export const DEFAULT_QUALIFICATION_FORM: QualificationFormData = {
-  name: '',
-  sequence: '',
+  name: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -208,27 +208,36 @@ export const DEFAULT_QUALIFICATION_FORM: QualificationFormData = {
  * Table columns configuration for qualification
  */
 export const QUALIFICATION_TABLE_COLUMNS: QualificationTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Qualification Name', sortable: true, filterable: true },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Qualification Name", sortable: true, filterable: true },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Common qualifications for reference
  */
 export const COMMON_QUALIFICATIONS = [
-  'High School', 'Associate Degree', 'Bachelor\'s Degree', 'Master\'s Degree',
-  'Doctorate', 'Diploma', 'Certificate', 'Professional Certification',
-  'Trade School', 'Vocational Training', 'Apprenticeship', 'GED'
+  "High School",
+  "Associate Degree",
+  "Bachelor's Degree",
+  "Master's Degree",
+  "Doctorate",
+  "Diploma",
+  "Certificate",
+  "Professional Certification",
+  "Trade School",
+  "Vocational Training",
+  "Apprenticeship",
+  "GED",
 ] as const;
 
 /**
  * Type for common qualification values
  */
-export type CommonQualification = typeof COMMON_QUALIFICATIONS[number];
+export type CommonQualification = (typeof COMMON_QUALIFICATIONS)[number];
 
 // ============================================================================
 // TYPE GUARDS
@@ -240,12 +249,13 @@ export type CommonQualification = typeof COMMON_QUALIFICATIONS[number];
 export function isQualification(obj: object): obj is Qualification {
   return (
     obj &&
-    typeof (obj as Qualification).id === 'number' &&
-    typeof (obj as Qualification).name === 'string' &&
-    ((obj as Qualification).sequence === null || typeof (obj as Qualification).sequence === 'number') &&
-    typeof (obj as Qualification).disabled === 'boolean' &&
-    typeof (obj as Qualification).createdAt === 'string' &&
-    typeof (obj as Qualification).updatedAt === 'string'
+    typeof (obj as Qualification).id === "number" &&
+    typeof (obj as Qualification).name === "string" &&
+    ((obj as Qualification).sequence === null ||
+      typeof (obj as Qualification).sequence === "number") &&
+    typeof (obj as Qualification).disabled === "boolean" &&
+    typeof (obj as Qualification).createdAt === "string" &&
+    typeof (obj as Qualification).updatedAt === "string"
   );
 }
 
@@ -255,9 +265,12 @@ export function isQualification(obj: object): obj is Qualification {
 export function isCreateQualificationPayload(obj: object): obj is CreateQualificationPayload {
   return (
     obj &&
-    typeof (obj as CreateQualificationPayload).name === 'string' &&
-    ((obj as CreateQualificationPayload).sequence === undefined || (obj as CreateQualificationPayload).sequence === null || typeof (obj as CreateQualificationPayload).sequence === 'number') &&
-    ((obj as CreateQualificationPayload).disabled === undefined || typeof (obj as CreateQualificationPayload).disabled === 'boolean')
+    typeof (obj as CreateQualificationPayload).name === "string" &&
+    ((obj as CreateQualificationPayload).sequence === undefined ||
+      (obj as CreateQualificationPayload).sequence === null ||
+      typeof (obj as CreateQualificationPayload).sequence === "number") &&
+    ((obj as CreateQualificationPayload).disabled === undefined ||
+      typeof (obj as CreateQualificationPayload).disabled === "boolean")
   );
 }
 
@@ -267,9 +280,13 @@ export function isCreateQualificationPayload(obj: object): obj is CreateQualific
 export function isUpdateQualificationPayload(obj: object): obj is UpdateQualificationPayload {
   return (
     obj &&
-    ((obj as UpdateQualificationPayload).name === undefined || typeof (obj as UpdateQualificationPayload).name === 'string') &&
-    ((obj as UpdateQualificationPayload).sequence === undefined || (obj as UpdateQualificationPayload).sequence === null || typeof (obj as UpdateQualificationPayload).sequence === 'number') &&
-    ((obj as UpdateQualificationPayload).disabled === undefined || typeof (obj as UpdateQualificationPayload).disabled === 'boolean')
+    ((obj as UpdateQualificationPayload).name === undefined ||
+      typeof (obj as UpdateQualificationPayload).name === "string") &&
+    ((obj as UpdateQualificationPayload).sequence === undefined ||
+      (obj as UpdateQualificationPayload).sequence === null ||
+      typeof (obj as UpdateQualificationPayload).sequence === "number") &&
+    ((obj as UpdateQualificationPayload).disabled === undefined ||
+      typeof (obj as UpdateQualificationPayload).disabled === "boolean")
   );
 }
 
@@ -301,7 +318,7 @@ export function formDataToPayload(formData: QualificationFormData): CreateQualif
 export function apiDataToFormData(qualification: Qualification): QualificationFormData {
   return {
     name: qualification.name,
-    sequence: qualification.sequence?.toString() || '',
+    sequence: qualification.sequence?.toString() || "",
     disabled: qualification.disabled,
   };
 }
@@ -340,21 +357,21 @@ export function getQualificationDisplayName(qualification: Qualification): strin
  * Get qualification status text
  */
 export function getQualificationStatusText(disabled: boolean): string {
-  return disabled ? 'Disabled' : 'Active';
+  return disabled ? "Disabled" : "Active";
 }
 
 /**
  * Get qualification status color
  */
 export function getQualificationStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
+  return disabled ? "text-red-600" : "text-green-600";
 }
 
 /**
  * Get qualification status badge variant
  */
-export function getQualificationStatusBadge(disabled: boolean): 'destructive' | 'default' {
-  return disabled ? 'destructive' : 'default';
+export function getQualificationStatusBadge(disabled: boolean): "destructive" | "default" {
+  return disabled ? "destructive" : "default";
 }
 
 /**
@@ -362,7 +379,11 @@ export function getQualificationStatusBadge(disabled: boolean): 'destructive' | 
  */
 export function sortQualificationsBySequence(qualifications: Qualification[]): Qualification[] {
   return [...qualifications].sort((a, b) => {
-    if ((a.sequence === null || a.sequence === undefined) && (b.sequence === null || b.sequence === undefined)) return 0;
+    if (
+      (a.sequence === null || a.sequence === undefined) &&
+      (b.sequence === null || b.sequence === undefined)
+    )
+      return 0;
     if (a.sequence === null || a.sequence === undefined) return 1;
     if (b.sequence === null || b.sequence === undefined) return -1;
     return (a.sequence ?? 0) - (b.sequence ?? 0);
@@ -373,7 +394,7 @@ export function sortQualificationsBySequence(qualifications: Qualification[]): Q
  * Filter active qualifications
  */
 export function filterActiveQualifications(qualifications: Qualification[]): Qualification[] {
-  return qualifications.filter(q => !q.disabled);
+  return qualifications.filter((q) => !q.disabled);
 }
 
 /**
@@ -381,16 +402,16 @@ export function filterActiveQualifications(qualifications: Qualification[]): Qua
  */
 export function getQualificationLevel(qualificationName: string): string {
   const name = qualificationName.toLowerCase();
-  
-  if (name.includes('doctorate') || name.includes('phd')) return 'Doctorate';
-  if (name.includes('master')) return 'Master\'s';
-  if (name.includes('bachelor') || name.includes('bachelor\'s')) return 'Bachelor\'s';
-  if (name.includes('associate')) return 'Associate';
-  if (name.includes('diploma')) return 'Diploma';
-  if (name.includes('certificate') || name.includes('certification')) return 'Certificate';
-  if (name.includes('high school') || name.includes('secondary')) return 'Secondary';
-  
-  return 'Other';
+
+  if (name.includes("doctorate") || name.includes("phd")) return "Doctorate";
+  if (name.includes("master")) return "Master's";
+  if (name.includes("bachelor") || name.includes("bachelor's")) return "Bachelor's";
+  if (name.includes("associate")) return "Associate";
+  if (name.includes("diploma")) return "Diploma";
+  if (name.includes("certificate") || name.includes("certification")) return "Certificate";
+  if (name.includes("high school") || name.includes("secondary")) return "Secondary";
+
+  return "Other";
 }
 
 /**
@@ -398,15 +419,15 @@ export function getQualificationLevel(qualificationName: string): string {
  */
 export function getQualificationLevelColor(level: string): string {
   const colorMap: Record<string, string> = {
-    'Doctorate': 'text-purple-600',
-    'Master\'s': 'text-blue-600',
-    'Bachelor\'s': 'text-green-600',
-    'Associate': 'text-orange-600',
-    'Diploma': 'text-yellow-600',
-    'Certificate': 'text-indigo-600',
-    'Secondary': 'text-gray-600',
-    'Other': 'text-gray-500',
+    Doctorate: "text-purple-600",
+    "Master's": "text-blue-600",
+    "Bachelor's": "text-green-600",
+    Associate: "text-orange-600",
+    Diploma: "text-yellow-600",
+    Certificate: "text-indigo-600",
+    Secondary: "text-gray-600",
+    Other: "text-gray-500",
   };
-  
-  return colorMap[level] || 'text-gray-500';
-} 
+
+  return colorMap[level] || "text-gray-500";
+}

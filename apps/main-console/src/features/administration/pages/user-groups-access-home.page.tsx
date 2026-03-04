@@ -2,7 +2,13 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Users, ShieldCheck, UserCog, CalendarCheck, Activity } from "lucide-react";
 
 const statCards = [
@@ -49,15 +55,41 @@ const statCards = [
 ];
 
 const directoryStats = [
-  { label: "Departments", value: 24, delta: "+2 since July", badge: "bg-indigo-100 text-indigo-700" },
-  { label: "Sub-Departments", value: 61, delta: "+6 new", badge: "bg-fuchsia-100 text-fuchsia-700" },
-  { label: "Designations", value: 142, delta: "11 mapped to roles", badge: "bg-cyan-100 text-cyan-700" },
-  { label: "Roles & Permissions", value: 54, delta: "5 pending review", badge: "bg-amber-100 text-amber-700" },
+  {
+    label: "Departments",
+    value: 24,
+    delta: "+2 since July",
+    badge: "bg-indigo-100 text-indigo-700",
+  },
+  {
+    label: "Sub-Departments",
+    value: 61,
+    delta: "+6 new",
+    badge: "bg-fuchsia-100 text-fuchsia-700",
+  },
+  {
+    label: "Designations",
+    value: 142,
+    delta: "11 mapped to roles",
+    badge: "bg-cyan-100 text-cyan-700",
+  },
+  {
+    label: "Roles & Permissions",
+    value: 54,
+    delta: "5 pending review",
+    badge: "bg-amber-100 text-amber-700",
+  },
 ];
 
 const groupBreakdown = [
   { name: "Academic Operations", type: "Academic", members: 214, active: 206, updated: "2h ago" },
-  { name: "Finance & Accounts", type: "Administrative", members: 68, active: 65, updated: "Yesterday" },
+  {
+    name: "Finance & Accounts",
+    type: "Administrative",
+    members: 68,
+    active: 65,
+    updated: "Yesterday",
+  },
   { name: "Exam Controllers", type: "Academic", members: 42, active: 39, updated: "4h ago" },
   { name: "Campus Infrastructure", type: "Support", members: 56, active: 52, updated: "Today" },
   { name: "Admission Committee", type: "Governance", members: 33, active: 31, updated: "3d ago" },
@@ -71,8 +103,18 @@ const attendanceSegments = [
 
 const pendingRequests = [
   { name: "Mira Bose", request: "Add to Finance & Accounts", time: "5 min ago", priority: "High" },
-  { name: "Arnab Dutta", request: "Role update: Exam Supervisor", time: "30 min ago", priority: "Medium" },
-  { name: "New Library Volunteer Batch", request: "Create group & assign mentors", time: "1 hr ago", priority: "Low" },
+  {
+    name: "Arnab Dutta",
+    request: "Role update: Exam Supervisor",
+    time: "30 min ago",
+    priority: "Medium",
+  },
+  {
+    name: "New Library Volunteer Batch",
+    request: "Create group & assign mentors",
+    time: "1 hr ago",
+    priority: "Low",
+  },
 ];
 
 const activityFeed = [
@@ -94,7 +136,12 @@ const activityFeed = [
     detail: "Support staff attendance dipped below 80%",
     time: "2 hrs ago",
   },
-  { event: "New Group Created", actor: "Arunima Paul", detail: "Industry Connect Taskforce", time: "Yesterday" },
+  {
+    event: "New Group Created",
+    actor: "Arunima Paul",
+    detail: "Industry Connect Taskforce",
+    time: "Yesterday",
+  },
 ];
 
 const attendanceDates = [
@@ -103,7 +150,10 @@ const attendanceDates = [
   { label: "Last Monday", value: "2025-11-17" },
 ];
 
-const attendanceByGroup: Record<string, Array<{ group: string; present: number; absent: number; total: number }>> = {
+const attendanceByGroup: Record<
+  string,
+  Array<{ group: string; present: number; absent: number; total: number }>
+> = {
   "2025-11-20": [
     { group: "Academic Operations", present: 198, absent: 12, total: 210 },
     { group: "Finance & Accounts", present: 61, absent: 7, total: 68 },
@@ -132,7 +182,9 @@ const departmentAttendance = [
 ];
 
 export default function UserGroupsAccessHomePage() {
-  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(attendanceDates[0]?.value ?? "");
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(
+    attendanceDates[0]?.value ?? "",
+  );
   const attendanceRows = attendanceByGroup[selectedAttendanceDate] ?? [];
 
   return (
@@ -153,7 +205,10 @@ export default function UserGroupsAccessHomePage() {
                 <stat.icon className={`h-4 w-4 ${stat.iconColor}`} />
                 {stat.title}
               </CardTitle>
-              <Badge variant="outline" className="text-xs text-slate-600 border-white/60 bg-white/60">
+              <Badge
+                variant="outline"
+                className="text-xs text-slate-600 border-white/60 bg-white/60"
+              >
                 MIS
               </Badge>
             </CardHeader>
@@ -173,7 +228,9 @@ export default function UserGroupsAccessHomePage() {
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {item.label}
+                  </p>
                   <div className="text-2xl font-bold text-slate-800">{item.value}</div>
                 </div>
                 <Badge className={item.badge}>{item.delta}</Badge>
@@ -288,7 +345,10 @@ export default function UserGroupsAccessHomePage() {
                     <td className="py-3">{row.total}</td>
                     <td className="py-3">
                       <div className="flex items-center gap-2">
-                        <Progress value={percent} className="w-32 bg-slate-100 [&>div]:bg-slate-500" />
+                        <Progress
+                          value={percent}
+                          className="w-32 bg-slate-100 [&>div]:bg-slate-500"
+                        />
                         <span className="text-sm font-semibold text-slate-700">{percent}%</span>
                       </div>
                     </td>
@@ -367,13 +427,18 @@ export default function UserGroupsAccessHomePage() {
       <Card>
         <CardHeader>
           <CardTitle>Departmental Attendance Pulse</CardTitle>
-          <CardDescription>Shows presence vs sanctioned strength for top departments.</CardDescription>
+          <CardDescription>
+            Shows presence vs sanctioned strength for top departments.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           {departmentAttendance.map((dept) => {
             const percent = Math.round((dept.present / dept.total) * 100);
             return (
-              <div key={dept.department} className="p-3 rounded-lg border bg-gradient-to-br from-white to-slate-50">
+              <div
+                key={dept.department}
+                className="p-3 rounded-lg border bg-gradient-to-br from-white to-slate-50"
+              >
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-sm font-semibold text-slate-800">{dept.department}</p>
                   <span className={`text-xs font-semibold ${dept.color}`}>{percent}%</span>

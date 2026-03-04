@@ -10,16 +10,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"; // Import Table components
-import { Plus, Upload, Download, Loader2, FileText, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  Download,
+  Loader2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { AnnualIncome } from "@/db/schema";
 import { AnnualIncomeDialog } from "./annual-income-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from 'xlsx'; // Import xlsx
+import * as XLSX from "xlsx"; // Import xlsx
 
 const ITEMS_PER_PAGE = 10;
-const REQUIRED_HEADERS = ['range']; // Define required headers for template
+const REQUIRED_HEADERS = ["range"]; // Define required headers for template
 
 export default function AnnualIncomesPage() {
   const [data, setData] = useState<AnnualIncome[]>([]);
@@ -44,11 +54,12 @@ export default function AnnualIncomesPage() {
     setLoading(true);
     try {
       // Assuming your API supports pagination, modify the fetch call
-      const response = await fetch(`/api/annual-incomes?page=${currentPage}&limit=${ITEMS_PER_PAGE}`);
+      const response = await fetch(
+        `/api/annual-incomes?page=${currentPage}&limit=${ITEMS_PER_PAGE}`,
+      );
       const result = await response.json();
       setData(result);
       setTotalCount(result.length);
-     
     } catch (error) {
       console.error("Error fetching annual incomes:", error);
       setData([]);
@@ -81,7 +92,7 @@ export default function AnnualIncomesPage() {
   const handleToggleStatus = async (id: number) => {
     try {
       const response = await fetch(`/api/annual-incomes?id=${id}`, {
-        method: 'PATCH',
+        method: "PATCH",
       });
       const result = await response.json();
 
@@ -112,8 +123,8 @@ export default function AnnualIncomesPage() {
     // Create a sample row with empty values
     const sampleData = [
       REQUIRED_HEADERS,
-      [''], // Empty row for example
-      ['50000 - 100000'], // Example row
+      [""], // Empty row for example
+      ["50000 - 100000"], // Example row
     ];
 
     // Create a new workbook and worksheet
@@ -121,10 +132,10 @@ export default function AnnualIncomesPage() {
     const ws = XLSX.utils.aoa_to_sheet(sampleData);
 
     // Add the worksheet to the workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Annual Income Template');
+    XLSX.utils.book_append_sheet(wb, ws, "Annual Income Template");
 
     // Generate Excel file
-    XLSX.writeFile(wb, 'annual_income_template.xlsx');
+    XLSX.writeFile(wb, "annual_income_template.xlsx");
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,7 +146,7 @@ export default function AnnualIncomesPage() {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
 
@@ -144,7 +155,6 @@ export default function AnnualIncomesPage() {
           } else {
             setNumberOfEntries(0);
           }
-
         } catch (error) {
           console.error("Error reading file for entry count:", error);
           setSelectedFile(null);
@@ -169,17 +179,17 @@ export default function AnnualIncomesPage() {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
-          const headers = (jsonData[0] as string[]).map(h => h.trim());
+          const headers = (jsonData[0] as string[]).map((h) => h.trim());
 
-          const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+          const missingHeaders = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
 
           if (missingHeaders.length > 0) {
             toast({
               title: "Invalid File Format",
-              description: `Missing required headers: ${missingHeaders.join(', ')}`,
+              description: `Missing required headers: ${missingHeaders.join(", ")}`,
               variant: "destructive",
             });
             resolve(false);
@@ -215,12 +225,12 @@ export default function AnnualIncomesPage() {
     }
 
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    formData.append("file", selectedFile);
 
     startUploadTransition(async () => {
       try {
-        const response = await fetch('/api/annual-incomes/upload', {
-          method: 'POST',
+        const response = await fetch("/api/annual-incomes/upload", {
+          method: "POST",
           body: formData,
         });
         const result = await response.json();
@@ -233,7 +243,7 @@ export default function AnnualIncomesPage() {
           setSelectedFile(null);
           setNumberOfEntries(0);
           if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+            fileInputRef.current.value = "";
           }
           fetchAnnualIncomes();
         } else {
@@ -257,12 +267,12 @@ export default function AnnualIncomesPage() {
   const handleDownloadClick = () => {
     startDownloadTransition(async () => {
       try {
-        const response = await fetch('/api/annual-incomes/download');
+        const response = await fetch("/api/annual-incomes/download");
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
-        a.download = 'annual_incomes.xlsx';
+        a.download = "annual_incomes.xlsx";
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -318,13 +328,23 @@ export default function AnnualIncomesPage() {
             )}
 
             {/* Upload File Button */}
-            <Button type="button" size="sm" onClick={handleUploadSubmit} disabled={!selectedFile || isPendingUpload}
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleUploadSubmit}
+              disabled={!selectedFile || isPendingUpload}
               className="bg-green-500 hover:bg-green-600 text-white flex items-center gap-2"
             >
               {isPendingUpload ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
               ) : (
-                <><Upload className="mr-2 h-4 w-4" />Upload File</>
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload File
+                </>
               )}
             </Button>
             {/* Download Template Button */}
@@ -344,9 +364,7 @@ export default function AnnualIncomesPage() {
           <div className="flex items-center gap-2">
             {/* Add Annual Income Dialog Trigger */}
             <AnnualIncomeDialog onSuccess={fetchAnnualIncomes}>
-              <Button
-                className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
-              >
+              <Button className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Annual Income Range
               </Button>
@@ -361,9 +379,15 @@ export default function AnnualIncomesPage() {
               className="bg-purple-500 hover:bg-purple-600 text-white flex items-center gap-2"
             >
               {isPendingDownload ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Downloading...</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Downloading...
+                </>
               ) : (
-                <><Download className="mr-2 h-4 w-4" />Download Annual Incomes</>
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Annual Incomes
+                </>
               )}
             </Button>
           </div>
@@ -390,36 +414,52 @@ export default function AnnualIncomesPage() {
             <TableBody>
               {paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-gray-500">No annual income ranges found.</TableCell>
+                  <TableCell colSpan={5} className="text-center text-gray-500">
+                    No annual income ranges found.
+                  </TableCell>
                 </TableRow>
               ) : (
                 paginatedData.map((annualIncome, index) => (
-                  <TableRow key={`annual-income-${annualIncome.id}-${index}`} className="hover:bg-gray-50">
-                    <TableCell className="font-medium text-gray-600">{startIndex + index + 1}</TableCell>
+                  <TableRow
+                    key={`annual-income-${annualIncome.id}-${index}`}
+                    className="hover:bg-gray-50"
+                  >
+                    <TableCell className="font-medium text-gray-600">
+                      {startIndex + index + 1}
+                    </TableCell>
                     <TableCell className="text-gray-700">{annualIncome.range}</TableCell>
                     <TableCell className="text-gray-700">
-                      <span className={`px-2 py-1 rounded-full text-xs ${annualIncome.disabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                        {annualIncome.disabled ? 'Disabled' : 'Active'}
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${annualIncome.disabled ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}
+                      >
+                        {annualIncome.disabled ? "Disabled" : "Active"}
                       </span>
                     </TableCell>
-                    <TableCell className="text-gray-700">{annualIncome.createdAt ? new Date(annualIncome.createdAt).toLocaleString() : 'N/A'}</TableCell>
+                    <TableCell className="text-gray-700">
+                      {annualIncome.createdAt
+                        ? new Date(annualIncome.createdAt).toLocaleString()
+                        : "N/A"}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                         {/* Edit Button */}
-                         <AnnualIncomeDialog annualIncome={annualIncome} onSuccess={fetchAnnualIncomes}>
-                           <Button variant="ghost" size="icon" className="hover:bg-gray-100">
-                             <Pencil className="h-4 w-4 text-blue-500" />
-                           </Button>
-                         </AnnualIncomeDialog>
-                         {/* Delete Button */}
-                         <Button 
-                           variant="ghost" 
-                           size="icon" 
-                           className="hover:bg-gray-100"
-                           onClick={() => annualIncome.id && handleToggleStatus(annualIncome.id)}
-                         >
-                           <Trash2 className="h-4 w-4 text-red-500" />
-                         </Button>
+                        {/* Edit Button */}
+                        <AnnualIncomeDialog
+                          annualIncome={annualIncome}
+                          onSuccess={fetchAnnualIncomes}
+                        >
+                          <Button variant="ghost" size="icon" className="hover:bg-gray-100">
+                            <Pencil className="h-4 w-4 text-blue-500" />
+                          </Button>
+                        </AnnualIncomeDialog>
+                        {/* Delete Button */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-gray-100"
+                          onClick={() => annualIncome.id && handleToggleStatus(annualIncome.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

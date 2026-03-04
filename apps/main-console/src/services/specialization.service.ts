@@ -16,7 +16,7 @@ export async function getAllSpecializations(): Promise<Specialization[]> {
     const response = await axiosInstance.get(BASE_URL);
     return response.data.payload;
   } catch (error) {
-    console.error('Error fetching specializations:', error);
+    console.error("Error fetching specializations:", error);
     throw error;
   }
 }
@@ -29,7 +29,7 @@ export async function getAllSpecializations(): Promise<Specialization[]> {
 export async function getSpecializationById(id: number): Promise<Specialization> {
   try {
     if (!id) {
-      throw new Error('Specialization ID is required');
+      throw new Error("Specialization ID is required");
     }
 
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
@@ -49,7 +49,7 @@ export async function getActiveSpecializations(): Promise<Specialization[]> {
     const response = await axiosInstance.get(`${BASE_URL}?disabled=false`);
     return response.data.payload;
   } catch (error) {
-    console.error('Error fetching active specializations:', error);
+    console.error("Error fetching active specializations:", error);
     throw error;
   }
 }
@@ -63,16 +63,18 @@ export async function getActiveSpecializations(): Promise<Specialization[]> {
  * @param payload - Specialization creation data
  * @returns Promise<Specialization> - Created specialization data
  */
-export async function createSpecialization(payload: Partial<Specialization>): Promise<Specialization> {
+export async function createSpecialization(
+  payload: Partial<Specialization>,
+): Promise<Specialization> {
   try {
     if (!payload.name || payload.name.trim().length === 0) {
-      throw new Error('Specialization name is required');
+      throw new Error("Specialization name is required");
     }
 
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data.payload;
   } catch (error) {
-    console.error('Error creating specialization:', error);
+    console.error("Error creating specialization:", error);
     throw error;
   }
 }
@@ -87,14 +89,17 @@ export async function createSpecialization(payload: Partial<Specialization>): Pr
  * @param payload - Specialization update data
  * @returns Promise<Specialization> - Updated specialization data
  */
-export async function updateSpecialization(id: number, payload: Partial<Specialization>): Promise<Specialization> {
+export async function updateSpecialization(
+  id: number,
+  payload: Partial<Specialization>,
+): Promise<Specialization> {
   try {
     if (!id) {
-      throw new Error('Specialization ID is required');
+      throw new Error("Specialization ID is required");
     }
 
     if (payload.name !== undefined && payload.name.trim().length === 0) {
-      throw new Error('Specialization name cannot be empty');
+      throw new Error("Specialization name cannot be empty");
     }
 
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
@@ -117,7 +122,7 @@ export async function updateSpecialization(id: number, payload: Partial<Speciali
 export async function deleteSpecialization(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('Specialization ID is required');
+      throw new Error("Specialization ID is required");
     }
 
     await axiosInstance.delete(`${BASE_URL}/${id}`);
@@ -136,16 +141,18 @@ export async function deleteSpecialization(id: number): Promise<void> {
  * @param payloads - Array of specialization creation data
  * @returns Promise<Specialization[]> - Array of created specializations
  */
-export async function createMultipleSpecializations(payloads: Partial<Specialization>[]): Promise<Specialization[]> {
+export async function createMultipleSpecializations(
+  payloads: Partial<Specialization>[],
+): Promise<Specialization[]> {
   try {
     if (!payloads || payloads.length === 0) {
-      throw new Error('At least one specialization payload is required');
+      throw new Error("At least one specialization payload is required");
     }
 
     const response = await axiosInstance.post(`${BASE_URL}/bulk`, payloads);
     return response.data.payload;
   } catch (error) {
-    console.error('Error creating multiple specializations:', error);
+    console.error("Error creating multiple specializations:", error);
     throw error;
   }
 }
@@ -156,17 +163,17 @@ export async function createMultipleSpecializations(payloads: Partial<Specializa
  * @returns Promise<Specialization[]> - Array of updated specializations
  */
 export async function updateMultipleSpecializations(
-  updates: Array<{ id: number; payload: Partial<Specialization> }>
+  updates: Array<{ id: number; payload: Partial<Specialization> }>,
 ): Promise<Specialization[]> {
   try {
     if (!updates || updates.length === 0) {
-      throw new Error('At least one specialization update is required');
+      throw new Error("At least one specialization update is required");
     }
 
     const response = await axiosInstance.put(`${BASE_URL}/bulk`, updates);
     return response.data.payload;
   } catch (error) {
-    console.error('Error updating multiple specializations:', error);
+    console.error("Error updating multiple specializations:", error);
     throw error;
   }
 }
@@ -187,11 +194,11 @@ export async function searchSpecializations(searchTerm: string): Promise<Special
     }
 
     const response = await axiosInstance.get(
-      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
+      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
     return response.data.payload;
   } catch (error) {
-    console.error('Error searching specializations:', error);
+    console.error("Error searching specializations:", error);
     throw error;
   }
 }
@@ -204,16 +211,14 @@ export async function searchSpecializations(searchTerm: string): Promise<Special
  */
 export async function getSpecializationsPaginated(
   page: number = 1,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<{ data: Specialization[]; total: number; page: number; limit: number }> {
   try {
-    const response = await axiosInstance.get(
-      `${BASE_URL}?page=${page}&limit=${limit}`
-    );
-    
+    const response = await axiosInstance.get(`${BASE_URL}?page=${page}&limit=${limit}`);
+
     // Extract pagination info from response headers or data
-    const total = parseInt(response.headers['x-total-count'] || '0');
-    
+    const total = parseInt(response.headers["x-total-count"] || "0");
+
     return {
       data: response.data.payload,
       total,
@@ -221,7 +226,7 @@ export async function getSpecializationsPaginated(
       limit,
     };
   } catch (error) {
-    console.error('Error fetching paginated specializations:', error);
+    console.error("Error fetching paginated specializations:", error);
     throw error;
   }
 }
@@ -241,12 +246,10 @@ export async function checkSpecializationExists(name: string): Promise<boolean> 
       return false;
     }
 
-    const response = await axiosInstance.get(
-      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
-    );
+    const response = await axiosInstance.get(`${BASE_URL}?name=${encodeURIComponent(name.trim())}`);
     return response.data.payload.length > 0;
   } catch (error) {
-    console.error('Error checking specialization existence:', error);
+    console.error("Error checking specialization existence:", error);
     return false;
   }
 }
@@ -255,7 +258,11 @@ export async function checkSpecializationExists(name: string): Promise<boolean> 
  * Get specialization statistics
  * @returns Promise<{ total: number; active: number; disabled: number }>
  */
-export async function getSpecializationStats(): Promise<{ total: number; active: number; disabled: number }> {
+export async function getSpecializationStats(): Promise<{
+  total: number;
+  active: number;
+  disabled: number;
+}> {
   try {
     const [allResponse, activeResponse] = await Promise.all([
       axiosInstance.get(BASE_URL),
@@ -268,7 +275,7 @@ export async function getSpecializationStats(): Promise<{ total: number; active:
 
     return { total, active, disabled };
   } catch (error) {
-    console.error('Error fetching specialization statistics:', error);
+    console.error("Error fetching specialization statistics:", error);
     throw error;
   }
 }
@@ -282,24 +289,24 @@ export const specializationService = {
   getAllSpecializations,
   getSpecializationById,
   getActiveSpecializations,
-  
+
   // Create operations
   createSpecialization,
-  
+
   // Update operations
   updateSpecialization,
-  
+
   // Delete operations
   deleteSpecialization,
-  
+
   // Bulk operations
   createMultipleSpecializations,
   updateMultipleSpecializations,
-  
+
   // Search and filter operations
   searchSpecializations,
   getSpecializationsPaginated,
-  
+
   // Utility functions
   checkSpecializationExists,
   getSpecializationStats,

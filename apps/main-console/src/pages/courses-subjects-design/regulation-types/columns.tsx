@@ -73,7 +73,7 @@ export const columns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<Regulatio
     id: "actions",
     cell: ({ row }) => {
       const regulationType = row.original;
-      
+
       return (
         <div className="flex space-x-2">
           <Button

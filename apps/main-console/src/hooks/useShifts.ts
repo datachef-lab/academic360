@@ -1,22 +1,22 @@
-import useSWR from 'swr';
-import { Shift } from '@/types/academics/shift';
-import { getAllShifts } from '@/services/academic';
+import useSWR from "swr";
+import { Shift } from "@/types/academics/shift";
+import { getAllShifts } from "@/services/academic";
 
 const fetcher = async (): Promise<Shift[]> => {
-    const res = await getAllShifts();
-    console.log("Shifts API response:", res);
-    return res;
+  const res = await getAllShifts();
+  console.log("Shifts API response:", res);
+  return res;
 };
 
 export function useShifts() {
-    const { data, error, isLoading } = useSWR<Shift[]>('api/v1/academics/shifts', fetcher);
+  const { data, error, isLoading } = useSWR<Shift[]>("api/v1/academics/shifts", fetcher);
 
-    console.log("Shifts data:", data);
-    console.log("Shifts error:", error);
+  console.log("Shifts data:", data);
+  console.log("Shifts error:", error);
 
-    return {
-        shifts: data || [],
-        loading: isLoading,
-        error: error,
-    };
-} 
+  return {
+    shifts: data || [],
+    loading: isLoading,
+    error: error,
+  };
+}

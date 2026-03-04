@@ -8,14 +8,9 @@ type AttendanceStatsProps = {
   selectedSemester: string;
 };
 
-export default function AttendanceStats({
-  mockData,
-  selectedSemester,
-}: AttendanceStatsProps) {
+export default function AttendanceStats({ mockData, selectedSemester }: AttendanceStatsProps) {
   const currentSubjects =
-    mockData.subjects[
-      selectedSemester as unknown as keyof typeof mockData.subjects
-    ] || [];
+    mockData.subjects[selectedSemester as unknown as keyof typeof mockData.subjects] || [];
 
   const calculateAttendancePercentage = (attended: number, total: number) => {
     return ((attended / total) * 100).toFixed(1);
@@ -27,22 +22,15 @@ export default function AttendanceStats({
         <CardContent className="p-5 flex flex-col justify-between h-full">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-blue-700 font-medium mb-1">
-                Average Attendance
-              </p>
+              <p className="text-sm text-blue-700 font-medium mb-1">Average Attendance</p>
               <p className="text-2xl font-bold text-blue-700">
                 {currentSubjects.length > 0
                   ? (
                       currentSubjects.reduce(
                         (sum, subject) =>
                           sum +
-                          Number(
-                            calculateAttendancePercentage(
-                              subject.attended,
-                              subject.total
-                            )
-                          ),
-                        0
+                          Number(calculateAttendancePercentage(subject.attended, subject.total)),
+                        0,
                       ) / currentSubjects.length
                     ).toFixed(1)
                   : 0}
@@ -53,9 +41,7 @@ export default function AttendanceStats({
               <BarChart className="w-6 h-6" />
             </div>
           </div>
-          <p className="text-sm mt-2 text-blue-600">
-            Across {currentSubjects.length} subjects
-          </p>
+          <p className="text-sm mt-2 text-blue-600">Across {currentSubjects.length} subjects</p>
         </CardContent>
       </Card>
 
@@ -63,9 +49,7 @@ export default function AttendanceStats({
         <CardContent className="p-5 flex flex-col justify-between h-full">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-green-700 font-medium mb-1">
-                Classes This Week
-              </p>
+              <p className="text-sm text-green-700 font-medium mb-1">Classes This Week</p>
               <p className="text-2xl font-bold text-green-700">12</p>
             </div>
             <div className="p-3 rounded-xl bg-green-200 text-green-700">
@@ -80,19 +64,12 @@ export default function AttendanceStats({
         <CardContent className="p-5 flex flex-col justify-between h-full">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-purple-700 font-medium mb-1">
-                Subjects Below Threshold
-              </p>
+              <p className="text-sm text-purple-700 font-medium mb-1">Subjects Below Threshold</p>
               <p className="text-2xl font-bold text-purple-700">
                 {
                   currentSubjects.filter(
                     (subject) =>
-                      Number(
-                        calculateAttendancePercentage(
-                          subject.attended,
-                          subject.total
-                        )
-                      ) < 75
+                      Number(calculateAttendancePercentage(subject.attended, subject.total)) < 75,
                   ).length
                 }
               </p>
@@ -101,9 +78,7 @@ export default function AttendanceStats({
               <Clock className="w-6 h-6" />
             </div>
           </div>
-          <p className="text-sm mt-2 text-purple-600">
-            75% attendance required
-          </p>
+          <p className="text-sm mt-2 text-purple-600">75% attendance required</p>
         </CardContent>
       </Card>
     </div>

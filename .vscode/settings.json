@@ -2,6 +2,9 @@
   "eslint.run": "onSave",
   "eslint.lintTask.enable": true,
 
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+
   // 🔥 REQUIRED for ESLint v9/v10 flat config
   "eslint.useFlatConfig": true,
 

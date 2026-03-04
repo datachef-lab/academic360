@@ -1,5 +1,4 @@
-
-import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts";
 import {
   Card,
   CardContent,
@@ -7,13 +6,13 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"
+} from "@/components/ui/chart";
 const chartData = [
   { month: "January", attendance: 186, mobile: 80 },
   { month: "February", attendance: 305, mobile: 200 },
@@ -21,7 +20,7 @@ const chartData = [
   { month: "April", attendance: 73, mobile: 190 },
   { month: "May", attendance: 209, mobile: 130 },
   { month: "June", attendance: 214, mobile: 140 },
-]
+];
 const chartConfig = {
   attendance: {
     label: "Attendance",
@@ -34,7 +33,7 @@ const chartConfig = {
   label: {
     color: "hsl(var(--background))",
   },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 export function Component() {
   return (
     <Card>
@@ -63,16 +62,8 @@ export function Component() {
               hide
             />
             <XAxis dataKey="attendance" type="number" hide />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="line" />}
-            />
-            <Bar
-              dataKey="attendance"
-              layout="vertical"
-              fill="var(--color-attendance)"
-              radius={4}
-            >
+            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+            <Bar dataKey="attendance" layout="vertical" fill="var(--color-attendance)" radius={4}>
               <LabelList
                 dataKey="month"
                 position="insideLeft"
@@ -93,7 +84,7 @@ export function Component() {
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
         <div className="flex gap-2 font-medium leading-none">
-            Aggregate attendance 80%
+          Aggregate attendance 80%
           {/* Trending up by 5.2% this month <TrendingUp className="h-4 w-4" /> */}
         </div>
         {/* <div className="leading-none text-muted-foreground">
@@ -101,5 +92,5 @@ export function Component() {
         </div> */}
       </CardFooter>
     </Card>
-  )
+  );
 }

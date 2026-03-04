@@ -14,12 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { BatchSubject } from "@/types/academics/batch-subjects";
 import { DbCourseMaterial } from "@/types/academics/course-material";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SubjectRowProps = {
   index: number;
@@ -52,33 +47,25 @@ const SubjectRow: React.FC<SubjectRowProps> = ({
         if (accessToken) {
           headers["Authorization"] = `Bearer ${accessToken}`;
         } else {
-          console.log(
-            `No token available for fetching materials for subject ${subject.subjectId}`
-          );
+          console.log(`No token available for fetching materials for subject ${subject.subjectId}`);
         }
 
-        const response = await fetch(
-          `/api/course-materials?subjectId=${subject.subjectId}`,
-          { headers }
-        );
+        const response = await fetch(`/api/course-materials?subjectId=${subject.subjectId}`, {
+          headers,
+        });
 
         if (!response.ok) {
           console.log(
             `Materials API response status for subject ${subject.subjectId}:`,
-            response.status
+            response.status,
           );
-          throw new Error(
-            `Failed to fetch materials for subject ${subject.subjectId}`
-          );
+          throw new Error(`Failed to fetch materials for subject ${subject.subjectId}`);
         }
 
         const data = await response.json();
         setMaterials(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error(
-          `Error fetching materials for subject ${subject.subjectId}:`,
-          error
-        );
+        console.error(`Error fetching materials for subject ${subject.subjectId}:`, error);
         setMaterials([]);
       } finally {
         setIsLoading(false);
@@ -112,15 +99,9 @@ const SubjectRow: React.FC<SubjectRowProps> = ({
   return (
     <TableRow>
       <TableCell className="text-center font-medium">{index + 1}</TableCell>
-      <TableCell className="font-medium">
-        {subject.subjectname || "Unknown Subject"}
-      </TableCell>
-      <TableCell className="text-center">
-        {subject.subjecttypename || "N/A"}
-      </TableCell>
-      <TableCell className="text-center">
-        {subject.paperName || "N/A"}
-      </TableCell>
+      <TableCell className="font-medium">{subject.subjectname || "Unknown Subject"}</TableCell>
+      <TableCell className="text-center">{subject.subjecttypename || "N/A"}</TableCell>
+      <TableCell className="text-center">{subject.paperName || "N/A"}</TableCell>
       <TableCell>
         <div className="flex flex-wrap gap-2 justify-center">
           {isLoading ? (
@@ -129,10 +110,7 @@ const SubjectRow: React.FC<SubjectRowProps> = ({
             </div>
           ) : materials.length > 0 ? (
             materials.map((material) => (
-              <div
-                key={material.id}
-                className="flex items-center gap-1.5 group relative"
-              >
+              <div key={material.id} className="flex items-center gap-1.5 group relative">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -141,9 +119,7 @@ const SubjectRow: React.FC<SubjectRowProps> = ({
                         className="flex items-center justify-center gap-1.5 px-2 py-1 h-7 cursor-pointer hover:bg-muted"
                       >
                         {materialTypeIcon(material.type)}
-                        <span className="text-xs max-w-[150px] truncate">
-                          {material.title}
-                        </span>
+                        <span className="text-xs max-w-[150px] truncate">{material.title}</span>
                         {material.type === "link" && material.url && (
                           <a
                             href={material.url}
@@ -160,9 +136,7 @@ const SubjectRow: React.FC<SubjectRowProps> = ({
                     <TooltipContent>
                       <p>{material.title}</p>
                       {material.type === "link" && (
-                        <p className="text-xs text-muted-foreground">
-                          {material.url}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{material.url}</p>
                       )}
                     </TooltipContent>
                   </Tooltip>
@@ -181,11 +155,7 @@ const SubjectRow: React.FC<SubjectRowProps> = ({
                     <Pencil className="h-3 w-3" />
                   </Button>
                   <Button
-                    variant={
-                      deleteConfirm === material.id
-                        ? "destructive"
-                        : "secondary"
-                    }
+                    variant={deleteConfirm === material.id ? "destructive" : "secondary"}
                     size="icon"
                     className="h-5 w-5 bg-background border shadow-sm"
                     onClick={(e) => {

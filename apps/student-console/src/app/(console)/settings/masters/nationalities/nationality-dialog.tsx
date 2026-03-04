@@ -1,15 +1,23 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useFormStatus } from 'react-dom';
-import { Loader2, Trash2 } from 'lucide-react';
-import { addNationality, deleteNationality, AddNationalityResult } from './actions';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useFormStatus } from "react-dom";
+import { Loader2, Trash2 } from "lucide-react";
+import { addNationality, deleteNationality, AddNationalityResult } from "./actions";
 import { useToast } from "@/hooks/use-toast";
-import { NationalityService, type ApiResponse } from '@/services/nationality.service';
+import { NationalityService, type ApiResponse } from "@/services/nationality.service";
 
 // --- Add/Edit Nationality Dialog ---
 interface AddNationalityDialogProps {
@@ -24,10 +32,15 @@ interface AddNationalityDialogProps {
   };
 }
 
-export function AddNationalityDialog({ onSuccess, open, onOpenChange, initialData }: AddNationalityDialogProps) {
-  const [name, setName] = useState(initialData?.name || '');
-  const [sequence, setSequence] = useState<number | ''> (initialData?.sequence ?? '');
-  const [code, setCode] = useState<number | ''> (initialData?.code ?? '');
+export function AddNationalityDialog({
+  onSuccess,
+  open,
+  onOpenChange,
+  initialData,
+}: AddNationalityDialogProps) {
+  const [name, setName] = useState(initialData?.name || "");
+  const [sequence, setSequence] = useState<number | "">(initialData?.sequence ?? "");
+  const [code, setCode] = useState<number | "">(initialData?.code ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -35,12 +48,12 @@ export function AddNationalityDialog({ onSuccess, open, onOpenChange, initialDat
   useEffect(() => {
     if (initialData) {
       setName(initialData.name);
-      setSequence(initialData.sequence ?? '');
-      setCode(initialData.code ?? '');
+      setSequence(initialData.sequence ?? "");
+      setCode(initialData.code ?? "");
     } else {
-      setName('');
-      setSequence('');
-      setCode('');
+      setName("");
+      setSequence("");
+      setCode("");
     }
   }, [initialData]);
 
@@ -59,14 +72,17 @@ export function AddNationalityDialog({ onSuccess, open, onOpenChange, initialDat
     let response: ApiResponse<any>;
 
     const nationalityData = {
-        name: name.trim(),
-        sequence: sequence === '' ? undefined : Number(sequence),
-        code: code === '' ? undefined : Number(code),
+      name: name.trim(),
+      sequence: sequence === "" ? undefined : Number(sequence),
+      code: code === "" ? undefined : Number(code),
     };
 
     if (initialData) {
       // Update existing nationality
-      response = await NationalityService.updateNationality({ ...nationalityData, id: initialData.id });
+      response = await NationalityService.updateNationality({
+        ...nationalityData,
+        id: initialData.id,
+      });
       if (response.success) {
         toast({
           title: "Nationality updated",
@@ -90,9 +106,9 @@ export function AddNationalityDialog({ onSuccess, open, onOpenChange, initialDat
           description: "The nationality has been successfully added.",
         });
         onSuccess();
-        setName(''); // Clear form
-        setSequence('');
-        setCode('');
+        setName(""); // Clear form
+        setSequence("");
+        setCode("");
         if (onOpenChange) onOpenChange(false);
       } else {
         toast({
@@ -113,7 +129,7 @@ export function AddNationalityDialog({ onSuccess, open, onOpenChange, initialDat
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{initialData ? 'Edit Nationality' : 'Add New Nationality'}</DialogTitle>
+          <DialogTitle>{initialData ? "Edit Nationality" : "Add New Nationality"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -129,7 +145,7 @@ export function AddNationalityDialog({ onSuccess, open, onOpenChange, initialDat
                 disabled={isSubmitting}
               />
             </div>
-             <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="sequence" className="text-right">
                 Sequence
               </Label>
@@ -142,7 +158,7 @@ export function AddNationalityDialog({ onSuccess, open, onOpenChange, initialDat
                 disabled={isSubmitting}
               />
             </div>
-             <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="code" className="text-right">
                 Code
               </Label>
@@ -163,8 +179,10 @@ export function AddNationalityDialog({ onSuccess, open, onOpenChange, initialDat
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
                 </>
+              ) : initialData ? (
+                "Save changes"
               ) : (
-                initialData ? 'Save changes' : 'Add Nationality'
+                "Add Nationality"
               )}
             </Button>
           </DialogFooter>
@@ -184,7 +202,7 @@ function SubmitButton() {
           Saving...
         </>
       ) : (
-        'Save changes'
+        "Save changes"
       )}
     </Button>
   );
@@ -229,7 +247,9 @@ export function DeleteNationalityDialog({ nationalityId }: DeleteNationalityDial
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline" disabled={isDeleting}>Cancel</Button>
+            <Button type="button" variant="outline" disabled={isDeleting}>
+              Cancel
+            </Button>
           </DialogClose>
           <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
             {isDeleting ? (
@@ -238,11 +258,11 @@ export function DeleteNationalityDialog({ nationalityId }: DeleteNationalityDial
                 Deleting...
               </>
             ) : (
-              'Delete'
+              "Delete"
             )}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

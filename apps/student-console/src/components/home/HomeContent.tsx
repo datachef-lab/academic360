@@ -123,7 +123,9 @@ export default function HomeContent() {
         // @ts-ignore - socket.io-client will be available after pnpm install
         const socketModule = await import("socket.io-client");
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "http://localhost:3000";
 
         // Wrap URL parsing in try-catch for better error handling
         let parsed: URL;
@@ -212,9 +214,14 @@ export default function HomeContent() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Welcome, {(user.name as string) || "Student"}!</h2>
+          <h2 className="text-xl font-semibold mb-2">
+            Welcome, {(user.name as string) || "Student"}!
+          </h2>
           <p className="text-gray-600 mb-4">Your student profile is being set up.</p>
-          <button onClick={refetch} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          <button
+            onClick={refetch}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
             Refresh
           </button>
         </div>

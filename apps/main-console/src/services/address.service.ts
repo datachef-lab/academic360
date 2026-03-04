@@ -55,7 +55,10 @@ export async function createAddress(payload: Partial<Address>): Promise<ApiRespo
   }
 }
 
-export async function updateAddress(id: number, payload: Partial<Address>): Promise<ApiResponse<Address>> {
+export async function updateAddress(
+  id: number,
+  payload: Partial<Address>,
+): Promise<ApiResponse<Address>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data;

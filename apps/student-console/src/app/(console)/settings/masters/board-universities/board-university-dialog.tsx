@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -17,25 +17,25 @@ import { Input } from "@/components/ui/input";
 import { addBoardUniversity, type AddBoardUniversityResult } from "./actions";
 
 export function BoardUniversityDialog() {
-    const [isOpen, setIsOpen] = useState(false);
-    const [name, setName] = useState('');
-    // Add state for other fields if needed, e.g., const [code, setCode] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [name, setName] = useState("");
+  // Add state for other fields if needed, e.g., const [code, setCode] = useState('');
 
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        
-        const result: AddBoardUniversityResult = await addBoardUniversity(formData);
-        
-        if (result && result.success) {
-            setIsOpen(false); // Close modal on success
-            setName(''); // Clear input
-            // Clear other input states if added
-            console.log("Success:", result.message);
-        } else {
-            console.error("Error:", result && result.error ? result.error : "An unknown error occurred.");
-        }
-    };
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+
+    const result: AddBoardUniversityResult = await addBoardUniversity(formData);
+
+    if (result && result.success) {
+      setIsOpen(false); // Close modal on success
+      setName(""); // Clear input
+      // Clear other input states if added
+      console.log("Success:", result.message);
+    } else {
+      console.error("Error:", result && result.error ? result.error : "An unknown error occurred.");
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -47,9 +47,7 @@ export function BoardUniversityDialog() {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Board University</DialogTitle>
-          <DialogDescription>
-            Enter the details for the new board university.
-          </DialogDescription>
+          <DialogDescription>Enter the details for the new board university.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -57,11 +55,11 @@ export function BoardUniversityDialog() {
               <Label htmlFor="name" className="text-right">
                 Name
               </Label>
-              <Input 
-                id="name" 
-                name="name" 
-                className="col-span-3" 
-                required 
+              <Input
+                id="name"
+                name="name"
+                className="col-span-3"
+                required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -89,4 +87,4 @@ export function BoardUniversityDialog() {
       </DialogContent>
     </Dialog>
   );
-} 
+}

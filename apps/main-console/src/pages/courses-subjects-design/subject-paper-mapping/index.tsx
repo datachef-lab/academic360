@@ -2,7 +2,13 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PlusCircle, FileText, Download, Upload, Edit, X, Loader2, Sparkles } from "lucide-react";
 import * as XLSX from "xlsx";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 // import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import {
   AlertDialog,
@@ -16,7 +22,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
 // import { PaperEditModal } from "./paper-edit-modal";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   getSubjects,
@@ -252,12 +264,16 @@ const SubjectPaperMappingPage = () => {
         setCourses(Array.isArray(courseRes) ? courseRes : []);
         setCourseTypes(Array.isArray(courseTypesRes) ? courseTypesRes : []);
         setClasses(
-          Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
+          Array.isArray(classesRes)
+            ? classesRes
+            : (classesRes as unknown as { payload: Class[] })?.payload || [],
         );
 
         console.log(
           "Classes data set:",
-          Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
+          Array.isArray(classesRes)
+            ? classesRes
+            : (classesRes as unknown as { payload: Class[] })?.payload || [],
         );
         console.log(
           "Filtered SEMESTER classes:",
@@ -369,7 +385,8 @@ const SubjectPaperMappingPage = () => {
         components:
           data.components
             ?.filter(
-              (comp: PaperComponentDto) => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null,
+              (comp: PaperComponentDto) =>
+                comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null,
             )
             .map((comp: PaperComponentDto) => ({
               paperId: comp.paperId!,
@@ -441,8 +458,12 @@ const SubjectPaperMappingPage = () => {
         const batchProgress = Math.round((batch / totalBatches) * 80) + 5; // 5-85% for data fetching
         setDownloadProgress(batchProgress);
 
-        console.log(`Fetching batch ${batch + 1}/${totalBatches} (pages ${startPage}-${endPage})...`);
-        toast.info(`Fetching batch ${batch + 1}/${totalBatches} (${allData.length}/${totalRecords} records)`);
+        console.log(
+          `Fetching batch ${batch + 1}/${totalBatches} (pages ${startPage}-${endPage})...`,
+        );
+        toast.info(
+          `Fetching batch ${batch + 1}/${totalBatches} (${allData.length}/${totalRecords} records)`,
+        );
 
         // Fetch multiple pages in parallel
         const pagePromises: Promise<PaginatedResponse<PaperDto>>[] = [];
@@ -513,7 +534,9 @@ const SubjectPaperMappingPage = () => {
           "Regulation Type": regulationType?.name || "-",
           "Academic Year": academicYear?.year || "-",
           "Exam Components":
-            paper.components?.map((comp: PaperComponentDto) => comp.examComponent?.name).join(", ") || "No components",
+            paper.components
+              ?.map((comp: PaperComponentDto) => comp.examComponent?.name)
+              .join(", ") || "No components",
         };
       });
 
@@ -1040,7 +1063,9 @@ const SubjectPaperMappingPage = () => {
               <FileText className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
               <span className="truncate">Subject Paper Mapping</span>
             </CardTitle>
-            <div className="text-xs sm:text-sm text-muted-foreground mt-1">Map subject papers to programCourses.</div>
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1">
+              Map subject papers to programCourses.
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -1073,8 +1098,12 @@ const SubjectPaperMappingPage = () => {
                       <h4 className="font-medium mb-2">Upload Results:</h4>
                       <div className="text-sm space-y-1">
                         <p>Total: {bulkUploadResult.summary?.total || 0}</p>
-                        <p className="text-green-600">Successful: {bulkUploadResult.summary?.successful || 0}</p>
-                        <p className="text-red-600">Failed: {bulkUploadResult.summary?.failed || 0}</p>
+                        <p className="text-green-600">
+                          Successful: {bulkUploadResult.summary?.successful || 0}
+                        </p>
+                        <p className="text-red-600">
+                          Failed: {bulkUploadResult.summary?.failed || 0}
+                        </p>
                       </div>
                       {bulkUploadResult.errors && bulkUploadResult.errors.length > 0 && (
                         <div className="mt-2">
@@ -1182,7 +1211,10 @@ const SubjectPaperMappingPage = () => {
                       <Select
                         value={filtersObj.affiliationId?.toString() ?? "all"}
                         onValueChange={(value) =>
-                          setFiltersObj((prev) => ({ ...prev, affiliationId: value === "all" ? null : Number(value) }))
+                          setFiltersObj((prev) => ({
+                            ...prev,
+                            affiliationId: value === "all" ? null : Number(value),
+                          }))
                         }
                       >
                         <SelectTrigger className="w-full">
@@ -1203,7 +1235,10 @@ const SubjectPaperMappingPage = () => {
                       <Select
                         value={filtersObj.academicYearId?.toString() ?? "all"}
                         onValueChange={(value) =>
-                          setFiltersObj((prev) => ({ ...prev, academicYearId: value === "all" ? null : Number(value) }))
+                          setFiltersObj((prev) => ({
+                            ...prev,
+                            academicYearId: value === "all" ? null : Number(value),
+                          }))
                         }
                       >
                         <SelectTrigger className="w-full">
@@ -1253,7 +1288,10 @@ const SubjectPaperMappingPage = () => {
                       <Select
                         value={filtersObj.subjectId?.toString() ?? "all"}
                         onValueChange={(value) =>
-                          setFiltersObj((prev) => ({ ...prev, subjectId: value === "all" ? null : Number(value) }))
+                          setFiltersObj((prev) => ({
+                            ...prev,
+                            subjectId: value === "all" ? null : Number(value),
+                          }))
                         }
                       >
                         <SelectTrigger className="w-full">
@@ -1274,7 +1312,10 @@ const SubjectPaperMappingPage = () => {
                       <Select
                         value={filtersObj.classId?.toString() ?? "all"}
                         onValueChange={(value) =>
-                          setFiltersObj((prev) => ({ ...prev, classId: value === "all" ? null : Number(value) }))
+                          setFiltersObj((prev) => ({
+                            ...prev,
+                            classId: value === "all" ? null : Number(value),
+                          }))
                         }
                       >
                         <SelectTrigger className="w-full">
@@ -1319,7 +1360,10 @@ const SubjectPaperMappingPage = () => {
                       <Select
                         value={filtersObj.subjectTypeId?.toString() ?? "all"}
                         onValueChange={(value) =>
-                          setFiltersObj((prev) => ({ ...prev, subjectTypeId: value === "all" ? null : Number(value) }))
+                          setFiltersObj((prev) => ({
+                            ...prev,
+                            subjectTypeId: value === "all" ? null : Number(value),
+                          }))
                         }
                       >
                         <SelectTrigger className="w-full">
@@ -1338,7 +1382,13 @@ const SubjectPaperMappingPage = () => {
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Is Optional</div>
                       <Select
-                        value={filtersObj.isOptional === null ? "all" : filtersObj.isOptional ? "true" : "false"}
+                        value={
+                          filtersObj.isOptional === null
+                            ? "all"
+                            : filtersObj.isOptional
+                              ? "true"
+                              : "false"
+                        }
                         onValueChange={(value) =>
                           setFiltersObj((prev) => ({
                             ...prev,
@@ -1359,7 +1409,13 @@ const SubjectPaperMappingPage = () => {
                     <div>
                       <div className="mb-1 text-sm text-muted-foreground">Auto Assigned</div>
                       <Select
-                        value={filtersObj.autoAssign === null ? "all" : filtersObj.autoAssign ? "true" : "false"}
+                        value={
+                          filtersObj.autoAssign === null
+                            ? "all"
+                            : filtersObj.autoAssign
+                              ? "true"
+                              : "false"
+                        }
                         onValueChange={(value) =>
                           setFiltersObj((prev) => ({
                             ...prev,
@@ -1420,7 +1476,8 @@ const SubjectPaperMappingPage = () => {
                     variant="outline"
                     className="text-xs border-purple-300 text-purple-700 bg-purple-50 flex items-center gap-1"
                   >
-                    {affiliations.find((a) => a.id === filtersObj.affiliationId)?.name || "Affiliation"}
+                    {affiliations.find((a) => a.id === filtersObj.affiliationId)?.name ||
+                      "Affiliation"}
                     <button
                       aria-label="Clear affiliation filter"
                       className="ml-1 hover:text-purple-900"
@@ -1438,7 +1495,8 @@ const SubjectPaperMappingPage = () => {
                     variant="outline"
                     className="text-xs border-slate-300 text-slate-700 bg-slate-50 flex items-center gap-1"
                   >
-                    {availableAcademicYears.find((ay) => ay.id === filtersObj.academicYearId)?.year || "Year"}
+                    {availableAcademicYears.find((ay) => ay.id === filtersObj.academicYearId)
+                      ?.year || "Year"}
                     <button
                       aria-label="Clear academic year filter"
                       className="ml-1 hover:text-slate-900"
@@ -1456,7 +1514,8 @@ const SubjectPaperMappingPage = () => {
                     variant="outline"
                     className="text-xs border-teal-300 text-teal-700 bg-teal-50 flex items-center gap-1"
                   >
-                    {regulationTypes.find((rt) => rt.id === filtersObj.regulationTypeId)?.name || "Regulation"}
+                    {regulationTypes.find((rt) => rt.id === filtersObj.regulationTypeId)?.name ||
+                      "Regulation"}
                     <button
                       aria-label="Clear regulation filter"
                       className="ml-1 hover:text-teal-900"
@@ -1510,7 +1569,8 @@ const SubjectPaperMappingPage = () => {
                     variant="outline"
                     className="text-xs border-blue-300 text-blue-700 bg-blue-50 flex items-center gap-1"
                   >
-                    {programCourses.find((pc) => pc.id === filtersObj.programCourseId)?.name || "Program Course"}
+                    {programCourses.find((pc) => pc.id === filtersObj.programCourseId)?.name ||
+                      "Program Course"}
                     <button
                       aria-label="Clear program course filter"
                       className="ml-1 hover:text-blue-900"
@@ -1528,7 +1588,8 @@ const SubjectPaperMappingPage = () => {
                     variant="outline"
                     className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50 flex items-center gap-1"
                   >
-                    {subjectTypes.find((st) => st.id === filtersObj.subjectTypeId)?.code || "Subject Type"}
+                    {subjectTypes.find((st) => st.id === filtersObj.subjectTypeId)?.code ||
+                      "Subject Type"}
                     <button
                       aria-label="Clear subject type filter"
                       className="ml-1 hover:text-emerald-900"
@@ -1598,9 +1659,13 @@ const SubjectPaperMappingPage = () => {
                   <Download className="h-4 w-4 mr-2" />
                 )}
                 <span className="hidden sm:inline">
-                  {isDownloading ? `Downloading... ${Math.round(downloadProgress)}%` : "Download All"}
+                  {isDownloading
+                    ? `Downloading... ${Math.round(downloadProgress)}%`
+                    : "Download All"}
                 </span>
-                <span className="sm:hidden">{isDownloading ? `${Math.round(downloadProgress)}%` : "Download"}</span>
+                <span className="sm:hidden">
+                  {isDownloading ? `${Math.round(downloadProgress)}%` : "Download"}
+                </span>
               </Button>
               {isDownloading && (
                 <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -1615,7 +1680,10 @@ const SubjectPaperMappingPage = () => {
           <div className="relative z-50 bg-white" style={{ height: "600px" }}>
             <div className="overflow-y-auto text-[14px] overflow-x-auto h-full border rounded-md">
               {/* Fixed Header */}
-              <div className="sticky top-0 z-50 text-gray-500 bg-gray-100 border-b" style={{ minWidth: "950px" }}>
+              <div
+                className="sticky top-0 z-50 text-gray-500 bg-gray-100 border-b"
+                style={{ minWidth: "950px" }}
+              >
                 <div className="flex">
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
@@ -1671,7 +1739,10 @@ const SubjectPaperMappingPage = () => {
               {/* Table Body */}
               <div className="bg-white relative">
                 {loading ? (
-                  <div className="flex items-center justify-center p-4 text-center" style={{ minWidth: "950px" }}>
+                  <div
+                    className="flex items-center justify-center p-4 text-center"
+                    style={{ minWidth: "950px" }}
+                  >
                     Loading...
                   </div>
                 ) : error ? (
@@ -1682,24 +1753,42 @@ const SubjectPaperMappingPage = () => {
                     {error}
                   </div>
                 ) : !Array.isArray(papers) || papers.length === 0 ? (
-                  <div className="flex items-center justify-center p-4 text-center" style={{ minWidth: "950px" }}>
-                    {!Array.isArray(papers) ? "Error loading data" : "No subject paper mappings found."}
+                  <div
+                    className="flex items-center justify-center p-4 text-center"
+                    style={{ minWidth: "950px" }}
+                  >
+                    {!Array.isArray(papers)
+                      ? "Error loading data"
+                      : "No subject paper mappings found."}
                   </div>
                 ) : (
                   papers.map((sp: PaperDto, idx: number) => (
-                    <div key={sp.id} className="flex border-b hover:bg-gray-50 group" style={{ minWidth: "950px" }}>
+                    <div
+                      key={sp.id}
+                      className="flex border-b hover:bg-gray-50 group"
+                      style={{ minWidth: "950px" }}
+                    >
                       <div
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
                         style={{ width: "7%" }}
                       >
                         {idx + 1}
                       </div>
-                      <div className="flex-shrink-0 p-3 border-r flex items-center" style={{ width: "14%" }}>
-                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                      <div
+                        className="flex-shrink-0 p-3 border-r flex items-center"
+                        style={{ width: "14%" }}
+                      >
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                        >
                           {programCourses.find((ele) => ele.id == sp.programCourseId)?.name ?? "-"}
                         </Badge>
                       </div>
-                      <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
+                      <div
+                        className="flex-shrink-0 p-3 border-r flex flex-col"
+                        style={{ width: "20%" }}
+                      >
                         <p>
                           {sp.name ?? "-"}
                           {!sp.isOptional && <span className="text-red-500 ml-1">*</span>}
@@ -1711,7 +1800,10 @@ const SubjectPaperMappingPage = () => {
                           )}
                         </p>
                         <div className="mt-1 flex flex-wrap gap-1">
-                          <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                          >
                             {subjects.find((s) => s.id === sp.subjectId)?.name ?? "-"}
                           </Badge>
                         </div>
@@ -1726,7 +1818,10 @@ const SubjectPaperMappingPage = () => {
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
                         style={{ width: "12%" }}
                       >
-                        <Badge variant="outline" className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50">
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
+                        >
                           {subjectTypes.find((st) => st.id === sp.subjectTypeId)?.code ?? "-"}
                         </Badge>
                       </div>
@@ -1734,7 +1829,10 @@ const SubjectPaperMappingPage = () => {
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
                         style={{ width: "10%" }}
                       >
-                        <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                        >
                           {classes.find((cls) => cls.id === sp.classId)?.name.split(" ")[1] ?? "-"}
                         </Badge>
                       </div>
@@ -1756,7 +1854,10 @@ const SubjectPaperMappingPage = () => {
                           )}
                         </div>
                       </div>
-                      <div className="flex-shrink-0 p-3 flex items-center justify-center" style={{ width: "6%" }}>
+                      <div
+                        className="flex-shrink-0 p-3 flex items-center justify-center"
+                        style={{ width: "6%" }}
+                      >
                         <div className="flex space-x-2">
                           <Button
                             variant="outline"
@@ -1785,8 +1886,8 @@ const SubjectPaperMappingPage = () => {
         <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-2 sm:px-0">
           <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
             <span className="hidden sm:inline">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
-              {totalItems} results
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+              {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} results
             </span>
             <span className="sm:hidden">
               Page {currentPage} of {totalPages} ({totalItems} total)

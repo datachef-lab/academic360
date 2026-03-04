@@ -15,9 +15,7 @@ import { motion } from "framer-motion";
 import { Calendar, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { Installment, Fee, EnrollmentFeesClientProps } from "./types";
 
-export default function EnrollmentFeesClient({
-  initialFeesData,
-}: EnrollmentFeesClientProps) {
+export default function EnrollmentFeesClient({ initialFeesData }: EnrollmentFeesClientProps) {
   const [feesData] = useState<Fee[]>(initialFeesData);
   const [selectedFee, setSelectedFee] = useState<number | null>(null);
 
@@ -37,9 +35,7 @@ export default function EnrollmentFeesClient({
     }).format(amount);
   };
 
-  const getStatusColor = (
-    status: Fee["status"] | Installment["status"]
-  ): string => {
+  const getStatusColor = (status: Fee["status"] | Installment["status"]): string => {
     switch (status) {
       case "paid":
         return "bg-green-100 text-green-800";
@@ -54,9 +50,7 @@ export default function EnrollmentFeesClient({
     }
   };
 
-  const getStatusIcon = (
-    status: Fee["status"] | Installment["status"]
-  ): React.ReactNode => {
+  const getStatusIcon = (status: Fee["status"] | Installment["status"]): React.ReactNode => {
     switch (status) {
       case "paid":
         return <CheckCircle className="w-4 h-4 text-green-600" />;
@@ -99,8 +93,7 @@ export default function EnrollmentFeesClient({
                 Enrollment & Fees
               </h1>
               <p className="text-blue-50 text-xl drop-shadow max-w-2xl">
-                Manage your academic payments and track your installments all in
-                one place
+                Manage your academic payments and track your installments all in one place
               </p>
             </div>
           </div>
@@ -116,12 +109,10 @@ export default function EnrollmentFeesClient({
                 <div className="p-4 bg-blue-50 rounded-full">
                   <Calendar className="h-10 w-10 text-blue-500" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800">
-                  No Fees Found
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-800">No Fees Found</h3>
                 <p className="text-gray-600 max-w-md">
-                  There are currently no fees assigned to your account. Check
-                  back later or contact the administration office.
+                  There are currently no fees assigned to your account. Check back later or contact
+                  the administration office.
                 </p>
               </div>
             </Card>
@@ -152,14 +143,12 @@ export default function EnrollmentFeesClient({
                     </div>
                     <Badge
                       className={`px-4 py-2 text-sm font-semibold rounded-lg shadow-sm ${getStatusColor(
-                        feesData[selectedFee].status
+                        feesData[selectedFee].status,
                       )}`}
                     >
                       <span className="flex items-center gap-2">
                         {getStatusIcon(feesData[selectedFee].status)}
-                        {feesData[selectedFee].status
-                          .replace("_", " ")
-                          .toUpperCase()}
+                        {feesData[selectedFee].status.replace("_", " ").toUpperCase()}
                       </span>
                     </Badge>
                   </div>
@@ -215,9 +204,7 @@ export default function EnrollmentFeesClient({
                           <Table>
                             <TableHeader>
                               <TableRow className="bg-gradient-to-r from-indigo-50 to-blue-50">
-                                <TableHead className="text-indigo-700 font-semibold">
-                                  No.
-                                </TableHead>
+                                <TableHead className="text-indigo-700 font-semibold">No.</TableHead>
                                 <TableHead className="text-indigo-700 font-semibold">
                                   Amount
                                 </TableHead>
@@ -233,46 +220,44 @@ export default function EnrollmentFeesClient({
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {feesData[selectedFee].installments.map(
-                                (installment, idx) => (
-                                  <TableRow
-                                    key={installment.id}
-                                    className="hover:bg-blue-50/50 transition-colors"
-                                  >
-                                    <TableCell className="font-medium text-gray-700">
-                                      {idx + 1}
-                                    </TableCell>
-                                    <TableCell className="font-medium text-gray-900">
-                                      {formatCurrency(installment.amount)}
-                                    </TableCell>
-                                    <TableCell className="text-gray-700">
-                                      {formatDate(installment.dueDate)}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge
-                                        className={`px-2 py-1 shadow-sm ${getStatusColor(
-                                          installment.status
-                                        )}`}
-                                      >
-                                        <span className="flex items-center gap-1">
-                                          {getStatusIcon(installment.status)}
-                                          {installment.status.toUpperCase()}
-                                        </span>
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                      {installment.paidOn ? (
-                                        <span className="text-green-600 font-medium flex items-center gap-1">
-                                          <CheckCircle className="h-4 w-4" />
-                                          {formatDate(installment.paidOn)}
-                                        </span>
-                                      ) : (
-                                        <span className="text-gray-500">-</span>
-                                      )}
-                                    </TableCell>
-                                  </TableRow>
-                                )
-                              )}
+                              {feesData[selectedFee].installments.map((installment, idx) => (
+                                <TableRow
+                                  key={installment.id}
+                                  className="hover:bg-blue-50/50 transition-colors"
+                                >
+                                  <TableCell className="font-medium text-gray-700">
+                                    {idx + 1}
+                                  </TableCell>
+                                  <TableCell className="font-medium text-gray-900">
+                                    {formatCurrency(installment.amount)}
+                                  </TableCell>
+                                  <TableCell className="text-gray-700">
+                                    {formatDate(installment.dueDate)}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      className={`px-2 py-1 shadow-sm ${getStatusColor(
+                                        installment.status,
+                                      )}`}
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        {getStatusIcon(installment.status)}
+                                        {installment.status.toUpperCase()}
+                                      </span>
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {installment.paidOn ? (
+                                      <span className="text-green-600 font-medium flex items-center gap-1">
+                                        <CheckCircle className="h-4 w-4" />
+                                        {formatDate(installment.paidOn)}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-500">-</span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
                             </TableBody>
                           </Table>
                         </div>
@@ -290,11 +275,7 @@ export default function EnrollmentFeesClient({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {feesData.map((fee, index) => (
-                <motion.div
-                  key={fee.id}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                >
+                <motion.div key={fee.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                   <Card
                     className="cursor-pointer hover:shadow-xl transition-all border-none bg-white shadow-lg overflow-hidden rounded-xl h-full"
                     onClick={() => handleCardClick(index)}
@@ -309,10 +290,10 @@ export default function EnrollmentFeesClient({
                               fee.status === "paid"
                                 ? "bg-green-500"
                                 : fee.status === "pending"
-                                ? "bg-yellow-500"
-                                : fee.status === "overdue"
-                                ? "bg-red-500"
-                                : "bg-blue-500"
+                                  ? "bg-yellow-500"
+                                  : fee.status === "overdue"
+                                    ? "bg-red-500"
+                                    : "bg-blue-500"
                             }`}
                           ></div>
                           <CardTitle className="text-xl font-bold text-gray-800">
@@ -327,7 +308,7 @@ export default function EnrollmentFeesClient({
                           </p>
                           <Badge
                             className={`px-3 py-1.5 shadow-sm rounded-lg ${getStatusColor(
-                              fee.status
+                              fee.status,
                             )}`}
                           >
                             <span className="flex items-center gap-1.5">
@@ -343,23 +324,16 @@ export default function EnrollmentFeesClient({
 
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-500">
-                              Payment Progress
-                            </span>
+                            <span className="text-gray-500">Payment Progress</span>
                             <span className="font-medium text-blue-700">
-                              {Math.round(
-                                (fee.paidAmount / fee.totalAmount) * 100
-                              )}
-                              %
+                              {Math.round((fee.paidAmount / fee.totalAmount) * 100)}%
                             </span>
                           </div>
                           <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
                               style={{
-                                width: `${
-                                  (fee.paidAmount / fee.totalAmount) * 100
-                                }%`,
+                                width: `${(fee.paidAmount / fee.totalAmount) * 100}%`,
                               }}
                             ></div>
                           </div>

@@ -9,7 +9,13 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Save, CheckCircle } from "lucide-react";
 import { getAllAnnualIncomes } from "@/services/annual-income.service";
@@ -103,7 +109,10 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
           }
         : null,
       annualIncome: initialData?.annualIncome
-        ? { id: initialData.annualIncome.id, range: (initialData.annualIncome as { range?: string } | null)?.range }
+        ? {
+            id: initialData.annualIncome.id,
+            range: (initialData.annualIncome as { range?: string } | null)?.range,
+          }
         : null,
     };
   });
@@ -132,7 +141,10 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
       id: initialData.id ?? p.id,
       parentType: initialData.parentType ?? null,
       annualIncome: initialData.annualIncome
-        ? { id: initialData.annualIncome.id, range: (initialData.annualIncome as { range?: string } | null)?.range }
+        ? {
+            id: initialData.annualIncome.id,
+            range: (initialData.annualIncome as { range?: string } | null)?.range,
+          }
         : null,
       fatherDetails: initialData.father
         ? {
@@ -343,7 +355,11 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
             <div className="flex flex-col gap-1">
               <Label>Occupation</Label>
               <Select
-                value={formData.fatherDetails?.occupation?.id ? String(formData.fatherDetails.occupation.id) : ""}
+                value={
+                  formData.fatherDetails?.occupation?.id
+                    ? String(formData.fatherDetails.occupation.id)
+                    : ""
+                }
                 onValueChange={(v) => {
                   const sel = occupations.find((o) => String(o.id) === v) ?? null;
                   setFormData((p) => ({
@@ -432,7 +448,11 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
             <div className="flex flex-col gap-1">
               <Label>Occupation</Label>
               <Select
-                value={formData.motherDetails?.occupation?.id ? String(formData.motherDetails.occupation.id) : ""}
+                value={
+                  formData.motherDetails?.occupation?.id
+                    ? String(formData.motherDetails.occupation.id)
+                    : ""
+                }
                 onValueChange={(v) => {
                   const sel = occupations.find((o) => String(o.id) === v) ?? null;
                   setFormData((p) => ({
@@ -488,7 +508,10 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
                 onChange={(e) =>
                   setFormData((p) => ({
                     ...p,
-                    guardianDetails: { ...(p.guardianDetails ?? {}), name: e.target.value } as Person,
+                    guardianDetails: {
+                      ...(p.guardianDetails ?? {}),
+                      name: e.target.value,
+                    } as Person,
                   }))
                 }
               />
@@ -501,7 +524,10 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
                 onChange={(e) =>
                   setFormData((p) => ({
                     ...p,
-                    guardianDetails: { ...(p.guardianDetails ?? {}), email: e.target.value } as Person,
+                    guardianDetails: {
+                      ...(p.guardianDetails ?? {}),
+                      email: e.target.value,
+                    } as Person,
                   }))
                 }
               />
@@ -513,7 +539,10 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
                 onChange={(e) =>
                   setFormData((p) => ({
                     ...p,
-                    guardianDetails: { ...(p.guardianDetails ?? {}), phone: e.target.value } as Person,
+                    guardianDetails: {
+                      ...(p.guardianDetails ?? {}),
+                      phone: e.target.value,
+                    } as Person,
                   }))
                 }
               />
@@ -521,7 +550,11 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
             <div className="flex flex-col gap-1">
               <Label>Occupation</Label>
               <Select
-                value={formData.guardianDetails?.occupation?.id ? String(formData.guardianDetails.occupation.id) : ""}
+                value={
+                  formData.guardianDetails?.occupation?.id
+                    ? String(formData.guardianDetails.occupation.id)
+                    : ""
+                }
                 onValueChange={(v) => {
                   const sel = occupations.find((o) => String(o.id) === v) ?? null;
                   setFormData((p) => ({
@@ -558,7 +591,14 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
                   fill="none"
                   viewBox="0 0 24 24"
                 >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
                   <path
                     className="opacity-75"
                     fill="currentColor"

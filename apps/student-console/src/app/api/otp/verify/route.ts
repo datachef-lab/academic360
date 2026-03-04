@@ -12,7 +12,10 @@ export async function POST(req: NextRequest) {
     console.log(type, recipient, otp);
     if (!type || !recipient || !otp) {
       console.log("OTP type, recipient, and OTP are required.");
-      return NextResponse.json({ message: "OTP type, recipient, and OTP are required." }, { status: 400 });
+      return NextResponse.json(
+        { message: "OTP type, recipient, and OTP are required." },
+        { status: 400 },
+      );
     }
 
     if (!otpType.enumValues.includes(type)) {

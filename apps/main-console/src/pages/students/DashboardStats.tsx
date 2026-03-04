@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import Cards from "@/components/home/Cards";
 import { MyBarChart } from "@/components/home/MyBarChart";
 import { MyLineChart } from "@/components/home/MyLineChart";

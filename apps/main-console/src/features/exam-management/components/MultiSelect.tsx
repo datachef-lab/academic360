@@ -13,11 +13,19 @@ interface MultiSelectProps {
   placeholder?: string;
 }
 
-export function MultiSelect({ label, options, selected, onChange, placeholder = "Select options" }: MultiSelectProps) {
+export function MultiSelect({
+  label,
+  options,
+  selected,
+  onChange,
+  placeholder = "Select options",
+}: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggle = (option: string) => {
-    onChange(selected.includes(option) ? selected.filter((x) => x !== option) : [...selected, option]);
+    onChange(
+      selected.includes(option) ? selected.filter((x) => x !== option) : [...selected, option],
+    );
   };
 
   return (
@@ -34,7 +42,9 @@ export function MultiSelect({ label, options, selected, onChange, placeholder = 
             <span className={selected.length ? "text-gray-900" : "text-gray-600"}>
               {selected.length ? selected.join(", ") : placeholder}
             </span>
-            <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+            <ChevronDown
+              className={`w-4 h-4 text-gray-600 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            />
           </Button>
         </PopoverTrigger>
         <PopoverContent

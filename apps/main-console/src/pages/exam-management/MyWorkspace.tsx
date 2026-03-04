@@ -14,7 +14,7 @@ export default function MyWorkspacePage() {
           <li>Previous changes done by the logged-in user to the database.</li>
         </ul> */}
         <ExamDates />
-        <NoticeTable/>
+        <NoticeTable />
       </div>
     </>
   );

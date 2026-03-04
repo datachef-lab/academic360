@@ -56,11 +56,11 @@ interface ReportStore {
   filters: ReportFilters;
   uiFilters: uiFilters;
   filteredData: Report[];
-  
+
   setFilters: (filters: ReportFilters) => void;
   setFilteredData: (data: Report[]) => void;
   StudentData: Student[];
-  setStudentData:(data:Student[])=>void;
+  setStudentData: (data: Student[]) => void;
   setUiFilters: (uiFilters: Partial<uiFilters>) => void;
 }
 
@@ -81,7 +81,7 @@ export const useReportStore = create<ReportStore>((set) => ({
     selectedFramework: null,
   },
   StudentData: [],
-  
+
   filteredData: [],
   setFilters: (filters) => {
     set({ filters });
@@ -89,8 +89,8 @@ export const useReportStore = create<ReportStore>((set) => ({
   setUiFilters: (uiFilters) => {
     set((state) => ({ uiFilters: { ...state.uiFilters, ...uiFilters } }));
   },
-  setStudentData:(StudentData)=>{
-    set({StudentData});
+  setStudentData: (StudentData) => {
+    set({ StudentData });
   },
   setFilteredData: (filteredData) => {
     set({ filteredData });

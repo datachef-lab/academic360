@@ -25,7 +25,9 @@ export default function WelcomeBanner({ student }: { student: StudentDto }) {
         <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1">
           Welcome {(user?.name as string) || "Student"}!
         </h1>
-        <p className="text-sm sm:text-base opacity-90 max-w-md">Always stay updated in your student portal</p>
+        <p className="text-sm sm:text-base opacity-90 max-w-md">
+          Always stay updated in your student portal
+        </p>
 
         {/* Notification button - Moved to be part of the welcome text section */}
         <NotificationCorner />

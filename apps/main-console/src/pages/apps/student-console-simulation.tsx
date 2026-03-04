@@ -7,7 +7,8 @@ import { useAuth } from "@/features/auth/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 
 // Student console base URL - can be configured via env variable
-const STUDENT_CONSOLE_BASE_URL = import.meta.env.VITE_APP_STUDENT_CONSOLE_URL || "http://localhost:3000";
+const STUDENT_CONSOLE_BASE_URL =
+  import.meta.env.VITE_APP_STUDENT_CONSOLE_URL || "http://localhost:3000";
 
 // const subLinks = [{ title: "Simulation", url: "simulation", icon: ExternalLink }];
 
@@ -53,7 +54,9 @@ export default function StudentConsoleSimulation() {
             );
             console.log("[SIMULATION] Sent admin token in response to REQUEST_ADMIN_TOKEN");
           } else {
-            console.warn("[SIMULATION] Iframe contentWindow not available when responding to REQUEST_ADMIN_TOKEN");
+            console.warn(
+              "[SIMULATION] Iframe contentWindow not available when responding to REQUEST_ADMIN_TOKEN",
+            );
           }
         } else {
           console.warn("[SIMULATION] REQUEST_ADMIN_TOKEN received but accessToken is null");

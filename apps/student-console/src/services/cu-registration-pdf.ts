@@ -22,10 +22,14 @@ export async function getCuRegistrationPdfUrl(
   studentId: number,
   applicationNumber: string,
 ): Promise<CuRegistrationPdfResponse> {
-  console.info(`[CU-REG PDF] Fetching PDF URL for student: ${studentId}, application: ${applicationNumber}`);
+  console.info(
+    `[CU-REG PDF] Fetching PDF URL for student: ${studentId}, application: ${applicationNumber}`,
+  );
 
   try {
-    const res = await api.get<ApiResponse<CuRegistrationPdfResponse>>(`${BASE}/url/${studentId}/${applicationNumber}`);
+    const res = await api.get<ApiResponse<CuRegistrationPdfResponse>>(
+      `${BASE}/url/${studentId}/${applicationNumber}`,
+    );
 
     console.info(`[CU-REG PDF] PDF URL response:`, res.data);
     return res.data.payload as CuRegistrationPdfResponse;
@@ -46,7 +50,9 @@ export async function getCuRegistrationPdfUrlByRequestId(
   console.info(`[CU-REG PDF] Fetching PDF URL for correction request: ${correctionRequestId}`);
 
   try {
-    const res = await api.get<ApiResponse<CuRegistrationPdfResponse>>(`${BASE}/url/request/${correctionRequestId}`);
+    const res = await api.get<ApiResponse<CuRegistrationPdfResponse>>(
+      `${BASE}/url/request/${correctionRequestId}`,
+    );
 
     console.info(`[CU-REG PDF] PDF URL response:`, res.data);
     return res.data.payload as CuRegistrationPdfResponse;
