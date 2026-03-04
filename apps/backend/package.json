@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "This is a taskify-backend used for serving the taskify-app. This is powered by Node.JS",
+  "description": "This is a academic360-backend used for serving the acdemic360-app. This is powered by Node.JS",
   "keywords": [
     "user",
     "task",
