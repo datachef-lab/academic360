@@ -557,21 +557,21 @@ export default function ExamsContent() {
         transition={{ duration: 0.3, delay: index * 0.1 }}
       >
         <Card className={`shadow-md hover:shadow-lg transition-all overflow-hidden group ${styles.border}`}>
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-start gap-4 w-full md:w-auto">
-                <div className={`${styles.iconBg} p-3 rounded-lg flex-shrink-0`}>
-                  <Icon className={`w-6 h-6 ${styles.iconColor}`} />
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-start gap-3 sm:gap-4 w-full sm:w-auto min-w-0">
+                <div className={`${styles.iconBg} p-2 sm:p-3 rounded-lg flex-shrink-0`}>
+                  <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${styles.iconColor}`} />
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate">
                     {examGroup?.name || exam.examType?.name || "Exam"}
                   </h3>
                   {/* {displayPaper?.subject?.name && (
                     <p className={`${styles.titleColor} font-medium mb-2`}>{displayPaper.subject.name}</p>
                   )} */}
                   {displayPaper && (
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                    <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                       <div className="flex items-center">
                         <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
                         {format(new Date(examGroup?.examCommencementDate!), "dd/MM/yyyy")}
@@ -584,8 +584,10 @@ export default function ExamsContent() {
                   )}
                 </div>
               </div>
-              <div className="mt-3 md:mt-0 flex items-center gap-3">
-                <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${styles.badge}`}>
+              <div className="mt-2 sm:mt-0 flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <span
+                  className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium ${styles.badge}`}
+                >
                   {exam.class.name}
                 </span>
                 <button
@@ -603,25 +605,32 @@ export default function ExamsContent() {
     );
   };
 
+  // Exam group counts (unique exam groups, not individual exams)
+  const upcomingExamGroupCount = new Set(upcomingExams.map((e) => e.examGroupId)).size;
+  const recentExamGroupCount = new Set(recentExams.map((e) => e.examGroupId)).size;
+  const previousExamGroupCount = new Set(previousExams.map((e) => e.examGroupId)).size;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-indigo-50/20 to-purple-50/20">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-800 text-white py-10 px-6 mb-8 rounded-b-3xl shadow-lg relative overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-800 text-white py-6 sm:py-8 md:py-10 px-4 sm:px-6 mb-6 sm:mb-8 rounded-b-2xl sm:rounded-b-3xl shadow-lg relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden opacity-30">
           <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-blue-400 mix-blend-overlay blur-2xl"></div>
           <div className="absolute right-40 top-20 w-32 h-32 rounded-full bg-purple-400 mix-blend-overlay blur-xl"></div>
           <div className="absolute left-20 bottom-10 w-48 h-48 rounded-full bg-indigo-300 mix-blend-overlay blur-2xl"></div>
           <div className="absolute inset-0 bg-[url('/illustrations/dots-pattern.svg')] opacity-5"></div>
         </div>
-        <div className="max-w-7xl mx-auto relative">
+        <div className="max-w-7xl mx-auto relative px-2 sm:px-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="mr-5 bg-white/10 backdrop-blur-sm p-4 rounded-xl shadow-xl border border-white/10">
-                <GraduationCap size={36} className="text-white drop-shadow-md" />
+            <div className="flex items-center gap-3 sm:gap-5 min-w-0">
+              <div className="flex-shrink-0 bg-white/10 backdrop-blur-sm p-2 sm:p-4 rounded-lg sm:rounded-xl shadow-xl border border-white/10">
+                <GraduationCap size={28} className="sm:w-9 sm:h-9 w-7 h-7 text-white drop-shadow-md" />
               </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">Exams Dashboard</h1>
-                <p className="text-blue-50 text-lg drop-shadow max-w-2xl">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2 text-white drop-shadow-md truncate">
+                  Exams Dashboard
+                </h1>
+                <p className="text-blue-50 text-sm sm:text-base md:text-lg drop-shadow max-w-2xl line-clamp-2">
                   Track your examinations and academic performance
                 </p>
               </div>
@@ -630,23 +639,23 @@ export default function ExamsContent() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-8 sm:pb-12">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
             <Card className="border-2 border-blue-200 shadow-lg hover:shadow-xl transition-all bg-gradient-to-br from-white to-blue-100">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-blue-600 font-medium">Upcoming Exams</p>
-                    <p className="text-3xl font-bold text-blue-700">{upcomingExams.length}</p>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-blue-600 font-medium truncate">Upcoming Exams</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-blue-700">{upcomingExamGroupCount}</p>
                   </div>
-                  <div className="bg-blue-50 p-3 rounded-xl border border-blue-200">
-                    <Calendar size={24} className="text-blue-600" />
+                  <div className="bg-blue-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-blue-200 flex-shrink-0">
+                    <Calendar size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-blue-600" />
                   </div>
                 </div>
               </CardContent>
@@ -659,14 +668,14 @@ export default function ExamsContent() {
             transition={{ duration: 0.3, delay: 0.2 }}
           >
             <Card className="border-2 border-amber-200 shadow-lg hover:shadow-xl transition-all bg-gradient-to-br from-white to-amber-100">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-amber-600 font-medium">Next Exam</p>
-                    <p className="text-3xl font-bold text-amber-700">{getNextExamDaysAway()}</p>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-amber-600 font-medium truncate">Next Exam</p>
+                    <p className="text-lg sm:text-3xl font-bold text-amber-700 truncate">{getNextExamDaysAway()}</p>
                   </div>
-                  <div className="bg-amber-50 p-3 rounded-xl border border-amber-200">
-                    <Clock size={24} className="text-amber-600" />
+                  <div className="bg-amber-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-amber-200 flex-shrink-0">
+                    <Clock size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-amber-600" />
                   </div>
                 </div>
               </CardContent>
@@ -679,11 +688,11 @@ export default function ExamsContent() {
             transition={{ duration: 0.3, delay: 0.3 }}
           >
             <Card className="border-2 border-purple-200 shadow-lg hover:shadow-xl transition-all bg-gradient-to-br from-white to-purple-100">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-purple-600 font-medium">Total Subjects</p>
-                    <p className="text-3xl font-bold text-purple-700">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-purple-600 font-medium truncate">Total Subjects</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-purple-700">
                       {
                         [
                           ...new Set(
@@ -695,8 +704,8 @@ export default function ExamsContent() {
                       }
                     </p>
                   </div>
-                  <div className="bg-purple-50 p-3 rounded-xl border border-purple-200">
-                    <FileText size={24} className="text-purple-600" />
+                  <div className="bg-purple-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-purple-200 flex-shrink-0">
+                    <FileText size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-purple-600" />
                   </div>
                 </div>
               </CardContent>
@@ -709,14 +718,14 @@ export default function ExamsContent() {
             transition={{ duration: 0.3, delay: 0.4 }}
           >
             <Card className="border-2 border-emerald-200 shadow-lg hover:shadow-xl transition-all bg-gradient-to-br from-white to-emerald-100">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-emerald-600 font-medium">Today&apos;s Exams</p>
-                    <p className="text-3xl font-bold text-emerald-700">{recentExams.length}</p>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-emerald-600 font-medium truncate">Today&apos;s Exams</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-emerald-700">{recentExamGroupCount}</p>
                   </div>
-                  <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-200">
-                    <BarChart size={24} className="text-emerald-600" />
+                  <div className="bg-emerald-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-emerald-200 flex-shrink-0">
+                    <BarChart size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-emerald-600" />
                   </div>
                 </div>
               </CardContent>
@@ -729,7 +738,7 @@ export default function ExamsContent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.5 }}
-          className="bg-white rounded-2xl shadow-lg border border-indigo-100 p-8 relative"
+          className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-indigo-100 p-4 sm:p-6 md:p-8 relative"
         >
           {loading ? (
             <div className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col justify-center items-center z-10">
@@ -756,27 +765,27 @@ export default function ExamsContent() {
             </div>
           ) : (
             <TabsFixed defaultValue="recent" className="w-full">
-              <TabsListFixed className="inline-flex h-12 items-center justify-center rounded-lg bg-indigo-50/60 p-1 mb-8">
+              <TabsListFixed className="flex flex-wrap sm:flex-nowrap h-auto sm:h-12 items-center justify-center rounded-lg bg-indigo-50/60 p-1 mb-6 sm:mb-8 gap-1">
                 <TabsTriggerFixed
                   value="upcoming"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-2.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
                 >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Upcoming ({upcomingExams.length})
+                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 shrink-0" />
+                  Upcoming ({upcomingExamGroupCount})
                 </TabsTriggerFixed>
                 <TabsTriggerFixed
                   value="recent"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-2.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
                 >
-                  <Clock className="w-4 h-4 mr-2" />
-                  Today ({recentExams.length})
+                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 shrink-0" />
+                  Today ({recentExamGroupCount})
                 </TabsTriggerFixed>
                 <TabsTriggerFixed
                   value="previous"
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-2.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
                 >
-                  <History className="w-4 h-4 mr-2" />
-                  Completed ({previousExams.length})
+                  <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 shrink-0" />
+                  Completed ({previousExamGroupCount})
                 </TabsTriggerFixed>
               </TabsListFixed>
 
@@ -860,8 +869,8 @@ export default function ExamsContent() {
                         </div>
                         <div className="flex items-center">
                           <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                            {recentExams.length} exam
-                            {recentExams.length !== 1 ? "s" : ""} today
+                            {recentExamGroupCount} exam
+                            {recentExamGroupCount !== 1 ? "s" : ""} today
                           </span>
                         </div>
                       </div>

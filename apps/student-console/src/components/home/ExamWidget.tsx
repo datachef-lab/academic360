@@ -2,19 +2,21 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExamDto } from "@/dtos";
+import { ExamDto, ExamGroupDto } from "@/dtos";
 import { format } from "date-fns";
 import { Calendar, Clock, GraduationCap, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 interface ExamWidgetProps {
   exams: ExamDto[];
+  examGroups: ExamGroupDto[];
 }
 
-export default function ExamWidget({ exams }: ExamWidgetProps) {
+export default function ExamWidget({ exams, examGroups }: ExamWidgetProps) {
   const now = new Date();
   const nowTime = now.getTime();
   const today = new Date();
+
   today.setHours(0, 0, 0, 0);
 
   // Helper: Check if all papers in an exam are completed
@@ -109,6 +111,9 @@ export default function ExamWidget({ exams }: ExamWidgetProps) {
   }
 
   const { exam: latestExam, nextPaper } = upcomingExams[0];
+  // if (examGroups.length > 0) {
+  const examGroup = examGroups.find((group) => group.id === latestExam.examGroupId);
+  // }
 
   const examDate = new Date(nextPaper.startTime);
   const isToday = examDate.toDateString() === now.toDateString();
@@ -139,18 +144,16 @@ export default function ExamWidget({ exams }: ExamWidgetProps) {
             {/* Exam Info */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <h4 className="text-base font-bold text-gray-800">{latestExam.examType?.name || "Exam"}</h4>
+                <h4 className="text-base font-bold text-gray-800">{examGroup?.name || "Exam"}</h4>
                 {isToday && (
                   <span className="px-2 py-0.5 text-xs font-medium bg-emerald-500 text-white rounded-full">Today</span>
                 )}
               </div>
 
-              {nextPaper.subject?.name && <p className="text-sm text-gray-600 font-medium">{nextPaper.subject.name}</p>}
-
               <div className="space-y-1 text-xs text-gray-600">
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-3 h-3" />
-                  <span>{format(examDate, "dd/MM/yyyy")}</span>
+                  <span>{examGroup && format(examGroup?.examCommencementDate, "dd/MM/yyyy")}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3 h-3" />
