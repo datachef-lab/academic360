@@ -1,0 +1,549 @@
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>FeesChallan_Rg_55379.pdf</title>
+  <style type="text/css">
+    * {
+      margin: 0;
+      padding: 0;
+      text-indent: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+      color: black;
+      width: 297mm;
+      min-height: 210mm;
+      height: 100%;
+    }
+
+    .copies-container {
+      display: flex;
+
+      align-items: stretch;
+      min-height: 100vh;
+    }
+
+    .challan-copy {
+      border: none;
+      border-right: 1px dotted #000;
+      padding: 12px;
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .challan-copy:last-child {
+      border-right: none;
+    }
+
+    .challan-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #000;
+    }
+
+    .college-logo {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #000;
+      flex-shrink: 0;
+    }
+
+    .header-text {
+      flex: 1;
+    }
+
+    .college-name {
+      font-size: 12pt;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    .address {
+      font-size: 8pt;
+      margin-bottom: 1px;
+    }
+
+    .session {
+      font-size: 8pt;
+    }
+
+    .bank-details {
+      margin-bottom: 8px;
+      font-size: 8pt;
+    }
+
+    .bank-details p {
+      margin: 1px 0;
+    }
+
+    .bank-staff-note {
+      font-weight: bold;
+      margin: 4px 0;
+      font-size: 8pt;
+    }
+
+    .student-info-wrapper {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 8px;
+      align-items: flex-start;
+    }
+
+    .student-info {
+      display: table;
+      flex: 1;
+      min-width: 0;
+      border-collapse: collapse;
+    }
+
+    .student-info-row {
+      display: table-row;
+    }
+
+    .student-info-label {
+      display: table-cell;
+      font-weight: bold;
+      padding: 2px 6px 2px 0;
+      width: 70px;
+      font-size: 9pt;
+    }
+
+    .student-info-value {
+      display: table-cell;
+      padding: 2px 0;
+      font-size: 9pt;
+    }
+
+    .challan-barcode-block {
+      flex-shrink: 0;
+      min-width: 100px;
+    }
+
+    .challan-no-value {
+      display: block;
+      font-size: 9pt;
+      margin-bottom: 4px;
+    }
+
+    .challan-barcode {
+      display: block;
+      width: 100%;
+      min-width: 80px;
+      max-width: 120px;
+      height: 28px;
+      background: repeating-linear-gradient(90deg, #000 0px, #000 2px, transparent 2px, transparent 4px);
+    }
+
+    .fee-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 6px;
+      font-size: 9pt;
+    }
+
+    .fee-table td {
+      border: 1px solid #000;
+      padding: 4px 6px;
+    }
+
+    .fee-table .label {
+      font-weight: bold;
+    }
+
+    .fee-table .amount {
+      text-align: right;
+    }
+
+    .total-row {
+      font-weight: bold;
+      border-top: 2px solid #000 !important;
+      border-bottom: 2px solid #000 !important;
+    }
+
+    .total-row td {
+      border-top: 2px solid #000 !important;
+      border-bottom: 2px solid #000 !important;
+    }
+
+    .amount-words {
+      font-size: 8pt;
+      margin: 6px 0;
+      font-style: italic;
+      text-align: center;
+    }
+
+    .fee-update-note {
+      margin: 6px 0;
+      font-size: 8pt;
+    }
+
+    .fee-update-note a {
+      color: #000;
+      text-decoration: underline;
+    }
+
+    .nb-notes {
+      margin: 6px 0;
+      font-size: 7pt;
+    }
+
+    .nb-notes p {
+      margin: 1px 0;
+    }
+
+    .footer-content {
+      margin-top: auto;
+    }
+
+    .signature-row {
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 8pt;
+    }
+
+    .signature-row .sig-right {
+      white-space: nowrap;
+    }
+
+    .signature-line {
+      border-bottom: 1px solid #000;
+      min-width: 100px;
+      display: inline-block;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .copy-label {
+      font-weight: bold;
+      font-size: 10pt;
+      margin-top: 12px;
+      padding-top: 8px;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    @page {
+      size: 297mm 210mm;
+      margin: 0;
+      padding: 0;
+    }
+
+    .print-tip {
+      padding: 8px 12px;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    @media print {
+
+      html,
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        width: 297mm !important;
+        height: 210mm !important;
+        min-height: 210mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden;
+      }
+
+      .copies-container {
+        /* margin: 12px !important; */
+        gap: 0 !important;
+        min-height: 210mm !important;
+        height: 210mm !important;
+        width: 297mm !important;
+      }
+
+      .challan-copy {
+        padding: 24px !important;
+      }
+
+      .print-tip {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="copies-container">
+    <!-- STUDENT COPY (left) -->
+    <div class="challan-copy">
+      <!-- <div style=" height: 100%;"> -->
+
+
+        <div class="challan-header">
+          <img class="college-logo" src="https://besc.academic360.app/api/api/v1/settings/file/4" alt="College Logo" />
+          <div class="header-text">
+            <div class="college-name">The Bhawanipur Education Society College</div>
+            <div class="address">5, Lala Lajpat Rai Sarani, Kolkata - 700020</div>
+            <div class="session">Session : 2024-2025</div>
+          </div>
+        </div>
+        <div class="bank-details">
+          <p>Federal Bank A/c 13040200023571</p>
+          <p>Payment can be made in any branch.</p>
+          <p>Preferred branch - Bhowanipore.</p>
+        </div>
+        <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
+        <div class="student-info-wrapper">
+          <div class="student-info">
+            <div class="student-info-row">
+              <span class="student-info-label">Name :</span>
+              <span class="student-info-value">MD ISHAN</span>
+            </div>
+            <div class="student-info-row">
+              <span class="student-info-label">UID :</span>
+              <span class="student-info-value">1004240156</span>
+            </div>
+            <div class="student-info-row">
+              <span class="student-info-label">DOB :</span>
+              <span class="student-info-value">02/03/2006</span>
+            </div>
+            <div class="student-info-row">
+              <span class="student-info-label">Mob No. :</span>
+              <span class="student-info-value">9330932995</span>
+            </div>
+            <div class="student-info-row">
+              <span class="student-info-label">Year :</span>
+              <span class="student-info-value">Semester II</span>
+            </div>
+            <div class="student-info-row">
+              <span class="student-info-label">Course :</span>
+              <span class="student-info-value">BBA (H) (Day)</span>
+            </div>
+          </div>
+          <div class="challan-barcode-block">
+            <span class="challan-no-value">Challan No : 1004240156/02</span>
+            <span class="challan-barcode"></span>
+          </div>
+        </div>
+        <table class="fee-table">
+          <tr>
+            <td class="label">Particulars</td>
+            <td class="label amount">Amount</td>
+          </tr>
+          <tr>
+            <td>Fees for Semester II</td>
+            <td class="amount">45395.00</td>
+          </tr>
+          <tr class="total-row">
+            <td>Total Amount To Pay</td>
+            <td class="amount">45395</td>
+          </tr>
+        </table>
+        <div class="amount-words">(Rs. Forty Five Thousand Three Hundred Ninety Five only)</div>
+        <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
+            href="mailto:feeupdate@thebges.edu.in">feeupdate@thebges.edu.in</a></div>
+        <div style="flex: 1; min-height: 8px;"></div>
+        <div class="footer-content">
+          <div class="signature-row">
+            <span>Date: 07/11/2025</span>
+            <span class="sig-right">Bank Official's Signature <span class="signature-line"></span></span>
+          </div>
+          <div class="nb-notes">
+            <p>N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the receiving
+              authority. Please retain the Money Receipt for future reference.</p>
+            <p>N.B. 2. Please note that taking enrollment &amp; paying fees for the same alone does not make you
+              automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is mandatory
+              for each University Exam.</p>
+            <p>N.B.3. Please do not make any request to Management or Staff for refund of fees. Fees once paid is not
+              refundable under any circumstances.</p>
+          </div>
+          <div class="copy-label">STUDENT COPY</div>
+        </div>
+
+      <!-- </div> -->
+    </div>
+
+    <!-- COLLEGE COPY (middle) -->
+    <div class="challan-copy">
+      <div class="challan-header">
+        <img class="college-logo" src="https://besc.academic360.app/api/api/v1/settings/file/4" alt="College Logo" />
+        <div class="header-text">
+          <div class="college-name">The Bhawanipur Education Society College</div>
+          <div class="address">5, Lala Lajpat Rai Sarani, Kolkata - 700020</div>
+          <div class="session">Session : 2024-2025</div>
+        </div>
+      </div>
+      <div class="bank-details">
+        <p>Federal Bank A/c 13040200023571</p>
+        <p>Payment can be made in any branch.</p>
+        <p>Preferred branch - Bhowanipore.</p>
+      </div>
+      <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
+      <div class="student-info-wrapper">
+        <div class="student-info">
+          <div class="student-info-row">
+            <span class="student-info-label">Name :</span>
+            <span class="student-info-value">MD ISHAN</span>
+          </div>
+          <div class="student-info-row">
+            <span class="student-info-label">UID :</span>
+            <span class="student-info-value">1004240156</span>
+          </div>
+          <div class="student-info-row">
+            <span class="student-info-label">DOB :</span>
+            <span class="student-info-value">02/03/2006</span>
+          </div>
+          <div class="student-info-row">
+            <span class="student-info-label">Mob No. :</span>
+            <span class="student-info-value">9330932995</span>
+          </div>
+          <div class="student-info-row">
+            <span class="student-info-label">Year :</span>
+            <span class="student-info-value">Semester II</span>
+          </div>
+          <div class="student-info-row">
+            <span class="student-info-label">Course :</span>
+            <span class="student-info-value">BBA (H) (Day)</span>
+          </div>
+        </div>
+        <div class="challan-barcode-block">
+          <span class="challan-no-value">Challan No : 1004240156/02</span>
+          <span class="challan-barcode"></span>
+        </div>
+      </div>
+      <table class="fee-table">
+        <tr>
+          <td class="label">Particulars</td>
+          <td class="label amount">Amount</td>
+        </tr>
+        <tr>
+          <td>Fees for Semester II</td>
+          <td class="amount">45395.00</td>
+        </tr>
+        <tr class="total-row">
+          <td>Total Amount To Pay</td>
+          <td class="amount">45395</td>
+        </tr>
+      </table>
+      <div class="amount-words">(Rs. Forty Five Thousand Three Hundred Ninety Five only)</div>
+      <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
+          href="mailto:feeupdate@thebges.edu.in">feeupdate@thebges.edu.in</a></div>
+      <div style="flex: 1; min-height: 8px;"></div>
+      <div class="footer-content">
+        <div class="signature-row">
+          <span>Date: 07/11/2025</span>
+          <span class="sig-right">Bank Official's Signature <span class="signature-line"></span></span>
+        </div>
+        <div class="nb-notes">
+          <p>N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the receiving
+            authority. Please retain the Money Receipt for future reference.</p>
+          <p>N.B. 2. Please note that taking enrollment &amp; paying fees for the same alone does not make you
+            automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is mandatory for
+            each University Exam.</p>
+          <p>N.B.3. Please do not make any request to Management or Staff for refund of fees. Fees once paid is not
+            refundable under any circumstances.</p>
+        </div>
+        <div class="copy-label">COLLEGE COPY</div>
+      </div>
+    </div>
+
+    <!-- BANK COPY (right) -->
+    <div class="challan-copy">
+      <div class="challan-header">
+        <img class="college-logo" src="https://besc.academic360.app/api/api/v1/settings/file/4" alt="College Logo" />
+        <div class="header-text">
+          <div class="college-name">The Bhawanipur Education Society College</div>
+          <div class="address">5, Lala Lajpat Rai Sarani, Kolkata - 700020</div>
+          <div class="session">Session : 2024-2025</div>
+        </div>
+      </div>
+      <div class="bank-details">
+        <p>Federal Bank A/c 13040200023571</p>
+        <p>Payment can be made in any branch.</p>
+        <p>Preferred branch - Bhowanipore.</p>
+      </div>
+      <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
+      <div class="student-info-wrapper">
+        <div class="student-info">
+          <div class="student-info-row">
+            <span class="student-info-label">Name :</span>
+            <span class="student-info-value">MD ISHAN</span>
+          </div>
+          <div class="student-info-row">
+            <span class="student-info-label">UID :</span>
+            <span class="student-info-value">1004240156</span>
+          </div>
+          <div class="student-info-row">
+            <span class="student-info-label">DOB :</span>
+            <span class="student-info-value">02/03/2006</span>
+          </div>
+          <div class="student-info-row">
+            <span class="student-info-label">Mob No. :</span>
+            <span class="student-info-value">9330932995</span>
+          </div>
+          <div class="student-info-row">
+            <span class="student-info-label">Year :</span>
+            <span class="student-info-value">Semester II</span>
+          </div>
+          <div class="student-info-row">
+            <span class="student-info-label">Course :</span>
+            <span class="student-info-value">BBA (H) (Day)</span>
+          </div>
+        </div>
+        <div class="challan-barcode-block">
+          <span class="challan-no-value">Challan No : 1004240156/02</span>
+          <span class="challan-barcode"></span>
+        </div>
+      </div>
+      <table class="fee-table">
+        <tr>
+          <td class="label">Particulars</td>
+          <td class="label amount">Amount</td>
+        </tr>
+        <tr>
+          <td>Fees for Semester II</td>
+          <td class="amount">45395.00</td>
+        </tr>
+        <tr class="total-row">
+          <td>Total Amount To Pay</td>
+          <td class="amount">45395</td>
+        </tr>
+      </table>
+      <div class="amount-words">(Rs. Forty Five Thousand Three Hundred Ninety Five only)</div>
+      <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
+          href="mailto:feeupdate@thebges.edu.in">feeupdate@thebges.edu.in</a></div>
+      <div style="flex: 1; min-height: 8px;"></div>
+      <div class="footer-content">
+        <div class="signature-row">
+          <span>Date: 07/11/2025</span>
+          <span class="sig-right">Bank Official's Signature <span class="signature-line"></span></span>
+        </div>
+        <div class="nb-notes">
+          <p>N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the receiving
+            authority. Please retain the Money Receipt for future reference.</p>
+          <p>N.B. 2. Please note that taking enrollment &amp; paying fees for the same alone does not make you
+            automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is mandatory for
+            each University Exam.</p>
+          <p>N.B.3. Please do not make any request to Management or Staff for refund of fees. Fees once paid is not
+            refundable under any circumstances.</p>
+        </div>
+        <div class="copy-label">BANK COPY</div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
