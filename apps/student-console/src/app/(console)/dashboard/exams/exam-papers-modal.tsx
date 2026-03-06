@@ -23,6 +23,7 @@ interface ExamPapersModalProps {
 interface PaperDetails {
   paperCode: string;
   examComponentName?: string;
+  examSubjectId: number;
   startTime: Date;
   endTime: Date;
   room: string;
@@ -136,6 +137,7 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId, examGroup
         return {
           paperCode: paper?.code || "",
           examComponentName: typeof examComponentName === "string" ? examComponentName : undefined,
+          examSubjectId: Number(examSubjectId),
           startTime: new Date(examSubject.startTime),
           endTime: new Date(examSubject.endTime),
           room,
@@ -145,7 +147,13 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId, examGroup
       })
       .filter((d): d is PaperDetails => d !== null);
 
-    return details.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    // Match backend admit card order: chronological by start time first, then examSubjectId as tiebreaker
+    return details.sort((a, b) => {
+      const tA = a.startTime.getTime();
+      const tB = b.startTime.getTime();
+      if (tA !== tB) return tA - tB;
+      return Number(a.examSubjectId) - Number(b.examSubjectId);
+    });
   };
 
   // Download admit card handler
@@ -212,6 +220,13 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId, examGroup
       paperDetails.push(...details);
     }
   }
+  // Match backend admit card order: chronological by start time first, then examSubjectId as tiebreaker
+  paperDetails.sort((a, b) => {
+    const tA = a.startTime.getTime();
+    const tB = b.startTime.getTime();
+    if (tA !== tB) return tA - tB;
+    return Number(a.examSubjectId) - Number(b.examSubjectId);
+  });
 
   return (
     examGroup &&
