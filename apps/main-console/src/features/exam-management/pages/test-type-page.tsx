@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, PlusCircle, ClipboardList, Edit, Trash2, Loader2 } from "lucide-react";
+import { Download, Upload, PlusCircle, ClipboardList, Edit, Trash2, Loader2, MoreHorizontal } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,11 +10,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { getAllExamTypes, createExamType, updateExamType, deleteExamType } from "@/services/exam-type.service";
 import type { ExamTypeT } from "@repo/db/schemas/models/exams";
+import { useIsMobile } from "@/hooks/useMobile";
 
 type ExamTypeFormValues = Pick<ExamTypeT, "name" | "shortName" | "isActive" | "foilNumberRequired">;
 
@@ -50,7 +57,6 @@ function ExamTypeForm({ initialData, onSubmit, onCancel, isSubmitting = false }:
       toast.error("Exam type name is required");
       return;
     }
-
     onSubmit({
       name: name.trim(),
       shortName: shortName.trim() || null,
@@ -131,6 +137,7 @@ export default function TestTypePage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const isMobile = useIsMobile();
 
   const loadExamTypes = useCallback(async () => {
     try {
@@ -180,7 +187,6 @@ export default function TestTypePage() {
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this exam type?")) return;
-
     try {
       setDeletingId(id);
       const response = await deleteExamType(id);
@@ -246,32 +252,175 @@ export default function TestTypePage() {
     }
   };
 
+  const tableContent = (
+    <div
+      className="rounded-md border border-slate-300 h-full max-h-[520px] overflow-y-auto"
+      style={isMobile ? { minWidth: "700px" } : undefined}
+    >
+      <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+        <thead className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
+          <tr className="text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
+            <th className="w-[6%] px-3 py-2 border-r border-slate-300 text-center">#</th>
+            <th className="w-[26%] px-3 py-2 border-r border-slate-300 text-left">Name</th>
+            <th className="w-[16%] px-3 py-2 border-r border-slate-300 text-left">Short Name</th>
+            <th className="w-[14%] px-3 py-2 border-r border-slate-300 text-center">Foil No. Req.</th>
+            <th className="w-[16%] px-3 py-2 border-r border-slate-300 text-left">Updated On</th>
+            <th className="w-[10%] px-3 py-2 border-r border-slate-300 text-center">Status</th>
+            <th className="w-[12%] px-3 py-2 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white">
+          {loading ? (
+            <tr>
+              <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading exam types...
+                </div>
+              </td>
+            </tr>
+          ) : filteredExamTypes.length === 0 ? (
+            <tr>
+              <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
+                No exam types match your search.
+              </td>
+            </tr>
+          ) : (
+            filteredExamTypes.map((examType, index) => (
+              <tr
+                key={examType.id ?? `${examType.name}-${index}`}
+                className="border-b border-slate-200 hover:bg-muted/40 transition-colors"
+              >
+                <td className="px-3 py-3 border-r border-slate-200 text-center">{index + 1}</td>
+                <td className="px-3 py-3 border-r border-slate-200">
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-medium text-slate-800 truncate" title={examType.name ?? undefined}>
+                      {examType.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">ID: {examType.id ?? "—"}</span>
+                  </div>
+                </td>
+                <td className="px-3 py-3 border-r border-slate-200">
+                  {examType.shortName ?? <span className="text-slate-400">—</span>}
+                </td>
+                <td className="px-3 py-3 border-r border-slate-200 text-center">
+                  <span
+                    className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                      examType.foilNumberRequired ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {examType.foilNumberRequired ? "Yes" : "No"}
+                  </span>
+                </td>
+                <td className="px-3 py-3 border-r border-slate-200">
+                  {formatDate(examType.updatedAt ?? examType.createdAt)}
+                </td>
+                <td className="px-3 py-3 border-r border-slate-200 text-center">
+                  <span
+                    className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                      examType.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {examType.isActive ? "Active" : "Inactive"}
+                  </span>
+                </td>
+                <td className="px-3 py-3 text-center">
+                  {isMobile ? (
+                    <div className="flex items-center justify-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={deletingId === examType.id}>
+                            {deletingId === examType.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <MoreHorizontal className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedExamType(examType);
+                              setIsFormOpen(true);
+                            }}
+                            className="text-blue-700 focus:text-blue-700 focus:bg-blue-50 gap-2 cursor-pointer"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(examType.id!)}
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50 gap-2 cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
+                        onClick={() => {
+                          setSelectedExamType(examType);
+                          setIsFormOpen(true);
+                        }}
+                        disabled={deletingId === examType.id}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="shadow-none"
+                        onClick={() => handleDelete(examType.id!)}
+                        disabled={deletingId === examType.id}
+                      >
+                        {deletingId === examType.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="p-4">
       <Card className="border-none">
-        <CardHeader className="flex flex-row items-center justify-between border rounded-md p-4 bg-background">
-          <div>
+        {/* ✅ FIX: removed flex-wrap from CardHeader; buttons container uses ml-auto + flex-shrink-0 */}
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center border rounded-md p-4 bg-background gap-3">
+          <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-              <ClipboardList className="mr-1 h-8 w-8 border rounded-md p-1 border-slate-400" />
+              <ClipboardList className="mr-1 h-8 w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
               Exam Types
             </CardTitle>
-            <p className="text-muted-foreground text-sm">
-              Maintain the catalogue of exam types and keep them in sync with the legacy system.
-            </p>
+            <p className="text-muted-foreground text-sm">Maintain exam type catalog and sync with the legacy system.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" className="shadow-none border-slate-200">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0">
+            <Button variant="outline" className="shadow-none border-slate-200 flex flex-1 sm:flex-none">
               <Upload className="mr-2 h-4 w-4" />
               Bulk Upload
             </Button>
-            <Button variant="outline" className="shadow-none border-slate-200">
+            <Button variant="outline" className="shadow-none border-slate-200 flex flex-1 sm:flex-none">
               <Download className="mr-2 h-4 w-4" />
               Download Template
             </Button>
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
                 <Button
-                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-none"
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-none w-full sm:w-auto"
                   onClick={() => {
                     setSelectedExamType(null);
                     setIsFormOpen(true);
@@ -298,127 +447,33 @@ export default function TestTypePage() {
             </AlertDialog>
           </div>
         </CardHeader>
+
         <CardContent className="px-0">
-          <div className="bg-background p-4 border-b flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="bg-background p-4 border-b flex items-center gap-2 justify-between">
             <Input
-              placeholder="Search by name, short name, or foil number required..."
-              className="w-full md:w-80"
+              placeholder="Search by name, short name, or foil number..."
+              className="w-full max-w-xs"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2 border-slate-200 shadow-none">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 border-slate-200 shadow-none whitespace-nowrap"
+            >
               <Download className="h-4 w-4" />
-              Export List
+              <span className="hidden sm:inline">Export List</span>
             </Button>
           </div>
 
-          <div className="overflow-x-auto flex-1" style={{ minHeight: "480px" }}>
-            <div className="rounded-md border border-slate-300 h-full max-h-[520px] overflow-y-auto min-w-full">
-              <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
-                <thead className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
-                  <tr className="text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
-                    <th className="w-[6%] px-3 py-2 border-r border-slate-300 text-center">#</th>
-                    <th className="w-[26%] px-3 py-2 border-r border-slate-300 text-left">Name</th>
-                    <th className="w-[16%] px-3 py-2 border-r border-slate-300 text-left">Short Name</th>
-                    <th className="w-[14%] px-3 py-2 border-r border-slate-300 text-center">Foil Number Required</th>
-                    <th className="w-[16%] px-3 py-2 border-r border-slate-300 text-left">Updated On</th>
-                    <th className="w-[10%] px-3 py-2 border-r border-slate-300 text-center">Status</th>
-                    <th className="w-[12%] px-3 py-2 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading exam types...
-                        </div>
-                      </td>
-                    </tr>
-                  ) : filteredExamTypes.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
-                        No exam types match your search.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredExamTypes.map((examType, index) => (
-                      <tr
-                        key={examType.id ?? `${examType.name}-${index}`}
-                        className="border-b border-slate-200 hover:bg-muted/40 transition-colors"
-                      >
-                        <td className="px-3 py-3 border-r border-slate-200 text-center">{index + 1}</td>
-                        <td className="px-3 py-3 border-r border-slate-200">
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-medium text-slate-800 truncate" title={examType.name ?? undefined}>
-                              {examType.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">ID: {examType.id ?? "—"}</span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-3 border-r border-slate-200">
-                          {examType.shortName ?? <span className="text-slate-400">—</span>}
-                        </td>
-                        <td className="px-3 py-3 border-r border-slate-200 text-center">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                              examType.foilNumberRequired
-                                ? "bg-purple-100 text-purple-800"
-                                : "bg-gray-100 text-gray-600"
-                            }`}
-                          >
-                            {examType.foilNumberRequired ? "Yes" : "No"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 border-r border-slate-200">
-                          {formatDate(examType.updatedAt ?? examType.createdAt)}
-                        </td>
-                        <td className="px-3 py-3 border-r border-slate-200 text-center">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                              examType.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {examType.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
-                              onClick={() => {
-                                setSelectedExamType(examType);
-                                setIsFormOpen(true);
-                              }}
-                              disabled={deletingId === examType.id}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              className="shadow-none"
-                              onClick={() => handleDelete(examType.id!)}
-                              disabled={deletingId === examType.id}
-                            >
-                              {deletingId === examType.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+          {isMobile ? (
+            <div className="overflow-x-auto" style={{ minHeight: "480px" }}>
+              {tableContent}
             </div>
-          </div>
+          ) : (
+            <div className="overflow-x-auto flex-1" style={{ minHeight: "480px" }}>
+              {tableContent}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

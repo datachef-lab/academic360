@@ -1638,28 +1638,51 @@ export async function createExamAssignment(
         );
       }
     } else {
-      // Otherwise, find or create by name and date
-      [foundExamGroup] = await tx
+      const normalizedName = (examGroup?.name || "")
+        .trim()
+        .replace(/\s+/g, " ");
+      const rawCommencementDate = (
+        examGroup as unknown as { examCommencementDate?: unknown } | null
+      )?.examCommencementDate;
+      const normalizedDate = String(rawCommencementDate ?? "").slice(0, 10);
+
+      if (!normalizedName || !normalizedDate) {
+        throw new Error("examGroup must have name and examCommencementDate");
+      }
+
+      const [existingExamGroup] = await tx
         .select()
         .from(examGroupModel)
         .where(
-          and(
-            ilike(examGroupModel.name, examGroup.name),
-            eq(
-              examGroupModel.examCommencementDate,
-              examGroup.examCommencementDate,
-            ),
-          ),
-        );
+          sql`LOWER(${examGroupModel.name}) = ${normalizedName.toLowerCase()}`,
+        )
+        .limit(1);
 
-      if (!foundExamGroup) {
+      if (existingExamGroup) {
+        throw new Error(
+          `Exam group "${normalizedName}" already exists (ID: ${existingExamGroup.id}). Please select the existing group or choose a different name.`,
+        );
+      }
+
+      try {
         [foundExamGroup] = await tx
           .insert(examGroupModel)
           .values({
-            name: examGroup.name,
-            examCommencementDate: examGroup.examCommencementDate,
+            name: normalizedName,
+            examCommencementDate: normalizedDate,
           })
           .returning();
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to create exam group";
+        if (message.includes("exam_groups_name_date_unique")) {
+          throw new Error(
+            `Exam group "${normalizedName}" with commencement date ${normalizedDate} already exists. Please select the existing group.`,
+          );
+        }
+        throw error;
       }
     }
 
@@ -4888,8 +4911,6 @@ export async function downloadSingleAdmitCard(
       })
       .where(inArray(examCandidateModel.id, allCandidateIds));
 
-    // Only increment the download count once on the first exam candidate record
-    // This ensures 1 download = count +1, regardless of number of papers
     await db
       .update(examCandidateModel)
       .set({

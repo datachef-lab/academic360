@@ -2,6 +2,40 @@ import { ApiError, ApiResponse, handleError } from "@/utils";
 import { NextFunction, Request, Response } from "express";
 import * as examGroupService from "../services/exam-group.service";
 
+export const validateExamGroupUniqueController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { name } = req.query;
+
+    if (typeof name !== "string" || !name.trim()) {
+      res.status(400).json(new ApiError(400, "`name` query param is required"));
+      return;
+    }
+
+    const existing = await examGroupService.findByName(name);
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        "SUCCESS",
+        {
+          isUnique: !existing,
+          existingExamGroupId: existing?.id ?? null,
+        },
+        existing
+          ? "Exam group with the same name already exists"
+          : "Exam group name is available",
+      ),
+    );
+  } catch (error) {
+    console.error("[VALIDATE-EXAM-GROUP-UNIQUE] Error:", error);
+    handleError(error, res, next);
+  }
+};
+
 export const getAllExamGroupsController = async (
   req: Request,
   res: Response,

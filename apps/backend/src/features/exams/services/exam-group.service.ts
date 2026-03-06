@@ -28,6 +28,24 @@ export interface ExamGroupFilters {
   academicYearId?: number | null;
 }
 
+function normalizeExamGroupName(name: string): string {
+  return (name || "").trim().replace(/\s+/g, " ");
+}
+
+export async function findByName(name: string) {
+  const normalizedName = normalizeExamGroupName(name);
+
+  if (!normalizedName) return null;
+
+  const [existing] = await db
+    .select()
+    .from(examGroupModel)
+    .where(sql`LOWER(${examGroupModel.name}) = ${normalizedName.toLowerCase()}`)
+    .limit(1);
+
+  return existing ?? null;
+}
+
 export async function findAll(
   page: number = 1,
   pageSize: number = 10,

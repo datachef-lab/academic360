@@ -18,6 +18,11 @@ router.get(
   examGroupController.getExamGroupPaperStatsByIdController,
 );
 
+router.get(
+  "/validate-unique",
+  examGroupController.validateExamGroupUniqueController,
+);
+
 router.get("/:id", examGroupController.getExamGroupByIdController);
 
 router.get(

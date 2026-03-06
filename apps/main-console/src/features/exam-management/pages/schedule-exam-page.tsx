@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import { getSubjectTypes, getExamComponents } from "@/services/course-design.api
 import { getPapersPaginated } from "@/services/course-design.api";
 import { getAllSubjects } from "@/services/subject.api";
 import { checkDuplicateExam, countStudentsBreakdownForExam } from "@/services/exam-schedule.service";
+import { validateExamGroupUnique } from "@/services/exam-group.service";
 import { fetchExamGroups, type ExamFilters } from "@/services/exam.service";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import type { PaperDto, ExamDto, ExamSubjectT, ExamRoomDto, ExamProgramCourseDto } from "@repo/db/index";
@@ -272,6 +273,14 @@ export default function ScheduleExamPage() {
   const [examGroupMode, setExamGroupMode] = useState<"new" | "existing">("new");
   const [newGroupName, setNewGroupName] = useState<string>("");
   const [selectedExistingGroupId, setSelectedExistingGroupId] = useState<number | null>(null);
+
+  // Exam group uniqueness (name + commencement date)
+  const [isCheckingExamGroupUnique, setIsCheckingExamGroupUnique] = useState(false);
+  const [duplicateExamGroupId, setDuplicateExamGroupId] = useState<number | null>(null);
+  const [examGroupUniqueError, setExamGroupUniqueError] = useState<string | null>(null);
+  const examGroupUniqueRequestIdRef = useRef(0);
+  const [newGroupCommencementDate, setNewGroupCommencementDate] = useState<Date | undefined>(undefined);
+  const [existingGroupFilterDate, setExistingGroupFilterDate] = useState<Date | undefined>(undefined);
 
   // Room and student selection moved to allot-exam-page
   // Excel file upload moved to allot-exam-page
@@ -1301,7 +1310,7 @@ export default function ScheduleExamPage() {
   const totalStudentCount = studentCountData?.total ?? 0;
   const studentCountBreakdown = studentCountData?.breakdown ?? [];
 
-  const formatDateWithoutTimezone = (value: Date | null | undefined) => {
+  const formatDateWithoutTimezone = useCallback((value: Date | null | undefined) => {
     if (!value) return undefined;
     const d = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(d.getTime())) return undefined;
@@ -1309,7 +1318,53 @@ export default function ScheduleExamPage() {
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
-  };
+  }, []);
+
+  // Debounced exam group uniqueness check (only for "Create New Group")
+  useEffect(() => {
+    if (examGroupMode !== "new") {
+      setIsCheckingExamGroupUnique(false);
+      setDuplicateExamGroupId(null);
+      setExamGroupUniqueError(null);
+      return;
+    }
+
+    const trimmedName = newGroupName.trim();
+
+    if (!trimmedName) {
+      setIsCheckingExamGroupUnique(false);
+      setDuplicateExamGroupId(null);
+      setExamGroupUniqueError(null);
+      return;
+    }
+
+    const requestId = ++examGroupUniqueRequestIdRef.current;
+    setIsCheckingExamGroupUnique(true);
+    setExamGroupUniqueError(null);
+
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const result = await validateExamGroupUnique(trimmedName);
+          if (examGroupUniqueRequestIdRef.current !== requestId) return;
+
+          setDuplicateExamGroupId(result.isUnique ? null : (result.existingExamGroupId ?? null));
+        } catch (error: unknown) {
+          if (examGroupUniqueRequestIdRef.current !== requestId) return;
+          setDuplicateExamGroupId(null);
+          setExamGroupUniqueError(error instanceof Error ? error.message : "Failed to validate exam group uniqueness");
+        } finally {
+          if (examGroupUniqueRequestIdRef.current === requestId) {
+            setIsCheckingExamGroupUnique(false);
+          }
+        }
+      })();
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [examGroupMode, newGroupName]);
 
   const assignExamMutation = useMutation({
     mutationFn: async () => {
@@ -1319,6 +1374,14 @@ export default function ScheduleExamPage() {
       }
       if (examGroupMode === "new" && !newGroupCommencementDate) {
         throw new Error("Please select an exam commencement date for the new group");
+      }
+      if (examGroupMode === "new" && isCheckingExamGroupUnique) {
+        throw new Error("Please wait while we verify the exam group name");
+      }
+      if (examGroupMode === "new" && duplicateExamGroupId) {
+        throw new Error(
+          `An exam group with the same name already exists (ID: ${duplicateExamGroupId}). Please select the existing group or choose a different name.`,
+        );
       }
       if (examGroupMode === "existing" && !selectedExistingGroupId) {
         throw new Error("Please select an existing exam group");
@@ -1521,10 +1584,10 @@ export default function ScheduleExamPage() {
     const streamNamesArray = Array.from(
       new Set(
         selectedProgramCourses
-          .map((pcId) => programCourses.find((pc) => pc.id === pcId)?.stream?.name!)
-          .filter(Boolean),
+          .map((pcId) => programCourses.find((pc) => pc.id === pcId)?.stream?.name)
+          .filter((name): name is string => !!name && name.trim().length > 0),
       ),
-    ) as string[];
+    );
 
     // Format stream names with &, commas
     let formattedStreams = "";
@@ -1566,10 +1629,6 @@ export default function ScheduleExamPage() {
       setNewGroupName(generateDefaultGroupName());
     }
   }, [examGroupMode, generateDefaultGroupName]);
-
-  // Update DatePicker state type
-  const [newGroupCommencementDate, setNewGroupCommencementDate] = useState<Date | undefined>(undefined);
-  const [existingGroupFilterDate, setExistingGroupFilterDate] = useState<Date | undefined>(undefined);
 
   // Auto-fetch existing exam groups when "Select Existing Group" tab is active
   const shouldFetchExistingGroups = !!(
@@ -1805,7 +1864,7 @@ export default function ScheduleExamPage() {
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500 overflow-hidden"
                               disabled={
                                 loading.programCourses ||
                                 !selectedAffiliationId ||
@@ -1813,7 +1872,7 @@ export default function ScheduleExamPage() {
                                 getFilteredProgramCourses().length === 0
                               }
                             >
-                              <span className="text-gray-600">
+                              <span className="text-gray-600 truncate max-w-[calc(100%-1.5rem)] text-left">
                                 {loading.programCourses
                                   ? "Loading..."
                                   : !selectedAffiliationId || !selectedRegulationTypeId
@@ -1821,7 +1880,7 @@ export default function ScheduleExamPage() {
                                     : getFilteredProgramCourses().length === 0
                                       ? "No program courses available"
                                       : selectedProgramCourses.length > 0
-                                        ? `Select Program Courses (${selectedProgramCourses.length})`
+                                        ? ` [${selectedProgramCourses.length}] Selected`
                                         : "Select Program Courses"}
                               </span>
                               <ChevronDown className="w-4 h-4 opacity-50" />
@@ -1862,14 +1921,14 @@ export default function ScheduleExamPage() {
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              className="h-8 w-full justify-between focus:ring-2 focus:ring-purple-500 focus:border-purple-500 overflow-hidden"
                               disabled={loading.subjectTypes}
                             >
-                              <span className="text-gray-600">
+                              <span className="text-gray-600 truncate max-w-[calc(100%-1.5rem)] text-left">
                                 {loading.subjectTypes
                                   ? "Loading..."
                                   : selectedSubjectCategories.length > 0
-                                    ? `Select Subject Categories (${selectedSubjectCategories.length})`
+                                    ? `[${selectedSubjectCategories.length}] Selected `
                                     : "Select Subject Categories"}
                               </span>
                               <ChevronDown className="w-4 h-4 opacity-50" />
@@ -1960,6 +2019,21 @@ export default function ScheduleExamPage() {
                             className="w-full"
                           />
                           <p className="text-xs text-gray-500">Select the date when this exam group starts.</p>
+                          {examGroupMode === "new" &&
+                            newGroupName.trim() &&
+                            (isCheckingExamGroupUnique ? (
+                              <p className="text-xs text-gray-600">
+                                Checking if this exam group name and date is available…
+                              </p>
+                            ) : duplicateExamGroupId ? (
+                              <p className="text-xs text-red-600">
+                                This exam group name already exists. Please switch to “Select Existing Group” or choose
+                                a different name.
+                              </p>
+                            ) : null)}
+                          {examGroupMode === "new" && examGroupUniqueError ? (
+                            <p className="text-xs text-amber-700">{examGroupUniqueError}</p>
+                          ) : null}
                         </div>
                       </div>
                     </TabsContent>
@@ -2839,6 +2913,7 @@ export default function ScheduleExamPage() {
                     disabled={
                       assignExamMutation.status === "loading" ||
                       duplicateCheckResult?.isDuplicate ||
+                      (examGroupMode === "new" && (isCheckingExamGroupUnique || !!duplicateExamGroupId)) ||
                       selectedSubjectPapers.length === 0 ||
                       !selectedSubjectPapers.every((sp) => {
                         const schedule = sp.schedule;

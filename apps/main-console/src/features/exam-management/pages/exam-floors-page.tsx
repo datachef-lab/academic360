@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, PlusCircle, DoorOpen, Edit, Trash2, Loader2 } from "lucide-react";
+import { Download, Upload, PlusCircle, DoorOpen, Edit, Trash2, Loader2, MoreHorizontal } from "lucide-react";
 import React from "react";
 import {
   AlertDialog,
@@ -10,6 +10,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -31,7 +37,6 @@ export default function ExamFloorsPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<number | null>(null);
 
-  // Fetch floors on component mount
   React.useEffect(() => {
     const fetchFloors = async () => {
       try {
@@ -103,7 +108,6 @@ export default function ExamFloorsPage() {
       setIsSubmitting(true);
 
       if (selectedFloor) {
-        // Update existing floor
         const response = await updateFloor(selectedFloor.id!, {
           name: form.name,
           shortName: form.shortName,
@@ -113,7 +117,6 @@ export default function ExamFloorsPage() {
 
         if (response.httpStatus === "UPDATED" || response.httpStatus === "SUCCESS") {
           toast.success("Floor updated successfully");
-          // Refresh floors list
           const refreshResponse = await getAllFloors();
           if (refreshResponse.httpStatus === "SUCCESS" && refreshResponse.payload) {
             setFloors(refreshResponse.payload);
@@ -125,7 +128,6 @@ export default function ExamFloorsPage() {
           });
         }
       } else {
-        // Create new floor
         const response = await createFloor({
           name: form.name,
           shortName: form.shortName,
@@ -135,7 +137,6 @@ export default function ExamFloorsPage() {
 
         if (response.httpStatus === "SUCCESS") {
           toast.success("Floor created successfully");
-          // Refresh floors list
           const refreshResponse = await getAllFloors();
           if (refreshResponse.httpStatus === "SUCCESS" && refreshResponse.payload) {
             setFloors(refreshResponse.payload);
@@ -160,7 +161,7 @@ export default function ExamFloorsPage() {
   return (
     <div className="p-4">
       <Card className="border-none">
-        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 bg-background">
+        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 bg-background flex-wrap gap-3">
           <div>
             <CardTitle className="flex items-center">
               <DoorOpen className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
@@ -168,12 +169,12 @@ export default function ExamFloorsPage() {
             </CardTitle>
             <div className="text-muted-foreground">A list of all the Floors.</div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" className="hidden sm:flex">
               <Upload className="mr-2 h-4 w-4" />
               Bulk Upload
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" className="hidden sm:flex">
               <Download className="mr-2 h-4 w-4" />
               Download Template
             </Button>
@@ -206,34 +207,49 @@ export default function ExamFloorsPage() {
           <div className="bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
             <Input
               placeholder="Search..."
-              className="w-64"
+              className="w-full max-w-xs"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="h-4 w-4" /> Download
+            <Button variant="outline" className="flex items-center gap-2 whitespace-nowrap">
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Download</span>
             </Button>
           </div>
+
           <div className="overflow-x-auto flex-1" style={{ minHeight: "420px" }}>
             <div className="rounded-md border border-slate-300 h-full max-h-[480px] overflow-y-auto min-w-full">
-              <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
-                <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300 min-w-full">
-                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
+              {/* ── Desktop header (sm and above) ── */}
+              <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur hidden sm:block">
+                <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
+                  <div className="w-12 flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     #
                   </div>
-                  <div className="flex-shrink-0 basis-[32%] px-3 py-2 border-r border-slate-300 flex items-center">
-                    Name
-                  </div>
-                  <div className="flex-shrink-0 basis-[20%] px-3 py-2 border-r border-slate-300 flex items-center">
+                  <div className="flex-1 min-w-0 px-3 py-2 border-r border-slate-300 flex items-center">Name</div>
+                  <div className="w-32 flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center">
                     Short Name
                   </div>
-                  <div className="flex-shrink-0 basis-[16%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
+                  <div className="w-24 flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     Sequence
                   </div>
-                  <div className="flex-shrink-0 basis-[12%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
+                  <div className="w-24 flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     Status
                   </div>
-                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 flex items-center justify-center">Actions</div>
+                  <div className="w-24 flex-shrink-0 px-3 py-2 flex items-center justify-center">Actions</div>
+                </div>
+              </div>
+
+              {/* ── Mobile header (below sm) ── */}
+              <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur block sm:hidden">
+                <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
+                  <div className="w-8 flex-shrink-0 px-2 py-2 border-r border-slate-300 flex items-center justify-center">
+                    #
+                  </div>
+                  <div className="flex-1 px-3 py-2 border-r border-slate-300 flex items-center">Name</div>
+                  <div className="w-[72px] flex-shrink-0 px-2 py-2 border-r border-slate-300 flex items-center justify-center">
+                    Status
+                  </div>
+                  <div className="w-10 flex-shrink-0 px-2 py-2 flex items-center justify-center">Act.</div>
                 </div>
               </div>
 
@@ -251,55 +267,120 @@ export default function ExamFloorsPage() {
                   filteredFloors.map((floor, index) => (
                     <div
                       key={floor.id ?? `${floor.name}-${index}`}
-                      className="flex border-b border-slate-200 hover:bg-muted/40 transition-colors"
+                      className="border-b border-slate-200 hover:bg-muted/40 transition-colors"
                     >
-                      <div className="flex-shrink-0 basis-[10%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                        {index + 1}
+                      {/* ── Desktop row ── */}
+                      <div className="hidden sm:flex">
+                        <div className="w-12 flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center justify-center">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0 px-3 py-3 border-r border-slate-200 flex flex-col">
+                          <span className="font-medium text-slate-800 truncate" title={floor.name ?? undefined}>
+                            {floor.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">ID: {floor.id ?? "—"}</span>
+                        </div>
+                        <div className="w-32 flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center">
+                          <span className="truncate">
+                            {floor.shortName ?? <span className="text-slate-400">—</span>}
+                          </span>
+                        </div>
+                        <div className="w-24 flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center justify-center">
+                          {floor.sequence ?? <span className="text-slate-400">—</span>}
+                        </div>
+                        <div className="w-24 flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center justify-center">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              floor.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {floor.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                        <div className="w-24 flex-shrink-0 px-3 py-3 flex items-center justify-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
+                            onClick={() => handleEdit(floor)}
+                            disabled={deletingId === floor.id}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="shadow-none"
+                            onClick={() => handleDelete(floor.id!)}
+                            disabled={deletingId === floor.id}
+                          >
+                            {deletingId === floor.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex-shrink-0 basis-[32%] px-3 py-3 border-r border-slate-200 flex flex-col">
-                        <span className="font-medium text-slate-800 truncate" title={floor.name ?? undefined}>
-                          {floor.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">ID: {floor.id ?? "—"}</span>
-                      </div>
-                      <div className="flex-shrink-0 basis-[20%] px-3 py-3 border-r border-slate-200 flex items-center">
-                        {floor.shortName ?? <span className="text-slate-400">—</span>}
-                      </div>
-                      <div className="flex-shrink-0 basis-[16%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                        {floor.sequence ?? <span className="text-slate-400">—</span>}
-                      </div>
-                      <div className="flex-shrink-0 basis-[12%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            floor.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {floor.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </div>
-                      <div className="flex-shrink-0 basis-[10%] px-3 py-3 flex items-center justify-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
-                          onClick={() => handleEdit(floor)}
-                          disabled={deletingId === floor.id}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="shadow-none"
-                          onClick={() => handleDelete(floor.id!)}
-                          disabled={deletingId === floor.id}
-                        >
-                          {deletingId === floor.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
+
+                      {/* ── Mobile row ── */}
+                      <div className="flex sm:hidden items-center">
+                        <div className="w-8 flex-shrink-0 px-2 py-3 border-r border-slate-200 flex items-center justify-center text-sm text-slate-500">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 px-3 py-3 border-r border-slate-200 flex flex-col min-w-0">
+                          <span className="font-medium text-slate-800 truncate text-sm" title={floor.name ?? undefined}>
+                            {floor.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground truncate">
+                            ID: {floor.id ?? "—"}
+                            {floor.shortName ? ` · ${floor.shortName}` : ""}
+                            {floor.sequence != null ? ` · Seq: ${floor.sequence}` : ""}
+                          </span>
+                        </div>
+                        <div className="w-[72px] flex-shrink-0 px-2 py-3 border-r border-slate-200 flex items-center justify-center">
+                          <span
+                            className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+                              floor.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {floor.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                        <div className="w-10 flex-shrink-0 flex items-center justify-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                disabled={deletingId === floor.id}
+                              >
+                                {deletingId === floor.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <MoreHorizontal className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleEdit(floor)}
+                                className="text-blue-700 focus:text-blue-700 focus:bg-blue-50 gap-2 cursor-pointer"
+                              >
+                                <Edit className="h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(floor.id!)}
+                                className="text-red-600 focus:text-red-600 focus:bg-red-50 gap-2 cursor-pointer"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </div>
                   ))

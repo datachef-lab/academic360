@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -146,6 +147,7 @@ export default function AllotExamPage() {
       retry: 1, // Only retry once
       retryDelay: 1000, // Wait 1 second before retry
       // Keep in cache for 5 minutes (v4 uses gcTime; keep staleTime/retry settings and avoid type mismatch)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore - supports gcTime in v4+, but some typings may not include it depending on setup
       gcTime: 300000,
       onError: (error) => {
@@ -794,7 +796,6 @@ export default function AllotExamPage() {
       return;
     }
 
-    // Otherwise, proceed directly with allotment
     allotExamMutation.mutate();
   };
 
@@ -1001,188 +1002,124 @@ export default function AllotExamPage() {
 
           {/* View Rooms and View Students Buttons Row */}
           {selectedExam && (
-            <Card className="border-0 shadow-none mb-4 min-h-[122px] flex flex-col justify-center">
-              <CardContent className="">
-                <div className="flex flex-wrap items-center gap-4">
+            <Card className="border-0 shadow-none mb-4">
+              <CardContent className="p-4">
+                {/* Top row: Toggles aligned to the right */}
+                <div className="flex justify-end mb-4">
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3">
+                      <Label
+                        htmlFor="room-selection-switch"
+                        className="text-sm font-medium text-gray-700 cursor-pointer"
+                      >
+                        Room Selection
+                      </Label>
+                      <Switch
+                        id="room-selection-switch"
+                        checked={enableRoomSelection}
+                        onCheckedChange={(checked) => {
+                          setEnableRoomSelection(checked);
+                          if (!checked) {
+                            setSelectedRooms([]);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="foil-number-switch" className="text-sm font-medium text-gray-700 cursor-pointer">
+                        Enable Foil Number
+                      </Label>
+                      <Switch
+                        id="foil-number-switch"
+                        checked={enableFoilNumber}
+                        onCheckedChange={(checked) => {
+                          setEnableFoilNumber(checked);
+                          if (!checked) {
+                            setExcelFile(null);
+                            setFoilNumberMap({});
+                            if (fileInputRef.current) {
+                              fileInputRef.current.value = "";
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom row: Action buttons using full width */}
+                <div
+                  className={`grid grid-cols-1 gap-3 w-full ${enableFoilNumber ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}
+                >
                   <Button
                     onClick={() => setRoomsModalOpen(true)}
                     variant="outline"
                     disabled={!selectedExam || selectedExam.examSubjects.length === 0 || !enableRoomSelection}
-                    className="h-10 border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-10 w-full border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <DoorOpen className="w-4 h-4 mr-2" />
                     View Rooms ({selectedRooms.length})
                   </Button>
+
                   <Button
                     onClick={() => setStudentsModalOpen(true)}
                     variant="outline"
-                    className="h-10 border-purple-300 min-w-[203px] hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50"
+                    className="h-10 w-full border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50"
                     disabled={studentsWithSeats.length === 0}
                   >
                     <Users className="w-4 h-4 mr-2" />
                     View Students ({studentsWithSeats.length})
                   </Button>
+
                   {/* Excel File Upload - Only show if foil number switch is enabled */}
-                  {selectedExam && enableFoilNumber && (
-                    <Card className="border-0 shadow-none ">
-                      <CardContent className="p-0">
-                        <div className="flex flex-col gap-1 items-center ">
-                          {/* <Label className="font-medium text-gray-700">Upload Excel</Label> */}
-                          <Popover>
-                            <PopoverTrigger asChild>
+                  {enableFoilNumber && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="h-10 w-full justify-between border-purple-300">
+                          <span className="flex items-center">
+                            <Upload className="w-4 h-4 mr-2" />
+                            {excelFile
+                              ? `File: ${excelFile.name.slice(0, 20)}${excelFile.name.length > 20 ? "..." : ""}`
+                              : "Upload Excel"}
+                          </span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-4" align="start">
+                        <div className="space-y-3">
+                          <Input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".xlsx,.xls"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Choose Excel File (foil_number, uid)
+                          </Button>
+                          {excelFile && (
+                            <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
+                              <span className="text-sm text-green-700">{excelFile.name}</span>
                               <Button
-                                variant="outline"
-                                className="h-10 w-full sm:w-auto sm:min-w-[200px] justify-between border-purple-300"
+                                variant="ghost"
+                                size="sm"
+                                onClick={removeExcelFile}
+                                className="text-red-600 hover:text-red-700"
                               >
-                                <Upload className="w-4 h-4 mr-2" />
-                                {excelFile
-                                  ? `File: ${excelFile.name.slice(0, 20)}${excelFile.name.length > 20 ? "..." : ""}`
-                                  : "Upload Excel"}
+                                <Trash2 className="w-3 h-3" />
                               </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 p-4" align="start">
-                              <div className="space-y-3">
-                                <Input
-                                  ref={fileInputRef}
-                                  type="file"
-                                  accept=".xlsx,.xls"
-                                  onChange={handleFileUpload}
-                                  className="hidden"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => fileInputRef.current?.click()}
-                                  className="w-full"
-                                >
-                                  <Upload className="w-4 h-4 mr-2" />
-                                  Choose Excel File (foil_number, uid)
-                                </Button>
-                                {excelFile && (
-                                  <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
-                                    <span className="text-sm text-green-700">{excelFile.name}</span>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={removeExcelFile}
-                                      className="text-red-600 hover:text-red-700"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                )}
-                                <p className="text-gray-500">Upload XLSX with columns: foil_number, uid</p>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
+                            </div>
+                          )}
+                          <p className="text-gray-500">Upload XLSX with columns: foil_number, uid</p>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </PopoverContent>
+                    </Popover>
                   )}
-
-                  {/* Room Selection and Foil Number Switches */}
-                  {selectedExam && (
-                    <div className="flex items-center gap-6 ml-auto">
-                      <div className="flex items-center gap-3">
-                        <Label
-                          htmlFor="room-selection-switch"
-                          className="text-sm font-medium text-gray-700 cursor-pointer"
-                        >
-                          Room Selection
-                        </Label>
-                        <Switch
-                          id="room-selection-switch"
-                          checked={enableRoomSelection}
-                          onCheckedChange={(checked) => {
-                            setEnableRoomSelection(checked);
-                            if (!checked) {
-                              setSelectedRooms([]);
-                            }
-                          }}
-                        />
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Label
-                          htmlFor="foil-number-switch"
-                          className="text-sm font-medium text-gray-700 cursor-pointer"
-                        >
-                          Enable Foil Number
-                        </Label>
-                        <Switch
-                          id="foil-number-switch"
-                          checked={enableFoilNumber}
-                          onCheckedChange={(checked) => {
-                            setEnableFoilNumber(checked);
-                            if (!checked) {
-                              setExcelFile(null);
-                              setFoilNumberMap({});
-                              if (fileInputRef.current) {
-                                fileInputRef.current.value = "";
-                              }
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Excel File Upload - Only show if foil number switch is enabled
-                  {selectedExam && enableFoilNumber && (
-                    <Card className="border-0 shadow-none mb-6">
-                      <CardContent className="pt-6 pb-4">
-                        <div className="flex flex-col gap-1">
-                          <Label className="font-medium text-gray-700">Upload Excel</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="h-10 w-full sm:w-auto sm:min-w-[200px] justify-between border-purple-300"
-                              >
-                                <Upload className="w-4 h-4 mr-2" />
-                                {excelFile
-                                  ? `File: ${excelFile.name.slice(0, 20)}${excelFile.name.length > 20 ? "..." : ""}`
-                                  : "Upload Excel"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 p-4" align="start">
-                              <div className="space-y-3">
-                                <Input
-                                  ref={fileInputRef}
-                                  type="file"
-                                  accept=".xlsx,.xls"
-                                  onChange={handleFileUpload}
-                                  className="hidden"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => fileInputRef.current?.click()}
-                                  className="w-full"
-                                >
-                                  <Upload className="w-4 h-4 mr-2" />
-                                  Choose Excel File (foil_number, uid)
-                                </Button>
-                                {excelFile && (
-                                  <div className="flex items-center justify-between p-2 bg-green-50 rounded border">
-                                    <span className="text-sm text-green-700">{excelFile.name}</span>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={removeExcelFile}
-                                      className="text-red-600 hover:text-red-700"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                )}
-                                <p className="text-gray-500">Upload XLSX with columns: foil_number, uid</p>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )} */}
                 </div>
               </CardContent>
             </Card>

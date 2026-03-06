@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Download, Upload, PlusCircle, DoorOpen, Edit, Trash2, Loader2 } from "lucide-react";
+import { Download, Upload, PlusCircle, DoorOpen, Edit, Trash2, Loader2, MoreHorizontal } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,6 +10,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
@@ -17,6 +23,7 @@ import { toast } from "sonner";
 import { getAllRooms, createRoom, updateRoom, deleteRoom, type RoomT } from "@/services/room.service";
 import { getAllFloors, type FloorT } from "@/services/floor.service";
 import { RoomDto } from "@/dtos";
+import { useIsMobile } from "@/hooks/useMobile";
 
 type RoomFormValues = {
   name: string;
@@ -66,7 +73,6 @@ function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floor
       toast.error("Room name is required");
       return;
     }
-
     onSubmit({
       name: name.trim(),
       shortName: shortName.trim() || undefined,
@@ -170,6 +176,7 @@ export default function ExamRoomsPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const isMobile = useIsMobile();
 
   const loadData = useCallback(async () => {
     try {
@@ -179,9 +186,7 @@ export default function ExamRoomsPage() {
       if (roomsResponse.httpStatus === "SUCCESS" && roomsResponse.payload) {
         setRooms(roomsResponse.payload);
       } else {
-        toast.error("Failed to load rooms", {
-          description: roomsResponse.message || "An error occurred",
-        });
+        toast.error("Failed to load rooms", { description: roomsResponse.message || "An error occurred" });
       }
 
       if (floorsResponse.httpStatus === "SUCCESS" && floorsResponse.payload) {
@@ -204,9 +209,7 @@ export default function ExamRoomsPage() {
   const floorLookup = useMemo(() => {
     const map = new Map<number, string>();
     floors.forEach((floor) => {
-      if (floor.id != null) {
-        map.set(floor.id, floor.name ?? "-");
-      }
+      if (floor.id != null) map.set(floor.id, floor.name ?? "-");
     });
     return map;
   }, [floors]);
@@ -246,9 +249,7 @@ export default function ExamRoomsPage() {
         toast.success("Room deleted successfully");
         setRooms((prev) => prev.filter((room) => room.id !== id));
       } else {
-        toast.error("Failed to delete room", {
-          description: response.message || "An error occurred",
-        });
+        toast.error("Failed to delete room", { description: response.message || "An error occurred" });
       }
     } catch (error) {
       console.error("Error deleting room:", error);
@@ -280,9 +281,7 @@ export default function ExamRoomsPage() {
           setIsFormOpen(false);
           setSelectedRoom(null);
         } else {
-          toast.error("Failed to update room", {
-            description: response.message || "An error occurred",
-          });
+          toast.error("Failed to update room", { description: response.message || "An error occurred" });
         }
       } else {
         const response = await createRoom(payload);
@@ -291,9 +290,7 @@ export default function ExamRoomsPage() {
           await loadData();
           setIsFormOpen(false);
         } else {
-          toast.error("Failed to create room", {
-            description: response.message || "An error occurred",
-          });
+          toast.error("Failed to create room", { description: response.message || "An error occurred" });
         }
       }
     } catch (error) {
@@ -306,10 +303,161 @@ export default function ExamRoomsPage() {
     }
   };
 
+  // Single table — same markup for mobile and desktop.
+  // On mobile: inner div gets minWidth so it scrolls horizontally.
+  // On mobile: actions column shows 3-dot dropdown; on desktop: icon buttons.
+  const tableContent = (
+    <div
+      className="rounded-md border border-slate-300 max-h-[520px] overflow-y-auto"
+      style={isMobile ? { minWidth: "780px" } : undefined}
+    >
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
+        <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300 min-w-full">
+          <div className="w-[5%] px-1 py-2 border-r border-slate-300 flex items-center justify-center">#</div>
+          <div className="w-[20%] px-2 py-2 border-r border-slate-300 flex items-center">Name</div>
+          <div className="w-[12%] px-1 py-2 border-r border-slate-300 flex items-center justify-center">Short</div>
+          <div className="w-[13%] px-1 py-2 border-r border-slate-300 flex items-center justify-center">Floor</div>
+          <div className="w-[10%] px-1 py-2 border-r border-slate-300 flex items-center justify-center text-center leading-tight">
+            Bench
+            <br />
+            es
+          </div>
+          <div className="w-[13%] px-1 py-2 border-r border-slate-300 flex items-center justify-center text-center leading-tight">
+            Max/
+            <br />
+            Bench
+          </div>
+          <div className="w-[12%] px-1 py-2 border-r border-slate-300 flex items-center justify-center">Status</div>
+          <div className="w-[15%] px-1 py-2 flex items-center justify-center">Actions</div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="bg-white min-w-full">
+        {loading ? (
+          <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200 gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading rooms...
+          </div>
+        ) : filteredRooms.length === 0 ? (
+          <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200">
+            No rooms match your search.
+          </div>
+        ) : (
+          filteredRooms.map((room, index) => {
+            const floorName = room.floor.id ? (floorLookup.get(room.floor.id) ?? "-") : "-";
+            return (
+              <div
+                key={room.id ?? `${room.name}-${index}`}
+                className="flex border-b border-slate-200 hover:bg-muted/40 transition-colors"
+              >
+                <div className="w-[5%] px-1 py-3 border-r border-slate-200 flex items-center justify-center text-sm">
+                  {index + 1}
+                </div>
+                <div className="w-[20%] px-2 py-3 border-r border-slate-200 flex flex-col justify-center min-w-0">
+                  <span className="font-medium text-slate-800 truncate text-sm" title={room.name ?? undefined}>
+                    {room.name}
+                  </span>
+                  {room.legacyRoomId && (
+                    <span className="text-xs text-muted-foreground truncate">ID: {room.legacyRoomId}</span>
+                  )}
+                </div>
+                <div className="w-[12%] px-1 py-3 border-r border-slate-200 flex items-center justify-center min-w-0">
+                  <span className="truncate text-sm">
+                    {room.shortName ?? <span className="text-slate-400">—</span>}
+                  </span>
+                </div>
+                <div className="w-[13%] px-1 py-3 border-r border-slate-200 flex items-center justify-center min-w-0">
+                  <span className="truncate text-sm">{floorName}</span>
+                </div>
+                <div className="w-[10%] px-1 py-3 border-r border-slate-200 flex items-center justify-center text-sm">
+                  {room.numberOfBenches ?? 0}
+                </div>
+                <div className="w-[13%] px-1 py-3 border-r border-slate-200 flex items-center justify-center text-sm">
+                  {room.maxStudentsPerBench ?? 0}
+                </div>
+                <div className="w-[12%] px-1 py-3 border-r border-slate-200 flex items-center justify-center">
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${
+                      room.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {room.isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <div className="w-[15%] px-1 py-3 flex items-center justify-center gap-1">
+                  {isMobile ? (
+                    // Mobile: 3-dot dropdown
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" disabled={deletingId === room.id}>
+                          {deletingId === room.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MoreHorizontal className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleEdit(room)}
+                          className="text-blue-700 focus:text-blue-700 focus:bg-blue-50 gap-2 cursor-pointer"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(room.id!)}
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50 gap-2 cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    // Desktop: two icon buttons
+                    <>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
+                        onClick={() => handleEdit(room)}
+                        disabled={deletingId === room.id}
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="h-7 w-7 shadow-none"
+                        onClick={() => handleDelete(room.id!)}
+                        disabled={deletingId === room.id}
+                      >
+                        {deletingId === room.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="p-4">
       <Card className="border-none">
-        <CardHeader className="flex flex-row items-center justify-between border rounded-md p-4 bg-background">
+        <CardHeader className="flex flex-row items-center justify-between border rounded-md p-4 bg-background flex-wrap gap-3">
           <div>
             <CardTitle className="flex items-center gap-2 text-xl font-semibold">
               <DoorOpen className="mr-1 h-8 w-8 border rounded-md p-1 border-slate-400" />
@@ -317,12 +465,12 @@ export default function ExamRoomsPage() {
             </CardTitle>
             <p className="text-muted-foreground text-sm">Manage exam rooms, assign floors, and toggle availability.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" className="shadow-none border-slate-200">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" className="shadow-none border-slate-200 hidden sm:flex">
               <Upload className="mr-2 h-4 w-4" />
               Bulk Upload
             </Button>
-            <Button variant="outline" className="shadow-none border-slate-200">
+            <Button variant="outline" className="shadow-none border-slate-200 hidden sm:flex">
               <Download className="mr-2 h-4 w-4" />
               Download Template
             </Button>
@@ -354,132 +502,33 @@ export default function ExamRoomsPage() {
             </AlertDialog>
           </div>
         </CardHeader>
+
         <CardContent className="px-0">
-          <div className="bg-background p-4 border-b flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="bg-background p-4 border-b flex items-center gap-2 justify-between">
             <Input
               placeholder="Search by name, short name, or floor..."
-              className="w-full md:w-72"
+              className="w-full max-w-xs"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2 border-slate-200 shadow-none">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 border-slate-200 shadow-none whitespace-nowrap"
+            >
               <Download className="h-4 w-4" />
-              Export List
+              <span className="hidden sm:inline">Export List</span>
             </Button>
           </div>
 
-          <div className="overflow-x-auto flex-1" style={{ minHeight: "480px" }}>
-            <div className="rounded-md border border-slate-300 h-full max-h-[520px] overflow-y-auto min-w-full">
-              <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur">
-                <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300 min-w-full">
-                  <div className="flex-shrink-0 basis-[5%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    #
-                  </div>
-                  <div className="flex-shrink-0 basis-[20%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    Name
-                  </div>
-                  <div className="flex-shrink-0 basis-[14%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    Short Name
-                  </div>
-                  <div className="flex-shrink-0 basis-[14%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    Floor
-                  </div>
-                  <div className="flex-shrink-0 basis-[12%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    Benches
-                  </div>
-                  <div className="flex-shrink-0 basis-[12%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    Max Students Per Bench
-                  </div>
-                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
-                    Status
-                  </div>
-                  <div className="flex-shrink-0 basis-[13%] px-3 py-2 flex items-center justify-center">Actions</div>
-                </div>
-              </div>
-
-              <div className="bg-white min-w-full">
-                {loading ? (
-                  <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200 gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading rooms...
-                  </div>
-                ) : filteredRooms.length === 0 ? (
-                  <div className="flex items-center justify-center h-52 text-muted-foreground border-b border-slate-200">
-                    No rooms match your search.
-                  </div>
-                ) : (
-                  filteredRooms.map((room, index) => {
-                    const floorName = room.floor.id ? (floorLookup.get(room.floor.id) ?? "-") : "-";
-                    return (
-                      <div
-                        key={room.id ?? `${room.name}-${index}`}
-                        className="flex border-b border-slate-200 hover:bg-muted/40 transition-colors"
-                      >
-                        <div className="flex-shrink-0 basis-[5%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                          {index + 1}
-                        </div>
-                        <div className="flex-shrink-0 basis-[20%] px-3 py-3 border-r border-slate-200 flex items-center">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-800 truncate" title={room.name ?? undefined}>
-                              {room.name}
-                            </span>
-                            {room.legacyRoomId && (
-                              <span className="text-xs text-muted-foreground">Legacy ID: {room.legacyRoomId}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex-shrink-0 basis-[14%] px-3 py-3 border-r border-slate-200 flex items-center">
-                          {room.shortName ?? <span className="text-slate-400">—</span>}
-                        </div>
-                        <div className="flex-shrink-0 basis-[14%] px-3 py-3 border-r border-slate-200 flex items-center">
-                          {floorName}
-                        </div>
-                        <div className="flex-shrink-0 basis-[12%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                          {room.numberOfBenches ?? 0}
-                        </div>
-                        <div className="flex-shrink-0 basis-[12%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                          {room.maxStudentsPerBench ?? 0}
-                        </div>
-                        <div className="flex-shrink-0 basis-[10%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              room.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {room.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                        <div className="flex-shrink-0 basis-[12%] px-3 py-3 flex items-center justify-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="border border-blue-200 text-blue-700 hover:bg-blue-50 shadow-none"
-                            onClick={() => handleEdit(room)}
-                            disabled={deletingId === room.id}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="shadow-none"
-                            onClick={() => handleDelete(room.id!)}
-                            disabled={deletingId === room.id}
-                          >
-                            {deletingId === room.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+          {/* Mobile: wrap in overflow-x-auto for horizontal scroll */}
+          {/* Desktop: plain wrapper, no scroll */}
+          {isMobile ? (
+            <div className="overflow-x-auto" style={{ minHeight: "480px" }}>
+              {tableContent}
             </div>
-          </div>
+          ) : (
+            <div style={{ minHeight: "480px" }}>{tableContent}</div>
+          )}
         </CardContent>
       </Card>
     </div>

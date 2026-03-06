@@ -2,8 +2,23 @@ import { ExamGroupDto, ExamPapersWithStats } from "@/dtos";
 import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 
+export interface ValidateExamGroupUniqueResponse {
+  isUnique: boolean;
+  existingExamGroupId: number | null;
+}
+
 export async function fetchExamGroupById(id: number): Promise<ExamGroupDto> {
   const response = await axiosInstance.get<ApiResponse<ExamGroupDto>>(`/api/exam-groups/${id}`);
+  return response.data.payload;
+}
+
+export async function validateExamGroupUnique(name: string): Promise<ValidateExamGroupUniqueResponse> {
+  const params = new URLSearchParams({
+    name,
+  });
+  const response = await axiosInstance.get<ApiResponse<ValidateExamGroupUniqueResponse>>(
+    `/api/exam-groups/validate-unique?${params.toString()}`,
+  );
   return response.data.payload;
 }
 
