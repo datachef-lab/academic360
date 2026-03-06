@@ -4903,7 +4903,6 @@ export async function downloadSingleAdmitCard(
     const allCandidateIds = examCandidateIds.map((ec) => ec.id);
     const firstCandidateId = allCandidateIds[0];
 
-    // Update all candidates' downloadedAt timestamp
     await db
       .update(examCandidateModel)
       .set({

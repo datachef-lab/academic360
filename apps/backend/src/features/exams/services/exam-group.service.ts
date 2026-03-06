@@ -211,6 +211,7 @@ export async function findByStudentId(
       pageSize,
       totalElements: 0,
       totalPages: 0,
+      totalSubjectCount: 0,
     };
   }
 
@@ -228,6 +229,21 @@ export async function findByStudentId(
     )
     .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .innerJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .where(eq(studentModel.id, studentId));
+
+  /**
+   * STEP 2b: Total DISTINCT exam subjects count (papers the student is enrolled in via exam_candidates)
+   */
+  const [{ totalSubjectCount }] = await db
+    .select({
+      totalSubjectCount: sql<number>`COUNT(DISTINCT ${examCandidateModel.examSubjectId})`,
+    })
+    .from(examCandidateModel)
+    .innerJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .where(eq(studentModel.id, studentId));
 
   /**
@@ -279,6 +295,7 @@ export async function findByStudentId(
     pageSize,
     totalElements: Number(totalCount),
     totalPages: Math.ceil(Number(totalCount) / pageSize),
+    totalSubjectCount: Number(totalSubjectCount ?? 0),
   };
 }
 

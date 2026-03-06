@@ -32,9 +32,11 @@ export default function ExamsContent() {
   const { student } = useStudent();
   const { user } = useAuth();
   const [examGroups, setExamGroups] = useState<ExamGroupDto[]>([]);
+  const [totalSubjectCount, setTotalSubjectCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("recent");
   const [selectedExam, setSelectedExam] = useState<ExamDto | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const socketRef = useRef<any | null>(null);
@@ -184,6 +186,7 @@ export default function ExamsContent() {
           return startTime <= nowTime;
         });
         setExamGroups(filteredExams);
+        setTotalSubjectCount(data.payload.totalSubjectCount ?? 0);
       })
       .catch((err) => {
         console.error("Error fetching exams via service:", err);
@@ -277,6 +280,7 @@ export default function ExamsContent() {
                   return startDate <= now;
                 });
                 setExamGroups(filteredExams);
+                setTotalSubjectCount(data.payload.totalSubjectCount ?? 0);
               })
               .catch((err: Error) => {
                 console.error("Error refetching exams:", err);
@@ -302,6 +306,7 @@ export default function ExamsContent() {
                   return startDate <= now;
                 });
                 setExamGroups(filteredExams);
+                setTotalSubjectCount(data.payload.totalSubjectCount ?? 0);
               })
               .catch((err: Error) => {
                 console.error("Error refetching exam groups:", err);
@@ -610,6 +615,59 @@ export default function ExamsContent() {
   const recentExamGroupCount = new Set(recentExams.map((e) => e.examGroupId)).size;
   const previousExamGroupCount = new Set(previousExams.map((e) => e.examGroupId)).size;
 
+  // Tab-specific subject counts (unique exam subject IDs in the tab's exams)
+  const upcomingSubjectCount = new Set(
+    upcomingExams
+      .flatMap((exam) =>
+        (exam.examSubjects ?? []).filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d > today;
+        }),
+      )
+      .map((s) => s.id),
+  ).size;
+  const todaySubjectCount = new Set(
+    recentExams
+      .flatMap((exam) =>
+        (exam.examSubjects ?? []).filter((s) => {
+          const d = new Date(s.startTime);
+          d.setHours(0, 0, 0, 0);
+          return d.getTime() === today.getTime();
+        }),
+      )
+      .map((s) => s.id),
+  ).size;
+  const completedSubjectCount = new Set(previousExams.flatMap((exam) => (exam.examSubjects ?? []).map((s) => s.id)))
+    .size;
+
+  // Tab-specific stats for display
+  const displayPrimaryCount =
+    activeTab === "upcoming"
+      ? upcomingExamGroupCount
+      : activeTab === "recent"
+        ? recentExamGroupCount
+        : previousExamGroupCount;
+  const displayPrimaryLabel =
+    activeTab === "upcoming" ? "Upcoming Exams" : activeTab === "recent" ? "Today's Exams" : "Completed Exams";
+  const displayTodayCount = activeTab === "recent" ? recentExamGroupCount : 0;
+  const displaySubjectCount =
+    activeTab === "upcoming"
+      ? upcomingSubjectCount
+      : activeTab === "recent"
+        ? todaySubjectCount
+        : activeTab === "previous"
+          ? completedSubjectCount
+          : totalSubjectCount;
+  const displayNextExam =
+    activeTab === "upcoming"
+      ? getNextExamDaysAway()
+      : activeTab === "recent"
+        ? recentExamGroupCount > 0
+          ? "Today"
+          : "N/A"
+        : "N/A";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-indigo-50/20 to-purple-50/20">
       {/* Header Banner */}
@@ -651,8 +709,8 @@ export default function ExamsContent() {
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm text-blue-600 font-medium truncate">Upcoming Exams</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-blue-700">{upcomingExamGroupCount}</p>
+                    <p className="text-xs sm:text-sm text-blue-600 font-medium truncate">{displayPrimaryLabel}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-blue-700">{displayPrimaryCount}</p>
                   </div>
                   <div className="bg-blue-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-blue-200 flex-shrink-0">
                     <Calendar size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-blue-600" />
@@ -672,7 +730,7 @@ export default function ExamsContent() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-xs sm:text-sm text-amber-600 font-medium truncate">Next Exam</p>
-                    <p className="text-lg sm:text-3xl font-bold text-amber-700 truncate">{getNextExamDaysAway()}</p>
+                    <p className="text-lg sm:text-3xl font-bold text-amber-700 truncate">{displayNextExam}</p>
                   </div>
                   <div className="bg-amber-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-amber-200 flex-shrink-0">
                     <Clock size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-amber-600" />
@@ -692,17 +750,7 @@ export default function ExamsContent() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-xs sm:text-sm text-purple-600 font-medium truncate">Total Subjects</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-purple-700">
-                      {
-                        [
-                          ...new Set(
-                            examGroups
-                              .flatMap((e) => e.exams)
-                              .flatMap((exam) => exam.examSubjects.map((es) => es.subject?.name).filter(Boolean)),
-                          ),
-                        ].length
-                      }
-                    </p>
+                    <p className="text-2xl sm:text-3xl font-bold text-purple-700">{displaySubjectCount}</p>
                   </div>
                   <div className="bg-purple-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-purple-200 flex-shrink-0">
                     <FileText size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-purple-600" />
@@ -722,7 +770,7 @@ export default function ExamsContent() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-xs sm:text-sm text-emerald-600 font-medium truncate">Today&apos;s Exams</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-emerald-700">{recentExamGroupCount}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-emerald-700">{displayTodayCount}</p>
                   </div>
                   <div className="bg-emerald-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-emerald-200 flex-shrink-0">
                     <BarChart size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-emerald-600" />
@@ -764,7 +812,7 @@ export default function ExamsContent() {
               </p>
             </div>
           ) : (
-            <TabsFixed defaultValue="recent" className="w-full">
+            <TabsFixed value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsListFixed className="flex flex-wrap sm:flex-nowrap h-auto sm:h-12 items-center justify-center rounded-lg bg-indigo-50/60 p-1 mb-6 sm:mb-8 gap-1">
                 <TabsTriggerFixed
                   value="upcoming"
