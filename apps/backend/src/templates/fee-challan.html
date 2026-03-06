@@ -4,7 +4,7 @@
 
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>FeesChallan_Rg_55379.pdf</title>
+  <title>fee-challan-prototype.pdf</title>
   <style type="text/css">
     * {
       margin: 0;
@@ -58,7 +58,7 @@
       height: 50px;
       border-radius: 50%;
       object-fit: cover;
-      border: 1px solid #000;
+
       flex-shrink: 0;
     }
 
@@ -116,6 +116,7 @@
 
     .student-info-row {
       display: flex;
+      line-height: 16px;
     }
 
     .student-info-label {
@@ -124,13 +125,13 @@
       font-weight: bold;
       padding: 2px 6px 2px 0;
       width: 70px;
-      font-size: 9pt;
+      font-size: 12px;
     }
 
     .student-info-value {
       display: table-cell;
       padding: 2px 0;
-      font-size: 9pt;
+       font-size: 12px;
     }
 
     .challan-barcode-block {
@@ -141,14 +142,15 @@
     .challan-no-value {
       display: block;
       font-size: 9pt;
+      font-weight: bold;
       margin-bottom: 4px;
     }
 
     .challan-barcode {
       display: block;
       width: 100%;
-      min-width: 80px;
-      max-width: 120px;
+      /* min-width: 120px;
+      max-width: 120px; */
       height: 28px;
       background: repeating-linear-gradient(90deg, #000 0px, #000 2px, transparent 2px, transparent 4px);
     }
@@ -309,7 +311,7 @@
           <p>Federal Bank A/c 13040200023571</p>
           <div style="display: flex; justify-content: space-between; width: 100%;">
             <p style="width: 50%;">Payment can be made in any branch.</p>
-            <p style="font-weight: bold; width: 50%;">Preferred branch - Bhowanipore.</p>
+            <p style="font-weight: bold; width: 50%; text-align: right;">Preferred branch - Bhowanipore.</p>
           </div>
         </div>
         <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
@@ -366,36 +368,39 @@
         <table class="fee-table">
           <tr>
             <td class="label">Particulars</td>
-            <td class="label amount">Amount</td>
+            <td class="label amount">Amount (in Rs.)</td>
           </tr>
           <tr>
             <td>Fees for Semester II</td>
-            <td class="amount">45395.00</td>
+            <td class="amount">45,395.00</td>
           </tr>
           <tr class="total-row">
             <td>Total Amount To Pay</td>
-            <td class="amount">45395</td>
+            <td class="amount">45,395.00</td>
+          </tr>
+           <tr class="total-row"> 
+            <td colspan="2" style="font-style: italic; font-size: 11px; font-weight: normal; text-align: end;">(Rs. Forty Five Thousand Three Hundred Ninety Five only)</td>
           </tr>
         </table>
-        <div class="amount-words">(Rs. Forty Five Thousand Three Hundred Ninety Five only)</div>
+        <div class="amount-words"></div>
         <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
-            href="mailto:feeupdate@thebges.edu.in">feeupdate@thebges.edu.in</a></div>
+            href="mailto:feeupdate@thebges.edu.in" style="font-weight: bold;">feeupdate@thebges.edu.in</a></div>
         <div style="flex: 1; min-height: 8px;"></div>
         <div class="footer-content">
-          <div class="signature-row">
-            <span>Date: 07/11/2025</span>
-            <span class="sig-right">Bank Official's Signature <span class="signature-line"></span></span>
+          <div class="signature-row" style="border-bottom: 1px solid black; padding-bottom: 4px;">
+            <span style="font-weight: bold;">Date: 07/11/2025</span>
+            <span style="font-weight: bold;" class="sig-right">Bank Official's Signature</span>
           </div>
           <div class="nb-notes">
-            <p>N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the receiving
+            <p style="margin-bottom: 10px;">N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the receiving
               authority. Please retain the Money Receipt for future reference.</p>
-            <p>N.B. 2. Please note that taking enrollment &amp; paying fees for the same alone does not make you
+            <p style="margin-bottom: 10px;">N.B. 2. Please note that taking enrollment &amp; paying fees for the same alone does not make you
               automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is mandatory
               for each University Exam.</p>
-            <p>N.B.3. Please do not make any request to Management or Staff for refund of fees. Fees once paid is not
+            <p style="margin-bottom: 10px; font-weight: bold;">N.B.3. Please do not make any request to Management or Staff for refund of fees. Fees once paid is not
               refundable under any circumstances.</p>
           </div>
-          <div class="copy-label">STUDENT COPY</div>
+          <div class="copy-label" style="text-align: end; font-style: italic;">STUDENT COPY</div>
         </div>
 
       <!-- </div> -->
@@ -403,171 +408,229 @@
 
     <!-- COLLEGE COPY (middle) -->
     <div class="challan-copy">
-      <div class="challan-header">
-        <img class="college-logo" src="https://besc.academic360.app/api/api/v1/settings/file/4" alt="College Logo" />
-        <div class="header-text">
-          <div class="college-name">The Bhawanipur Education Society College</div>
-          <div class="address">5, Lala Lajpat Rai Sarani, Kolkata - 700020</div>
-          <div class="session">Session : 2024-2025</div>
-        </div>
-      </div>
-      <div class="bank-details">
-        <p>Federal Bank A/c 13040200023571</p>
-        <p>Payment can be made in any branch.</p>
-        <p>Preferred branch - Bhowanipore.</p>
-      </div>
-      <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
-      <div class="student-info-wrapper">
-        <div class="student-info">
-          <div class="student-info-row">
-            <span class="student-info-label">Name :</span>
-            <span class="student-info-value">MD ISHAN</span>
-          </div>
-          <div class="student-info-row">
-            <span class="student-info-label">UID :</span>
-            <span class="student-info-value">1004240156</span>
-          </div>
-          <div class="student-info-row">
-            <span class="student-info-label">DOB :</span>
-            <span class="student-info-value">02/03/2006</span>
-          </div>
-          <div class="student-info-row">
-            <span class="student-info-label">Mob No. :</span>
-            <span class="student-info-value">9330932995</span>
-          </div>
-          <div class="student-info-row">
-            <span class="student-info-label">Year :</span>
-            <span class="student-info-value">Semester II</span>
-          </div>
-          <div class="student-info-row">
-            <span class="student-info-label">Course :</span>
-            <span class="student-info-value">BBA (H) (Day)</span>
+      <!-- <div style=" height: 100%;"> -->
+
+
+        <div class="challan-header">
+          <img class="college-logo" src="https://besc.academic360.app/api/api/v1/settings/file/4" alt="College Logo" />
+          <div class="header-text">
+            <div class="college-name">The Bhawanipur Education Society College</div>
+            <div class="address">5, Lala Lajpat Rai Sarani, Kolkata - 700020</div>
+            <div class="session">Session : 2024-2025</div>
           </div>
         </div>
-        <div class="challan-barcode-block">
-          <span class="challan-no-value">Challan No : 1004240156/02</span>
-          <span class="challan-barcode"></span>
+        <div class="bank-details">
+          <p>Federal Bank A/c 13040200023571</p>
+          <div style="display: flex; justify-content: space-between; width: 100%;">
+            <p style="width: 50%;">Payment can be made in any branch.</p>
+            <p style="font-weight: bold; width: 50%; text-align: right;">Preferred branch - Bhowanipore.</p>
+          </div>
         </div>
-      </div>
-      <table class="fee-table">
-        <tr>
-          <td class="label">Particulars</td>
-          <td class="label amount">Amount</td>
-        </tr>
-        <tr>
-          <td>Fees for Semester II</td>
-          <td class="amount">45395.00</td>
-        </tr>
-        <tr class="total-row">
-          <td>Total Amount To Pay</td>
-          <td class="amount">45395</td>
-        </tr>
-      </table>
-      <div class="amount-words">(Rs. Forty Five Thousand Three Hundred Ninety Five only)</div>
-      <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
-          href="mailto:feeupdate@thebges.edu.in">feeupdate@thebges.edu.in</a></div>
-      <div style="flex: 1; min-height: 8px;"></div>
-      <div class="footer-content">
-        <div class="signature-row">
-          <span>Date: 07/11/2025</span>
-          <span class="sig-right">Bank Official's Signature <span class="signature-line"></span></span>
+        <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
+        <div class="student-info-wrapper">
+          <div class="student-info">
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>Name</span> 
+                <span>:</span>
+              </div>
+              <span class="student-info-value">MD ISHAN</span>
+            </div>
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>UID</span> 
+                <span>:</span>
+              </div>
+              <span class="student-info-value">1004240156</span>
+            </div>
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>DOB</span>
+                <span>:</span>
+              </div>
+              <span class="student-info-value">02/03/2006</span>
+            </div>
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>Mob No.</span>
+                <span>:</span>
+              </div>
+              <span class="student-info-value">9330932995</span>
+            </div>
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>Year</span>
+                <span>:</span>
+              </div>
+              <span class="student-info-value">Semester II</span>
+            </div>
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>Course</span>
+                <span>:</span>
+              </div>
+              <span class="student-info-value">BBA (H) (Day)</span>
+            </div>
+          </div>
+          <div class="challan-barcode-block">
+            <span class="challan-no-value">Challan No : 1004240156/02</span>
+            <span class="challan-barcode"></span>
+          </div>
         </div>
-        <div class="nb-notes">
-          <p>N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the receiving
-            authority. Please retain the Money Receipt for future reference.</p>
-          <p>N.B. 2. Please note that taking enrollment &amp; paying fees for the same alone does not make you
-            automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is mandatory for
-            each University Exam.</p>
-          <p>N.B.3. Please do not make any request to Management or Staff for refund of fees. Fees once paid is not
-            refundable under any circumstances.</p>
+        <table class="fee-table">
+          <tr>
+            <td class="label">Particulars</td>
+            <td class="label amount">Amount (in Rs.)</td>
+          </tr>
+          <tr>
+            <td>Fees for Semester II</td>
+            <td class="amount">45,395.00</td>
+          </tr>
+          <tr class="total-row">
+            <td>Total Amount To Pay</td>
+            <td class="amount">45,395.00</td>
+          </tr>
+           <tr class="total-row"> 
+            <td colspan="2" style="font-style: italic; font-size: 11px; font-weight: normal; text-align: end;">(Rs. Forty Five Thousand Three Hundred Ninety Five only)</td>
+          </tr>
+        </table>
+        <div class="amount-words"></div>
+        <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
+            href="mailto:feeupdate@thebges.edu.in" style="font-weight: bold;">feeupdate@thebges.edu.in</a></div>
+        <div style="flex: 1; min-height: 8px;"></div>
+        <div class="footer-content">
+          <div class="signature-row" style="border-bottom: 1px solid black; padding-bottom: 4px;">
+            <span style="font-weight: bold;">Date: 07/11/2025</span>
+            <span style="font-weight: bold;" class="sig-right">Bank Official's Signature</span>
+          </div>
+          <div class="nb-notes">
+            <p style="margin-bottom: 10px;">N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the receiving
+              authority. Please retain the Money Receipt for future reference.</p>
+            <p style="margin-bottom: 10px;">N.B. 2. Please note that taking enrollment &amp; paying fees for the same alone does not make you
+              automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is mandatory
+              for each University Exam.</p>
+            <p style="margin-bottom: 10px; font-weight: bold;">N.B.3. Please do not make any request to Management or Staff for refund of fees. Fees once paid is not
+              refundable under any circumstances.</p>
+          </div>
+          <div class="copy-label" style="text-align: end; font-style: italic;">COLLEGE COPY</div>
         </div>
-        <div class="copy-label">COLLEGE COPY</div>
-      </div>
+
+      <!-- </div> -->
     </div>
 
     <!-- BANK COPY (right) -->
     <div class="challan-copy">
-      <div class="challan-header">
-        <img class="college-logo" src="https://besc.academic360.app/api/api/v1/settings/file/4" alt="College Logo" />
-        <div class="header-text">
-          <div class="college-name">The Bhawanipur Education Society College</div>
-          <div class="address">5, Lala Lajpat Rai Sarani, Kolkata - 700020</div>
-          <div class="session">Session : 2024-2025</div>
-        </div>
-      </div>
-      <div class="bank-details">
-        <p>Federal Bank A/c 13040200023571</p>
-        <p>Payment can be made in any branch.</p>
-        <p>Preferred branch - Bhowanipore.</p>
-      </div>
-      <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
-      <div class="student-info-wrapper">
-        <div class="student-info">
-          <div class="student-info-row">
-            <span class="student-info-label">Name :</span>
-            <span class="student-info-value">MD ISHAN</span>
-          </div>
-          <div class="student-info-row">
-            <span class="student-info-label">UID :</span>
-            <span class="student-info-value">1004240156</span>
-          </div>
-          <div class="student-info-row">
-            <span class="student-info-label">DOB :</span>
-            <span class="student-info-value">02/03/2006</span>
-          </div>
-          <div class="student-info-row">
-            <span class="student-info-label">Mob No. :</span>
-            <span class="student-info-value">9330932995</span>
-          </div>
-          <div class="student-info-row">
-            <span class="student-info-label">Year :</span>
-            <span class="student-info-value">Semester II</span>
-          </div>
-          <div class="student-info-row">
-            <span class="student-info-label">Course :</span>
-            <span class="student-info-value">BBA (H) (Day)</span>
+      <!-- <div style=" height: 100%;"> -->
+
+
+        <div class="challan-header">
+          <img class="college-logo" src="https://besc.academic360.app/api/api/v1/settings/file/4" alt="College Logo" />
+          <div class="header-text">
+            <div class="college-name">The Bhawanipur Education Society College</div>
+            <div class="address">5, Lala Lajpat Rai Sarani, Kolkata - 700020</div>
+            <div class="session">Session : 2024-2025</div>
           </div>
         </div>
-        <div class="challan-barcode-block">
-          <span class="challan-no-value">Challan No : 1004240156/02</span>
-          <span class="challan-barcode"></span>
+        <div class="bank-details">
+          <p>Federal Bank A/c 13040200023571</p>
+          <div style="display: flex; justify-content: space-between; width: 100%;">
+            <p style="width: 50%;">Payment can be made in any branch.</p>
+            <p style="font-weight: bold; width: 50%; text-align: right;">Preferred branch - Bhowanipore.</p>
+          </div>
         </div>
-      </div>
-      <table class="fee-table">
-        <tr>
-          <td class="label">Particulars</td>
-          <td class="label amount">Amount</td>
-        </tr>
-        <tr>
-          <td>Fees for Semester II</td>
-          <td class="amount">45395.00</td>
-        </tr>
-        <tr class="total-row">
-          <td>Total Amount To Pay</td>
-          <td class="amount">45395</td>
-        </tr>
-      </table>
-      <div class="amount-words">(Rs. Forty Five Thousand Three Hundred Ninety Five only)</div>
-      <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
-          href="mailto:feeupdate@thebges.edu.in">feeupdate@thebges.edu.in</a></div>
-      <div style="flex: 1; min-height: 8px;"></div>
-      <div class="footer-content">
-        <div class="signature-row">
-          <span>Date: 07/11/2025</span>
-          <span class="sig-right">Bank Official's Signature <span class="signature-line"></span></span>
+        <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
+        <div class="student-info-wrapper">
+          <div class="student-info">
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>Name</span> 
+                <span>:</span>
+              </div>
+              <span class="student-info-value">MD ISHAN</span>
+            </div>
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>UID</span> 
+                <span>:</span>
+              </div>
+              <span class="student-info-value">1004240156</span>
+            </div>
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>DOB</span>
+                <span>:</span>
+              </div>
+              <span class="student-info-value">02/03/2006</span>
+            </div>
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>Mob No.</span>
+                <span>:</span>
+              </div>
+              <span class="student-info-value">9330932995</span>
+            </div>
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>Year</span>
+                <span>:</span>
+              </div>
+              <span class="student-info-value">Semester II</span>
+            </div>
+            <div class="student-info-row">
+              <div class="student-info-label">
+                <span>Course</span>
+                <span>:</span>
+              </div>
+              <span class="student-info-value">BBA (H) (Day)</span>
+            </div>
+          </div>
+          <div class="challan-barcode-block">
+            <span class="challan-no-value">Challan No : 1004240156/02</span>
+            <span class="challan-barcode"></span>
+          </div>
         </div>
-        <div class="nb-notes">
-          <p>N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the receiving
-            authority. Please retain the Money Receipt for future reference.</p>
-          <p>N.B. 2. Please note that taking enrollment &amp; paying fees for the same alone does not make you
-            automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is mandatory for
-            each University Exam.</p>
-          <p>N.B.3. Please do not make any request to Management or Staff for refund of fees. Fees once paid is not
-            refundable under any circumstances.</p>
+        <table class="fee-table">
+          <tr>
+            <td class="label">Particulars</td>
+            <td class="label amount">Amount (in Rs.)</td>
+          </tr>
+          <tr>
+            <td>Fees for Semester II</td>
+            <td class="amount">45,395.00</td>
+          </tr>
+          <tr class="total-row">
+            <td>Total Amount To Pay</td>
+            <td class="amount">45,395.00</td>
+          </tr>
+           <tr class="total-row"> 
+            <td colspan="2" style="font-style: italic; font-size: 11px; font-weight: normal; text-align: end;">(Rs. Forty Five Thousand Three Hundred Ninety Five only)</td>
+          </tr>
+        </table>
+        <div class="amount-words"></div>
+        <div class="fee-update-note">If paid in cash at Federal Bank, scan &amp; mail your Fees Paid Challan at <a
+            href="mailto:feeupdate@thebges.edu.in" style="font-weight: bold;">feeupdate@thebges.edu.in</a></div>
+        <div style="flex: 1; min-height: 8px;"></div>
+        <div class="footer-content">
+          <div class="signature-row" style="border-bottom: 1px solid black; padding-bottom: 4px;">
+            <span style="font-weight: bold;">Date: 07/11/2025</span>
+            <span style="font-weight: bold;" class="sig-right">Bank Official's Signature</span>
+          </div>
+          <div class="nb-notes">
+            <p style="margin-bottom: 10px;">N.B. 1. This receipt is not valid without the seal of the bank, date and signature of the receiving
+              authority. Please retain the Money Receipt for future reference.</p>
+            <p style="margin-bottom: 10px;">N.B. 2. Please note that taking enrollment &amp; paying fees for the same alone does not make you
+              automatically eligible for Calcutta University Exam. Calcutta University Exam Form fill up is mandatory
+              for each University Exam.</p>
+            <p style="margin-bottom: 10px; font-weight: bold;">N.B.3. Please do not make any request to Management or Staff for refund of fees. Fees once paid is not
+              refundable under any circumstances.</p>
+          </div>
+          <div class="copy-label" style="text-align: end; font-style: italic;">BANK COPY</div>
         </div>
-        <div class="copy-label">BANK COPY</div>
-      </div>
+
+      <!-- </div> -->
     </div>
+
+
   </div>
 </body>
 
