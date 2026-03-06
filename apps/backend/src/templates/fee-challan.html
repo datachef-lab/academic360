@@ -50,7 +50,7 @@
       gap: 10px;
       margin-bottom: 8px;
       padding-bottom: 8px;
-      border-bottom: 1px solid #000;
+      /* border-bottom: 1px solid #000; */
     }
 
     .college-logo {
@@ -67,23 +67,26 @@
     }
 
     .college-name {
-      font-size: 12pt;
+      font-size: 12px;
+      text-align: center;
       font-weight: bold;
       margin-bottom: 2px;
     }
 
     .address {
-      font-size: 8pt;
+      font-size: 10px;
+      text-align: center;
       margin-bottom: 1px;
     }
 
     .session {
-      font-size: 8pt;
+      font-size: 10px;
+      text-align: center;
     }
 
     .bank-details {
       margin-bottom: 8px;
-      font-size: 8pt;
+      font-size: 11px;
     }
 
     .bank-details p {
@@ -91,9 +94,8 @@
     }
 
     .bank-staff-note {
-      font-weight: bold;
       margin: 4px 0;
-      font-size: 8pt;
+       font-size: 11px;
     }
 
     .student-info-wrapper {
@@ -275,7 +277,7 @@
       }
 
       .challan-copy {
-        padding: 24px !important;
+        padding: 24px 12px !important;
       }
 
       .print-tip {
@@ -302,8 +304,10 @@
         </div>
         <div class="bank-details">
           <p>Federal Bank A/c 13040200023571</p>
-          <p>Payment can be made in any branch.</p>
-          <p>Preferred branch - Bhowanipore.</p>
+          <div style="display: flex; justify-content: space-between;">
+            <p>Payment can be made in any branch.</p>
+            <p style="font-weight: bold;">Preferred branch - Bhowanipore.</p>
+          </div>
         </div>
         <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
         <div class="student-info-wrapper">
