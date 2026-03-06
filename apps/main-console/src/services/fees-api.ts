@@ -892,6 +892,8 @@ export async function getFilteredFeeGroupPromotionMappings(
 export interface BulkUploadRow {
   UID?: string;
   "Student Name"?: string;
+  Affiliation?: string;
+  Regulation?: string;
   "Program Course Name"?: string;
   "Academic Year"?: string;
   Semester?: string;
@@ -901,6 +903,7 @@ export interface BulkUploadRow {
   "Approved By User Email"?: string;
   "Approved Timestamp"?: string;
   Remarks?: string;
+  "Failure Reason"?: string;
 }
 
 export interface BulkUploadResult {
@@ -919,6 +922,7 @@ export interface BulkUploadResult {
     data: BulkUploadRow;
     mappingId: number;
   }>;
+  failureFilePath?: string;
 }
 
 export async function bulkUploadFeeGroupPromotionMappings(file: File): Promise<ApiResponse<BulkUploadResult>> {

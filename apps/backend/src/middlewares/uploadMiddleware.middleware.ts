@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter to allow only Excel files
+// File filter to allow Excel and CSV files
 const fileFilter = (
   req: Request,
   file: Express.Multer.File,
@@ -32,11 +32,13 @@ const fileFilter = (
   if (
     file.mimetype ===
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-    file.mimetype === "application/vnd.ms-excel"
+    file.mimetype === "application/vnd.ms-excel" ||
+    file.mimetype === "text/csv" ||
+    file.mimetype === "application/csv"
   ) {
     cb(null, true);
   } else {
-    cb(new Error("Only Excel files are allowed!"));
+    cb(new Error("Only Excel or CSV files are allowed!"));
   }
 };
 

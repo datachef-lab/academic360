@@ -131,6 +131,11 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
   };
 
   const operation = (progressUpdate?.meta?.operation as string | undefined) ?? undefined;
+  const meta = (progressUpdate?.meta ?? {}) as Record<string, unknown>;
+  const processed = typeof meta.processed === "number" ? meta.processed : undefined;
+  const total = typeof meta.total === "number" ? meta.total : undefined;
+  const successful = typeof meta.successful === "number" ? meta.successful : undefined;
+  const failed = typeof meta.failed === "number" ? meta.failed : undefined;
 
   const getDialogTitle = () => {
     if (progressUpdate?.type === "download_progress") return "Download Progress";
@@ -245,6 +250,34 @@ export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: Export
             <p className="text-sm text-slate-700">{message}</p>
             {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
           </div>
+
+          {/* Live counters (bulk upload) */}
+          {operation === "fee_group_promotion_bulk_upload" &&
+            (processed !== undefined || successful !== undefined || failed !== undefined) && (
+              <div className="text-sm text-slate-700 bg-slate-50 p-2 rounded space-y-1">
+                {(processed !== undefined || total !== undefined) && (
+                  <div className="flex justify-between">
+                    <span>Processed</span>
+                    <span className="font-medium">
+                      {processed ?? 0}
+                      {total !== undefined ? ` / ${total}` : ""}
+                    </span>
+                  </div>
+                )}
+                {successful !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-green-700">Success</span>
+                    <span className="font-medium text-green-700">{successful}</span>
+                  </div>
+                )}
+                {failed !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-red-700">Failed</span>
+                    <span className="font-medium text-red-700">{failed}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
           {/* File Name */}
           {fileName && (

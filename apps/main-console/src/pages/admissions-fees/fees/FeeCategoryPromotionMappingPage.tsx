@@ -62,6 +62,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const [bulkUploadFile, setBulkUploadFile] = useState<File | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [bulkUploadResult, setBulkUploadResult] = useState<BulkUploadResult | null>(null);
+  const [bulkUploadMissingColumns, setBulkUploadMissingColumns] = useState<string[]>([]);
   const [exportProgressOpen, setExportProgressOpen] = useState(false);
   const [currentProgressUpdate, setCurrentProgressUpdate] = useState<ProgressUpdate | null>(null);
   const [currentOperation, setCurrentOperation] = useState<string | null>(null);
@@ -102,6 +103,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const { feeCategories } = useFeeCategories();
   const { feeGroups } = useFeeGroups();
   const { currentAcademicYear } = useAcademicYear();
+  const studentProfileBaseUrl =
+    import.meta.env.VITE_STUDENT_PROFILE_URL || "https://74.207.233.48:8443/hrclIRP/studentimages";
 
   // Only fetch when user has applied at least one filter
   const hasFilters =
@@ -474,6 +477,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
       {
         UID: "",
         "Student Name": "",
+        Affiliation: "",
+        Regulation: "",
         "Program Course Name": "",
         "Academic Year": "",
         Semester: "",
@@ -493,6 +498,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     const colWidths = [
       { wch: 15 }, // UID
       { wch: 25 }, // Student Name
+      { wch: 20 }, // Affiliation
+      { wch: 20 }, // Regulation
       { wch: 25 }, // Program Course Name
       { wch: 15 }, // Academic Year
       { wch: 15 }, // Semester
@@ -512,6 +519,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const REQUIRED_BULK_UPLOAD_COLUMNS = [
     "UID",
     "Student Name",
+    "Affiliation",
+    "Regulation",
     "Program Course Name",
     "Academic Year",
     "Semester",
@@ -537,10 +546,15 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const sheetName = workbook.SheetNames?.[0] ?? "Sheet1";
+      const sheetName = workbook.SheetNames?.find((n) => n?.toString().trim().toLowerCase() === "sheet1") ?? null;
+      if (!sheetName) {
+        errors.push({ row: 0, data: {}, error: "Missing required sheet: Sheet1" });
+        return { isValid: false, errors, missingColumns, data: [] };
+      }
+
       const worksheet = workbook.Sheets?.[sheetName];
       if (!worksheet) {
-        errors.push("Failed to read worksheet from Excel file");
+        errors.push({ row: 0, data: {}, error: "Failed to read worksheet from Excel file" });
         return { isValid: false, errors, missingColumns, data: [] };
       }
       const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet as XLSX.WorkSheet);
@@ -575,6 +589,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         const rowNumber = index + 2;
         const uid = getVal(row, "UID");
         const studentName = getVal(row, "Student Name");
+        const affiliation = getVal(row, "Affiliation");
+        const regulation = getVal(row, "Regulation");
         const programCourseName = getVal(row, "Program Course Name");
         const academicYear = getVal(row, "Academic Year");
         const semester = getVal(row, "Semester");
@@ -588,6 +604,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         const missing: string[] = [];
         if (!uid) missing.push("UID");
         if (!studentName) missing.push("Student Name");
+        if (!affiliation) missing.push("Affiliation");
+        if (!regulation) missing.push("Regulation");
         if (!programCourseName) missing.push("Program Course Name");
         if (!academicYear) missing.push("Academic Year");
         if (!semester) missing.push("Semester");
@@ -603,6 +621,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
             data: {
               UID: uid,
               "Student Name": studentName,
+              Affiliation: affiliation,
+              Regulation: regulation,
               "Program Course Name": programCourseName,
               "Academic Year": academicYear,
               Semester: semester,
@@ -621,6 +641,8 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         data.push({
           UID: uid,
           "Student Name": studentName,
+          Affiliation: affiliation,
+          Regulation: regulation,
           "Program Course Name": programCourseName,
           "Academic Year": academicYear,
           Semester: semester,
@@ -653,11 +675,13 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
 
     setIsBulkUploading(true);
     setBulkUploadResult(null);
+    setBulkUploadMissingColumns([]);
 
     try {
       // Validate file
       const validation = await validateBulkUploadFile(bulkUploadFile);
       if (!validation.isValid) {
+        setBulkUploadMissingColumns(validation.missingColumns);
         const msg =
           validation.missingColumns.length > 0
             ? `Missing required columns: ${validation.missingColumns.join(", ")}`
@@ -715,7 +739,21 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
           );
         } else if (result.summary.failed === 0) {
           toast.success(`Bulk upload completed: ${result.summary.successful} mappings created`);
+        } else if (result.summary.failed > 0) {
+          toast.error(`Bulk upload failed: ${result.summary.failed} rows failed`);
         }
+
+        // Download failure file if available
+        if (result.failureFilePath && result.summary.failed > 0) {
+          const downloadUrl = `/uploads/${result.failureFilePath}`;
+          const link = document.createElement("a");
+          link.href = downloadUrl;
+          link.download = result.failureFilePath.split("/").pop() || "failures.xlsx";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+
         refetchMappings();
       }
     } catch (error) {
@@ -970,7 +1008,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   <TableHead>Shift</TableHead>
                   <TableHead>Payment Status</TableHead>
                   <TableHead>Amount to Pay</TableHead>
-                  <TableHead>Slab Type</TableHead>
+                  <TableHead>Fee Slab &amp; Category</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1020,9 +1058,26 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                         </TableCell>
                         <TableCell>{globalIndex}</TableCell>
                         <TableCell>
-                          <div className="flex flex-col">
-                            <span>{studentName}</span>
-                            {uid && <span className="text-xs text-gray-500">UID: {uid}</span>}
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage
+                                src={uid ? `${studentProfileBaseUrl}/Student_Image_${uid}.jpg` : undefined}
+                              />
+                              <AvatarFallback className="text-xs">
+                                {studentName && studentName !== "-"
+                                  ? studentName
+                                      .split(" ")
+                                      .map((n) => n[0])
+                                      .join("")
+                                      .slice(0, 2)
+                                      .toUpperCase()
+                                  : "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                              <span>{studentName}</span>
+                              {uid && <span className="text-xs text-gray-500">UID: {uid}</span>}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -1454,6 +1509,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                     const file = e.target.files?.[0] || null;
                     setBulkUploadFile(file);
                     setBulkUploadResult(null);
+                    setBulkUploadMissingColumns([]);
                   }}
                   className="flex-1"
                 />
@@ -1462,7 +1518,11 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   Template
                 </Button>
               </div>
-              <p className="text-xs text-gray-500">Excel file must contain columns: UID, Semester, Fee Category Name</p>
+              <p className="text-xs text-gray-500">
+                Excel file must contain columns: UID, Student Name, Affiliation, Regulation, Program Course Name,
+                Academic Year, Semester, Shift, Fee Slab, Fee Category, Approved By User Email, Approved Timestamp,
+                Remarks (optional)
+              </p>
             </div>
 
             {bulkUploadFile && (
@@ -1489,16 +1549,43 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   </div>
                 </div>
 
+                {bulkUploadMissingColumns.length > 0 && (
+                  <div className="p-3 bg-amber-50 rounded-md">
+                    <p className="text-sm font-medium text-amber-800 mb-2">Missing Columns:</p>
+                    <p className="text-xs text-amber-700">{bulkUploadMissingColumns.join(", ")}</p>
+                  </div>
+                )}
+
                 {bulkUploadResult.errors.length > 0 && (
-                  <div className="p-3 bg-red-50 rounded-md max-h-60 overflow-y-auto">
-                    <p className="text-sm font-medium text-red-700 mb-2">Errors:</p>
-                    <ul className="text-xs text-red-600 space-y-1">
-                      {bulkUploadResult.errors.map((error, index) => (
-                        <li key={index}>
-                          Row {error.row}: {error.error}
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="space-y-2">
+                    <div className="p-3 bg-red-50 rounded-md max-h-60 overflow-y-auto">
+                      <p className="text-sm font-medium text-red-700 mb-2">Errors:</p>
+                      <ul className="text-xs text-red-600 space-y-1">
+                        {bulkUploadResult.errors.map((error, index) => (
+                          <li key={index}>
+                            Row {error.row}: {error.error}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    {bulkUploadResult.failureFilePath && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const downloadUrl = `/uploads/${bulkUploadResult.failureFilePath}`;
+                          const link = document.createElement("a");
+                          link.href = downloadUrl;
+                          link.download = bulkUploadResult.failureFilePath.split("/").pop() || "failures.xlsx";
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="w-full flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Failure Report
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

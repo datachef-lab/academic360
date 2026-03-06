@@ -28,6 +28,7 @@ import {
 } from "@repo/db/schemas";
 import XLSX from "xlsx";
 import fs from "fs";
+import path from "path";
 import * as studentService from "@/features/user/services/student.service.js";
 import * as classService from "@/features/academics/services/class.service.js";
 import { socketService } from "@/services/socketService.js";
@@ -45,6 +46,10 @@ import {
 import * as programCourseService from "@/features/course-design/services/program-course.service.js";
 import * as feeCategoryService from "./fee-category.service.js";
 import * as userService from "@/features/user/services/user.service.js";
+import {
+  affiliationModel,
+  regulationTypeModel,
+} from "@repo/db/schemas/models/course-design";
 
 /**
  * Converts a Promotion model to PromotionDto
@@ -798,6 +803,8 @@ async function calculateTotalPayable(
 export interface BulkUploadRow {
   UID?: string;
   "Student Name"?: string;
+  Affiliation?: string;
+  Regulation?: string;
   "Program Course Name"?: string;
   "Academic Year"?: string;
   Semester?: string;
@@ -807,6 +814,7 @@ export interface BulkUploadRow {
   "Approved By User Email"?: string;
   "Approved Timestamp"?: string;
   Remarks?: string;
+  "Failure Reason"?: string;
 }
 
 export interface BulkUploadResult {
@@ -825,6 +833,7 @@ export interface BulkUploadResult {
     data: BulkUploadRow;
     mappingId: number;
   }>;
+  failureFilePath?: string;
 }
 
 function getRowVal(row: Record<string, unknown>, key: string): string {
@@ -877,7 +886,15 @@ export const bulkUploadFeeGroupPromotionMappings = async (
     emitProgress("Reading Excel file...", 0, "started");
 
     const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0] ?? "Sheet1";
+    const sheetName =
+      workbook.SheetNames?.find(
+        (n) => n?.toString().trim().toLowerCase() === "sheet1",
+      ) ?? null;
+
+    if (!sheetName) {
+      emitProgress("Missing required sheet: Sheet1", 100, "error");
+      return result;
+    }
     const worksheet = workbook.Sheets[sheetName];
     if (!worksheet) {
       emitProgress("Failed to read worksheet", 100, "error");
@@ -904,6 +921,8 @@ export const bulkUploadFeeGroupPromotionMappings = async (
       allClasses,
       allShifts,
       allAcademicYears,
+      allAffiliations,
+      allRegulationTypes,
     ] = await Promise.all([
       db.select().from(feeCategoryModel),
       db.select().from(feeSlabModel),
@@ -912,6 +931,8 @@ export const bulkUploadFeeGroupPromotionMappings = async (
       db.select().from(classModel).where(eq(classModel.type, "SEMESTER")),
       db.select().from(shiftModel),
       db.select().from(academicYearModel),
+      db.select().from(affiliationModel),
+      db.select().from(regulationTypeModel),
     ]);
 
     const feeCategoryMap = new Map<string, number>();
@@ -945,6 +966,15 @@ export const bulkUploadFeeGroupPromotionMappings = async (
       const key = ay.year?.toString().toLowerCase().trim();
       if (key) academicYearMap.set(key, ay.id!);
     });
+    const affiliationMap = new Map<string, number>();
+    allAffiliations.forEach((aff) => {
+      if (aff.name) affiliationMap.set(aff.name.toLowerCase().trim(), aff.id!);
+    });
+    const regulationTypeMap = new Map<string, number>();
+    allRegulationTypes.forEach((reg) => {
+      if (reg.name)
+        regulationTypeMap.set(reg.name.toLowerCase().trim(), reg.id!);
+    });
 
     emitProgress("Validating rows...", 10, "in_progress");
 
@@ -956,8 +986,10 @@ export const bulkUploadFeeGroupPromotionMappings = async (
           pct,
           "in_progress",
           {
-            processed: i,
+            processed: i + 1,
             total: rawData.length,
+            successful: result.summary.successful,
+            failed: result.summary.failed,
           },
         );
       }
@@ -965,7 +997,16 @@ export const bulkUploadFeeGroupPromotionMappings = async (
       const row = rawData[i];
       const rowNumber = i + 2;
 
-      const uid = getRowVal(row, "UID");
+      const rawUid = getRowVal(row, "UID");
+      // Normalise UID: if it looks numeric and shorter than 10 digits, pad leading zeros.
+      // This handles cases where Excel/CSV parsing has stripped leading zeros.
+      let uid = rawUid;
+      if (/^\d{1,10}$/.test(uid) && uid.length < 10) {
+        uid = uid.padStart(10, "0");
+      }
+      const studentName = getRowVal(row, "Student Name");
+      const affiliation = getRowVal(row, "Affiliation");
+      const regulation = getRowVal(row, "Regulation");
       const programCourseName = getRowVal(row, "Program Course Name");
       const academicYear = getRowVal(row, "Academic Year");
       const semester = getRowVal(row, "Semester");
@@ -973,10 +1014,13 @@ export const bulkUploadFeeGroupPromotionMappings = async (
       const feeSlabName = getRowVal(row, "Fee Slab");
       const feeCategoryName = getRowVal(row, "Fee Category");
       const approvedByEmail = getRowVal(row, "Approved By User Email");
+      const approvedTimestamp = getRowVal(row, "Approved Timestamp");
 
       const rowData: BulkUploadRow = {
-        UID: uid,
-        "Student Name": getRowVal(row, "Student Name"),
+        UID: rawUid,
+        "Student Name": studentName,
+        Affiliation: affiliation,
+        Regulation: regulation,
         "Program Course Name": programCourseName,
         "Academic Year": academicYear,
         Semester: semester,
@@ -984,22 +1028,29 @@ export const bulkUploadFeeGroupPromotionMappings = async (
         "Fee Slab": feeSlabName,
         "Fee Category": feeCategoryName,
         "Approved By User Email": approvedByEmail,
-        "Approved Timestamp": getRowVal(row, "Approved Timestamp"),
+        "Approved Timestamp": approvedTimestamp,
         Remarks: getRowVal(row, "Remarks"),
       };
 
       if (
         !uid ||
+        !studentName ||
+        !affiliation ||
+        !regulation ||
         !programCourseName ||
         !academicYear ||
         !semester ||
         !shift ||
         !feeSlabName ||
         !feeCategoryName ||
-        !approvedByEmail
+        !approvedByEmail ||
+        !approvedTimestamp
       ) {
         const missing = [];
         if (!uid) missing.push("UID");
+        if (!studentName) missing.push("Student Name");
+        if (!affiliation) missing.push("Affiliation");
+        if (!regulation) missing.push("Regulation");
         if (!programCourseName) missing.push("Program Course Name");
         if (!academicYear) missing.push("Academic Year");
         if (!semester) missing.push("Semester");
@@ -1007,6 +1058,7 @@ export const bulkUploadFeeGroupPromotionMappings = async (
         if (!feeSlabName) missing.push("Fee Slab");
         if (!feeCategoryName) missing.push("Fee Category");
         if (!approvedByEmail) missing.push("Approved By User Email");
+        if (!approvedTimestamp) missing.push("Approved Timestamp");
         result.errors.push({
           row: rowNumber,
           data: rowData,
@@ -1063,17 +1115,62 @@ export const bulkUploadFeeGroupPromotionMappings = async (
           continue;
         }
 
-        // (a) Student with uid + program course + semester + shift + academic year exists
-        const programCourseId = programCourseMap.get(
-          programCourseName.toLowerCase(),
+        // (4.1) Fetch Program Course using Affiliation, Regulation, and Program Course Name
+        const affiliationId = affiliationMap.get(affiliation.toLowerCase());
+        const regulationTypeId = regulationTypeMap.get(
+          regulation.toLowerCase(),
         );
+
+        if (!affiliationId) {
+          result.errors.push({
+            row: rowNumber,
+            data: rowData,
+            error: `Affiliation "${affiliation}" not found`,
+          });
+          result.summary.failed++;
+          continue;
+        }
+
+        if (!regulationTypeId) {
+          result.errors.push({
+            row: rowNumber,
+            data: rowData,
+            error: `Regulation "${regulation}" not found`,
+          });
+          result.summary.failed++;
+          continue;
+        }
+
+        // Find program course by affiliation, regulation, and name
+        const [programCourse] = await db
+          .select()
+          .from(programCourseModel)
+          .where(
+            and(
+              eq(programCourseModel.affiliationId, affiliationId),
+              eq(programCourseModel.regulationTypeId, regulationTypeId),
+              ilike(programCourseModel.name, programCourseName),
+            ),
+          )
+          .limit(1);
+
+        if (!programCourse || !programCourse.id) {
+          result.errors.push({
+            row: rowNumber,
+            data: rowData,
+            error: `Program Course "${programCourseName}" not found for Affiliation "${affiliation}" and Regulation "${regulation}"`,
+          });
+          result.summary.failed++;
+          continue;
+        }
+
+        const programCourseId = programCourse.id;
         const classId = classMap.get(semester.toLowerCase());
         const shiftId = shiftMap.get(shift.toLowerCase());
         const academicYearId = academicYearMap.get(academicYear.toLowerCase());
 
-        if (!programCourseId || !classId || !shiftId || !academicYearId) {
+        if (!classId || !shiftId || !academicYearId) {
           const missing = [];
-          if (!programCourseId) missing.push("Program Course");
           if (!classId) missing.push("Semester");
           if (!shiftId) missing.push("Shift");
           if (!academicYearId) missing.push("Academic Year");
@@ -1167,13 +1264,13 @@ export const bulkUploadFeeGroupPromotionMappings = async (
           result.errors.push({
             row: rowNumber,
             data: rowData,
-            error: `No fee structure with fee slab "${feeSlabName}" found for academic year "${academicYear}", program course "${programCourseName}", semester "${semester}", shift "${shift}"`,
+            error: `Fee Structure Not Found: No fee structure with fee slab "${feeSlabName}" found for academic year "${academicYear}", program course "${programCourseName}", semester "${semester}", shift "${shift}"`,
           });
           result.summary.failed++;
           continue;
         }
 
-        // Create or get existing mapping
+        // (8) Duplicate Mapping Check - Check if fee_group_promotion_mapping entry already exists
         const [existingMapping] = await db
           .select()
           .from(feeGroupPromotionMappingModel)
@@ -1186,6 +1283,34 @@ export const bulkUploadFeeGroupPromotionMappings = async (
 
         let createdMappingId: number;
         if (existingMapping) {
+          // Check if fees are already paid
+          const paidMappings = await db
+            .select({ id: feeStudentMappingModel.id })
+            .from(feeStudentMappingModel)
+            .where(
+              and(
+                eq(
+                  feeStudentMappingModel.feeGroupPromotionMappingId,
+                  existingMapping.id,
+                ),
+                eq(feeStudentMappingModel.paymentStatus, "COMPLETED"),
+              ),
+            )
+            .limit(1);
+
+          if (paidMappings.length > 0) {
+            // Fees already paid - do NOT update
+            result.errors.push({
+              row: rowNumber,
+              data: rowData,
+              error:
+                "Duplicate mapping exists and fees are already paid. Cannot update.",
+            });
+            result.summary.failed++;
+            continue;
+          }
+
+          // Fees NOT paid - update the existing mapping
           createdMappingId = existingMapping.id!;
           await db
             .update(feeGroupPromotionMappingModel)
@@ -1196,6 +1321,7 @@ export const bulkUploadFeeGroupPromotionMappings = async (
             })
             .where(eq(feeGroupPromotionMappingModel.id, existingMapping.id));
         } else {
+          // Create new mapping
           const [createdMapping] = await db
             .insert(feeGroupPromotionMappingModel)
             .values({
@@ -1286,6 +1412,46 @@ export const bulkUploadFeeGroupPromotionMappings = async (
       }
     }
 
+    // Generate failure Excel file if there are errors
+    let failureFilePath: string | undefined;
+    if (result.errors.length > 0) {
+      try {
+        const failureData = result.errors.map((err) => ({
+          ...err.data,
+          "Failure Reason": err.error,
+        }));
+
+        const failureWb = XLSX.utils.book_new();
+        const failureWs = XLSX.utils.json_to_sheet(failureData);
+        XLSX.utils.book_append_sheet(failureWb, failureWs, "Sheet1");
+
+        const fileName = `fee-group-promotion-mapping-failures-${userId}-${Date.now()}.xlsx`;
+        const uploadsRoot = path.resolve(process.cwd(), "uploads");
+        const failureDir = path.join(uploadsRoot, "failures");
+        if (!fs.existsSync(failureDir)) {
+          fs.mkdirSync(failureDir, { recursive: true });
+        }
+
+        const absoluteFailurePath = path.join(failureDir, fileName);
+        // Write as a real XLSX binary to avoid format issues
+        const wbBuffer = XLSX.write(failureWb, {
+          bookType: "xlsx",
+          type: "buffer",
+        } as XLSX.WritingOptions);
+        fs.writeFileSync(absoluteFailurePath, wbBuffer);
+
+        // Return relative path for UI download via `/uploads/...`
+        failureFilePath = `failures/${fileName}`;
+      } catch (failureFileError) {
+        console.error(
+          "Failed to generate failure Excel file:",
+          failureFileError,
+        );
+      }
+    }
+
+    result.failureFilePath = failureFilePath;
+
     try {
       fs.unlinkSync(filePath);
     } catch (cleanupError) {
@@ -1300,6 +1466,7 @@ export const bulkUploadFeeGroupPromotionMappings = async (
       {
         successful: result.summary.successful,
         failed: result.summary.failed,
+        failureFilePath,
       },
     );
 
