@@ -1589,7 +1589,7 @@ export default function ScheduleExamPage() {
   );
 
   const existingGroupFilterDateStr = existingGroupFilterDate
-    ? existingGroupFilterDate.toISOString().split("T")[0]
+    ? existingGroupFilterDate.toLocaleDateString("en-CA")
     : undefined;
 
   const { data: existingGroupsData, isLoading: loadingExamGroups } = useQuery(
