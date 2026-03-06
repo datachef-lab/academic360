@@ -86,7 +86,7 @@
 
     .bank-details {
       margin-bottom: 8px;
-      font-size: 11px;
+      font-size: 10px;
     }
 
     .bank-details p {
@@ -94,30 +94,33 @@
     }
 
     .bank-staff-note {
-      margin: 4px 0;
-       font-size: 11px;
+      margin: 10px 0;
+      margin-bottom: 18px;
+       font-size: 9px;
     }
 
     .student-info-wrapper {
       display: flex;
       gap: 16px;
       margin-bottom: 8px;
-      align-items: flex-start;
+      align-items: center;
     }
 
     .student-info {
-      display: table;
+      display: flex;
+      flex-direction: column;
       flex: 1;
       min-width: 0;
       border-collapse: collapse;
     }
 
     .student-info-row {
-      display: table-row;
+      display: flex;
     }
 
     .student-info-label {
-      display: table-cell;
+      display: flex;
+      justify-content: space-between;
       font-weight: bold;
       padding: 2px 6px 2px 0;
       width: 70px;
@@ -304,36 +307,54 @@
         </div>
         <div class="bank-details">
           <p>Federal Bank A/c 13040200023571</p>
-          <div style="display: flex; justify-content: space-between;">
-            <p>Payment can be made in any branch.</p>
-            <p style="font-weight: bold;">Preferred branch - Bhowanipore.</p>
+          <div style="display: flex; justify-content: space-between; width: 100%;">
+            <p style="width: 50%;">Payment can be made in any branch.</p>
+            <p style="font-weight: bold; width: 50%;">Preferred branch - Bhowanipore.</p>
           </div>
         </div>
         <div class="bank-staff-note">BANK STAFF: PLEASE ENTER CHALLAN NO IN PARTICULARS /STATEMENT</div>
         <div class="student-info-wrapper">
           <div class="student-info">
             <div class="student-info-row">
-              <span class="student-info-label">Name :</span>
+              <div class="student-info-label">
+                <span>Name</span> 
+                <span>:</span>
+              </div>
               <span class="student-info-value">MD ISHAN</span>
             </div>
             <div class="student-info-row">
-              <span class="student-info-label">UID :</span>
+              <div class="student-info-label">
+                <span>UID</span> 
+                <span>:</span>
+              </div>
               <span class="student-info-value">1004240156</span>
             </div>
             <div class="student-info-row">
-              <span class="student-info-label">DOB :</span>
+              <div class="student-info-label">
+                <span>DOB</span>
+                <span>:</span>
+              </div>
               <span class="student-info-value">02/03/2006</span>
             </div>
             <div class="student-info-row">
-              <span class="student-info-label">Mob No. :</span>
+              <div class="student-info-label">
+                <span>Mob No.</span>
+                <span>:</span>
+              </div>
               <span class="student-info-value">9330932995</span>
             </div>
             <div class="student-info-row">
-              <span class="student-info-label">Year :</span>
+              <div class="student-info-label">
+                <span>Year</span>
+                <span>:</span>
+              </div>
               <span class="student-info-value">Semester II</span>
             </div>
             <div class="student-info-row">
-              <span class="student-info-label">Course :</span>
+              <div class="student-info-label">
+                <span>Course</span>
+                <span>:</span>
+              </div>
               <span class="student-info-value">BBA (H) (Day)</span>
             </div>
           </div>
