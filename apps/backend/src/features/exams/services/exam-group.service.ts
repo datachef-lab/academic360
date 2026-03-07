@@ -32,6 +32,11 @@ function normalizeExamGroupName(name: string): string {
   return (name || "").trim().replace(/\s+/g, " ");
 }
 
+function normalizeExamCommencementDate(date: unknown): string {
+  if (date instanceof Date) return date.toISOString().slice(0, 10);
+  return String(date ?? "").slice(0, 10);
+}
+
 export async function findByName(name: string) {
   const normalizedName = normalizeExamGroupName(name);
 
@@ -41,6 +46,30 @@ export async function findByName(name: string) {
     .select()
     .from(examGroupModel)
     .where(sql`LOWER(${examGroupModel.name}) = ${normalizedName.toLowerCase()}`)
+    .limit(1);
+
+  return existing ?? null;
+}
+
+/** Find exam group by name + commencement date (both required). Used for uniqueness validation. */
+export async function findByNameAndCommencementDate(
+  name: string,
+  examCommencementDate: string,
+) {
+  const normalizedName = normalizeExamGroupName(name);
+  const normalizedDate = normalizeExamCommencementDate(examCommencementDate);
+
+  if (!normalizedName || !normalizedDate) return null;
+
+  const [existing] = await db
+    .select()
+    .from(examGroupModel)
+    .where(
+      and(
+        sql`LOWER(${examGroupModel.name}) = ${normalizedName.toLowerCase()}`,
+        eq(examGroupModel.examCommencementDate, normalizedDate),
+      ),
+    )
     .limit(1);
 
   return existing ?? null;

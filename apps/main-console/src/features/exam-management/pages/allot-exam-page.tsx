@@ -1051,15 +1051,23 @@ export default function AllotExamPage() {
                 <div
                   className={`grid grid-cols-1 gap-3 w-full ${enableFoilNumber ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}
                 >
-                  <Button
-                    onClick={() => setRoomsModalOpen(true)}
-                    variant="outline"
-                    disabled={!selectedExam || selectedExam.examSubjects.length === 0 || !enableRoomSelection}
-                    className="h-10 w-full border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <DoorOpen className="w-4 h-4 mr-2" />
-                    View Rooms ({selectedRooms.length})
-                  </Button>
+                  <div className="flex flex-col gap-1">
+                    <Button
+                      onClick={() => setRoomsModalOpen(true)}
+                      variant="outline"
+                      disabled={!selectedExam || selectedExam.examSubjects.length === 0 || !enableRoomSelection}
+                      className="h-10 w-full border-purple-300 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <DoorOpen className="w-4 h-4 mr-2" />
+                      View Rooms ({selectedRooms.length})
+                    </Button>
+                    {enableRoomSelection && selectedRooms.length === 0 && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />
+                        Please select at least one room
+                      </p>
+                    )}
+                  </div>
 
                   <Button
                     onClick={() => setStudentsModalOpen(true)}
@@ -1153,6 +1161,12 @@ export default function AllotExamPage() {
                       required
                       disabled={!!admitCardStartDate?.trim() && !!admitCardEndDate?.trim()}
                     />
+                    {(!admitCardStartDate || admitCardStartDate.trim() === "") && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />
+                        Please provide admit card start date
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="admit-card-end-date" className="text-sm font-medium text-gray-700">
@@ -1174,6 +1188,20 @@ export default function AllotExamPage() {
                       required
                       disabled={!!admitCardStartDate?.trim() && !!admitCardEndDate?.trim()}
                     />
+                    {(!admitCardEndDate || admitCardEndDate.trim() === "") && admitCardStartDate?.trim() && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />
+                        Please provide admit card end date
+                      </p>
+                    )}
+                    {admitCardStartDate?.trim() &&
+                      admitCardEndDate?.trim() &&
+                      new Date(admitCardEndDate) <= new Date(admitCardStartDate) && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3 shrink-0" />
+                          End date must be after start date
+                        </p>
+                      )}
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
@@ -1736,24 +1764,6 @@ export default function AllotExamPage() {
                   "Allot Exam"
                 )}
               </Button>
-              {!areAdmitCardDatesValid() && (
-                <p className="text-xs text-red-500">
-                  <AlertTriangle className="w-3 h-3 inline mr-1" />
-                  {!admitCardStartDate || admitCardStartDate.trim() === ""
-                    ? "Please provide admit card start date"
-                    : !admitCardEndDate || admitCardEndDate.trim() === ""
-                      ? "Please provide admit card end date"
-                      : new Date(admitCardEndDate) <= new Date(admitCardStartDate)
-                        ? "End date must be after start date"
-                        : "Invalid admit card dates"}
-                </p>
-              )}
-              {enableRoomSelection && selectedRooms.length === 0 && (
-                <p className="text-xs text-red-500">
-                  <AlertTriangle className="w-3 h-3 inline mr-1" />
-                  Please select at least one room
-                </p>
-              )}
             </div>
           )}
         </div>

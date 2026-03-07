@@ -8,13 +8,11 @@ export async function getAllExamComponent(): Promise<ApiResponse<ExamComponent[]
   return response.data;
 }
 
-// Get a single ExamComponent
 export async function getExamComponent(ExamComponentId: number): Promise<ApiResponse<ExamComponent>> {
   const response = await axiosInstance.get(`/api/course-design/exam-components/${ExamComponentId}`);
   return response.data;
 }
 
-// Add a new ExamComponent
 export async function addExamComponent(newExamComponent: ExamComponent): Promise<ApiResponse<ExamComponent>> {
   const response = await axiosInstance.post(`/api/course-design/exam-components`, newExamComponent);
   return response.data;

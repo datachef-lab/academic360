@@ -8,14 +8,28 @@ export const validateExamGroupUniqueController = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { name } = req.query;
+    const { name, examCommencementDate } = req.query;
 
     if (typeof name !== "string" || !name.trim()) {
       res.status(400).json(new ApiError(400, "`name` query param is required"));
       return;
     }
+    if (
+      typeof examCommencementDate !== "string" ||
+      !examCommencementDate.trim()
+    ) {
+      res
+        .status(400)
+        .json(
+          new ApiError(400, "`examCommencementDate` query param is required"),
+        );
+      return;
+    }
 
-    const existing = await examGroupService.findByName(name);
+    const existing = await examGroupService.findByNameAndCommencementDate(
+      name,
+      examCommencementDate,
+    );
 
     res.status(200).json(
       new ApiResponse(
@@ -26,8 +40,8 @@ export const validateExamGroupUniqueController = async (
           existingExamGroupId: existing?.id ?? null,
         },
         existing
-          ? "Exam group with the same name already exists"
-          : "Exam group name is available",
+          ? "Exam group with the same name and commencement date already exists"
+          : "Exam group name and commencement date combination is available",
       ),
     );
   } catch (error) {

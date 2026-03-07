@@ -15,7 +15,7 @@ router.use(verifyJWT);
 
 // Create
 router.post("/", createUserStatusMasterDomainController);
-// Read by ID
+
 router.get("/:id", getUserStatusMasterDomainById);
 // Read all for a master
 router.get("/master/:masterId", getUserStatusMasterDomainsByMasterId);

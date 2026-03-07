@@ -13,9 +13,8 @@ const router = express.Router();
 
 router.use(verifyJWT);
 
-// Create
 router.post("/", createUserStatusMasterFrequencyController);
-// Read by ID
+
 router.get("/:id", getUserStatusMasterFrequencyById);
 // Read all for a master
 router.get("/master/:masterId", getUserStatusMasterFrequenciesByMasterId);

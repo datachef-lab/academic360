@@ -1320,7 +1320,7 @@ export default function ScheduleExamPage() {
     return `${year}-${month}-${day}`;
   }, []);
 
-  // Debounced exam group uniqueness check (only for "Create New Group")
+  // Debounced exam group uniqueness check (only for "Create New Group"; runs after both name and date are set)
   useEffect(() => {
     if (examGroupMode !== "new") {
       setIsCheckingExamGroupUnique(false);
@@ -1330,8 +1330,12 @@ export default function ScheduleExamPage() {
     }
 
     const trimmedName = newGroupName.trim();
+    const commencementDateStr = newGroupCommencementDate
+      ? formatDateWithoutTimezone(newGroupCommencementDate)
+      : undefined;
 
-    if (!trimmedName) {
+    // Run validation only after date is set (and name is non-empty)
+    if (!trimmedName || !commencementDateStr) {
       setIsCheckingExamGroupUnique(false);
       setDuplicateExamGroupId(null);
       setExamGroupUniqueError(null);
@@ -1345,7 +1349,7 @@ export default function ScheduleExamPage() {
     const timer = window.setTimeout(() => {
       void (async () => {
         try {
-          const result = await validateExamGroupUnique(trimmedName);
+          const result = await validateExamGroupUnique(trimmedName, commencementDateStr);
           if (examGroupUniqueRequestIdRef.current !== requestId) return;
 
           setDuplicateExamGroupId(result.isUnique ? null : (result.existingExamGroupId ?? null));
@@ -1364,7 +1368,7 @@ export default function ScheduleExamPage() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [examGroupMode, newGroupName]);
+  }, [examGroupMode, newGroupName, newGroupCommencementDate, formatDateWithoutTimezone]);
 
   const assignExamMutation = useMutation({
     mutationFn: async () => {
@@ -1376,11 +1380,11 @@ export default function ScheduleExamPage() {
         throw new Error("Please select an exam commencement date for the new group");
       }
       if (examGroupMode === "new" && isCheckingExamGroupUnique) {
-        throw new Error("Please wait while we verify the exam group name");
+        throw new Error("Please wait while we verify the exam group name and date");
       }
       if (examGroupMode === "new" && duplicateExamGroupId) {
         throw new Error(
-          `An exam group with the same name already exists (ID: ${duplicateExamGroupId}). Please select the existing group or choose a different name.`,
+          `An exam group with the same name and commencement date already exists (ID: ${duplicateExamGroupId}). Please select the existing group or choose a different name/date.`,
         );
       }
       if (examGroupMode === "existing" && !selectedExistingGroupId) {
@@ -2036,8 +2040,8 @@ export default function ScheduleExamPage() {
                               </p>
                             ) : duplicateExamGroupId ? (
                               <p className="text-xs text-red-600">
-                                This exam group name already exists. Please switch to “Select Existing Group” or choose
-                                a different name.
+                                This exam group name and commencement date already exists. Please switch to “Select
+                                Existing Group” or choose a different name/date.
                               </p>
                             ) : null)}
                           {examGroupMode === "new" && examGroupUniqueError ? (

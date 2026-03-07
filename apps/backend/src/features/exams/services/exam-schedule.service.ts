@@ -1644,7 +1644,12 @@ export async function createExamAssignment(
       const rawCommencementDate = (
         examGroup as unknown as { examCommencementDate?: unknown } | null
       )?.examCommencementDate;
-      const normalizedDate = String(rawCommencementDate ?? "").slice(0, 10);
+      const normalizedDate =
+        rawCommencementDate &&
+        typeof rawCommencementDate === "object" &&
+        rawCommencementDate instanceof Date
+          ? rawCommencementDate.toISOString().slice(0, 10)
+          : String(rawCommencementDate ?? "").slice(0, 10);
 
       if (!normalizedName || !normalizedDate) {
         throw new Error("examGroup must have name and examCommencementDate");
@@ -1654,13 +1659,16 @@ export async function createExamAssignment(
         .select()
         .from(examGroupModel)
         .where(
-          sql`LOWER(${examGroupModel.name}) = ${normalizedName.toLowerCase()}`,
+          and(
+            sql`LOWER(${examGroupModel.name}) = ${normalizedName.toLowerCase()}`,
+            eq(examGroupModel.examCommencementDate, normalizedDate),
+          ),
         )
         .limit(1);
 
       if (existingExamGroup) {
         throw new Error(
-          `Exam group "${normalizedName}" already exists (ID: ${existingExamGroup.id}). Please select the existing group or choose a different name.`,
+          `Exam group "${normalizedName}" with commencement date ${normalizedDate} already exists (ID: ${existingExamGroup.id}). Please select the existing group or choose a different name/date.`,
         );
       }
 

@@ -12,9 +12,13 @@ export async function fetchExamGroupById(id: number): Promise<ExamGroupDto> {
   return response.data.payload;
 }
 
-export async function validateExamGroupUnique(name: string): Promise<ValidateExamGroupUniqueResponse> {
+export async function validateExamGroupUnique(
+  name: string,
+  examCommencementDate: string,
+): Promise<ValidateExamGroupUniqueResponse> {
   const params = new URLSearchParams({
     name,
+    examCommencementDate,
   });
   const response = await axiosInstance.get<ApiResponse<ValidateExamGroupUniqueResponse>>(
     `/api/exam-groups/validate-unique?${params.toString()}`,
