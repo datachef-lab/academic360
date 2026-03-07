@@ -256,7 +256,13 @@ export async function formatAppform(
     form.id!,
   );
 
-  dto.paymentInfo = await findPaymentInfoByApplicationFormId(form.id!);
+  const paymentInfo = await findPaymentInfoByApplicationFormId(form.id!);
+  dto.paymentInfo = paymentInfo
+    ? ({
+        ...paymentInfo,
+        paymentFor: "ADMISSION_APPLICATION_FEE" as const,
+      } as PaymentT)
+    : null;
 
   return dto;
 }

@@ -367,3 +367,19 @@ export const examSeatAllocationModeEnum = pgEnum("exam_seat_allocation_mode", [
     "STANDARD",
     "FOIL_NUMBER_BASED",
 ]);
+
+export const paymentGatewayEnum = pgEnum("payment_gateway", [
+    "RAZORPAY",
+    "PAYTM",
+    "PAYU",
+    "CCAVENUE",
+    "OTHER",
+    "CASHFREE",
+    "OFFLINE",
+]);
+
+export const paymentForTypeEnum = pgEnum("payment_for_type", [
+    "ADMISSION_APPLICATION_FEE",
+    "FEE",
+    "OTHER",
+]);
