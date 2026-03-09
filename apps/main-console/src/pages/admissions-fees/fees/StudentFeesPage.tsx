@@ -72,24 +72,6 @@ const StudentFeesPage: React.FC = () => {
   const { showError } = useError();
   const { user } = useAuth();
   const { openPaytmCheckout, loading: paytmLoading } = usePaytmCheckout();
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const payment = params.get("payment");
-    const orderId = params.get("orderId");
-    if (payment && orderId) {
-      if (payment === "success") {
-        toast.success("Payment recorded successfully");
-      } else if (payment === "failed") {
-        toast.error("Payment failed");
-      }
-      params.delete("payment");
-      params.delete("orderId");
-      const newSearch = params.toString();
-      const newUrl = newSearch ? `${window.location.pathname}?${newSearch}` : window.location.pathname;
-      window.history.replaceState({}, "", newUrl);
-    }
-  }, []);
-
   // Fetch all fee-student-mappings for a student
   const fetchStudentMappings = useCallback(
     async (studentId: number) => {
@@ -112,6 +94,41 @@ const StudentFeesPage: React.FC = () => {
     [showError],
   );
 
+  // Handle payment callback from redirect URL (Paytm opens in new tab, redirects back)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get("payment");
+    const orderId = params.get("orderId");
+    const studentIdParam = params.get("studentId");
+    if (payment && orderId) {
+      if (payment === "success") {
+        toast.success("Payment recorded successfully");
+      } else if (payment === "failed") {
+        toast.error("Payment failed");
+      }
+      if (studentIdParam) {
+        const sid = parseInt(studentIdParam, 10);
+        if (!isNaN(sid)) {
+          getStudentById(sid)
+            .then((student) => {
+              if (student?.id) {
+                setSelectedStudent(student);
+                fetchStudentMappings(student.id);
+              }
+            })
+            .catch(() => {});
+        }
+      }
+      params.delete("payment");
+      params.delete("orderId");
+      params.delete("studentId");
+      const newSearch = params.toString();
+      const newUrl = newSearch ? `${window.location.pathname}?${newSearch}` : window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [fetchStudentMappings]);
+
+  // Handle payment callback from postMessage (Paytm in popup with opener)
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.data?.type === "PAYTM_PAYMENT_RESULT") {
@@ -120,7 +137,8 @@ const StudentFeesPage: React.FC = () => {
         } else if (e.data.payment === "failed") {
           toast.error("Payment failed");
         }
-        if (selectedStudent?.id) fetchStudentMappings(selectedStudent.id);
+        const sid = e.data.studentId ? parseInt(e.data.studentId, 10) : selectedStudent?.id;
+        if (sid && !isNaN(sid)) fetchStudentMappings(sid);
       }
     };
     window.addEventListener("message", handler);

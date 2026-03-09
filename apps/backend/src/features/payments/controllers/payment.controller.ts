@@ -1,4 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/index.js";
+import { feeStudentMappingModel } from "@repo/db/schemas";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
@@ -446,15 +449,24 @@ export const paymentCallbackHandler = async (
       });
     }
 
+    let studentId = "";
+    if (payment.feeStudentMappingId) {
+      const [mapping] = await db
+        .select({ studentId: feeStudentMappingModel.studentId })
+        .from(feeStudentMappingModel)
+        .where(eq(feeStudentMappingModel.id, payment.feeStudentMappingId));
+      if (mapping?.studentId) studentId = String(mapping.studentId);
+    }
+
     const frontendUrl = process.env.CORS_ORIGIN || "http://localhost:5173";
-    const redirectUrl = `${frontendUrl}/dashboard/fees/student-fees?payment=${status === "TXN_SUCCESS" ? "success" : "failed"}&orderId=${orderId}`;
     const paymentResult = status === "TXN_SUCCESS" ? "success" : "failed";
+    const redirectUrl = `${frontendUrl}/dashboard/fees/student-fees?payment=${paymentResult}&orderId=${orderId}${studentId ? `&studentId=${studentId}` : ""}`;
     res.setHeader("Content-Type", "text/html");
     res.status(200).send(
       `<!DOCTYPE html><html><body>
         <script>
           if (window.opener) {
-            try { window.opener.postMessage({ type: "PAYTM_PAYMENT_RESULT", payment: "${paymentResult}", orderId: "${orderId}" }, "${frontendUrl}"); } catch(e) {}
+            try { window.opener.postMessage({ type: "PAYTM_PAYMENT_RESULT", payment: "${paymentResult}", orderId: "${orderId}", studentId: "${studentId}" }, "${frontendUrl}"); } catch(e) {}
             window.close();
           } else {
             window.location.href = "${redirectUrl}";
