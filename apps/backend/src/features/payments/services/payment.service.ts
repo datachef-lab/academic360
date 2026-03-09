@@ -101,11 +101,11 @@ export async function updatePaymentByOrderId(
     gatewayResponse?: object;
   },
 ) {
-  const dbStatus = updates.status === "SUCCESS" ? "COMPLETED" : updates.status;
+  const dbStatus = updates.status === "SUCCESS" ? "COMPLETED" : "FAILED";
   const [updated] = await db
     .update(paymentModel)
     .set({
-      status: dbStatus,
+      status: updates.status,
       paymentStatus: dbStatus,
       transactionId: updates.transactionId ?? null,
       bankTxnId: updates.bankTxnId ?? null,

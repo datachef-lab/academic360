@@ -60,7 +60,7 @@ export function usePaytmCheckout() {
       };
       document.head.appendChild(script);
     });
-  });
+  }, []);
 
   useEffect(() => {
     getPaymentConfig()
