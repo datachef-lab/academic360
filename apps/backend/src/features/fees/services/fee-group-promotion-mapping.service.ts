@@ -252,6 +252,11 @@ async function modelToDto(
     return null;
   }
 
+  // Fetch updatedByUser if available
+  const updatedByUser = model.updatedByUserId
+    ? await userService.findById(model.updatedByUserId)
+    : null;
+
   return {
     ...model,
     feeGroup: {
@@ -260,6 +265,14 @@ async function modelToDto(
       feeSlab,
     },
     promotion: promotionDto,
+    updatedByUser: updatedByUser
+      ? {
+          name: updatedByUser.name || "Unknown",
+          avatarUrl:
+            (updatedByUser as { avatarUrl?: string | null } | null)
+              ?.avatarUrl ?? null,
+        }
+      : null,
   };
 }
 
@@ -538,13 +551,21 @@ export const updateFeeGroupPromotionMapping = async (
     return null;
   }
 
+  // Prepare update data - handle remarks: empty string becomes null, undefined means don't update
+  const updateData: any = {
+    ...data,
+    updatedAt: new Date(),
+    updatedByUserId: data.updatedByUserId ?? userId,
+  };
+
+  // Handle remarks: if explicitly provided (even as empty string), update it
+  if (data.remarks !== undefined) {
+    updateData.remarks = data.remarks === "" ? null : data.remarks;
+  }
+
   const [updated] = await db
     .update(feeGroupPromotionMappingModel)
-    .set({
-      ...data,
-      updatedAt: new Date(),
-      updatedByUserId: data.updatedByUserId ?? userId,
-    })
+    .set(updateData)
     .where(eq(feeGroupPromotionMappingModel.id, id))
     .returning();
 

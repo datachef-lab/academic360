@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   getAllFeeGroupPromotionMappings,
@@ -72,20 +72,82 @@ export const useUpdateFeeGroupPromotionMapping = () => {
       const response = await updateFeeGroupPromotionMapping(id, data);
       return response.payload;
     },
-    onSuccess: (_data, variables) => {
-      // Invalidate and refetch mappings list
-      queryClient.invalidateQueries({
+    /**
+     * Optimistic update for super-fast UI:
+     * - Immediately patches the affected mapping in all cached lists
+     * - Rolls back if the request fails
+     * - Still keeps server as source of truth via onSuccess
+     */
+    onMutate: async ({ id, data }) => {
+      // Cancel any outgoing refetches so we don't overwrite our optimistic update
+      await queryClient.cancelQueries({
         queryKey: feeGroupPromotionMappingKeys.lists(),
       });
-      // Also invalidate the specific detail if needed
-      queryClient.invalidateQueries({
-        queryKey: feeGroupPromotionMappingKeys.detail(variables.id),
+
+      // Take a snapshot of current cached lists so we can roll back on error
+      const listKey = feeGroupPromotionMappingKeys.lists() as QueryKey;
+      const previousLists = queryClient.getQueriesData(listKey) as [QueryKey, unknown][];
+
+      // Helper: strip undefined fields so we don't overwrite existing values with undefined
+      const cleanPatch: Record<string, unknown> = { ...data };
+      Object.keys(cleanPatch).forEach((key) => {
+        if (cleanPatch[key] === undefined) {
+          delete cleanPatch[key];
+        }
       });
-      toast.success("Fee group promotion mapping updated successfully");
+
+      // Optimistically update all list queries containing this mapping
+      previousLists.forEach(([queryKey, oldValue]) => {
+        if (!Array.isArray(oldValue)) return;
+        queryClient.setQueryData(
+          queryKey,
+          oldValue.map((m: any) => (m?.id === id ? { ...m, ...cleanPatch } : m)),
+        );
+      });
+
+      return { previousLists };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _variables, context) => {
       console.error("Error updating fee group promotion mapping:", error);
+
+      // Roll back to previous cached values if we have them
+      if (context?.previousLists) {
+        context.previousLists.forEach(([prevKey, oldValue]) => {
+          queryClient.setQueryData(prevKey, oldValue);
+        });
+      }
+
       toast.error("Failed to update fee group promotion mapping");
+    },
+    onSuccess: (data, variables) => {
+      // Merge server response into caches (keeps any recalculated fields like amountToPay)
+      if (data) {
+        // Update all list queries
+        queryClient.setQueriesData(
+          { queryKey: feeGroupPromotionMappingKeys.lists(), exact: false },
+          (oldValue: unknown) => {
+            if (!Array.isArray(oldValue)) return oldValue;
+
+            // Clean server payload to avoid overriding with undefined
+            const cleanServer: Record<string, unknown> = { ...data };
+            Object.keys(cleanServer).forEach((key) => {
+              if (cleanServer[key] === undefined) {
+                delete cleanServer[key];
+              }
+            });
+
+            return oldValue.map((m: any) => (m?.id === variables.id ? { ...m, ...cleanServer } : m));
+          },
+        );
+
+        // Update the detail cache for this mapping as well
+        queryClient.setQueryData(feeGroupPromotionMappingKeys.detail(variables.id), (old: any) => ({
+          ...old,
+          ...data,
+        }));
+      }
+
+      toast.success("Fee group promotion mapping updated successfully");
     },
   });
 };

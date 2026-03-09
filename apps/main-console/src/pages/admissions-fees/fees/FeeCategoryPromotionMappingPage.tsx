@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Link2, Trash2, Upload, Download, Loader2, Pencil } from "lucide-react";
+import { Link2, Trash2, Upload, Download, Loader2, Pencil, ChevronDown, Check } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,6 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +55,16 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
   const [deletingItem, setDeletingItem] = useState<FeeGroupPromotionMappingDto | null>(null);
   const [editingItem, setEditingItem] = useState<FeeGroupPromotionMappingDto | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [showSlabChangeModal, setShowSlabChangeModal] = useState(false);
+  const [pendingSlabChange, setPendingSlabChange] = useState<{
+    mapping: FeeGroupPromotionMappingDto;
+    newFeeGroupId: number | null;
+  } | null>(null);
+  const [slabChangeForm, setSlabChangeForm] = useState<{
+    approvedByUserId: number | null;
+    remarks: string;
+  }>({ approvedByUserId: null, remarks: "" });
+  const [slabChangeError, setSlabChangeError] = useState<string>("");
   const [editForm, setEditForm] = useState<{
     feeGroupId: number | null;
     remarks: string;
@@ -516,6 +532,79 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     XLSX.writeFile(wb, "fee-group-promotion-mapping-template.xlsx");
   };
 
+  // Export current student fee group mappings (respecting filters & search) as Excel + CSV
+  const handleDownloadMappingsExport = () => {
+    // Use filtered mappings so export matches the current filters/search,
+    // fallback to all mappings if filters have not been applied yet.
+    const exportMappings = filteredMappings.length > 0 ? filteredMappings : mappings;
+
+    if (!exportMappings.length) {
+      toast.error("No mappings available to export");
+      return;
+    }
+
+    const rows = exportMappings.map((mapping, index) => {
+      const promo: any = mapping.promotion || {};
+      const studentName = promo.studentName || promo.name || "-";
+      const uid = promo.uid || promo.studentUid || "";
+      const programCourseName = promo.programCourse?.name || "-";
+      const semesterName = promo.class?.name || "-";
+      const shiftName = promo.shift?.name || "-";
+      const paymentStatus = mapping.paymentStatus ?? "Pending";
+      const amountToPay = mapping.amountToPay ?? 0;
+      const feeSlabName = mapping.feeGroup?.feeSlab?.name || "-";
+      const feeCategoryName = mapping.feeGroup?.feeCategory?.name || mapping.feeCategory?.name || "-";
+      const approvedByName = mapping.updatedByUser?.name || "";
+      const approvalDate = mapping.updatedAt
+        ? new Date(mapping.updatedAt).toLocaleString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "";
+
+      return {
+        "Sr No.": index + 1,
+        UID: uid,
+        "Student Name": studentName,
+        "Program Course": programCourseName,
+        Semester: semesterName,
+        Shift: shiftName,
+        "Payment Status": paymentStatus,
+        "Amount to Pay": amountToPay,
+        "Fee Slab": feeSlabName,
+        "Fee Category": feeCategoryName,
+        "Approved By": approvedByName,
+        "Approval Date": approvalDate,
+        Remarks: mapping.remarks ?? "",
+      };
+    });
+
+    // Create worksheet & workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "Student Fee Group Mapping");
+
+    // Download as Excel
+    const dateTag = new Date().toISOString().slice(0, 10);
+    const excelFileName = `student-fee-group-mapping-${dateTag}.xlsx`;
+    XLSX.writeFile(wb, excelFileName);
+
+    // Also prepare a CSV version (optional, same data) and trigger download
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const csvUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = csvUrl;
+    link.download = `student-fee-group-mapping-${dateTag}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(csvUrl);
+  };
+
   const REQUIRED_BULK_UPLOAD_COLUMNS = [
     "UID",
     "Student Name",
@@ -776,9 +865,9 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
     setEditDialogOpen(true);
   };
 
-  // Load admin/staff users when edit dialog opens
+  // Load admin/staff users when edit dialog or slab change modal opens
   useEffect(() => {
-    if (editDialogOpen) {
+    if (editDialogOpen || showSlabChangeModal) {
       setApprovalSearchText("");
       findAdminsAndStaff(1, 200).then((users) => {
         setAdminStaffUsers(
@@ -792,7 +881,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         );
       });
     }
-  }, [editDialogOpen]);
+  }, [editDialogOpen, showSlabChangeModal]);
 
   const filteredAdminStaffUsers = useMemo(() => {
     if (!approvalSearchText.trim()) return adminStaffUsers;
@@ -816,12 +905,49 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         id: editingItem.id,
         data: {
           feeGroupId: editForm.feeGroupId,
-          remarks: editForm.remarks || undefined,
+          // Send remarks as-is so clearing the field also clears remarks in DB
+          remarks: editForm.remarks,
           updatedByUserId: editForm.updatedByUserId ?? undefined,
         },
       });
       setEditDialogOpen(false);
       setEditingItem(null);
+    } catch {
+      // Error handled by mutation
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleSlabChangeClick = (mapping: FeeGroupPromotionMappingDto, newFeeGroupId: number) => {
+    setPendingSlabChange({ mapping, newFeeGroupId });
+    setSlabChangeForm({ approvedByUserId: null, remarks: "" });
+    setSlabChangeError("");
+    setShowSlabChangeModal(true);
+  };
+
+  const handleSlabChangeConfirm = async () => {
+    if (!pendingSlabChange) return;
+    if (!slabChangeForm.approvedByUserId) {
+      setSlabChangeError("Please select an approver to proceed");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      await updateMutation.mutateAsync({
+        id: pendingSlabChange.mapping.id!,
+        data: {
+          feeGroupId: pendingSlabChange.newFeeGroupId,
+          // Send remarks as-is so clearing the field also clears remarks in DB
+          remarks: slabChangeForm.remarks,
+          updatedByUserId: slabChangeForm.approvedByUserId ?? undefined,
+        },
+      });
+      setShowSlabChangeModal(false);
+      setPendingSlabChange(null);
+      setSlabChangeForm({ approvedByUserId: null, remarks: "" });
+      toast.success("Slab changed successfully");
     } catch {
       // Error handled by mutation
     } finally {
@@ -898,10 +1024,16 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                 Configure mappings between students (by class/UID/roll) and fee groups
               </p>
             </div>
-            <Button onClick={() => setShowBulkUploadModal(true)} className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Upload Bulk Mapping
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleDownloadMappingsExport} className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Download Excel / CSV
+              </Button>
+              <Button onClick={() => setShowBulkUploadModal(true)} className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Upload Bulk Mapping
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -1008,14 +1140,17 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   <TableHead>Shift</TableHead>
                   <TableHead>Payment Status</TableHead>
                   <TableHead>Amount to Pay</TableHead>
-                  <TableHead>Fee Slab &amp; Category</TableHead>
+                  <TableHead>Fee Slab</TableHead>
+                  <TableHead>Approved By</TableHead>
+                  <TableHead>Approval Date</TableHead>
+                  <TableHead>Remarks</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {!hasFilters ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-gray-500">
+                    <TableCell colSpan={13} className="text-center py-12 text-gray-500">
                       <p className="font-medium">Apply filters to load data</p>
                       <p className="text-sm mt-1">
                         Select at least one filter (e.g. Academic Year, Semester) to view student fee group mappings.
@@ -1024,7 +1159,7 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                   </TableRow>
                 ) : paginatedMappings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={13} className="text-center py-8 text-gray-500">
                       No mappings found
                     </TableCell>
                   </TableRow>
@@ -1149,16 +1284,131 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell>
+                          {mapping.updatedByUser?.name ? (
+                            <div className="flex items-center gap-2">
+                              <UserAvatar
+                                user={{
+                                  name: mapping.updatedByUser.name,
+                                  image: mapping.updatedByUser.avatarUrl ?? undefined,
+                                }}
+                                size="sm"
+                                className="rounded-full shrink-0"
+                              />
+                              <span className="text-sm">{mapping.updatedByUser.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {mapping.updatedAt ? (
+                            <span className="text-sm">
+                              {new Date(mapping.updatedAt).toLocaleDateString("en-GB", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              })}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {mapping.remarks ? (
+                            <span className="text-sm" title={mapping.remarks}>
+                              {mapping.remarks.length > 50 ? `${mapping.remarks.substring(0, 50)}...` : mapping.remarks}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => paymentStatus !== "Paid" && handleEditClick(mapping)}
-                              disabled={paymentStatus === "Paid"}
-                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-40 disabled:pointer-events-none"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                            {paymentStatus === "Paid" ? (
+                              <div
+                                className="flex items-center gap-1 text-gray-400"
+                                title="Record is PAID — no modifications allowed"
+                              >
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <rect x="3" y="11" width="18" height="11" rx="2" />
+                                  <path d="M7 11V7a5 5 0 0110 0v4" />
+                                </svg>
+                                <span className="text-xs">Locked</span>
+                              </div>
+                            ) : (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 text-purple-600 border-purple-300 bg-purple-50 hover:bg-purple-100 hover:text-purple-700"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                                    Change Slab
+                                    <ChevronDown className="h-3.5 w-3.5 ml-1.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-64">
+                                  <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase border-b">
+                                    Change Slab — {studentName}
+                                  </div>
+                                  {(() => {
+                                    const currentFeeGroupId = mapping.feeGroup?.id;
+                                    const availableGroups =
+                                      feeGroups && feeGroups.length > 0
+                                        ? feeGroups
+                                        : (() => {
+                                            const seen = new Set<number>();
+                                            const out: typeof feeGroups = [];
+                                            for (const m of mappings) {
+                                              if (m.feeGroup?.id && !seen.has(m.feeGroup.id)) {
+                                                seen.add(m.feeGroup.id);
+                                                out.push(m.feeGroup);
+                                              }
+                                            }
+                                            if (mapping.feeGroup?.id && !seen.has(mapping.feeGroup.id)) {
+                                              out.unshift(mapping.feeGroup);
+                                            }
+                                            return out;
+                                          })();
+                                    return availableGroups?.map((fg) => {
+                                      const isCurrent = fg.id === currentFeeGroupId;
+                                      return (
+                                        <DropdownMenuItem
+                                          key={fg.id}
+                                          disabled={isCurrent}
+                                          onClick={() => !isCurrent && handleSlabChangeClick(mapping, fg.id!)}
+                                          className="flex items-center justify-between py-2"
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs font-mono font-semibold">
+                                              {fg.feeSlab?.name || "-"}
+                                            </span>
+                                            <span className="text-gray-400">|</span>
+                                            <span className="text-sm">{fg.feeCategory?.name || "-"}</span>
+                                            {isCurrent && (
+                                              <span className="text-xs text-purple-600 font-semibold ml-2">
+                                                CURRENT
+                                              </span>
+                                            )}
+                                          </div>
+                                        </DropdownMenuItem>
+                                      );
+                                    });
+                                  })()}
+                                  <div className="px-2 py-1.5 text-xs text-gray-500 border-t mt-1">
+                                    ℹ Amount auto-recalculated from master Slab table
+                                  </div>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                             {canDelete && (
                               <Button
                                 variant="ghost"
@@ -1837,6 +2087,187 @@ const FeeGroupPromotionMappingPage: React.FC = () => {
         itemName={deletingItem?.feeGroup?.feeCategory?.name || deletingItem?.feeCategory?.name || ""}
         description={`Are you sure you want to delete the mapping between fee group "${deletingItem?.feeGroup?.feeCategory?.name || deletingItem?.feeCategory?.name}" and student "${getPromotionDisplayText(deletingItem?.promotion)}"? This action cannot be undone.`}
       />
+
+      {/* Slab Change Confirmation Modal */}
+      <Dialog open={showSlabChangeModal} onOpenChange={setShowSlabChangeModal}>
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Confirm Slab Change</DialogTitle>
+          </DialogHeader>
+          {pendingSlabChange && (
+            <div className="space-y-6 py-5 overflow-y-auto">
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-sm text-yellow-800">
+                  This will update the slab for the <strong>current active UNPAID semester only</strong>. Future
+                  semesters will inherit the new slab type automatically on promotion.
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-md flex items-center gap-4">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage
+                    src={
+                      (pendingSlabChange.mapping.promotion as { uid?: string } | undefined)?.uid
+                        ? `${import.meta.env.VITE_STUDENT_IMAGE_BASE_URL ?? "https://besc.academic360.app/id-card-generate/api/images?crop=true&uid="}${
+                            (pendingSlabChange.mapping.promotion as { uid: string }).uid
+                          }`
+                        : undefined
+                    }
+                  />
+                  <AvatarFallback className="bg-slate-200 text-slate-700 text-sm">
+                    {(pendingSlabChange.mapping.promotion as { studentName?: string } | undefined)?.studentName
+                      ?.split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase() || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Student</div>
+                  <div className="font-semibold text-sm">
+                    {(pendingSlabChange.mapping.promotion as { studentName?: string })?.studentName || "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    UID: {(pendingSlabChange.mapping.promotion as { uid?: string })?.uid || "—"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-8 p-4 bg-slate-50 rounded-md">
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-2">From</div>
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {pendingSlabChange.mapping.feeGroup?.feeSlab?.name || "-"}
+                  </Badge>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {pendingSlabChange.mapping.feeGroup?.feeCategory?.name || "-"}
+                  </div>
+                </div>
+                <div className="text-2xl text-muted-foreground">→</div>
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-2">To</div>
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {(() => {
+                      const newGroup = feeGroups?.find((fg) => fg.id === pendingSlabChange.newFeeGroupId);
+                      return newGroup?.feeSlab?.name || "-";
+                    })()}
+                  </Badge>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {(() => {
+                      const newGroup = feeGroups?.find((fg) => fg.id === pendingSlabChange.newFeeGroupId);
+                      return newGroup?.feeCategory?.name || "-";
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-md border border-slate-200">
+                <p className="text-xs text-muted-foreground">
+                  💡 The new fee amount will be resolved automatically from the <strong>FeeSlab master table</strong>{" "}
+                  (Program · Shift · Slab).
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  Approved By <span className="text-red-500">*</span>
+                </Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Input
+                    placeholder="Search by name, email, type..."
+                    value={approvalSearchText}
+                    onChange={(e) => setApprovalSearchText(e.target.value)}
+                    className="max-w-[260px] h-8 text-sm"
+                  />
+                </div>
+                <div
+                  className="border rounded-md max-h-48 overflow-y-auto divide-y"
+                  role="listbox"
+                  aria-label="Select approver"
+                >
+                  {filteredAdminStaffUsers.length === 0 ? (
+                    <p className="p-3 text-sm text-muted-foreground text-center">
+                      {approvalSearchText ? "No users match your search" : "No users available"}
+                    </p>
+                  ) : (
+                    filteredAdminStaffUsers.map((u) => {
+                      const isSelected = slabChangeForm.approvedByUserId === u.id;
+                      return (
+                        <button
+                          key={u.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            setSlabChangeForm((prev) => ({
+                              ...prev,
+                              approvedByUserId: isSelected ? null : u.id,
+                            }));
+                            setSlabChangeError("");
+                          }}
+                          className={`w-full flex items-center gap-3 p-3 text-left transition-all duration-150 hover:bg-slate-100 ${
+                            isSelected
+                              ? "bg-primary/10 ring-2 ring-primary/40 shadow-sm scale-[0.99]"
+                              : "bg-transparent scale-100"
+                          }`}
+                        >
+                          <UserAvatar
+                            user={{ name: u.name, image: u.image ?? undefined }}
+                            size="sm"
+                            className="rounded-full shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium truncate">{u.name}</p>
+                              {u.type && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                                  {u.type}
+                                </Badge>
+                              )}
+                            </div>
+                            {u.email && <p className="text-xs text-muted-foreground truncate">{u.email}</p>}
+                          </div>
+                          {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+                {slabChangeError && <p className="text-xs text-red-600 mt-1">{slabChangeError}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  Remarks <span className="text-xs text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Textarea
+                  placeholder="e.g. Student applied for scholarship, documents verified…"
+                  value={slabChangeForm.remarks}
+                  onChange={(e) => setSlabChangeForm((prev) => ({ ...prev, remarks: e.target.value }))}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSlabChangeModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSlabChangeConfirm} disabled={savingEdit}>
+              {savingEdit ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                "Confirm Change"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk Upload Progress Dialog (socket-driven, like reports page) */}
       <ExportProgressDialog
