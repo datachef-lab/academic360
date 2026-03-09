@@ -749,7 +749,7 @@ export default function ExamsContent() {
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm text-purple-600 font-medium truncate">Total Subjects</p>
+                    <p className="text-xs sm:text-sm text-purple-600 font-medium truncate">Total Papers</p>
                     <p className="text-2xl sm:text-3xl font-bold text-purple-700">{displaySubjectCount}</p>
                   </div>
                   <div className="bg-purple-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-purple-200 flex-shrink-0">

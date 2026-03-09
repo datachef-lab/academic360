@@ -105,7 +105,7 @@ export default function ScheduleExamPage() {
   });
 
   // Ensure classes is always an array to prevent .map() errors
-  const classes = Array.isArray(classesData) ? classesData : [];
+  const classes = useMemo(() => (Array.isArray(classesData) ? classesData : []), [classesData]);
 
   const { data: programCourses = [], isLoading: loadingProgramCourses } = useQuery({
     queryKey: ["programCourses"],
@@ -572,7 +572,7 @@ export default function ScheduleExamPage() {
     return filtered;
   }, [papers, selectedExamComponent]);
 
-  const getDistinctSubjects = (): Array<{
+  const getDistinctSubjects = useCallback((): Array<{
     subjectId: number | null;
     subjectName: string;
     subjectCode: string | null;
@@ -600,7 +600,7 @@ export default function ScheduleExamPage() {
       subjectName: subjectData.name,
       subjectCode: subjectData.code,
     }));
-  };
+  }, [getAvailablePapers, subjects]);
 
   // getPapersForSelectedSubject moved to allot-exam-page
 
@@ -1521,8 +1521,8 @@ export default function ScheduleExamPage() {
     const streamNamesArray = Array.from(
       new Set(
         selectedProgramCourses
-          .map((pcId) => programCourses.find((pc) => pc.id === pcId)?.stream?.name!)
-          .filter(Boolean),
+          .map((pcId) => programCourses.find((pc) => pc.id === pcId)?.stream?.name)
+          .filter((name): name is string => Boolean(name)),
       ),
     ) as string[];
 
@@ -1538,6 +1538,11 @@ export default function ScheduleExamPage() {
         streamNamesArray.slice(0, -1).join(", ") + " & " + streamNamesArray[streamNamesArray.length - 1];
     }
 
+    const affiliation = affiliations.find((a) => a.id == selectedAffiliationId);
+    const affiliationName = affiliation?.shortName || affiliation?.name || "";
+    const regulation = regulationTypes.find((r) => r.id == selectedRegulationTypeId);
+    const regulationName = regulation?.shortName || regulation?.name || "";
+
     const examTypeName = examTypes.find((et) => et.id?.toString() === examType)?.name || "";
 
     const academicYearName = availableAcademicYears.find((ay) => ay.id === selectedAcademicYearId)?.year || "";
@@ -1545,7 +1550,7 @@ export default function ScheduleExamPage() {
     const semesterName = classes.find((c) => c.id?.toString() === semester)?.name || "";
 
     if (formattedStreams && examTypeName && academicYearName && semesterName) {
-      return `${toSentenceCase(semesterName)} ${toSentenceCase(formattedStreams)} - ${toSentenceCase(examTypeName)} (${toSentenceCase(academicYearName)})`;
+      return `${toSentenceCase(semesterName)} ${affiliationName} (${regulationName}) ${toSentenceCase(formattedStreams)} - ${toSentenceCase(examTypeName)} (${toSentenceCase(academicYearName)})`;
     }
 
     return "";
@@ -1558,6 +1563,10 @@ export default function ScheduleExamPage() {
     examTypes,
     availableAcademicYears,
     classes,
+    selectedAffiliationId,
+    affiliations,
+    selectedRegulationTypeId,
+    regulationTypes,
   ]);
 
   // Set default name when filters change
@@ -1580,7 +1589,7 @@ export default function ScheduleExamPage() {
   );
 
   const existingGroupFilterDateStr = existingGroupFilterDate
-    ? existingGroupFilterDate.toISOString().split("T")[0]
+    ? existingGroupFilterDate.toLocaleDateString("en-CA")
     : undefined;
 
   const { data: existingGroupsData, isLoading: loadingExamGroups } = useQuery(
