@@ -35,10 +35,6 @@ import {
   studentRouter,
   studentApaarUpdateRouter,
   transportDetailsRouter,
-  userStatusMasterRouter,
-  userStatusMasterLevelRouter,
-  userStatusMasterDomainRouter,
-  userStatusMasterFrequencyRouter,
   userRouter,
 } from "./user/routes/index.js";
 // import feesComponentRouter from "./fees/routes/feesComponent.route.js";
@@ -85,7 +81,16 @@ import {
 import {
   departmentRouter,
   designationRouter,
-  subDepartmentRouter,
+  appModuleRouter,
+  userGroupRouter,
+  userGroupDomainRouter,
+  userGroupMemberRouter,
+  userPrivilegeRouter,
+  userPrivilegeSubRouter,
+  userStatusRouter,
+  userStatusReasonRouter,
+  userStatusSessionMappingRouter,
+  userStaffDepartmentMappingRouter,
 } from "./administration/routes/index.js";
 
 export {
@@ -118,10 +123,6 @@ export {
   personRouter,
   personalDetailsRouter,
   transportDetailsRouter,
-  userStatusMasterRouter,
-  userStatusMasterLevelRouter,
-  userStatusMasterDomainRouter,
-  userStatusMasterFrequencyRouter,
   studentRouter,
   studentApaarUpdateRouter,
   userRouter,
@@ -161,5 +162,14 @@ export {
   examScheduleRouter,
   departmentRouter,
   designationRouter,
-  subDepartmentRouter,
+  appModuleRouter,
+  userGroupRouter,
+  userGroupDomainRouter,
+  userGroupMemberRouter,
+  userPrivilegeRouter,
+  userPrivilegeSubRouter,
+  userStatusRouter,
+  userStatusReasonRouter,
+  userStatusSessionMappingRouter,
+  userStaffDepartmentMappingRouter,
 };

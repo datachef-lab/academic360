@@ -344,25 +344,6 @@ export const feeCategoryValidityTypeEnum = pgEnum("fee_category_type", [
     "PROGRAM_COURSE",
 ]);
 
-export const userStatusMasterTypeEnum = pgEnum("user_status_master_type", [
-    "ACTIVE",
-    "IN_ACTIVE",
-]);
-
-export const userStatusMasterLevelTypeEnum = pgEnum("user_status_master_level_type", [
-    "SYSTEM",
-    "ACADEMIC",
-]);
-
-export const userStatusMasterFrequencyTypeEnum = pgEnum("user_status_master_frequency_type", [
-    "ALWAYS_NEW_ENTRY",
-    "PER_ACADEMIC_YEAR",
-    "PER_SEMESTER",
-    "ONLY_ONCE",
-    "REQUIRED",
-    "OPTIONAL"
-]);
-
 export const examSeatAllocationModeEnum = pgEnum("exam_seat_allocation_mode", [
     "STANDARD",
     "FOIL_NUMBER_BASED",
@@ -382,4 +363,13 @@ export const paymentForTypeEnum = pgEnum("payment_for_type", [
     "ADMISSION_APPLICATION_FEE",
     "FEE",
     "OTHER",
+]);
+
+export const academic360ApplicationDomainEnum = pgEnum("academic360_application_domain_type", [
+    "MAIN_CONSOLE",
+    "STUDENT_CONSOLE",
+    "STUDENT_CONSOLE_MOBILE",
+    "EXAM_ATTENDANCE_APP",
+    "ID_CARD_GENERATOR",
+    "EVENT_GATEKEEPER",
 ]);

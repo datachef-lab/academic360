@@ -57,7 +57,7 @@ export const createDepartmentHandler = async (
       return;
     }
 
-    const department = await createDepartment({
+    const createPayload = {
       name: normalizedName,
       code: normalizedCode,
       description: normalizedDescription,
@@ -68,7 +68,8 @@ export const createDepartmentHandler = async (
             ? null
             : undefined,
       isActive: typeof isActive === "boolean" ? isActive : true,
-    });
+    };
+    const department = await createDepartment(createPayload);
 
     res
       .status(201)

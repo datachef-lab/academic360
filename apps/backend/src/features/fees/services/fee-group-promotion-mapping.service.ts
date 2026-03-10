@@ -37,7 +37,7 @@ import {
   FeeGroupDto,
   FeeCategoryDto,
 } from "@repo/db/dtos/fees";
-import { PromotionDto } from "@repo/db/dtos/user";
+import { PromotionDto } from "@repo/db/dtos/batches";
 import {
   religionModel,
   categoryModel,

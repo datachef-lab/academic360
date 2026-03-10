@@ -1,16 +1,17 @@
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import {
-  Designation,
   designationModel,
+  type DesignationT,
 } from "@repo/db/schemas/models/administration/designation.model.js";
 
-type NewDesignationData = Omit<Designation, "id" | "createdAt" | "updatedAt">;
-type UpdateDesignationData = Partial<
-  Omit<Designation, "id" | "createdAt" | "updatedAt">
+type CreateDesignationInput = Omit<
+  DesignationT,
+  "id" | "createdAt" | "updatedAt"
 >;
+type UpdateDesignationInput = Partial<CreateDesignationInput>;
 
-export async function getAllDesignations(): Promise<Designation[]> {
+export async function getAllDesignations(): Promise<DesignationT[]> {
   return await db
     .select()
     .from(designationModel)
@@ -19,7 +20,7 @@ export async function getAllDesignations(): Promise<Designation[]> {
 
 export async function getDesignationById(
   id: number,
-): Promise<Designation | null> {
+): Promise<DesignationT | null> {
   const [designation] = await db
     .select()
     .from(designationModel)
@@ -29,7 +30,7 @@ export async function getDesignationById(
 
 export async function getDesignationByName(
   name: string,
-): Promise<Designation | null> {
+): Promise<DesignationT | null> {
   const [designation] = await db
     .select()
     .from(designationModel)
@@ -38,16 +39,16 @@ export async function getDesignationByName(
 }
 
 export async function createDesignation(
-  data: NewDesignationData,
-): Promise<Designation> {
+  data: CreateDesignationInput,
+): Promise<DesignationT> {
   const [created] = await db.insert(designationModel).values(data).returning();
   return created;
 }
 
 export async function updateDesignation(
   id: number,
-  data: UpdateDesignationData,
-): Promise<Designation | null> {
+  data: UpdateDesignationInput,
+): Promise<DesignationT | null> {
   const [updated] = await db
     .update(designationModel)
     .set(data)
@@ -58,7 +59,7 @@ export async function updateDesignation(
 
 export async function deleteDesignation(
   id: number,
-): Promise<Designation | null> {
+): Promise<DesignationT | null> {
   const [deleted] = await db
     .delete(designationModel)
     .where(eq(designationModel.id, id))

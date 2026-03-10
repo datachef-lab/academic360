@@ -45,6 +45,10 @@
             "types": "./dist/dtos/exams/index.d.ts",
             "import": "./dist/dtos/exams/index.js"
         },
+        "./dtos/administration": {
+            "types": "./dist/dtos/administration/index.d.ts",
+            "import": "./dist/dtos/administration/index.js"
+        },
         "./schemas/enums": {
             "types": "./dist/schemas/enums/index.d.ts",
             "import": "./dist/schemas/enums/index.js"

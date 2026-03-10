@@ -79,15 +79,20 @@ import {
   examScheduleRouter,
   departmentRouter,
   designationRouter,
-  subDepartmentRouter,
+  appModuleRouter,
+  userGroupRouter,
+  userGroupDomainRouter,
+  userGroupMemberRouter,
+  userPrivilegeRouter,
+  userPrivilegeSubRouter,
+  userStatusRouter,
+  userStatusReasonRouter,
+  userStatusSessionMappingRouter,
+  userStaffDepartmentMappingRouter,
   feeHeadRouter,
   feeStructureComponentRouter,
   feeCategoryRouter,
   feeGroupPromotionMappingRouter,
-  userStatusMasterRouter,
-  userStatusMasterLevelRouter,
-  userStatusMasterDomainRouter,
-  userStatusMasterFrequencyRouter,
 } from "@/features/index.js";
 import instalmentRouter from "@/features/fees/routes/instalment.route.js";
 import receiptTypeRouter from "@/features/fees/routes/receipt-type.route.js";
@@ -158,7 +163,7 @@ import {
   studentSubjectSelectionRoutes,
   dynamicSubjectsRoutes,
 } from "@/features/subject-selection/routes/index.js";
-import { userStatusMappingRouter } from "./features/user/routes/index.js";
+
 import { examGroupRouter } from "./features/exams/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
@@ -379,16 +384,6 @@ app.use(
 
 app.use("/api/users", userRouter);
 
-app.use("/api/user-statuses", userStatusMappingRouter);
-
-// User status master endpoints
-app.use("/api/user-status-masters", userStatusMasterRouter);
-// User status master level endpoints
-app.use("/api/user-status-master-levels", userStatusMasterLevelRouter);
-// User status master domain endpoints
-app.use("/api/user-status-master-domains", userStatusMasterDomainRouter);
-// User status master frequency endpoints
-app.use("/api/user-status-master-frequencies", userStatusMasterFrequencyRouter);
 app.use("/api/sessions", sessionRouter);
 
 app.use("/api/personal-details", personalDetailsRouter);
@@ -445,7 +440,31 @@ app.use("/api/administration/departments", departmentRouter);
 
 app.use("/api/administration/designations", designationRouter);
 
-app.use("/api/administration/sub-departments", subDepartmentRouter);
+app.use("/api/administration/app-modules", appModuleRouter);
+
+app.use("/api/administration/user-groups", userGroupRouter);
+
+app.use("/api/administration/user-group-domains", userGroupDomainRouter);
+
+app.use("/api/administration/user-group-members", userGroupMemberRouter);
+
+app.use("/api/administration/user-privileges", userPrivilegeRouter);
+
+app.use("/api/administration/user-privilege-subs", userPrivilegeSubRouter);
+
+app.use("/api/administration/user-statuses", userStatusRouter);
+
+app.use("/api/administration/user-status-reasons", userStatusReasonRouter);
+
+app.use(
+  "/api/administration/user-status-session-mappings",
+  userStatusSessionMappingRouter,
+);
+
+app.use(
+  "/api/administration/user-staff-department-mappings",
+  userStaffDepartmentMappingRouter,
+);
 
 app.use("/api/address", addressRouter);
 

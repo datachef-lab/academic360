@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { AnyPgColumn, boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const departmentModel = pgTable("departments", {
     id: serial().primaryKey(),
@@ -9,6 +9,8 @@ export const departmentModel = pgTable("departments", {
     code: varchar({ length: 100 }).notNull().unique(),
     description: varchar({ length: 2000 }).notNull(),
     isActive: boolean().default(true),
+    parentDepartmentId: integer("parent_department_id_fk")
+        .references((): AnyPgColumn => departmentModel.id),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

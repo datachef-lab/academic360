@@ -4,25 +4,14 @@ import { AccommodationT, AnnualIncomeT, ApplicationFormT, BoardResultStatusT, Ca
 import { DisabilityCodeT, EmergencyContactT, StaffT, TransportDetailsT, } from "../../schemas/models/user";
 import { StudentT } from "../../schemas/models/user/student.model";
 import { ProgramCourseDto } from "../course-design";
-import { BatchDto } from "../batches";
+import { BatchDto, PromotionDto } from "../batches";
 import { AdmissionAcademicInfoDto, AdmissionCourseDetailsDto, ApplicationFormDto } from "../admissions";
 import { PoliceStationT } from "@/schemas/models/user/police-station.model";
 import { PostOfficeT } from "@/schemas/models/user/post-office.model";
-import { UserStatusMaster, } from "@/schemas/models/user/user-status-master.model";
-import { UserStatusMasterLevel,  } from "@/schemas/models/user/user-status-master-level.model";
-import { UserStatusMasterDomain, } from "@/schemas/models/user/user-status-master-domain.model";
-import { UserStatusMasterFrequency,  } from "@/schemas/models/user/user-status-master-frequency.model";
-import { UserStatusMapping,  } from "@/schemas/models/user/user-status-mapping.model";
+import { UserPrivilegeDto } from "../administration";
 
-export interface PromotionDto extends Omit<PromotionT, "promotionStatusId" | "boardResultStatusId" | "sessionId" | "classId" | "sectionId" | "shiftId" | "programCourseId"> {
-    promotionStatus: PromotionStatusT;
-    boardResultStatus: BoardResultStatusT;
-    session: SessionT;
-    class: ClassT;
-    section: SectionT;
-    shift: ShiftT;
-    programCourse: ProgramCourseDto;
-}
+
+
 
 export interface StudentDto extends Omit<StudentT, "applicationId" | "programCourseId" | "specializationId"> {
     applicationFormAbstract: ApplicationFormT | null;
@@ -42,8 +31,8 @@ export interface StaffDto extends Omit<StaffT, "shiftId"> {
 }
 
 export interface UserDto extends UserT {
-    payload: StudentDto | StaffDto,
-    statuses?: UserStatusMappingDto[],
+    payload: StudentDto | StaffDto;
+    privileges?: UserPrivilegeDto[];
 }
 
 export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "cityId" | "districtId" | "previousCountryId" | "previousStateId" | "previousCityId" | "previousDistrictId" | "postofficeId" | "policeStationId"> {
@@ -118,14 +107,4 @@ export interface ProfileInfo {
     emergencyContactDetails: EmergencyContactT | null;
     transportDetails: TransportDetailsDto | null;
     accommodationDetails: AccommodationDto | null;
-}
-
-export interface UserStatusMasterDto extends UserStatusMaster {
-    levels: UserStatusMasterLevel[];
-    domains: UserStatusMasterDomain[];
-    frequencies: UserStatusMasterFrequency[];
-}
-
-export interface UserStatusMappingDto extends Omit<UserStatusMapping, "userStatusMasterId"> {
-    userStatusMaster: UserStatusMasterDto;
 }

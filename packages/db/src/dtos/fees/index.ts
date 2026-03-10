@@ -1,7 +1,7 @@
 import { AcademicYearT, ClassT, FeeCategoryT,  FeeHeadT, FeeStructureComponentT, FeeStructureInstallmentT, FeeStructureT, FeeStudentMappingT, ReceiptTypeT, Shift } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
-import { PromotionDto, UserDto } from "../user";
-
+import { PromotionDto  } from "../batches/index";
+import {UserDto } from "../user/index";
 import { FeeSlabT } from "@/schemas/models/fees/fee-slab.model";
 import { FeeGroupT } from "@/schemas/models/fees/fee-group.model";
 import { FeeGroupPromotionMappingT } from "@/schemas/models/fees/fee-group-promotion-mapping.model";

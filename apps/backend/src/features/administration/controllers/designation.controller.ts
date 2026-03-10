@@ -34,7 +34,7 @@ export const createDesignationHandler = async (
       return;
     }
 
-    const designation = await createDesignation({
+    const createPayload = {
       name: normalizedName,
       description:
         typeof description === "string" ? description.trim() || null : null,
@@ -45,7 +45,8 @@ export const createDesignationHandler = async (
             ? null
             : undefined,
       isActive: typeof isActive === "boolean" ? isActive : true,
-    });
+    };
+    const designation = await createDesignation(createPayload);
 
     res
       .status(201)
