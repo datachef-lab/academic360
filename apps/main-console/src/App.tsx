@@ -62,6 +62,7 @@ import Dashboard from "./features/dashboard/pages/dashboard";
 import LoginPage from "./features/auth/pages/login-page";
 import ResetPasswordPage from "./features/auth/pages/reset-password-page";
 import { NotFoundPage, SettingsPage, UserProfilePage } from "./pages";
+import AdmitCardDistributions from "./pages/AdmitCardDistributions";
 
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
@@ -212,6 +213,10 @@ const router = createBrowserRouter(
 
             { path: "collect", element: <examManagementModule.CollectAnswerscriptsPage /> },
           ],
+        },
+        {
+          path: "admit-card-distributions",
+          element: <AdmitCardDistributions />,
         },
         {
           path: "cu-registration",

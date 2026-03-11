@@ -666,6 +666,13 @@
       "when": 1772811644038,
       "tag": "0094_fast_the_call",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1773130223343,
+      "tag": "0095_amusing_whiplash",
+      "breakpoints": true
     }
   ]
 }

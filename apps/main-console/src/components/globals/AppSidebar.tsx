@@ -74,6 +74,7 @@ const data = {
     // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
     { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },
+    { title: "Admit Card Distributions", url: "/dashboard/admit-card-distributions", icon: ClipboardList },
     { title: "Physical CUReg Marking", url: "/dashboard/cu-reg/physical-marking", icon: CheckSquare },
     { title: "Exam Management", url: "/dashboard/exam-management", icon: GraduationCap },
     { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: Activity },

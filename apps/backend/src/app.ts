@@ -160,6 +160,7 @@ import {
 } from "@/features/subject-selection/routes/index.js";
 import { userStatusMappingRouter } from "./features/user/routes/index.js";
 import { examGroupRouter } from "./features/exams/routes/index.js";
+import admitCardRouter from "./features/exams/routes/admit-card.routes.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -493,6 +494,7 @@ app.use("/api/exams/rooms", roomRouter);
 app.use("/api/exams/exam-types", examTypeRouter);
 app.use("/api/exams/schedule", examScheduleRouter);
 app.use("/api/exam-groups", examGroupRouter);
+app.use("/api/admit-card", admitCardRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 app.use("/api/admissions/application-forms", applicationFormRouter);
