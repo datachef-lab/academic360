@@ -10,7 +10,6 @@ import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-// Validate input using Zod schema for creation
 function validateAccommodationInput(data: Omit<AccommodationType, "id">) {
   const parseResult = createAccommodationSchema.safeParse(data);
   if (!parseResult.success) {

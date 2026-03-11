@@ -21,6 +21,7 @@ import {
   Activity,
   FileText,
   BookOpen,
+  CloudUpload,
 } from "lucide-react";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -79,6 +80,7 @@ const data = {
     { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: Activity },
     { title: "Reports", url: "/dashboard/reports", icon: ClipboardList },
     { title: "Fees Module", url: "/dashboard/fees", icon: IndianRupee },
+    { title: "Bulk Upload", url: "/dashboard/bulk-upload", icon: CloudUpload },
     { title: "Document Issuance", url: "/dashboard/document-issuance", icon: FileText },
     { title: "Student Console Simulation", url: "/dashboard/apps/student-console/simulation", icon: BookOpen },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
