@@ -4497,6 +4497,13 @@ export async function downloadAdmitCardTrackingByExamId(
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
     .leftJoin(
+      examSubjectModel,
+      and(
+        eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+        eq(examSubjectModel.examId, examModel.id),
+      ),
+    )
+    .leftJoin(
       academicYearModel,
       eq(academicYearModel.id, examModel.academicYearId),
     )

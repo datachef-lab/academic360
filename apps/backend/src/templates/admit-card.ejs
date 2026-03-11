@@ -884,19 +884,25 @@
       <p style="text-indent: 0pt; text-align: left"><br /></p>
       <p style="text-indent: 0pt; text-align: left">Please Note:</p>
       <ol id="l1" style="padding-left: 14px; margin-top: 4px">
-        <li data-list-text="1)">
+        <% 
+        const hasRoom = examRows.some(row => row.room);
+        let noteNum = 1;
+        %>
+        <% if (!hasRoom) { %>
+        <li data-list-text="<%= noteNum %>)">
           <p style="text-indent: -11pt; text-align: left">
             Your classroom and seat allocation details will be sent to your Institutional Email ID 24 hours before the scheduled exam.
-            
           </p>
         </li>
-        <li data-list-text="2)">
+        <% noteNum++; } %>
+        <li data-list-text="<%= noteNum %>)">
           <p style="text-indent: -11pt; text-align: left">
             It is mandatory to carry this Admit Card along with College ID card to the Examination Hall.
             
           </p>
         </li>
-        <li data-list-text="3)">
+        <% noteNum++; %>
+        <li data-list-text="<%= noteNum %>)">
           <p style="text-indent: -11pt; text-align: left">
             Retain this Admit card for the entire Academic year.
           </p>

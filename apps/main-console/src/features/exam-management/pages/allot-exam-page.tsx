@@ -192,20 +192,34 @@ export default function AllotExamPage() {
       if (fetchedExam.examGroupId) {
         setSelectedExamGroupId(fetchedExam.examGroupId);
       }
-      // Set admit card dates if they exist
-      if (fetchedExam.admitCardStartDownloadDate) {
-        setAdmitCardStartDate(toDatetimeLocal(fetchedExam.admitCardStartDownloadDate));
+      // Set admit card dates: first from selected exam, else from any exam in the same group
+      let startDate = fetchedExam.admitCardStartDownloadDate
+        ? toDatetimeLocal(fetchedExam.admitCardStartDownloadDate)
+        : "";
+      let endDate = fetchedExam.admitCardLastDownloadDate
+        ? toDatetimeLocal(fetchedExam.admitCardLastDownloadDate)
+        : "";
+      if ((!startDate || !endDate) && examGroupsData) {
+        const groupId = fetchedExam.examGroupId ?? selectedExamGroupId;
+        const group = groupId ? examGroupsData.find((g) => g.id === groupId) : null;
+        const examsInGroup = group?.exams ?? [];
+        const examWithDates = examsInGroup.find(
+          (e) => e.admitCardStartDownloadDate && e.admitCardLastDownloadDate,
+        );
+        if (examWithDates) {
+          if (!startDate) startDate = toDatetimeLocal(examWithDates.admitCardStartDownloadDate);
+          if (!endDate) endDate = toDatetimeLocal(examWithDates.admitCardLastDownloadDate);
+        }
       }
-      if (fetchedExam.admitCardLastDownloadDate) {
-        setAdmitCardEndDate(toDatetimeLocal(fetchedExam.admitCardLastDownloadDate));
-      }
+      setAdmitCardStartDate(startDate);
+      setAdmitCardEndDate(endDate);
     } else if (selectedExamId === null) {
       // Clear exam state when no exam is selected
       setSelectedExam(null);
       setAdmitCardStartDate("");
       setAdmitCardEndDate("");
     }
-  }, [fetchedExam, selectedExamId]);
+  }, [fetchedExam, selectedExamId, selectedExamGroupId, examGroupsData]);
 
   // Debug: Log loading states
   useEffect(() => {
@@ -1305,6 +1319,7 @@ export default function AllotExamPage() {
                       }}
                       className="h-10"
                       required
+                      disabled={!!admitCardStartDate?.trim() && !!admitCardEndDate?.trim()}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -1332,6 +1347,7 @@ export default function AllotExamPage() {
                       }}
                       className="h-10"
                       required
+                      disabled={!!admitCardStartDate?.trim() && !!admitCardEndDate?.trim()}
                     />
                   </div>
                 </div>
@@ -1339,6 +1355,11 @@ export default function AllotExamPage() {
                   <span className="text-red-500">*</span> Required: Set the date range when students
                   can download their admit cards.
                 </p>
+                {admitCardStartDate?.trim() && admitCardEndDate?.trim() && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    You can later change this window from the exam details page once allotted.
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

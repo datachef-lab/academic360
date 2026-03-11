@@ -10,6 +10,8 @@ async function getOrigins() {
     .where(eq(appsModel.isActive, true));
 
   return [
+    "https://securestage.paytmpayments.com",
+    "https://secure.paytmpayments.com",
     "http://localhost:3000",
     "http://localhost:3008",
     "http://localhost:5173",

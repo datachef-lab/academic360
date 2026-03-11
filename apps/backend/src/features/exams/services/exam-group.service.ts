@@ -14,6 +14,10 @@ import {
   promotionModel,
   studentModel,
 } from "@repo/db/schemas";
+import {
+  paperComponentModel,
+  examComponentModel,
+} from "@repo/db/schemas/models/course-design";
 import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import * as examScheduleService from "./exam-schedule.service";
 import { socketService } from "@/services/socketService";
@@ -189,6 +193,7 @@ export async function findByStudentId(
       pageSize,
       totalElements: 0,
       totalPages: 0,
+      totalSubjectCount: 0,
     };
   }
 
@@ -206,6 +211,21 @@ export async function findByStudentId(
     )
     .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .innerJoin(examModel, eq(examModel.id, examCandidateModel.examId))
+    .where(eq(studentModel.id, studentId));
+
+  /**
+   * STEP 2b: Total DISTINCT exam subjects count (papers the student is enrolled in via exam_candidates)
+   */
+  const [{ totalSubjectCount }] = await db
+    .select({
+      totalSubjectCount: sql<number>`COUNT(DISTINCT ${examCandidateModel.examSubjectId})`,
+    })
+    .from(examCandidateModel)
+    .innerJoin(
+      promotionModel,
+      eq(promotionModel.id, examCandidateModel.promotionId),
+    )
+    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
     .where(eq(studentModel.id, studentId));
 
   /**
@@ -257,6 +277,7 @@ export async function findByStudentId(
     pageSize,
     totalElements: Number(totalCount),
     totalPages: Math.ceil(Number(totalCount) / pageSize),
+    totalSubjectCount: Number(totalSubjectCount ?? 0),
   };
 }
 
@@ -408,7 +429,10 @@ export async function findExamCandidatesByStudentIdAndExamGroupId(
   examGroupId: number,
 ) {
   const examCandidates = await db
-    .select()
+    .select({
+      exam_candidates: examCandidateModel,
+      paperComponentId: examSubjectModel.paperComponentId,
+    })
     .from(examCandidateModel)
     .leftJoin(examModel, eq(examModel.id, examCandidateModel.examId))
     .leftJoin(examGroupModel, eq(examGroupModel.id, examModel.examGroupId))
@@ -417,22 +441,62 @@ export async function findExamCandidatesByStudentIdAndExamGroupId(
       eq(promotionModel.id, examCandidateModel.promotionId),
     )
     .leftJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .leftJoin(
+      examSubjectModel,
+      eq(examSubjectModel.id, examCandidateModel.examSubjectId),
+    )
     .where(
       and(eq(studentModel.id, studentId), eq(examGroupModel.id, examGroupId)),
     );
 
   const result = await Promise.all(
-    examCandidates.map(async (examCandidate) => {
+    examCandidates.map(async (row) => {
+      const examCandidate = row.exam_candidates;
+      const paperComponentId = row.paperComponentId;
       const paper = await db
         .select()
         .from(paperModel)
-        .where(eq(paperModel.id, examCandidate.exam_candidates.paperId))
+        .where(eq(paperModel.id, examCandidate.paperId))
         .limit(1)
         .then((rows) => rows[0]);
 
+      let examComponentName = "";
+      if (paperComponentId) {
+        const [pc] = await db
+          .select()
+          .from(paperComponentModel)
+          .where(eq(paperComponentModel.id, paperComponentId))
+          .limit(1);
+        if (pc?.examComponentId) {
+          const [ec] = await db
+            .select()
+            .from(examComponentModel)
+            .where(eq(examComponentModel.id, pc.examComponentId))
+            .limit(1);
+          examComponentName = ec?.name || ec?.shortName || ec?.code || "";
+        }
+      }
+      // Fallback: when exam_subject.paperComponentId is null, fetch from paper's components
+      if (!examComponentName && examCandidate.paperId) {
+        const [pc] = await db
+          .select()
+          .from(paperComponentModel)
+          .where(eq(paperComponentModel.paperId, examCandidate.paperId))
+          .limit(1);
+        if (pc?.examComponentId) {
+          const [ec] = await db
+            .select()
+            .from(examComponentModel)
+            .where(eq(examComponentModel.id, pc.examComponentId))
+            .limit(1);
+          examComponentName = ec?.name || ec?.shortName || ec?.code || "";
+        }
+      }
+
       return {
-        ...examCandidate.exam_candidates,
+        ...examCandidate,
         paper,
+        examComponentName: examComponentName || undefined,
       };
     }),
   );

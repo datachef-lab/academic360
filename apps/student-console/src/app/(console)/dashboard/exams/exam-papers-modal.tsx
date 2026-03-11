@@ -29,6 +29,8 @@ interface ExamPapersModalProps {
 
 interface PaperDetails {
   paperCode: string;
+  examComponentName?: string;
+  examSubjectId: number;
   startTime: Date;
   endTime: Date;
   room: string;
@@ -116,13 +118,15 @@ export function ExamPapersModal({
   const getPaperDetails = (exam?: ExamDto): PaperDetails[] => {
     if (!exam || candidates.length === 0) return [];
 
-    return candidates
-      .map((candidate) => {
-        const candidateData = (candidate as any).exam_candidates ?? candidate;
+    const details = candidates
+      .map((candidate): PaperDetails | null => {
+        const c = candidate as unknown as Record<string, unknown>;
+        const candidateData = (c.exam_candidates ?? candidate) as Record<string, unknown>;
         const examRoomId = candidateData?.examRoomId;
         const examSubjectId = candidateData?.examSubjectId;
         const seatNumber = candidateData?.seatNumber;
-        const paper = candidate?.paper;
+        const paper = (candidate as { paper?: { code?: string } })?.paper;
+        const examComponentName = c.examComponentName;
 
         if (!paper || !examSubjectId) {
           return null;
@@ -147,15 +151,24 @@ export function ExamPapersModal({
 
         return {
           paperCode: paper?.code || "",
+          examComponentName: typeof examComponentName === "string" ? examComponentName : undefined,
+          examSubjectId: Number(examSubjectId),
           startTime: new Date(examSubject.startTime),
           endTime: new Date(examSubject.endTime),
-          room: room,
-          floor: floor,
-          seatNumber: seatNumber || "Not assigned",
+          room,
+          floor,
+          seatNumber: String(seatNumber ?? "Not assigned"),
         };
       })
-      .filter((detail): detail is PaperDetails => detail !== null)
-      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+      .filter((d): d is PaperDetails => d !== null);
+
+    // Match backend admit card order: chronological by start time first, then examSubjectId as tiebreaker
+    return details.sort((a, b) => {
+      const tA = a.startTime.getTime();
+      const tB = b.startTime.getTime();
+      if (tA !== tB) return tA - tB;
+      return Number(a.examSubjectId) - Number(b.examSubjectId);
+    });
   };
 
   // Download admit card handler
@@ -222,16 +235,23 @@ export function ExamPapersModal({
       paperDetails.push(...details);
     }
   }
+  // Match backend admit card order: chronological by start time first, then examSubjectId as tiebreaker
+  paperDetails.sort((a, b) => {
+    const tA = a.startTime.getTime();
+    const tB = b.startTime.getTime();
+    if (tA !== tB) return tA - tB;
+    return Number(a.examSubjectId) - Number(b.examSubjectId);
+  });
 
   return (
     examGroup &&
     examGroup.exams.length > 0 && (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="p-0 gap-0 sm:max-w-2xl max-h-[85vh] border-none overflow-hidden shadow-elevated rounded-xl">
-          <DialogHeader className="bg-indigo-600 px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <DialogTitle className="text-2xl font-semibold text-white tracking-tight">
+        <DialogContent className="p-0 gap-0 w-[95vw] max-w-2xl max-h-[90vh] sm:max-h-[85vh] border-none overflow-hidden shadow-elevated rounded-xl">
+          <DialogHeader className="bg-indigo-600 px-4 sm:px-8 py-4 sm:py-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-1 min-w-0">
+                <DialogTitle className="text-lg sm:text-2xl font-semibold text-white tracking-tight">
                   Exam Schedule
                 </DialogTitle>
                 <p className="text-white/80 text-sm font-medium"></p>
@@ -291,48 +311,46 @@ export function ExamPapersModal({
               <p className="text-gray-500">No exam papers found for this exam.</p>
             </div>
           ) : (
-            <div className=" rounded-md after:shadow-md  overflow-hidden flex-1 flex flex-col">
-              <Table>
-                <TableHeader className="bg-gray-200 ">
-                  <TableRow className=" bg-gray-200 hover:bg-gray-200">
-                    <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider  py-4 pl-6 pr-4 ">
-                      Date & Time
-                    </TableHead>
-                    <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider  py-3 px-4">
-                      Venue
-                    </TableHead>
-                    <TableHead className="text-gray-800 font-semibold text-xs text-center uppercase tracking-wider py-3 px-2">
-                      Subject / Paper
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-              </Table>
-              <div className="overflow-auto max-h-[400px] thin-scrollbar">
+            <div className="rounded-md after:shadow-md overflow-hidden flex-1 flex flex-col -mx-4 sm:mx-0">
+              <div className="overflow-x-auto overflow-y-auto max-h-[50vh] sm:max-h-[400px] thin-scrollbar">
                 <Table>
+                  <TableHeader className="bg-gray-200">
+                    <TableRow className="bg-gray-200 hover:bg-gray-200">
+                      <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider py-3 pl-4 sm:pl-6 pr-2 sm:pr-4 min-w-[100px]">
+                        Date & Time
+                      </TableHead>
+                      <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider py-3 px-2 sm:px-4 min-w-[120px]">
+                        Venue
+                      </TableHead>
+                      <TableHead className="text-gray-800 font-semibold text-xs uppercase tracking-wider py-3 px-2 min-w-[100px]">
+                        Subject / Paper
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
                     {paperDetails.map((detail, index) => (
                       <TableRow key={index} className="border-b border-gray-200 hover:bg-white">
-                        <TableCell className="py-4 pl-6 pr-4 ">
+                        <TableCell className="py-3 pl-4 sm:pl-6 pr-2 sm:pr-4">
                           <div className="space-y-0.5">
-                            <div className="font-semibold text-gray-800 text-sm">
+                            <div className="font-semibold text-gray-800 text-xs sm:text-sm">
                               {format(detail.startTime, "dd/MM/yyyy")}
                             </div>
-                            <div className="text-muted-gray-800 text-xs font-mono">
+                            <div className="text-muted-gray-800 text-[10px] sm:text-xs font-mono">
                               {format(detail.startTime, "hh:mm a")} –{" "}
                               {format(detail.endTime, "hh:mm a")}
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="py-4 px-4 ">
+                        <TableCell className="py-3 px-2 sm:px-4">
                           <div className="space-y-0.5">
-                            <div className="font-semibold text-gray-800 text-sm">
+                            <div className="font-semibold text-gray-800 text-xs sm:text-sm">
                               {detail.room === "Not assigned" ? (
                                 <span className="text-gray-500 italic">Room: Not assigned</span>
                               ) : (
                                 <>Room: {detail.room}</>
                               )}
                             </div>
-                            <div className="text-muted-gray-800 text-xs flex items-center font-mono gap-1.5">
+                            <div className="text-muted-gray-800 text-[10px] sm:text-xs flex items-center font-mono gap-1.5 flex-wrap">
                               {detail.floor ? (
                                 <>
                                   {detail.floor} •
@@ -346,8 +364,12 @@ export function ExamPapersModal({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="py-4 px-2 ">
-                          <div className="text-muted-gray-800  text-sm ">{detail.paperCode}</div>
+                        <TableCell className="py-3 px-2">
+                          <div className="text-muted-gray-800 text-xs sm:text-sm">
+                            {detail.examComponentName
+                              ? `${detail.paperCode} (${detail.examComponentName})`
+                              : detail.paperCode}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

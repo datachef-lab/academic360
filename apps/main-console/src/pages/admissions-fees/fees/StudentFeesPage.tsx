@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Wallet, Edit, Trash2, Search, Eye, CreditCard, Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,7 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { DeleteConfirmationModal } from "@/components/common/DeleteConfirmationModal";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +44,7 @@ import {
   updateStudentFeesMapping,
   deleteStudentFeesMapping,
 } from "@/services/fees-api";
+import { usePaytmCheckout } from "@/hooks/usePaytmCheckout";
 import { useError } from "@/hooks/useError";
 import {
   fetchStudentByUid,
@@ -83,7 +90,7 @@ const StudentFeesPage: React.FC = () => {
   const [sendingNotification, setSendingNotification] = useState(false);
   const { showError } = useError();
   const { user } = useAuth();
-
+  const { openPaytmCheckout, loading: paytmLoading } = usePaytmCheckout();
   // Fetch all fee-student-mappings for a student
   const fetchStudentMappings = useCallback(
     async (studentId: number) => {
@@ -105,6 +112,59 @@ const StudentFeesPage: React.FC = () => {
     },
     [showError],
   );
+
+  // Handle payment callback from redirect URL (Paytm opens in new tab, redirects back)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get("payment");
+    const orderId = params.get("orderId");
+    const studentIdParam = params.get("studentId");
+    if (payment && orderId) {
+      if (payment === "success") {
+        toast.success("Payment recorded successfully");
+      } else if (payment === "failed") {
+        toast.error("Payment failed");
+      }
+      if (studentIdParam) {
+        const sid = parseInt(studentIdParam, 10);
+        if (!isNaN(sid)) {
+          getStudentById(sid)
+            .then((student) => {
+              if (student?.id) {
+                setSelectedStudent(student);
+                fetchStudentMappings(student.id);
+              }
+            })
+            .catch(() => {});
+        }
+      }
+      params.delete("payment");
+      params.delete("orderId");
+      params.delete("studentId");
+      const newSearch = params.toString();
+      const newUrl = newSearch
+        ? `${window.location.pathname}?${newSearch}`
+        : window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [fetchStudentMappings]);
+
+  // Handle payment callback from postMessage (Paytm in popup with opener)
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "PAYTM_PAYMENT_RESULT") {
+        if (e.data.payment === "success") {
+          toast.success("Payment recorded successfully");
+        } else if (e.data.payment === "failed") {
+          toast.error("Payment failed");
+        }
+        const sid = e.data.studentId ? parseInt(e.data.studentId, 10) : selectedStudent?.id;
+        if (sid && !isNaN(sid)) fetchStudentMappings(sid);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [selectedStudent?.id, fetchStudentMappings]);
 
   // Search for student by UID, roll number, or registration number
   const handleStudentSearch = useCallback(async () => {
@@ -279,13 +339,15 @@ const StudentFeesPage: React.FC = () => {
 
     try {
       setProcessingPayment(true);
+      const existingPaid = paymentItem.amountPaid || 0;
+      const newTotalPaid = existingPaid + paymentForm.amountPaid;
       const updateData: any = {
-        amountPaid: paymentForm.amountPaid,
+        amountPaid: newTotalPaid,
         paymentMode: paymentForm.paymentMode,
         paymentStatus:
-          paymentForm.amountPaid >= (paymentItem.totalPayable || 0)
+          newTotalPaid >= (paymentItem.totalPayable || 0)
             ? "COMPLETED"
-            : paymentForm.amountPaid > 0
+            : newTotalPaid > 0
               ? "PENDING"
               : "PENDING",
       };
@@ -537,8 +599,12 @@ const StudentFeesPage: React.FC = () => {
                                 <DropdownMenuItem
                                   onClick={() => {
                                     setPaymentItem(mapping);
+                                    const remaining = Math.max(
+                                      0,
+                                      (mapping.totalPayable || 0) - (mapping.amountPaid || 0),
+                                    );
                                     setPaymentForm({
-                                      amountPaid: mapping.amountPaid || 0,
+                                      amountPaid: remaining,
                                       paymentMode:
                                         (mapping.paymentMode as "CASH" | "CHEQUE" | "ONLINE") ||
                                         "CASH",
@@ -1270,9 +1336,15 @@ const StudentFeesPage: React.FC = () => {
 
       {/* Payment Modal */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[95vh] flex flex-col p-0">
+        <DialogContent
+          className="max-w-2xl w-[95vw] max-h-[95vh] flex flex-col p-0"
+          aria-describedby="record-payment-desc"
+        >
           <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
             <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription id="record-payment-desc" className="sr-only">
+              Record fee payment for the selected student
+            </DialogDescription>
           </DialogHeader>
           {paymentItem && (
             <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4 min-h-0">
@@ -1351,30 +1423,52 @@ const StudentFeesPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p className="text-sm font-medium text-blue-900 mb-3">
-                      Complete payment through payment gateway
+                      Complete payment through Paytm
                     </p>
                     <Button
                       type="button"
+                      disabled={paytmLoading}
                       onClick={async () => {
                         if (!paymentItem?.id || !selectedStudent?.id) {
                           toast.error("Missing payment information");
                           return;
                         }
 
-                        // TODO: Replace with actual payment gateway integration
-                        // This should call a backend API to generate payment link
-                        // For now, this is a placeholder
-                        const paymentLink = `/api/v1/fees/payments/initiate?studentId=${selectedStudent.id}&mappingId=${paymentItem.id}&amount=${paymentItem.totalPayable}`;
+                        const amountToPay =
+                          (paymentItem.totalPayable || 0) - (paymentItem.amountPaid || 0);
+                        if (amountToPay <= 0) {
+                          toast.error("No amount due for this fee mapping");
+                          return;
+                        }
 
-                        // Open payment gateway in new window/tab
-                        window.open(paymentLink, "_blank");
-
-                        toast.info("Redirecting to payment gateway...");
+                        openPaytmCheckout({
+                          feeStudentMappingId: paymentItem.id,
+                          amount: amountToPay,
+                          studentId: selectedStudent.id,
+                          studentName: selectedStudent.name ?? undefined,
+                          studentEmail: selectedStudent.personalEmail ?? undefined,
+                          studentMobile: selectedStudent.mobile ?? undefined,
+                          onBeforeInvoke: () => {
+                            setShowPaymentModal(false);
+                            setPaymentItem(null);
+                          },
+                          onSuccess: async () => {
+                            toast.success("Payment recorded successfully");
+                            setShowPaymentModal(false);
+                            setPaymentItem(null);
+                            if (selectedStudent?.id) {
+                              await fetchStudentMappings(selectedStudent.id);
+                            }
+                          },
+                          onFailure: (msg) => {
+                            toast.error(msg || "Payment failed");
+                          },
+                        });
                       }}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Proceed to Payment Gateway
+                      {paytmLoading ? "Opening Paytm..." : "Proceed to Paytm"}
                     </Button>
                     <p className="text-xs text-blue-700 mt-2">
                       After completing payment, the transaction details will be automatically
@@ -1393,13 +1487,19 @@ const StudentFeesPage: React.FC = () => {
                 setShowPaymentModal(false);
                 setPaymentItem(null);
               }}
-              disabled={processingPayment}
+              disabled={processingPayment || paytmLoading}
             >
               Cancel
             </Button>
-            <Button onClick={handlePaymentSubmit} disabled={processingPayment}>
-              {processingPayment ? "Processing..." : "Record Payment"}
-            </Button>
+            {paymentForm.paymentMode === "ONLINE" ? (
+              <p className="text-sm text-amber-600 self-center">
+                Use &quot;Proceed to Paytm&quot; above to complete payment
+              </p>
+            ) : (
+              <Button onClick={handlePaymentSubmit} disabled={processingPayment}>
+                {processingPayment ? "Processing..." : "Record Payment"}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

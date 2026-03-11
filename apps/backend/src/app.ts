@@ -102,6 +102,7 @@ import feesSlabRouter from "@/features/fees/routes/index.js";
 // import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
 // import studentFeesMappingRouter from "./features/fees/routes/student-fees-mapping.route.js";
 import feesRouter from "./features/fees/routes/index.js";
+import paymentRouter from "@/features/payments/routes/payment.route.js";
 import {
   admissionRouter,
   applicationFormRouter,
@@ -528,6 +529,8 @@ app.use(
 app.use("/api/admissions/cu-registration-pdf", cuRegistrationPdfRouter);
 // Mount the generic admission router last to avoid conflicts with specific routes
 app.use("/api/admissions", admissionRouter);
+
+app.use("/api/payments", paymentRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 

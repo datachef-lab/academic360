@@ -209,6 +209,13 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     return feeGroup?.feeCategory?.name || "General";
   };
 
+  // Base slab = full amount reference (Slab F or "Full Fees" category slab). Other slabs are capped by this.
+  const isBaseSlab = (slab: ConcessionSlabUI): boolean =>
+    slab.name.toUpperCase() === "SLAB F" ||
+    feeGroups.some(
+      (fg) => fg.feeCategory?.name?.toUpperCase() === "FULL FEES" && fg.feeSlab?.id === slab.id,
+    );
+
   // Validate uniqueness of fee structure amounts
   const validateUniqueness = useCallback(
     async (page: number = conflictsPage) => {
@@ -583,8 +590,8 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
   const removeSlab = (index: number) => {
     setFeeStructureRow((prev) => {
       const slabToRemove = prev.concessionSlabs[index];
-      // Prevent removing Slab F
-      if (slabToRemove.name.toUpperCase() === "SLAB F") {
+      // Prevent removing base slab (Full Fees / Slab F)
+      if (isBaseSlab(slabToRemove)) {
         return prev;
       }
 
@@ -647,17 +654,28 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
     setFeeStructureRow((prev) => {
       const updatedComponents = [...prev.feeComponents, newComponent];
 
-      // If this is the first component, automatically add Slab F
+      // If this is the first component, add default slab: prefer "Full Fees" category from fee groups, else Slab F
       if (prev.feeComponents.length === 0) {
-        const slabF = feeConcessionSlabs.find((slab) => slab.name.toUpperCase() === "SLAB F");
-        if (slabF) {
+        // Find slab linked to "Full Fees" category via fee groups
+        const fullFeesFeeGroup = feeGroups.find(
+          (fg) => fg.feeCategory?.name?.toUpperCase() === "FULL FEES" && fg.feeSlab?.id,
+        );
+        const fullFeesSlabId = fullFeesFeeGroup?.feeSlab?.id;
+        const defaultSlab = fullFeesSlabId
+          ? feeConcessionSlabs.find((s) => s.id === fullFeesSlabId)
+          : null;
+        // Fallback to Slab F if no "Full Fees" slab found
+        const slabToAdd =
+          defaultSlab ?? feeConcessionSlabs.find((slab) => slab.name.toUpperCase() === "SLAB F");
+
+        if (slabToAdd) {
           const feeHeadAmounts: { [key: number]: number } = {};
           feeHeadAmounts[feeHeadId] = 0; // Initialize with 0, will be set in Step 2
 
-          const slabFEntry: ConcessionSlabUI = {
-            id: slabF.id!,
-            name: slabF.name,
-            defaultConcessionRate: 0, // Slab F has 0% concession
+          const slabEntry: ConcessionSlabUI = {
+            id: slabToAdd.id!,
+            name: slabToAdd.name,
+            defaultConcessionRate: slabToAdd.defaultConcessionRate ?? 0,
             concessionAmount: 0,
             payableAmount: 0,
             feeHeadAmounts,
@@ -666,7 +684,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
           return {
             ...prev,
             feeComponents: updatedComponents,
-            concessionSlabs: [slabFEntry],
+            concessionSlabs: [slabEntry],
           };
         }
       }
@@ -1679,22 +1697,21 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                   0,
                                 );
 
-                                // Calculate allocation percentage
-                                const slabF = feeStructureRow.concessionSlabs.find(
-                                  (s) => s.name.toUpperCase() === "SLAB F",
+                                // Calculate allocation percentage (base slab = full amount reference)
+                                const baseSlab = feeStructureRow.concessionSlabs.find((s) =>
+                                  isBaseSlab(s),
                                 );
-                                const slabFTotal = slabF
-                                  ? Object.values(slabF.feeHeadAmounts || {}).reduce(
+                                const baseSlabTotal = baseSlab
+                                  ? Object.values(baseSlab.feeHeadAmounts || {}).reduce(
                                       (sum, amt) => sum + amt,
                                       0,
                                     )
                                   : 0;
-                                const allocation =
-                                  slab.name.toUpperCase() === "SLAB F"
-                                    ? 100
-                                    : slabFTotal > 0
-                                      ? (totalPayable / slabFTotal) * 100
-                                      : 0;
+                                const allocation = isBaseSlab(slab)
+                                  ? 100
+                                  : baseSlabTotal > 0
+                                    ? (totalPayable / baseSlabTotal) * 100
+                                    : 0;
 
                                 return (
                                   <TableRow key={slab.id} className="border-b-2 border-gray-400">
@@ -1702,7 +1719,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                       {index + 1}
                                     </TableCell>
                                     <TableCell className="text-center border-r-2 border-gray-400 p-2 min-h-[60px] sticky left-[60px] bg-white">
-                                      {slab.name.toUpperCase() === "SLAB F" ? (
+                                      {isBaseSlab(slab) ? (
                                         <div className="text-sm font-semibold text-gray-900 py-1">
                                           {slab.name}
                                         </div>
@@ -1808,15 +1825,16 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                             )}
                                             onChange={(e) => {
                                               const newAmount = parseFloat(e.target.value) || 0;
-                                              // Only apply Slab F limit to non-Slab F slabs
+                                              // Only cap amount for non-base slabs (base = full fees reference)
                                               let finalAmount = newAmount;
-                                              if (slab.name.toUpperCase() !== "SLAB F") {
-                                                const slabF = feeStructureRow.concessionSlabs.find(
-                                                  (s) => s.name.toUpperCase() === "SLAB F",
-                                                );
-                                                const slabFAmount =
-                                                  slabF?.feeHeadAmounts?.[component.id] || 0;
-                                                finalAmount = Math.min(newAmount, slabFAmount);
+                                              if (!isBaseSlab(slab)) {
+                                                const baseSlab =
+                                                  feeStructureRow.concessionSlabs.find((s) =>
+                                                    isBaseSlab(s),
+                                                  );
+                                                const baseAmount =
+                                                  baseSlab?.feeHeadAmounts?.[component.id] || 0;
+                                                finalAmount = Math.min(newAmount, baseAmount);
                                               }
                                               setFeeStructureRow((prev) => ({
                                                 ...prev,
@@ -1859,7 +1877,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                                     {/* Action */}
                                     {isCreateMode && (
                                       <TableCell className="text-center p-2 min-h-[60px] sticky right-0 bg-white">
-                                        {slab.name.toUpperCase() !== "SLAB F" ? (
+                                        {!isBaseSlab(slab) ? (
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -2421,22 +2439,21 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                             0,
                           );
 
-                          // Calculate allocation percentage
-                          const slabF = feeStructureRow.concessionSlabs.find(
-                            (s) => s.name.toUpperCase() === "SLAB F",
+                          // Calculate allocation percentage (base slab = full fees reference)
+                          const baseSlab = feeStructureRow.concessionSlabs.find((s) =>
+                            isBaseSlab(s),
                           );
-                          const slabFTotal = slabF
-                            ? Object.values(slabF.feeHeadAmounts || {}).reduce(
+                          const baseSlabTotal = baseSlab
+                            ? Object.values(baseSlab.feeHeadAmounts || {}).reduce(
                                 (sum, amt) => sum + amt,
                                 0,
                               )
                             : 0;
-                          const allocation =
-                            slab.name.toUpperCase() === "SLAB F"
-                              ? 100
-                              : slabFTotal > 0
-                                ? (totalPayable / slabFTotal) * 100
-                                : 0;
+                          const allocation = isBaseSlab(slab)
+                            ? 100
+                            : baseSlabTotal > 0
+                              ? (totalPayable / baseSlabTotal) * 100
+                              : 0;
 
                           return (
                             <TableRow
