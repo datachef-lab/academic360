@@ -1,0 +1,96 @@
+#!/bin/sh
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  academic360 — pre-push  |  branch: $BRANCH"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ── feature / fix / chore / refactor branches → silent push ──────────
+case "$BRANCH" in
+  feature/*|fix/*|hotfix/*|chore/*|refactor/*|docs/*)
+    echo "  ✓ Dev branch — pushing without release."
+    echo ""
+    exit 0
+    ;;
+esac
+
+# ── develop → alpha only ─────────────────────────────────────────────
+if [ "$BRANCH" = "develop" ]; then
+  echo ""
+  echo "  📦 You're on 'develop'. Alpha pre-releases only."
+  echo ""
+  echo "  [1] patch alpha  →  e.g. v1.0.1-alpha.1"
+  echo "  [2] minor alpha  →  e.g. v1.1.0-alpha.1"
+  echo "  [3] major alpha  →  e.g. v2.0.0-alpha.1"
+  echo "  [4] skip         →  just push, no release"
+  echo ""
+  printf "  Your choice (1/2/3/4): "
+  read choice < /dev/tty
+
+  case "$choice" in
+    1) pnpm release:patch -- --prerelease alpha ;;
+    2) pnpm release:minor -- --prerelease alpha ;;
+    3) pnpm release:major -- --prerelease alpha ;;
+    4) echo "  → Skipping release." ;;
+    *) echo "  → Invalid, skipping release." ;;
+  esac
+
+  [ "$choice" = "1" ] || [ "$choice" = "2" ] || [ "$choice" = "3" ] && git push origin --tags
+  exit 0
+fi
+
+# ── staging → beta only ──────────────────────────────────────────────
+if [ "$BRANCH" = "staging" ]; then
+  echo ""
+  echo "  📦 You're on 'staging'. Beta pre-releases only."
+  echo ""
+  echo "  [1] patch beta   →  e.g. v1.0.1-beta.1"
+  echo "  [2] minor beta   →  e.g. v1.1.0-beta.1"
+  echo "  [3] major beta   →  e.g. v2.0.0-beta.1"
+  echo "  [4] skip         →  just push, no release"
+  echo ""
+  printf "  Your choice (1/2/3/4): "
+  read choice < /dev/tty
+
+  case "$choice" in
+    1) pnpm release:patch -- --prerelease beta ;;
+    2) pnpm release:minor -- --prerelease beta ;;
+    3) pnpm release:major -- --prerelease beta ;;
+    4) echo "  → Skipping release." ;;
+    *) echo "  → Invalid, skipping release." ;;
+  esac
+
+  [ "$choice" = "1" ] || [ "$choice" = "2" ] || [ "$choice" = "3" ] && git push origin --tags
+  exit 0
+fi
+
+# ── main → stable only ───────────────────────────────────────────────
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
+  echo ""
+  echo "  🚀 You're on 'main'. Stable releases only."
+  echo ""
+  echo "  [1] patch        →  e.g. v1.0.1  (bug fixes)"
+  echo "  [2] minor        →  e.g. v1.1.0  (new features)"
+  echo "  [3] major        →  e.g. v2.0.0  (breaking changes)"
+  echo "  [4] skip         →  just push, no release"
+  echo ""
+  printf "  Your choice (1/2/3/4): "
+  read choice < /dev/tty
+
+  case "$choice" in
+    1) pnpm release:patch ;;
+    2) pnpm release:minor ;;
+    3) pnpm release:major ;;
+    4) echo "  → Skipping release." ;;
+    *) echo "  → Invalid, skipping release." ;;
+  esac
+
+  [ "$choice" = "1" ] || [ "$choice" = "2" ] || [ "$choice" = "3" ] && git push origin --tags
+  exit 0
+fi
+
+# ── any other branch → just push ─────────────────────────────────────
+echo "  ✓ No release rule for '$BRANCH' — pushing normally."
+exit 0
