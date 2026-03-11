@@ -6,7 +6,7 @@ import z from "zod";
 export const userGroupModel = pgTable("user_groups", {
     id: serial().primaryKey(),
     name: varchar({ length: 500 }).notNull().unique(),
-    shortName: varchar({ length: 500 }),
+    description: varchar({ length: 500 }),
     code: varchar({ length: 255 }),
     sequence: integer().notNull().default(0),
     isActive: boolean().notNull().default(true),

@@ -1,13 +1,27 @@
-import { AppModuleT, DepartmentT, UserGroupDomainT, UserGroupMemberT, UserGroupT, UserPrivilegeSubT, UserPrivilegeT, UserStatusReasonT, UserStatusSessionMappingT, UserStatusT } from "@/schemas";
+import { 
+    AppModuleT, 
+    DepartmentT, 
+    DesignationT, 
+    UserGroupDomainT, 
+    UserGroupMemberT, 
+    UserGroupT, 
+    UserPrivilegeSubProgramCourseT, 
+    UserPrivilegeSubScopeT, 
+    UserPrivilegeSubT, 
+    UserPrivilegeT, 
+    UserStatusReasonT, 
+    UserStatusSessionMappingT, 
+    UserStatusT,
+} from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
 import { SessionDto } from "../academics";
 
 export interface DepartmentDto extends Omit<DepartmentT, "parentDepartmentId"> {
-    parentDepartment: DepartmentDto[];
+    parentDepartment: DepartmentDto | null;
 }
 
 export interface AppModuleDto extends Omit<AppModuleT, "parentAppModuleId"> {
-    parentAppModule: AppModuleDto[];
+    parentAppModule: AppModuleDto | null;
 }
 
 export interface UserGroupDto extends UserGroupT {
@@ -15,10 +29,19 @@ export interface UserGroupDto extends UserGroupT {
     members: UserGroupMemberT[];
 }
 
-export interface UserPrivilegeSubDto extends Omit<UserPrivilegeSubT, "appModuleId" | "programCourseId" | "departmentId"> {
-    appModule: AppModuleDto
-    programCourse?: ProgramCourseDto;
+export interface UserPrivilegeSubProgramCourseDto extends Omit<UserPrivilegeSubProgramCourseT, "programCourseId"> {
+    programCourse: ProgramCourseDto;
+}
+
+export interface UserPrivilegeSubScopeDto extends Omit<UserPrivilegeSubScopeT, "departmentId" | "designationId"> {
     department?: DepartmentDto;
+    designation?: DesignationT;
+}
+
+export interface UserPrivilegeSubDto extends Omit<UserPrivilegeSubT, "appModuleId"> {
+    appModule: AppModuleDto;
+    programCourses?: UserPrivilegeSubProgramCourseDto[];
+    scopes?: UserPrivilegeSubScopeDto[];
 }
 
 export interface UserPrivilegeDto extends Omit<UserPrivilegeT, "userGroupId" | "userStatusId"> {

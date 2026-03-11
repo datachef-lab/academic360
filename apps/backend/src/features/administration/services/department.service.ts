@@ -14,7 +14,7 @@ type UpdateDepartmentInput = Partial<CreateDepartmentInput>;
 
 function toDepartmentDto(model: DepartmentT): DepartmentDto {
   const { parentDepartmentId, ...rest } = model;
-  return { ...rest, parentDepartment: [] };
+  return { ...rest, parentDepartment: null };
 }
 
 export async function getAllDepartments(): Promise<DepartmentDto[]> {

@@ -84,11 +84,9 @@ import {
   userGroupDomainRouter,
   userGroupMemberRouter,
   userPrivilegeRouter,
-  userPrivilegeSubRouter,
   userStatusRouter,
   userStatusReasonRouter,
   userStatusSessionMappingRouter,
-  userStaffDepartmentMappingRouter,
   feeHeadRouter,
   feeStructureComponentRouter,
   feeCategoryRouter,
@@ -450,8 +448,6 @@ app.use("/api/administration/user-group-members", userGroupMemberRouter);
 
 app.use("/api/administration/user-privileges", userPrivilegeRouter);
 
-app.use("/api/administration/user-privilege-subs", userPrivilegeSubRouter);
-
 app.use("/api/administration/user-statuses", userStatusRouter);
 
 app.use("/api/administration/user-status-reasons", userStatusReasonRouter);
@@ -459,11 +455,6 @@ app.use("/api/administration/user-status-reasons", userStatusReasonRouter);
 app.use(
   "/api/administration/user-status-session-mappings",
   userStatusSessionMappingRouter,
-);
-
-app.use(
-  "/api/administration/user-staff-department-mappings",
-  userStaffDepartmentMappingRouter,
 );
 
 app.use("/api/address", addressRouter);

@@ -14,10 +14,6 @@ export const userPrivilegeSubModel = pgTable("user_privilege_sub", {
     appModuleId: integer("app_module_id_fk")
         .references(() => appModuleModel.id)
         .notNull(),
-    programCourseId: integer("program_course_id_fk")
-        .references(() => programCourseModel.id),
-    departmentId: integer("department_id_fk")
-        .references(() => departmentModel.id),
     isAccessible: boolean().notNull().default(true),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
@@ -25,8 +21,6 @@ export const userPrivilegeSubModel = pgTable("user_privilege_sub", {
     userPrivilegeAppModuleProgramCourseDepartmentUnique: unique("uq_user_group_app_module_program_course_department").on(
         table.userPrivilegeId,
         table.appModuleId,
-        table.programCourseId,
-        table.departmentId,
     )
 }));
 

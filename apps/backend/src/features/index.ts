@@ -86,11 +86,9 @@ import {
   userGroupDomainRouter,
   userGroupMemberRouter,
   userPrivilegeRouter,
-  userPrivilegeSubRouter,
   userStatusRouter,
   userStatusReasonRouter,
   userStatusSessionMappingRouter,
-  userStaffDepartmentMappingRouter,
 } from "./administration/routes/index.js";
 
 export {
@@ -167,9 +165,7 @@ export {
   userGroupDomainRouter,
   userGroupMemberRouter,
   userPrivilegeRouter,
-  userPrivilegeSubRouter,
   userStatusRouter,
   userStatusReasonRouter,
   userStatusSessionMappingRouter,
-  userStaffDepartmentMappingRouter,
 };

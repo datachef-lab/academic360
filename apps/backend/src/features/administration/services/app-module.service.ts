@@ -11,7 +11,7 @@ type UpdateAppModuleInput = Partial<CreateAppModuleInput>;
 
 function toAppModuleDto(model: AppModuleT): AppModuleDto {
   const { parentAppModuleId, ...rest } = model;
-  return { ...rest, parentAppModule: [] };
+  return { ...rest, parentAppModule: null };
 }
 
 export async function getAllAppModules(): Promise<AppModuleDto[]> {
