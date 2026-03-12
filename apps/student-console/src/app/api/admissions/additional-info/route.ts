@@ -28,12 +28,18 @@ export async function GET(request: NextRequest) {
     if (applicationFormId) {
       const result = await findAdditionalInfoByApplicationFormId(parseInt(applicationFormId));
       if (!result) {
-        return NextResponse.json({ error: "Additional info not found for this application" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Additional info not found for this application" },
+          { status: 404 },
+        );
       }
       return NextResponse.json(result);
     }
 
-    return NextResponse.json({ error: "Either id or applicationFormId is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Either id or applicationFormId is required" },
+      { status: 400 },
+    );
   } catch (error) {
     console.error("Error in GET additional info:", error);
     return NextResponse.json({ error: "Failed to get additional info" }, { status: 500 });

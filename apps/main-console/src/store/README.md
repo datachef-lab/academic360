@@ -30,8 +30,14 @@ src/
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 
 function MyComponent() {
-  const { currentAcademicYear, availableAcademicYears, loading, error, loadAcademicYears, setCurrentYear } =
-    useAcademicYear();
+  const {
+    currentAcademicYear,
+    availableAcademicYears,
+    loading,
+    error,
+    loadAcademicYears,
+    setCurrentYear,
+  } = useAcademicYear();
 
   useEffect(() => {
     loadAcademicYears();

@@ -55,7 +55,10 @@ export function Breadcrumb() {
 
   if (segments.length === 0) {
     return (
-      <View className="px-4 py-2 flex-row items-center" style={{ borderBottomWidth: 1, borderColor: theme.border }}>
+      <View
+        className="px-4 py-2 flex-row items-center"
+        style={{ borderBottomWidth: 1, borderColor: theme.border }}
+      >
         <Text style={{ color: theme.text, opacity: 0.7, fontSize: 13 }}>Home</Text>
       </View>
     );

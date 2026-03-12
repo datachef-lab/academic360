@@ -282,43 +282,103 @@ const LoginPage = () => {
           <div className="relative w-[60px] h-[60px]">
             <div
               className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={{ "--rotation": "36", "--translation": "150", "--delay": "0.1" } as React.CSSProperties}
+              style={
+                {
+                  "--rotation": "36",
+                  "--translation": "150",
+                  "--delay": "0.1",
+                } as React.CSSProperties
+              }
             ></div>
             <div
               className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={{ "--rotation": "72", "--translation": "150", "--delay": "0.2" } as React.CSSProperties}
+              style={
+                {
+                  "--rotation": "72",
+                  "--translation": "150",
+                  "--delay": "0.2",
+                } as React.CSSProperties
+              }
             ></div>
             <div
               className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={{ "--rotation": "108", "--translation": "150", "--delay": "0.3" } as React.CSSProperties}
+              style={
+                {
+                  "--rotation": "108",
+                  "--translation": "150",
+                  "--delay": "0.3",
+                } as React.CSSProperties
+              }
             ></div>
             <div
               className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={{ "--rotation": "144", "--translation": "150", "--delay": "0.4" } as React.CSSProperties}
+              style={
+                {
+                  "--rotation": "144",
+                  "--translation": "150",
+                  "--delay": "0.4",
+                } as React.CSSProperties
+              }
             ></div>
             <div
               className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={{ "--rotation": "180", "--translation": "150", "--delay": "0.5" } as React.CSSProperties}
+              style={
+                {
+                  "--rotation": "180",
+                  "--translation": "150",
+                  "--delay": "0.5",
+                } as React.CSSProperties
+              }
             ></div>
             <div
               className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={{ "--rotation": "216", "--translation": "150", "--delay": "0.6" } as React.CSSProperties}
+              style={
+                {
+                  "--rotation": "216",
+                  "--translation": "150",
+                  "--delay": "0.6",
+                } as React.CSSProperties
+              }
             ></div>
             <div
               className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={{ "--rotation": "252", "--translation": "150", "--delay": "0.7" } as React.CSSProperties}
+              style={
+                {
+                  "--rotation": "252",
+                  "--translation": "150",
+                  "--delay": "0.7",
+                } as React.CSSProperties
+              }
             ></div>
             <div
               className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={{ "--rotation": "288", "--translation": "150", "--delay": "0.8" } as React.CSSProperties}
+              style={
+                {
+                  "--rotation": "288",
+                  "--translation": "150",
+                  "--delay": "0.8",
+                } as React.CSSProperties
+              }
             ></div>
             <div
               className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={{ "--rotation": "324", "--translation": "150", "--delay": "0.9" } as React.CSSProperties}
+              style={
+                {
+                  "--rotation": "324",
+                  "--translation": "150",
+                  "--delay": "0.9",
+                } as React.CSSProperties
+              }
             ></div>
             <div
               className="absolute w-1/2 h-[150%] bg-[#722bab] rounded-sm [transform:rotate(calc(var(--rotation)*1deg))_translate(0,calc(var(--translation)*1%))] animate-[spinner-fzua35_1s_calc(var(--delay)*1s)_infinite_ease]"
-              style={{ "--rotation": "360", "--translation": "150", "--delay": "1" } as React.CSSProperties}
+              style={
+                {
+                  "--rotation": "360",
+                  "--translation": "150",
+                  "--delay": "1",
+                } as React.CSSProperties
+              }
             ></div>
           </div>
         </div>
@@ -370,7 +430,10 @@ const LoginPage = () => {
               </AvatarFallback>
             </Avatar>
             <div className="text-left">
-              <Badge variant="outline" className="text-sm font-bold text-blue-900 bg-blue-50 border-blue-200 mb-2">
+              <Badge
+                variant="outline"
+                className="text-sm font-bold text-blue-900 bg-blue-50 border-blue-200 mb-2"
+              >
                 {settings.find((ele) => ele.name === "College Abbreviation")?.value}
               </Badge>
               <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
@@ -395,7 +458,9 @@ const LoginPage = () => {
                     <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838l-2.727 1.17 1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
                   </svg>
                 </div>
-                <span className="text-xl sm:text-2xl font-extrabold text-purple-600">academic360</span>
+                <span className="text-xl sm:text-2xl font-extrabold text-purple-600">
+                  academic360
+                </span>
               </div>
             </CardTitle>
             <h3 className="font-extrabold text-center text-2xl md:text-3xl">Welcome Back!</h3>
@@ -406,7 +471,10 @@ const LoginPage = () => {
             <form onSubmit={handleSubmit} className="grid gap-6">
               {/* Email */}
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-white">
+                <label
+                  htmlFor="email"
+                  className="text-sm font-medium text-gray-700 dark:text-white"
+                >
                   Email
                 </label>
                 <div className="relative">
@@ -427,7 +495,10 @@ const LoginPage = () => {
 
               {/* Password */}
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-white">
+                <label
+                  htmlFor="password"
+                  className="text-sm font-medium text-gray-700 dark:text-white"
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -454,7 +525,10 @@ const LoginPage = () => {
               </div>
               <div className="w-full px-6 pb-6 -mt-4">
                 <div className="flex justify-end">
-                  <Link to="/reset-password" className="text-sm text-purple-600 hover:text-purple-700">
+                  <Link
+                    to="/reset-password"
+                    className="text-sm text-purple-600 hover:text-purple-700"
+                  >
                     Forgot password?
                   </Link>
                 </div>
@@ -502,7 +576,9 @@ const LoginPage = () => {
         </Card>
 
         {/* Footer */}
-        <p className="text-white text-xs md:text-sm absolute bottom-0 pb-4">All Rights Reserved. @2025</p>
+        <p className="text-white text-xs md:text-sm absolute bottom-0 pb-4">
+          All Rights Reserved. @2025
+        </p>
       </div>
 
       {/* Right Section (Image) */}

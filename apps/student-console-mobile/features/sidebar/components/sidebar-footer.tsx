@@ -34,7 +34,11 @@ export default function SidebarFooter() {
       }}
     >
       {/* Logout */}
-      <Pressable onPress={handleLogout} disabled={loggingOut} className="flex-row items-center gap-3 mb-3">
+      <Pressable
+        onPress={handleLogout}
+        disabled={loggingOut}
+        className="flex-row items-center gap-3 mb-3"
+      >
         {loggingOut ? (
           <ActivityIndicator size="small" color={colorScheme === "dark" ? "#ff6b6b" : "#d32f2f"} />
         ) : (

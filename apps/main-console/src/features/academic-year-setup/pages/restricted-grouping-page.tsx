@@ -3,13 +3,32 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -134,7 +153,9 @@ export default function RestrictedGroupingPage() {
         id: dto.id || 0,
         subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
         subject: dto.subject?.name || "",
-        semesters: (dto.forClasses || []).map((c) => c.class?.shortName || c.class?.name || "").filter(Boolean),
+        semesters: (dto.forClasses || [])
+          .map((c) => c.class?.shortName || c.class?.name || "")
+          .filter(Boolean),
         cannotCombineWith: (dto.cannotCombineWithSubjects || [])
           .map((s) => s.cannotCombineWithSubject?.name || "")
           .filter(Boolean),
@@ -157,29 +178,37 @@ export default function RestrictedGroupingPage() {
     async function load() {
       try {
         // Load masters in parallel (resilient to individual failures)
-        const [subjectsRes, subjectTypesRes, classesRes, programCoursesRes] = await Promise.allSettled([
-          getSubjects() as Promise<SubjectDto[]>,
-          getSubjectTypes() as Promise<SubjectTypeLite[]>,
-          getAllClasses(),
-          getProgramCourses() as Promise<ProgramCourseLite[]>,
-        ]);
+        const [subjectsRes, subjectTypesRes, classesRes, programCoursesRes] =
+          await Promise.allSettled([
+            getSubjects() as Promise<SubjectDto[]>,
+            getSubjectTypes() as Promise<SubjectTypeLite[]>,
+            getAllClasses(),
+            getProgramCourses() as Promise<ProgramCourseLite[]>,
+          ]);
 
         const subjects = subjectsRes.status === "fulfilled" ? subjectsRes.value : [];
         const subjectTypes = subjectTypesRes.status === "fulfilled" ? subjectTypesRes.value : [];
         const classes = classesRes.status === "fulfilled" ? classesRes.value : [];
-        const programCourses = programCoursesRes.status === "fulfilled" ? programCoursesRes.value : [];
+        const programCourses =
+          programCoursesRes.status === "fulfilled" ? programCoursesRes.value : [];
 
         if (!isMounted) return;
         // Initial page load via server pagination loader
         await loadPage();
 
         setAllSubjects(subjects.map((s) => s.name).filter(Boolean));
-        setAllCategories(subjectTypes.map((st) => st.code || st.name || "").filter((v): v is string => !!v));
+        setAllCategories(
+          subjectTypes.map((st) => st.code || st.name || "").filter((v): v is string => !!v),
+        );
         if (classes.length === 0 && classesRes.status === "rejected") {
           toast.warning("Couldn't load classes. Some fields may be empty.");
         }
-        setAllSemesters(classes.map((c) => c.shortName || c.name || "").filter((v): v is string => !!v));
-        setAllProgramCourses(programCourses.map((pc) => pc.name || "").filter((v): v is string => !!v));
+        setAllSemesters(
+          classes.map((c) => c.shortName || c.name || "").filter((v): v is string => !!v),
+        );
+        setAllProgramCourses(
+          programCourses.map((pc) => pc.name || "").filter((v): v is string => !!v),
+        );
 
         // Build lookup maps
         const subjMap: Record<string, number> = {};
@@ -294,15 +323,25 @@ export default function RestrictedGroupingPage() {
       subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
       subject: dto.subject?.name || "",
       semesters: Array.from(
-        new Set((dto.forClasses || []).map((c) => c.class?.shortName || c.class?.name || "").filter(Boolean)),
+        new Set(
+          (dto.forClasses || [])
+            .map((c) => c.class?.shortName || c.class?.name || "")
+            .filter(Boolean),
+        ),
       ),
       cannotCombineWith: Array.from(
         new Set(
-          (dto.cannotCombineWithSubjects || []).map((s) => s.cannotCombineWithSubject?.name || "").filter(Boolean),
+          (dto.cannotCombineWithSubjects || [])
+            .map((s) => s.cannotCombineWithSubject?.name || "")
+            .filter(Boolean),
         ),
       ),
       applicableProgramCoursesFor: Array.from(
-        new Set((dto.applicableProgramCourses || []).map((pc) => pc.programCourse?.name || "").filter(Boolean)),
+        new Set(
+          (dto.applicableProgramCourses || [])
+            .map((pc) => pc.programCourse?.name || "")
+            .filter(Boolean),
+        ),
       ),
       isActive: dto.isActive ?? true,
     }));
@@ -321,8 +360,11 @@ export default function RestrictedGroupingPage() {
     const programCourseMatch =
       !selectedProgramCourse ||
       selectedProgramCourse === "all" ||
-      item.applicableProgramCoursesFor.some((course: string) => course.includes(selectedProgramCourse));
-    const categoryMatch = !selectedCategory || selectedCategory === "all" || item.subjectCategory === selectedCategory;
+      item.applicableProgramCoursesFor.some((course: string) =>
+        course.includes(selectedProgramCourse),
+      );
+    const categoryMatch =
+      !selectedCategory || selectedCategory === "all" || item.subjectCategory === selectedCategory;
     return programCourseMatch && categoryMatch;
   });
 
@@ -347,13 +389,19 @@ export default function RestrictedGroupingPage() {
     }
   };
 
-  const updateRule = (ruleId: number, field: string, value: string | string[] | boolean | number) => {
+  const updateRule = (
+    ruleId: number,
+    field: string,
+    value: string | string[] | boolean | number,
+  ) => {
     if (activeTab === "category-program") {
       setCategoryProgramRules((rules) =>
         rules.map((rule) => (rule.id === ruleId ? { ...rule, [field]: value } : rule)),
       );
     } else {
-      setSubjectRules((rules) => rules.map((rule) => (rule.id === ruleId ? { ...rule, [field]: value } : rule)));
+      setSubjectRules((rules) =>
+        rules.map((rule) => (rule.id === ruleId ? { ...rule, [field]: value } : rule)),
+      );
     }
   };
 
@@ -435,7 +483,9 @@ export default function RestrictedGroupingPage() {
     }
 
     try {
-      const results = await Promise.all(payloads.map((p) => restrictedGroupingApi.createRestrictedGroupingMain(p)));
+      const results = await Promise.all(
+        payloads.map((p) => restrictedGroupingApi.createRestrictedGroupingMain(p)),
+      );
       toast.success(`Saved ${results.length} restricted grouping${results.length > 1 ? "s" : ""}`);
       setIsAddDialogOpen(false);
       resetDialog();
@@ -444,7 +494,9 @@ export default function RestrictedGroupingPage() {
         id: dto.id || 0,
         subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
         subject: dto.subject?.name || "",
-        semesters: (dto.forClasses || []).map((c) => c.class?.shortName || c.class?.name || "").filter(Boolean),
+        semesters: (dto.forClasses || [])
+          .map((c) => c.class?.shortName || c.class?.name || "")
+          .filter(Boolean),
         cannotCombineWith: (dto.cannotCombineWithSubjects || [])
           .map((s) => s.cannotCombineWithSubject?.name || "")
           .filter(Boolean),
@@ -465,13 +517,20 @@ export default function RestrictedGroupingPage() {
     setOpenPopovers((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleMultiSelectChange = (ruleId: number, field: string, value: string, isSelected: boolean) => {
+  const handleMultiSelectChange = (
+    ruleId: number,
+    field: string,
+    value: string,
+    isSelected: boolean,
+  ) => {
     const currentRules = activeTab === "category-program" ? categoryProgramRules : subjectRules;
     const rule = currentRules.find((r) => r.id === ruleId);
     if (!rule) return;
 
     const currentArray = rule[field as keyof typeof rule] as string[];
-    const newArray = isSelected ? currentArray.filter((item) => item !== value) : [...currentArray, value];
+    const newArray = isSelected
+      ? currentArray.filter((item) => item !== value)
+      : [...currentArray, value];
 
     updateRule(ruleId, field, newArray);
   };
@@ -484,11 +543,14 @@ export default function RestrictedGroupingPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-700">Restricted Groupings</h1>
             <p className="text-gray-600 mt-1">
-              Define relationships between programs-courses and subjects. Configure which subjects belong to which
-              programs and courses.
+              Define relationships between programs-courses and subjects. Configure which subjects
+              belong to which programs and courses.
             </p>
           </div>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="bg-purple-600 hover:bg-purple-700">
+          <Button
+            onClick={() => setIsAddDialogOpen(true)}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add
           </Button>
@@ -569,7 +631,9 @@ export default function RestrictedGroupingPage() {
                     <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-20">
                       Status
                     </TableHead>
-                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-700 w-24">Actions</TableHead>
+                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-700 w-24">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
               </Table>
@@ -585,13 +649,20 @@ export default function RestrictedGroupingPage() {
                       className="hover:bg-gray-50 border-b-2 border-gray-300"
                       style={{ borderBottom: "2px solid #d1d5db" }}
                     >
-                      <TableCell className="border-r border-gray-300 w-16">{startIndex + index + 1}</TableCell>
+                      <TableCell className="border-r border-gray-300 w-16">
+                        {startIndex + index + 1}
+                      </TableCell>
                       <TableCell className="font-medium border-r border-gray-300 w-32">
-                        <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50">
+                        <Badge
+                          variant="outline"
+                          className="border-blue-500 text-blue-700 bg-blue-50"
+                        >
                           {relation.subjectCategory}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-medium border-r border-gray-300 w-48">{relation.subject}</TableCell>
+                      <TableCell className="font-medium border-r border-gray-300 w-48">
+                        {relation.subject}
+                      </TableCell>
                       <TableCell className="border-r border-gray-300 w-24">
                         <div className="flex flex-wrap gap-1">
                           {(relation.semesters || []).map((semester, semIndex) => (
@@ -607,17 +678,22 @@ export default function RestrictedGroupingPage() {
                       </TableCell>
                       <TableCell className="border-r border-gray-300 w-48">
                         <div className="flex flex-wrap gap-1">
-                          {(relation.cannotCombineWith || []).slice(0, 2).map((subject, subjectIndex) => (
+                          {(relation.cannotCombineWith || [])
+                            .slice(0, 2)
+                            .map((subject, subjectIndex) => (
+                              <Badge
+                                key={subjectIndex}
+                                variant="outline"
+                                className="text-xs border-red-500 text-red-700 bg-red-50"
+                              >
+                                {subject}
+                              </Badge>
+                            ))}
+                          {(relation.cannotCombineWith || []).length > 2 && (
                             <Badge
-                              key={subjectIndex}
                               variant="outline"
                               className="text-xs border-red-500 text-red-700 bg-red-50"
                             >
-                              {subject}
-                            </Badge>
-                          ))}
-                          {(relation.cannotCombineWith || []).length > 2 && (
-                            <Badge variant="outline" className="text-xs border-red-500 text-red-700 bg-red-50">
                               +{(relation.cannotCombineWith || []).length - 2} more
                             </Badge>
                           )}
@@ -625,21 +701,27 @@ export default function RestrictedGroupingPage() {
                       </TableCell>
                       <TableCell className="border-r border-gray-300 w-40">
                         <div className="flex flex-wrap gap-1">
-                          {(relation.applicableProgramCoursesFor || []).map((course, courseIndex) => (
-                            <Badge
-                              key={courseIndex}
-                              variant="outline"
-                              className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300"
-                            >
-                              {course.split(" - ")[0]}
-                            </Badge>
-                          ))}
+                          {(relation.applicableProgramCoursesFor || []).map(
+                            (course, courseIndex) => (
+                              <Badge
+                                key={courseIndex}
+                                variant="outline"
+                                className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300"
+                              >
+                                {course.split(" - ")[0]}
+                              </Badge>
+                            ),
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="border-r border-gray-300 w-20">
                         <Badge
                           variant={relation.isActive ? "default" : "secondary"}
-                          className={relation.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}
+                          className={
+                            relation.isActive
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }
                         >
                           {relation.isActive ? "Active" : "Inactive"}
                         </Badge>
@@ -693,12 +775,17 @@ export default function RestrictedGroupingPage() {
               <div>
                 <DialogTitle>Subject Relations</DialogTitle>
                 <DialogDescription>
-                  Configure relations, restrictions, and applicability rules for the selected subject.
+                  Configure relations, restrictions, and applicability rules for the selected
+                  subject.
                   {currentAcademicYear && (
                     <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
                       <strong>Note:</strong> These mappings will be created for the academic year{" "}
-                      <span className="font-semibold text-blue-700">{currentAcademicYear.year}</span>
-                      {currentAcademicYear.isCurrentYear === true && <span className="text-green-600"> (Current)</span>}
+                      <span className="font-semibold text-blue-700">
+                        {currentAcademicYear.year}
+                      </span>
+                      {currentAcademicYear.isCurrentYear === true && (
+                        <span className="text-green-600"> (Current)</span>
+                      )}
                       .
                     </div>
                   )}
@@ -706,7 +793,10 @@ export default function RestrictedGroupingPage() {
               </div>
               <div className="flex justify-end rounded-md pr-7">
                 <div className="flex items-center gap-3">
-                  <Label htmlFor="subjectSelect" className="text-sm font-semibold whitespace-nowrap">
+                  <Label
+                    htmlFor="subjectSelect"
+                    className="text-sm font-semibold whitespace-nowrap"
+                  >
                     For Subject:
                   </Label>
                   <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -730,7 +820,9 @@ export default function RestrictedGroupingPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <div className="flex items-center justify-between mb-1 pb-4">
                 <TabsList className="flex w-auto justify-start">
-                  <TabsTrigger value="category-program">Category & Program-Course Specific</TabsTrigger>
+                  <TabsTrigger value="category-program">
+                    Category & Program-Course Specific
+                  </TabsTrigger>
                   <TabsTrigger value="subject-specific">Subject Specific</TabsTrigger>
                 </TabsList>
                 <Button
@@ -792,13 +884,17 @@ export default function RestrictedGroupingPage() {
                                 className="border-b-2 border-gray-300 hover:bg-gray-50"
                                 style={{ borderBottom: "2px solid #d1d5db" }}
                               >
-                                <TableCell className="border-r border-gray-300 w-16">{index + 1}</TableCell>
+                                <TableCell className="border-r border-gray-300 w-16">
+                                  {index + 1}
+                                </TableCell>
 
                                 {/* Subject Category Dropdown */}
                                 <TableCell className="font-medium border-r border-gray-300 w-40">
                                   <Select
                                     value={rule.category}
-                                    onValueChange={(value) => updateRule(rule.id, "category", value)}
+                                    onValueChange={(value) =>
+                                      updateRule(rule.id, "category", value)
+                                    }
                                   >
                                     <SelectTrigger className="w-full text-gray-700">
                                       <SelectValue placeholder="Select category" />
@@ -826,7 +922,9 @@ export default function RestrictedGroupingPage() {
                                         className="w-full justify-between text-left font-normal h-auto"
                                       >
                                         {rule.cannotCombineWith.length === 0 ? (
-                                          <span className="text-muted-foreground">Select subjects...</span>
+                                          <span className="text-muted-foreground">
+                                            Select subjects...
+                                          </span>
                                         ) : (
                                           <div className="flex flex-wrap gap-1 max-w-full">
                                             {rule.cannotCombineWith.slice(0, 2).map((subject) => (
@@ -853,7 +951,10 @@ export default function RestrictedGroupingPage() {
                                     </PopoverTrigger>
                                     <PopoverContent className="w-64 p-0" align="start">
                                       <Command>
-                                        <CommandInput placeholder="Search subjects..." className="text-gray-700" />
+                                        <CommandInput
+                                          placeholder="Search subjects..."
+                                          className="text-gray-700"
+                                        />
                                         <CommandEmpty>No subjects found.</CommandEmpty>
                                         <CommandGroup>
                                           {allSubjects
@@ -900,11 +1001,17 @@ export default function RestrictedGroupingPage() {
                                         className="w-full justify-between text-left font-normal h-auto"
                                       >
                                         {rule.semesters.length === 0 ? (
-                                          <span className="text-muted-foreground">Select semesters...</span>
+                                          <span className="text-muted-foreground">
+                                            Select semesters...
+                                          </span>
                                         ) : (
                                           <div className="flex flex-wrap gap-1 max-w-full">
                                             {rule.semesters.map((semester) => (
-                                              <Badge key={semester} variant="secondary" className="text-xs">
+                                              <Badge
+                                                key={semester}
+                                                variant="secondary"
+                                                className="text-xs"
+                                              >
                                                 {semester}
                                               </Badge>
                                             ))}
@@ -915,7 +1022,10 @@ export default function RestrictedGroupingPage() {
                                     </PopoverTrigger>
                                     <PopoverContent className="w-48 p-0" align="start">
                                       <Command>
-                                        <CommandInput placeholder="Search semesters..." className="text-gray-700" />
+                                        <CommandInput
+                                          placeholder="Search semesters..."
+                                          className="text-gray-700"
+                                        />
                                         <CommandEmpty>No semesters found.</CommandEmpty>
                                         <CommandGroup>
                                           {allSemesters.map((semester) => (
@@ -933,7 +1043,9 @@ export default function RestrictedGroupingPage() {
                                             >
                                               <Check
                                                 className={`mr-2 h-4 w-4 ${
-                                                  rule.semesters.includes(semester) ? "opacity-100" : "opacity-0"
+                                                  rule.semesters.includes(semester)
+                                                    ? "opacity-100"
+                                                    : "opacity-0"
                                                 }`}
                                               />
                                               {semester}
@@ -958,7 +1070,9 @@ export default function RestrictedGroupingPage() {
                                         className="w-full justify-between text-left font-normal h-auto"
                                       >
                                         {rule.applicableProgramCourses.length === 0 ? (
-                                          <span className="text-muted-foreground">Select courses...</span>
+                                          <span className="text-muted-foreground">
+                                            Select courses...
+                                          </span>
                                         ) : (
                                           <div className="flex flex-wrap gap-1 max-w-full">
                                             {rule.applicableProgramCourses.map((course) => (
@@ -977,7 +1091,10 @@ export default function RestrictedGroupingPage() {
                                     </PopoverTrigger>
                                     <PopoverContent className="w-80 p-0" align="start">
                                       <Command>
-                                        <CommandInput placeholder="Search courses..." className="text-gray-700" />
+                                        <CommandInput
+                                          placeholder="Search courses..."
+                                          className="text-gray-700"
+                                        />
                                         <CommandEmpty>No courses found.</CommandEmpty>
                                         <CommandGroup>
                                           {allProgramCourses.map((course) => (
@@ -1079,7 +1196,9 @@ export default function RestrictedGroupingPage() {
                                 className="border-b-2 border-gray-300 hover:bg-gray-50"
                                 style={{ borderBottom: "2px solid #d1d5db" }}
                               >
-                                <TableCell className="border-r border-gray-300 w-16">{index + 1}</TableCell>
+                                <TableCell className="border-r border-gray-300 w-16">
+                                  {index + 1}
+                                </TableCell>
 
                                 {/* Studied in 12th? Checkbox */}
                                 <TableCell className="border-r border-gray-300 w-48">
@@ -1087,7 +1206,9 @@ export default function RestrictedGroupingPage() {
                                     <Switch
                                       id={`studied-12th-${rule.id}`}
                                       checked={rule.studiedIn12th}
-                                      onCheckedChange={(checked) => updateRule(rule.id, "studiedIn12th", checked)}
+                                      onCheckedChange={(checked) =>
+                                        updateRule(rule.id, "studiedIn12th", checked)
+                                      }
                                       className="data-[state=checked]:bg-green-600"
                                     />
                                     <Label
@@ -1115,7 +1236,9 @@ export default function RestrictedGroupingPage() {
                                     <Label
                                       htmlFor={`board-pass-${rule.id}`}
                                       className={`text-sm font-medium ${
-                                        rule.class12thBoardPassMarks ? "text-green-600" : "text-gray-700"
+                                        rule.class12thBoardPassMarks
+                                          ? "text-green-600"
+                                          : "text-gray-700"
                                       }`}
                                     >
                                       {rule.class12thBoardPassMarks ? "Yes" : "No"}
@@ -1130,7 +1253,11 @@ export default function RestrictedGroupingPage() {
                                     placeholder="Enter marks"
                                     value={rule.minMarksOverride || ""}
                                     onChange={(e) =>
-                                      updateRule(rule.id, "minMarksOverride", parseInt(e.target.value) || 0)
+                                      updateRule(
+                                        rule.id,
+                                        "minMarksOverride",
+                                        parseInt(e.target.value) || 0,
+                                      )
                                     }
                                     disabled={rule.class12thBoardPassMarks}
                                     className="w-full text-gray-700"
@@ -1143,7 +1270,9 @@ export default function RestrictedGroupingPage() {
                                     <Switch
                                       id={`status-${rule.id}`}
                                       checked={rule.isActive}
-                                      onCheckedChange={(checked) => updateRule(rule.id, "isActive", checked)}
+                                      onCheckedChange={(checked) =>
+                                        updateRule(rule.id, "isActive", checked)
+                                      }
                                       className="data-[state=checked]:bg-green-600"
                                     />
                                     <Label
@@ -1250,7 +1379,9 @@ export default function RestrictedGroupingPage() {
                     <Checkbox
                       id={`cc-${s}`}
                       checked={editCannotCombine.includes(s)}
-                      onCheckedChange={() => toggleEditArray(s, editCannotCombine, setEditCannotCombine)}
+                      onCheckedChange={() =>
+                        toggleEditArray(s, editCannotCombine, setEditCannotCombine)
+                      }
                     />
                     <Label htmlFor={`cc-${s}`} className="text-sm">
                       {s}
@@ -1267,7 +1398,9 @@ export default function RestrictedGroupingPage() {
                     <Checkbox
                       id={`pc-${pc}`}
                       checked={editProgramCourses.includes(pc)}
-                      onCheckedChange={() => toggleEditArray(pc, editProgramCourses, setEditProgramCourses)}
+                      onCheckedChange={() =>
+                        toggleEditArray(pc, editProgramCourses, setEditProgramCourses)
+                      }
                     />
                     <Label htmlFor={`pc-${pc}`} className="text-sm">
                       {pc}
@@ -1296,7 +1429,11 @@ export default function RestrictedGroupingPage() {
           </div>
 
           <div className="flex items-center space-x-2 mt-4">
-            <Checkbox id="active" checked={editIsActive} onCheckedChange={(v) => setEditIsActive(Boolean(v))} />
+            <Checkbox
+              id="active"
+              checked={editIsActive}
+              onCheckedChange={(v) => setEditIsActive(Boolean(v))}
+            />
             <Label htmlFor="active">Active</Label>
           </div>
 

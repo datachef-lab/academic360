@@ -24,7 +24,12 @@ type StudentContentProps = {
   };
 };
 
-export default function StudentContent({ activeTab, studentId, userId, personalEmail }: StudentContentProps) {
+export default function StudentContent({
+  activeTab,
+  studentId,
+  userId,
+  personalEmail,
+}: StudentContentProps) {
   const { data: profile } = useQuery({
     queryKey: ["user-profile", userId || studentId],
     queryFn: async () => {

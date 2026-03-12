@@ -27,7 +27,7 @@ export async function addDegree(formData: FormData): Promise<AddDegreeResult> {
     level: formData.get("level"),
     sequence: formData.get("sequence") ? Number(formData.get("sequence")) : undefined,
   };
-  if (!allowedLevels.includes(data.level as typeof degreeLevelType.enumValues[number])) {
+  if (!allowedLevels.includes(data.level as (typeof degreeLevelType.enumValues)[number])) {
     return { success: false, error: "Invalid degree level." };
   }
   const validation = degreeSchema.safeParse(data);
@@ -47,8 +47,11 @@ export async function addDegree(formData: FormData): Promise<AddDegreeResult> {
   }
 }
 
-export async function updateDegree(id: number, data: { name: any; level: any; sequence?: number }): Promise<AddDegreeResult> {
-  if (!allowedLevels.includes(data.level as typeof degreeLevelType.enumValues[number])) {
+export async function updateDegree(
+  id: number,
+  data: { name: any; level: any; sequence?: number },
+): Promise<AddDegreeResult> {
+  if (!allowedLevels.includes(data.level as (typeof degreeLevelType.enumValues)[number])) {
     return { success: false, error: "Invalid degree level." };
   }
   const validation = degreeSchema.safeParse(data);
@@ -56,10 +59,13 @@ export async function updateDegree(id: number, data: { name: any; level: any; se
     return { success: false, error: validation.error.message };
   }
   try {
-    await dbPostgres.update(degree).set({
-      ...validation.data,
-      level: validation.data.level as any,
-    }).where(eq(degree.id, id));
+    await dbPostgres
+      .update(degree)
+      .set({
+        ...validation.data,
+        level: validation.data.level as any,
+      })
+      .where(eq(degree.id, id));
     revalidatePath("/settings/masters/degrees");
     return { success: true, message: "Degree updated successfully." };
   } catch (error) {
@@ -68,7 +74,9 @@ export async function updateDegree(id: number, data: { name: any; level: any; se
   }
 }
 
-export async function deleteDegree(id: number): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function deleteDegree(
+  id: number,
+): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     await dbPostgres.update(degree).set({ disabled: true }).where(eq(degree.id, id));
     revalidatePath("/settings/masters/degrees");
@@ -79,7 +87,9 @@ export async function deleteDegree(id: number): Promise<{ success: boolean; mess
   }
 }
 
-export async function uploadDegreesFromFile(formData: FormData): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function uploadDegreesFromFile(
+  formData: FormData,
+): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const file = formData.get("file");
     if (!file) return { success: false, error: "No file uploaded." };
@@ -87,11 +97,13 @@ export async function uploadDegreesFromFile(formData: FormData): Promise<{ succe
     const workbook = XLSX.read(arrayBuffer, { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json: any[] = XLSX.utils.sheet_to_json(sheet);
-    const validDegrees = json.map(row => ({
-      name: row["Name"] || row["name"],
-      level: row["Level"] || row["level"],
-      sequence: row["Sequence"] || row["sequence"]
-    })).filter(d => d.name && d.level);
+    const validDegrees = json
+      .map((row) => ({
+        name: row["Name"] || row["name"],
+        level: row["Level"] || row["level"],
+        sequence: row["Sequence"] || row["sequence"],
+      }))
+      .filter((d) => d.name && d.level);
     await dbPostgres.insert(degree).values(validDegrees);
     revalidatePath("/settings/masters/degrees");
     return { success: true, message: "Degrees uploaded successfully." };
@@ -107,5 +119,7 @@ export async function downloadDegrees(): Promise<Blob> {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Degrees");
   const wbout = XLSX.write(wb, { type: "array", bookType: "xlsx" });
-  return new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-} 
+  return new Blob([wbout], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+}

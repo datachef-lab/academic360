@@ -4,8 +4,7 @@ export const Features = () => {
       <div className="text-center">
         <h2 className="font-semibold text-3xl">Features you'll love</h2>
         <p className="max-w-md mx-auto mt-2 text-gray-500">
-          A responsive documentation template built for everyone who wants to
-          create a plugin.
+          A responsive documentation template built for everyone who wants to create a plugin.
         </p>
       </div>
 
@@ -29,13 +28,9 @@ export const Features = () => {
             </svg>
           </span>
           <div>
-            <h3 className="font-semibold text-xl">
-              Student Management Features
-            </h3>
+            <h3 className="font-semibold text-xl">Student Management Features</h3>
             <ul className="mt-2 list-disc list-inside text-gray-500">
-              <li>
-                Manage student profiles with personal and academic information
-              </li>
+              <li>Manage student profiles with personal and academic information</li>
               <li>Track attendance and generate reports</li>
               <li>Record and analyze student grades</li>
             </ul>
@@ -61,17 +56,10 @@ export const Features = () => {
             </svg>
           </span>
           <div>
-            <h3 className="font-semibold text-xl">
-              User Access & Role Management
-            </h3>
+            <h3 className="font-semibold text-xl">User Access & Role Management</h3>
             <ul className="mt-2 list-disc list-inside text-gray-500">
-              <li>
-                Define multiple roles such as Admin, Teacher, Student, and
-                Parent
-              </li>
-              <li>
-                Assign specific permissions to each role (view, edit, delete)
-              </li>
+              <li>Define multiple roles such as Admin, Teacher, Student, and Parent</li>
+              <li>Assign specific permissions to each role (view, edit, delete)</li>
               <li>Manage user accounts and access levels</li>
             </ul>
           </div>
@@ -126,9 +114,7 @@ export const Features = () => {
           <div>
             <h3 className="font-semibold text-xl">Grade Management</h3>
             <ul className="mt-2 list-disc list-inside text-gray-500">
-              <li>
-                Record and manage grades for various subjects and assessments
-              </li>
+              <li>Record and manage grades for various subjects and assessments</li>
               <li>Generate detailed grade reports for each student</li>
               <li>Track student performance over time</li>
             </ul>
@@ -156,15 +142,9 @@ export const Features = () => {
           <div>
             <h3 className="font-semibold text-xl">Gradebook & Reporting</h3>
             <ul className="mt-2 list-disc list-inside text-gray-500">
-              <li>
-                Enter and manage grades for assignments, quizzes, and exams
-              </li>
-              <li>
-                Automatically calculate final grades based on weighted criteria
-              </li>
-              <li>
-                Generate performance reports for individual students or groups
-              </li>
+              <li>Enter and manage grades for assignments, quizzes, and exams</li>
+              <li>Automatically calculate final grades based on weighted criteria</li>
+              <li>Generate performance reports for individual students or groups</li>
             </ul>
           </div>
         </div>
@@ -188,19 +168,11 @@ export const Features = () => {
             </svg>
           </span>
           <div>
-            <h3 className="font-semibold text-xl">
-              Behavioral Tracking & Feedback
-            </h3>
+            <h3 className="font-semibold text-xl">Behavioral Tracking & Feedback</h3>
             <ul className="mt-2 list-disc list-inside text-gray-500">
               <li>Record positive and negative behavior points for students</li>
-              <li>
-                Assign behavior categories (e.g., "Respect," "Punctuality,"
-                "Participation")
-              </li>
-              <li>
-                Provide real-time feedback to students and parents through
-                notifications
-              </li>
+              <li>Assign behavior categories (e.g., "Respect," "Punctuality," "Participation")</li>
+              <li>Provide real-time feedback to students and parents through notifications</li>
             </ul>
           </div>
         </div>

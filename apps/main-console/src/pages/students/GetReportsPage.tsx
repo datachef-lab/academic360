@@ -30,7 +30,7 @@ const Page: React.FC = () => {
         page: debouncePagination.pageIndex + 1,
         pageSize: debouncePagination.pageSize,
       }),
-    placeholderData: (prevData: Report ) => prevData,
+    placeholderData: (prevData: Report) => prevData,
     staleTime: 10000,
   });
 
@@ -78,7 +78,6 @@ const Page: React.FC = () => {
         />
       </motion.div>
       <div className="w-full mt-4  max-w-auto mx-auto p-6 grid grid-cols-1 gap-6">
-       
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

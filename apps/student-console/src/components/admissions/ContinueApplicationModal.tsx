@@ -62,16 +62,9 @@ export function ContinueApplicationModal({ isOpen, onClose }: ContinueApplicatio
               required
             />
           </div>
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex justify-end space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
-            >
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
@@ -89,4 +82,4 @@ export function ContinueApplicationModal({ isOpen, onClose }: ContinueApplicatio
       </DialogContent>
     </Dialog>
   );
-} 
+}

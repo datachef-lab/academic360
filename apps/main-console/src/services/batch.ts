@@ -39,12 +39,16 @@ export async function deleteBatch(id: number | string): Promise<void> {
 }
 
 // Get batch summaries by filters (e.g., academicYearId)
-export async function getBatchSummariesByFilters(filters: { academicYearId?: number }): Promise<BatchSummary[]> {
+export async function getBatchSummariesByFilters(filters: {
+  academicYearId?: number;
+}): Promise<BatchSummary[]> {
   return getAllBatches(filters.academicYearId);
 }
 
 // Upload batch (bulk)
-export async function uploadBatch(batchRows: BatchStudentRow[]): Promise<{ success: boolean, exceptions: BatchStudentRow[] }> {
+export async function uploadBatch(
+  batchRows: BatchStudentRow[],
+): Promise<{ success: boolean; exceptions: BatchStudentRow[] }> {
   const res = await axiosInstance.post("/api/batches/upload", batchRows);
   return res.data.payload;
-} 
+}

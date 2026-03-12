@@ -2,7 +2,13 @@
 import React, { useState } from "react";
 import Instructions from "./components/instructions";
 import SubjectSelectionForm from "./components/subject-selection-form";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { Info, AlertCircle } from "lucide-react";
 import { useStudent } from "@/providers/student-provider";
 
@@ -35,10 +41,12 @@ export default function SubjectSelection() {
           <div className="text-center max-w-md mx-auto p-8">
             <div className="mb-6">
               <AlertCircle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-semibold text-gray-800 mb-2">Subject Selection Not Available</h2>
+              <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+                Subject Selection Not Available
+              </h2>
               <p className="text-gray-600 text-lg">
-                Subject Selection is not applicable for {student?.programCourse?.course?.name?.trim()?.toUpperCase()}{" "}
-                students.
+                Subject Selection is not applicable for{" "}
+                {student?.programCourse?.course?.name?.trim()?.toUpperCase()} students.
               </p>
             </div>
           </div>
@@ -75,7 +83,10 @@ export default function SubjectSelection() {
         {/* Mobile notes modal - optimized for mobile scrolling */}
         {openMobileNotes && (
           <div className="lg:hidden fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
-            <div className="absolute inset-0 bg-black/50" onClick={() => setOpenMobileNotes(false)} />
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setOpenMobileNotes(false)}
+            />
             <div className="relative bg-white w-full max-w-md max-h-[95vh] sm:max-h-[90vh] rounded-lg shadow-xl border z-10 flex flex-col">
               {/* Fixed Header */}
               <div className="flex items-center justify-between px-3 sm:px-4 py-3 border-b bg-white rounded-t-lg flex-shrink-0">
@@ -90,7 +101,11 @@ export default function SubjectSelection() {
               </div>
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 mobile-modal-scroll">
-                <Instructions compact={true} student={student} visibleCategories={visibleCategories} />
+                <Instructions
+                  compact={true}
+                  student={student}
+                  visibleCategories={visibleCategories}
+                />
               </div>
             </div>
           </div>

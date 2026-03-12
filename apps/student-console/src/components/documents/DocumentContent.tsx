@@ -2,7 +2,13 @@
 // @ts-nocheck
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Download, Eye, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -218,9 +224,9 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
   });
 
   // Get unique semesters for the semester dropdown
-  const semesters = [...new Set(documents.filter((doc) => doc.semester !== null).map((doc) => doc.semester))].sort(
-    (a, b) => (a || 0) - (b || 0),
-  );
+  const semesters = [
+    ...new Set(documents.filter((doc) => doc.semester !== null).map((doc) => doc.semester)),
+  ].sort((a, b) => (a || 0) - (b || 0));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-indigo-50/20 to-purple-50/20">
@@ -310,8 +316,8 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
             <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-700 mb-2">No Documents Found</h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              We couldn&apos;t find any documents for your account. If you believe this is an error, please contact the
-              administrative staff.
+              We couldn&apos;t find any documents for your account. If you believe this is an error,
+              please contact the administrative staff.
             </p>
           </div>
         )}
@@ -463,7 +469,10 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
               className="h-8 w-8 p-0 bg-white/90 backdrop-blur-sm rounded-full border-gray-300 shadow-md"
               onClick={() => {
                 if (previewUrl) {
-                  const downloadUrl = previewUrl.replace("disposition=inline", "disposition=attachment");
+                  const downloadUrl = previewUrl.replace(
+                    "disposition=inline",
+                    "disposition=attachment",
+                  );
                   window.open(downloadUrl, "_blank");
                 }
               }}

@@ -1,6 +1,5 @@
 import { SubjectType } from "./academics/subject-metadata";
 
-
 export interface StudentInfo {
   name: string;
   registrationNo: string;
@@ -15,7 +14,7 @@ export interface CourseComponent {
   componentType: "Theoretical" | "Practical" | "Tutorial"; // Extend as needed
   fullMarks: number;
   marksObtained: number;
-  
+
   credit: number;
 }
 
@@ -28,9 +27,8 @@ export interface Course {
   components: CourseComponent[];
 }
 
-
 export interface GradeCardData {
   universityName: string;
   studentInfo: StudentInfo;
   courses: Course[];
-} 
+}

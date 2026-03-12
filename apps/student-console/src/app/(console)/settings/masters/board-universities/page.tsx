@@ -2,15 +2,43 @@
 // @ts-nocheck
 import React, { useState, useTransition, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Upload, Download, Loader2, FileText, ChevronLeft, ChevronRight, Ban } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pencil,
+  Upload,
+  Download,
+  Loader2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Ban,
+} from "lucide-react";
 import { BoardUniversityDialog } from "./board-university-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast"; // Assuming useToast is available
 import * as XLSX from "xlsx"; // Assuming xlsx is installed
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
 
 // Import placeholder actions for upload/download (assuming they exist in ./actions)
@@ -64,7 +92,9 @@ export default function BoardUniversitiesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast(); // Assuming useToast is available
 
-  const [editingBoardUniversity, setEditingBoardUniversity] = useState<BoardUniversityDto | null>(null);
+  const [editingBoardUniversity, setEditingBoardUniversity] = useState<BoardUniversityDto | null>(
+    null,
+  );
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedCode, setEditedCode] = useState<string | null>("");
@@ -412,7 +442,10 @@ export default function BoardUniversitiesPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handleDisable = async (id: number | undefined, currentDisabled: boolean | null | undefined) => {
+  const handleDisable = async (
+    id: number | undefined,
+    currentDisabled: boolean | null | undefined,
+  ) => {
     if (id === undefined) return;
 
     try {
@@ -498,7 +531,8 @@ export default function BoardUniversitiesPage() {
   return (
     <div className="container mx-auto px-4">
       <div className="flex flex-col gap-4 mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Board / Universities Management</h1> {/* Updated title */}
+        <h1 className="text-2xl font-bold text-gray-900">Board / Universities Management</h1>{" "}
+        {/* Updated title */}
         <div className="flex flex-wrap justify-between items-center gap-3">
           {" "}
           {/* Container for both button groups */}
@@ -604,7 +638,9 @@ export default function BoardUniversitiesPage() {
             {" "}
             {/* Made header sticky */}
             <TableRow className="bg-gray-50 hover:bg-gray-50">
-              <TableHead className="w-[80px] font-semibold text-center text-gray-700">Sr. No</TableHead>
+              <TableHead className="w-[80px] font-semibold text-center text-gray-700">
+                Sr. No
+              </TableHead>
               <TableHead className="font-semibold text-center text-gray-700">Name</TableHead>
               <TableHead className="font-semibold text-center text-gray-700">Degree</TableHead>
               <TableHead className="font-semibold text-center text-gray-700">Code</TableHead>
@@ -629,13 +665,20 @@ export default function BoardUniversitiesPage() {
               </TableRow>
             ) : (
               data.map((boardUniversity, index) => (
-                <TableRow key={`board-university-${boardUniversity.id}-${index}`} className="hover:bg-gray-50">
+                <TableRow
+                  key={`board-university-${boardUniversity.id}-${index}`}
+                  className="hover:bg-gray-50"
+                >
                   <TableCell className="font-medium text-center text-gray-600">
                     {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                   </TableCell>
                   <TableCell className="text-gray-700 ">{boardUniversity.name}</TableCell>
-                  <TableCell className="text-gray-700 text-center">{boardUniversity.degreeName}</TableCell>
-                  <TableCell className="text-gray-700 text-center">{boardUniversity.code}</TableCell>
+                  <TableCell className="text-gray-700 text-center">
+                    {boardUniversity.degreeName}
+                  </TableCell>
+                  <TableCell className="text-gray-700 text-center">
+                    {boardUniversity.code}
+                  </TableCell>
                   <TableCell className="text-gray-700 text-center">
                     <span
                       className={`px-2 py-1 rounded-full text-xs ${boardUniversity.disabled ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}
@@ -643,8 +686,12 @@ export default function BoardUniversitiesPage() {
                       {boardUniversity.disabled ? "Disabled" : "Active"}
                     </span>
                   </TableCell>
-                  <TableCell className="text-gray-700 text-center">{boardUniversity.sequence ?? "-"}</TableCell>
-                  <TableCell className="text-gray-700 text-center">{boardUniversity.subjects?.length || 0}</TableCell>
+                  <TableCell className="text-gray-700 text-center">
+                    {boardUniversity.sequence ?? "-"}
+                  </TableCell>
+                  <TableCell className="text-gray-700 text-center">
+                    {boardUniversity.subjects?.length || 0}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       {/* Edit Button */}
@@ -663,7 +710,9 @@ export default function BoardUniversitiesPage() {
                         className="hover:bg-gray-100"
                         onClick={() => handleDisable(boardUniversity.id, boardUniversity.disabled)}
                       >
-                        <Ban className={`h-4 w-4 ${boardUniversity.disabled ? "text-green-500" : "text-red-500"}`} />
+                        <Ban
+                          className={`h-4 w-4 ${boardUniversity.disabled ? "text-green-500" : "text-red-500"}`}
+                        />
                       </Button>
                     </div>
                   </TableCell>
@@ -680,7 +729,9 @@ export default function BoardUniversitiesPage() {
           {" "}
           {/* Increased max-width */}
           <DialogHeader className="pb-4">
-            <DialogTitle className="text-2xl font-bold text-gray-800">Edit Board University</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-gray-800">
+              Edit Board University
+            </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col md:flex-row gap-6 py-4 overflow-hidden">
             <div className="flex flex-col space-y-4 pr-4 border-r border-gray-200 md:w-[300px]">
@@ -755,7 +806,9 @@ export default function BoardUniversitiesPage() {
               <div className="flex justify-between items-center mb-2">
                 {" "}
                 {/* Adjusted margin */}
-                <Label className="text-base font-medium text-gray-700">Subjects ({editedSubjects.length})</Label>
+                <Label className="text-base font-medium text-gray-700">
+                  Subjects ({editedSubjects.length})
+                </Label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -822,7 +875,8 @@ export default function BoardUniversitiesPage() {
                                 onChange={(e) => {
                                   const newSubjects = [...editedSubjects];
                                   const originalIndex = editedSubjects.indexOf(subject);
-                                  if (originalIndex > -1) newSubjects[originalIndex].name = e.target.value;
+                                  if (originalIndex > -1)
+                                    newSubjects[originalIndex].name = e.target.value;
                                   setEditedSubjects(newSubjects);
                                 }}
                                 placeholder="Enter subject name"
@@ -832,14 +886,17 @@ export default function BoardUniversitiesPage() {
                             <TableCell className="py-3 px-1">
                               <Input
                                 type="text"
-                                value={subject.passingMarks !== null ? String(subject.passingMarks) : ""}
+                                value={
+                                  subject.passingMarks !== null ? String(subject.passingMarks) : ""
+                                }
                                 onChange={(e) => {
                                   const value = e.target.value;
                                   if (value === "" || /^[0-9]*$/.test(value)) {
                                     const newSubjects = [...editedSubjects];
                                     const originalIndex = editedSubjects.indexOf(subject);
                                     if (originalIndex > -1)
-                                      newSubjects[originalIndex].passingMarks = value === "" ? null : Number(value);
+                                      newSubjects[originalIndex].passingMarks =
+                                        value === "" ? null : Number(value);
                                     setEditedSubjects(newSubjects);
                                   }
                                 }}
@@ -855,7 +912,8 @@ export default function BoardUniversitiesPage() {
                                 onCheckedChange={(checked: boolean) => {
                                   const newSubjects = [...editedSubjects];
                                   const originalIndex = editedSubjects.indexOf(subject);
-                                  if (originalIndex > -1) newSubjects[originalIndex].disabled = !checked;
+                                  if (originalIndex > -1)
+                                    newSubjects[originalIndex].disabled = !checked;
                                   setEditedSubjects(newSubjects);
                                 }}
                                 id={`subject-${subject.name}-${index}-status`}
@@ -867,8 +925,8 @@ export default function BoardUniversitiesPage() {
                       ) : (
                         <TableRow className="hover:bg-transparent">
                           <TableCell colSpan={3} className="text-center text-gray-500 py-4">
-                            No subjects found matching your search criteria or none added. Click &quot;Add Subject&quot;
-                            to add one.
+                            No subjects found matching your search criteria or none added. Click
+                            &quot;Add Subject&quot; to add one.
                           </TableCell>
                         </TableRow>
                       )}

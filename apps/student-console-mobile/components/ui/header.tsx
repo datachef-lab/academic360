@@ -116,7 +116,10 @@ export function Header() {
             <View
               className="h-9 w-9 items-center justify-center rounded-full"
               style={{
-                backgroundColor: getAvatarColorForChar(user?.name?.charAt(0) || "?", colorScheme === "dark"),
+                backgroundColor: getAvatarColorForChar(
+                  user?.name?.charAt(0) || "?",
+                  colorScheme === "dark",
+                ),
               }}
             >
               <Text className="text-sm font-semibold" style={{ color: "#ffffff" }}>

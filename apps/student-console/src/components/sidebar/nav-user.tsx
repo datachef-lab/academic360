@@ -2,7 +2,12 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import { LogOut, ChevronDown, Settings } from "lucide-react";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,7 +81,9 @@ export function NavUser() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold text-gray-900">{user?.name || "Student"}</span>
+                  <span className="truncate font-semibold text-gray-900">
+                    {user?.name || "Student"}
+                  </span>
                   <span className="truncate text-xs text-gray-600">{user?.payload.uid || ""}</span>
                 </div>
               </div>

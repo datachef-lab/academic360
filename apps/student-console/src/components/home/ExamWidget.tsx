@@ -146,7 +146,9 @@ export default function ExamWidget({ exams, examGroups }: ExamWidgetProps) {
               <div className="flex items-center gap-2">
                 <h4 className="text-base font-bold text-gray-800">{examGroup?.name || "Exam"}</h4>
                 {isToday && (
-                  <span className="px-2 py-0.5 text-xs font-medium bg-emerald-500 text-white rounded-full">Today</span>
+                  <span className="px-2 py-0.5 text-xs font-medium bg-emerald-500 text-white rounded-full">
+                    Today
+                  </span>
                 )}
               </div>
 

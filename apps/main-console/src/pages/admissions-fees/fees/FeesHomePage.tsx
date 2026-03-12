@@ -3,8 +3,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -53,7 +66,12 @@ import {
 import MultiSelect from "@/components/ui/MultiSelect";
 import { Label } from "@/components/ui/label";
 import { Pagination } from "@/components/ui/pagination";
-import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Mock data - Replace with actual API calls
 const mockKPIData = {
@@ -97,30 +115,114 @@ const mockDefaultersData = [
 ];
 
 const mockInstallmentsData = [
-  { student: "John Doe", installment: "2/4", dueDate: "2025-01-15", amount: 12500, status: "upcoming" },
-  { student: "Jane Smith", installment: "1/4", dueDate: "2024-12-20", amount: 15000, status: "overdue" },
-  { student: "Bob Wilson", installment: "3/4", dueDate: "2025-02-10", amount: 10000, status: "upcoming" },
-  { student: "Alice Johnson", installment: "1/4", dueDate: "2024-12-15", amount: 13750, status: "overdue" },
-  { student: "Charlie Brown", installment: "4/4", dueDate: "2025-03-01", amount: 15000, status: "upcoming" },
-  { student: "Diana Prince", installment: "2/4", dueDate: "2025-01-20", amount: 17500, status: "upcoming" },
-  { student: "Edward Norton", installment: "1/4", dueDate: "2024-12-25", amount: 16250, status: "overdue" },
-  { student: "Fiona Apple", installment: "3/4", dueDate: "2025-02-05", amount: 15000, status: "upcoming" },
-  { student: "George Lucas", installment: "1/4", dueDate: "2024-12-10", amount: 30000, status: "overdue" },
-  { student: "Helen Keller", installment: "2/4", dueDate: "2025-01-25", amount: 12500, status: "upcoming" },
-  { student: "Isaac Newton", installment: "4/4", dueDate: "2025-02-28", amount: 11250, status: "upcoming" },
-  { student: "Julia Roberts", installment: "1/4", dueDate: "2024-12-30", amount: 10000, status: "overdue" },
+  {
+    student: "John Doe",
+    installment: "2/4",
+    dueDate: "2025-01-15",
+    amount: 12500,
+    status: "upcoming",
+  },
+  {
+    student: "Jane Smith",
+    installment: "1/4",
+    dueDate: "2024-12-20",
+    amount: 15000,
+    status: "overdue",
+  },
+  {
+    student: "Bob Wilson",
+    installment: "3/4",
+    dueDate: "2025-02-10",
+    amount: 10000,
+    status: "upcoming",
+  },
+  {
+    student: "Alice Johnson",
+    installment: "1/4",
+    dueDate: "2024-12-15",
+    amount: 13750,
+    status: "overdue",
+  },
+  {
+    student: "Charlie Brown",
+    installment: "4/4",
+    dueDate: "2025-03-01",
+    amount: 15000,
+    status: "upcoming",
+  },
+  {
+    student: "Diana Prince",
+    installment: "2/4",
+    dueDate: "2025-01-20",
+    amount: 17500,
+    status: "upcoming",
+  },
+  {
+    student: "Edward Norton",
+    installment: "1/4",
+    dueDate: "2024-12-25",
+    amount: 16250,
+    status: "overdue",
+  },
+  {
+    student: "Fiona Apple",
+    installment: "3/4",
+    dueDate: "2025-02-05",
+    amount: 15000,
+    status: "upcoming",
+  },
+  {
+    student: "George Lucas",
+    installment: "1/4",
+    dueDate: "2024-12-10",
+    amount: 30000,
+    status: "overdue",
+  },
+  {
+    student: "Helen Keller",
+    installment: "2/4",
+    dueDate: "2025-01-25",
+    amount: 12500,
+    status: "upcoming",
+  },
+  {
+    student: "Isaac Newton",
+    installment: "4/4",
+    dueDate: "2025-02-28",
+    amount: 11250,
+    status: "upcoming",
+  },
+  {
+    student: "Julia Roberts",
+    installment: "1/4",
+    dueDate: "2024-12-30",
+    amount: 10000,
+    status: "overdue",
+  },
 ];
 
 const mockTransactionsData = [
   { txnId: "TXN001234", student: "John Doe", amount: 50000, mode: "UPI", status: "success" },
   { txnId: "TXN001233", student: "Jane Smith", amount: 45000, mode: "Card", status: "success" },
   { txnId: "TXN001232", student: "Bob Wilson", amount: 40000, mode: "UPI", status: "success" },
-  { txnId: "TXN001231", student: "Alice Johnson", amount: 55000, mode: "Bank Transfer", status: "success" },
+  {
+    txnId: "TXN001231",
+    student: "Alice Johnson",
+    amount: 55000,
+    mode: "Bank Transfer",
+    status: "success",
+  },
   { txnId: "TXN001230", student: "Charlie Brown", amount: 60000, mode: "Cash", status: "success" },
   { txnId: "TXN001229", student: "Diana Prince", amount: 70000, mode: "UPI", status: "success" },
   { txnId: "TXN001228", student: "Edward Norton", amount: 65000, mode: "Card", status: "failed" },
   { txnId: "TXN001227", student: "Fiona Apple", amount: 60000, mode: "UPI", status: "success" },
-  { txnId: "TXN001226", student: "George Lucas", amount: 120000, mode: "Bank Transfer", status: "success" },
+  {
+    txnId: "TXN001226",
+    student: "George Lucas",
+    amount: 120000,
+    mode: "Bank Transfer",
+    status: "success",
+  },
   { txnId: "TXN001225", student: "Helen Keller", amount: 50000, mode: "UPI", status: "success" },
   { txnId: "TXN001224", student: "Isaac Newton", amount: 45000, mode: "Card", status: "cancelled" },
   { txnId: "TXN001223", student: "Julia Roberts", amount: 40000, mode: "UPI", status: "success" },
@@ -297,7 +399,10 @@ export default function FeesHomePage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Rows per page:</span>
-            <Select value={itemsPerPage.toString()} onValueChange={(value) => onItemsPerPageChange(Number(value))}>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => onItemsPerPageChange(Number(value))}
+            >
               <SelectTrigger className="h-8 w-[70px]">
                 <SelectValue />
               </SelectTrigger>
@@ -338,7 +443,9 @@ export default function FeesHomePage() {
                     size="sm"
                     onClick={() => onPageChange(pageNum)}
                     className={`h-8 w-8 p-0 ${
-                      displayCurrentPage === pageNum ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600" : ""
+                      displayCurrentPage === pageNum
+                        ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                        : ""
                     }`}
                   >
                     {pageNum}
@@ -427,7 +534,12 @@ export default function FeesHomePage() {
                     <SelectItem value="2023-24">2023-24</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" onClick={() => setIsFilterModalOpen(true)} className="h-9 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsFilterModalOpen(true)}
+                  className="h-9 gap-2"
+                >
                   <Filter className="h-4 w-4" />
                   Filters
                 </Button>
@@ -575,8 +687,8 @@ export default function FeesHomePage() {
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
-                          Shows fee collection summary by program course including total students, eligible students,
-                          and paid students.
+                          Shows fee collection summary by program course including total students,
+                          eligible students, and paid students.
                         </p>
                       </TooltipContent>
                     </UITooltip>
@@ -588,13 +700,21 @@ export default function FeesHomePage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted">
-                          <TableHead className="bg-muted font-semibold border-r border-border">Sr. No</TableHead>
+                          <TableHead className="bg-muted font-semibold border-r border-border">
+                            Sr. No
+                          </TableHead>
                           <TableHead className="bg-muted font-semibold border-r border-border">
                             Program-Courses
                           </TableHead>
-                          <TableHead className="bg-muted font-semibold border-r border-border">Total</TableHead>
-                          <TableHead className="bg-muted font-semibold border-r border-border">Eligible</TableHead>
-                          <TableHead className="bg-muted font-semibold border-r border-border">Paid</TableHead>
+                          <TableHead className="bg-muted font-semibold border-r border-border">
+                            Total
+                          </TableHead>
+                          <TableHead className="bg-muted font-semibold border-r border-border">
+                            Eligible
+                          </TableHead>
+                          <TableHead className="bg-muted font-semibold border-r border-border">
+                            Paid
+                          </TableHead>
                           <TableHead className="bg-muted font-semibold">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -613,7 +733,10 @@ export default function FeesHomePage() {
                           <TableRow key={idx}>
                             <TableCell className="border-r border-border">{idx + 1}</TableCell>
                             <TableCell className="border-r border-border">
-                              <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                              >
                                 {row.programCourse}
                               </Badge>
                             </TableCell>
@@ -649,8 +772,9 @@ export default function FeesHomePage() {
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>
-                                Displays monthly, quarterly, or yearly collection trends over time. Toggle between
-                                different time ranges to analyze fee collection patterns.
+                                Displays monthly, quarterly, or yearly collection trends over time.
+                                Toggle between different time ranges to analyze fee collection
+                                patterns.
                               </p>
                             </TooltipContent>
                           </UITooltip>
@@ -690,7 +814,13 @@ export default function FeesHomePage() {
                         <YAxis />
                         <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
                         <Legend />
-                        <Line type="monotone" dataKey="amount" stroke="#8884d8" strokeWidth={2} name="Collection" />
+                        <Line
+                          type="monotone"
+                          dataKey="amount"
+                          stroke="#8884d8"
+                          strokeWidth={2}
+                          name="Collection"
+                        />
                       </LineChart>
                     </ResponsiveContainer>
                   </CardContent>
@@ -707,8 +837,8 @@ export default function FeesHomePage() {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            Shows the distribution of payment statuses: Paid (65%), Partial (20%), and Unpaid (15%)
-                            students.
+                            Shows the distribution of payment statuses: Paid (65%), Partial (20%),
+                            and Unpaid (15%) students.
                           </p>
                         </TooltipContent>
                       </UITooltip>
@@ -808,8 +938,8 @@ export default function FeesHomePage() {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            Shows the number of students enrolled in each semester (I through VI). Helps understand
-                            student distribution across academic levels.
+                            Shows the number of students enrolled in each semester (I through VI).
+                            Helps understand student distribution across academic levels.
                           </p>
                         </TooltipContent>
                       </UITooltip>
@@ -848,8 +978,8 @@ export default function FeesHomePage() {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            Displays student distribution across different shifts (Morning, Evening, Night) and sections
-                            (A, B, C, etc.). Helps manage class allocation.
+                            Displays student distribution across different shifts (Morning, Evening,
+                            Night) and sections (A, B, C, etc.). Helps manage class allocation.
                           </p>
                         </TooltipContent>
                       </UITooltip>
@@ -901,8 +1031,9 @@ export default function FeesHomePage() {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            Shows the number of students enrolled under each concession slab (A: 10%, B: 20%, C: 30%, D:
-                            40%, E: 0%). Helps analyze fee concession distribution.
+                            Shows the number of students enrolled under each concession slab (A:
+                            10%, B: 20%, C: 30%, D: 40%, E: 0%). Helps analyze fee concession
+                            distribution.
                           </p>
                         </TooltipContent>
                       </UITooltip>
@@ -940,8 +1071,9 @@ export default function FeesHomePage() {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            Displays alerts for missing fee structures, late fee rules, and unmapped concession slabs.
-                            Helps identify configuration issues that need attention.
+                            Displays alerts for missing fee structures, late fee rules, and unmapped
+                            concession slabs. Helps identify configuration issues that need
+                            attention.
                           </p>
                         </TooltipContent>
                       </UITooltip>
@@ -951,17 +1083,23 @@ export default function FeesHomePage() {
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Missing Fee Structure</AlertTitle>
-                      <AlertDescription>B.A Semester II Evening shift has no fee structure defined</AlertDescription>
+                      <AlertDescription>
+                        B.A Semester II Evening shift has no fee structure defined
+                      </AlertDescription>
                     </Alert>
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Late Fee Rule Missing</AlertTitle>
-                      <AlertDescription>Semester III has no late fee rule configured</AlertDescription>
+                      <AlertDescription>
+                        Semester III has no late fee rule configured
+                      </AlertDescription>
                     </Alert>
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>Unmapped Concession Slab</AlertTitle>
-                      <AlertDescription>Concession Slab F is not mapped to any fee structure</AlertDescription>
+                      <AlertDescription>
+                        Concession Slab F is not mapped to any fee structure
+                      </AlertDescription>
                     </Alert>
                   </CardContent>
                 </Card>
@@ -978,9 +1116,9 @@ export default function FeesHomePage() {
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
-                          Comprehensive overview of all fee structures showing affiliation, regulation, program course,
-                          shift, semester, receipt type, concession slab amounts, total fees, and status. Helps track
-                          fee structure completeness.
+                          Comprehensive overview of all fee structures showing affiliation,
+                          regulation, program course, shift, semester, receipt type, concession slab
+                          amounts, total fees, and status. Helps track fee structure completeness.
                         </p>
                       </TooltipContent>
                     </UITooltip>
@@ -992,7 +1130,9 @@ export default function FeesHomePage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted">
-                          <TableHead className="bg-muted font-semibold whitespace-nowrap">Affiliation</TableHead>
+                          <TableHead className="bg-muted font-semibold whitespace-nowrap">
+                            Affiliation
+                          </TableHead>
                           <TableHead className="bg-muted font-semibold">Regulation</TableHead>
                           <TableHead className="bg-muted font-semibold">Program Course</TableHead>
                           <TableHead className="bg-muted font-semibold">Shift</TableHead>
@@ -1097,7 +1237,9 @@ export default function FeesHomePage() {
                             <TableCell>{formatCurrency(row.slabC)}</TableCell>
                             <TableCell>{formatCurrency(row.slabD)}</TableCell>
                             <TableCell>{formatCurrency(row.slabE)}</TableCell>
-                            <TableCell className="font-semibold">{formatCurrency(row.totalFee)}</TableCell>
+                            <TableCell className="font-semibold">
+                              {formatCurrency(row.totalFee)}
+                            </TableCell>
                             <TableCell>
                               <Badge
                                 variant={
@@ -1142,25 +1284,33 @@ export default function FeesHomePage() {
                 <Card className="bg-blue-50 border-blue-200">
                   <CardHeader className="pb-2">
                     <CardDescription className="text-blue-700">Today</CardDescription>
-                    <CardTitle className="text-2xl text-blue-700">{formatCurrency(125000)}</CardTitle>
+                    <CardTitle className="text-2xl text-blue-700">
+                      {formatCurrency(125000)}
+                    </CardTitle>
                   </CardHeader>
                 </Card>
                 <Card className="bg-green-50 border-green-200">
                   <CardHeader className="pb-2">
                     <CardDescription className="text-green-700">This Month</CardDescription>
-                    <CardTitle className="text-2xl text-green-700">{formatCurrency(1800000)}</CardTitle>
+                    <CardTitle className="text-2xl text-green-700">
+                      {formatCurrency(1800000)}
+                    </CardTitle>
                   </CardHeader>
                 </Card>
                 <Card className="bg-purple-50 border-purple-200">
                   <CardHeader className="pb-2">
                     <CardDescription className="text-purple-700">This Quarter</CardDescription>
-                    <CardTitle className="text-2xl text-purple-700">{formatCurrency(5300000)}</CardTitle>
+                    <CardTitle className="text-2xl text-purple-700">
+                      {formatCurrency(5300000)}
+                    </CardTitle>
                   </CardHeader>
                 </Card>
                 <Card className="bg-orange-50 border-orange-200">
                   <CardHeader className="pb-2">
                     <CardDescription className="text-orange-700">This Year</CardDescription>
-                    <CardTitle className="text-2xl text-orange-700">{formatCurrency(9800000)}</CardTitle>
+                    <CardTitle className="text-2xl text-orange-700">
+                      {formatCurrency(9800000)}
+                    </CardTitle>
                   </CardHeader>
                 </Card>
               </div>
@@ -1178,9 +1328,9 @@ export default function FeesHomePage() {
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>
-                              Displays fee collection summary by program course. Filter by semester and shift to view
-                              specific data. Shows total students, eligible students, and paid students for each
-                              program.
+                              Displays fee collection summary by program course. Filter by semester
+                              and shift to view specific data. Shows total students, eligible
+                              students, and paid students for each program.
                             </p>
                           </TooltipContent>
                         </UITooltip>
@@ -1205,7 +1355,10 @@ export default function FeesHomePage() {
                           <SelectItem value="sem6">Semester VI</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Select value={selectedProgramCourseShift || "all"} onValueChange={setSelectedProgramCourseShift}>
+                      <Select
+                        value={selectedProgramCourseShift || "all"}
+                        onValueChange={setSelectedProgramCourseShift}
+                      >
                         <SelectTrigger className="w-[150px]">
                           <SelectValue placeholder="Select Shift" />
                         </SelectTrigger>
@@ -1230,11 +1383,15 @@ export default function FeesHomePage() {
                           <TableHead className="bg-muted font-semibold border-r border-border text-sm">
                             Program-Courses
                           </TableHead>
-                          <TableHead className="bg-muted font-semibold border-r border-border text-sm">Total</TableHead>
+                          <TableHead className="bg-muted font-semibold border-r border-border text-sm">
+                            Total
+                          </TableHead>
                           <TableHead className="bg-muted font-semibold border-r border-border text-sm">
                             Eligible
                           </TableHead>
-                          <TableHead className="bg-muted font-semibold border-r border-border text-sm">Paid</TableHead>
+                          <TableHead className="bg-muted font-semibold border-r border-border text-sm">
+                            Paid
+                          </TableHead>
                           <TableHead className="bg-muted font-semibold text-sm">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1251,15 +1408,26 @@ export default function FeesHomePage() {
                           { programCourse: "MBA", total: 40, eligible: 38, paid: 35 },
                         ].map((row, idx) => (
                           <TableRow key={idx} className="border-b">
-                            <TableCell className="border-r border-border text-sm">{idx + 1}</TableCell>
                             <TableCell className="border-r border-border text-sm">
-                              <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                              {idx + 1}
+                            </TableCell>
+                            <TableCell className="border-r border-border text-sm">
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                              >
                                 {row.programCourse}
                               </Badge>
                             </TableCell>
-                            <TableCell className="border-r border-border text-sm">{row.total}</TableCell>
-                            <TableCell className="border-r border-border text-sm">{row.eligible}</TableCell>
-                            <TableCell className="border-r border-border text-sm">{row.paid}</TableCell>
+                            <TableCell className="border-r border-border text-sm">
+                              {row.total}
+                            </TableCell>
+                            <TableCell className="border-r border-border text-sm">
+                              {row.eligible}
+                            </TableCell>
+                            <TableCell className="border-r border-border text-sm">
+                              {row.paid}
+                            </TableCell>
                             <TableCell className="text-sm">
                               <Button size="sm" variant="outline" className="h-7">
                                 <Download className="h-3 w-3 mr-1" />
@@ -1285,8 +1453,8 @@ export default function FeesHomePage() {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            Shows outstanding fee amounts categorized by age: 0-30 days, 31-60 days, 61-90 days, and
-                            over 90 days. Helps identify overdue payments.
+                            Shows outstanding fee amounts categorized by age: 0-30 days, 31-60 days,
+                            61-90 days, and over 90 days. Helps identify overdue payments.
                           </p>
                         </TooltipContent>
                       </UITooltip>
@@ -1323,8 +1491,8 @@ export default function FeesHomePage() {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            Lists all upcoming and overdue installments with student details, due dates, amounts, and
-                            payment status. Helps track installment payments.
+                            Lists all upcoming and overdue installments with student details, due
+                            dates, amounts, and payment status. Helps track installment payments.
                           </p>
                         </TooltipContent>
                       </UITooltip>
@@ -1369,7 +1537,9 @@ export default function FeesHomePage() {
                     <div className="mt-4">
                       <Pagination
                         currentPage={installmentsTablePage}
-                        totalPages={Math.ceil(mockInstallmentsData.length / installmentsTablePageSize)}
+                        totalPages={Math.ceil(
+                          mockInstallmentsData.length / installmentsTablePageSize,
+                        )}
                         totalItems={mockInstallmentsData.length}
                         itemsPerPage={installmentsTablePageSize}
                         startIndex={(installmentsTablePage - 1) * installmentsTablePageSize}
@@ -1503,7 +1673,9 @@ export default function FeesHomePage() {
                     <div className="mt-4">
                       <Pagination
                         currentPage={transactionsTablePage}
-                        totalPages={Math.ceil(mockTransactionsData.length / transactionsTablePageSize)}
+                        totalPages={Math.ceil(
+                          mockTransactionsData.length / transactionsTablePageSize,
+                        )}
                         totalItems={mockTransactionsData.length}
                         itemsPerPage={transactionsTablePageSize}
                         startIndex={(transactionsTablePage - 1) * transactionsTablePageSize}
@@ -1587,7 +1759,15 @@ export default function FeesHomePage() {
                             <TableCell>{row.semester}</TableCell>
                             <TableCell>{formatCurrency(row.due)}</TableCell>
                             <TableCell>
-                              <Badge variant={row.days > 60 ? "destructive" : row.days > 30 ? "secondary" : "outline"}>
+                              <Badge
+                                variant={
+                                  row.days > 60
+                                    ? "destructive"
+                                    : row.days > 30
+                                      ? "secondary"
+                                      : "outline"
+                                }
+                              >
                                 {row.days} days
                               </Badge>
                             </TableCell>
@@ -1834,7 +2014,9 @@ export default function FeesHomePage() {
           <DialogContent className="w-[98vw] sm:w-[98vw] max-w-[98vw] h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>Overdue Students</DialogTitle>
-              <DialogDescription>Students with payments overdue for more than 30 days</DialogDescription>
+              <DialogDescription>
+                Students with payments overdue for more than 30 days
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 flex-1 flex flex-col min-h-0">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-4">
@@ -1843,11 +2025,17 @@ export default function FeesHomePage() {
                   <Button size="sm" variant="outline" className="text-xs sm:text-sm">
                     Select All
                   </Button>
-                  <Button size="sm" className="text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button
+                    size="sm"
+                    className="text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 text-white"
+                  >
                     <Send className="h-3 w-3 mr-1" />
                     Send Reminders
                   </Button>
-                  <Button size="sm" className="text-xs sm:text-sm bg-orange-600 hover:bg-orange-700 text-white">
+                  <Button
+                    size="sm"
+                    className="text-xs sm:text-sm bg-orange-600 hover:bg-orange-700 text-white"
+                  >
                     <CreditCard className="h-3 w-3 mr-1" />
                     Apply Late Fee
                   </Button>
@@ -1864,13 +2052,25 @@ export default function FeesHomePage() {
                       <TableHead className="bg-muted font-semibold w-12">
                         <input type="checkbox" />
                       </TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[120px]">Student</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Program-Course</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[80px]">Semester</TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[120px]">
+                        Student
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Program-Course
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[80px]">
+                        Semester
+                      </TableHead>
                       <TableHead className="bg-muted font-semibold min-w-[80px]">Shift</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Due Amount</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Days Overdue</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[150px]">Actions</TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Due Amount
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Days Overdue
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[150px]">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1886,33 +2086,56 @@ export default function FeesHomePage() {
                           </TableCell>
                           <TableCell>{row.student}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                            >
                               {row.program}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                            >
                               {row.semester}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                            >
                               Morning
                             </Badge>
                           </TableCell>
                           <TableCell>{formatCurrency(row.due)}</TableCell>
                           <TableCell>
-                            <Badge variant={row.days > 60 ? "destructive" : row.days > 30 ? "secondary" : "outline"}>
+                            <Badge
+                              variant={
+                                row.days > 60
+                                  ? "destructive"
+                                  : row.days > 30
+                                    ? "secondary"
+                                    : "outline"
+                              }
+                            >
                               {row.days} days
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button size="sm" className="text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white">
+                              <Button
+                                size="sm"
+                                className="text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white"
+                              >
                                 <Send className="h-3 w-3 mr-1" />
                                 Remind
                               </Button>
-                              <Button size="sm" className="text-xs h-7 bg-orange-600 hover:bg-orange-700 text-white">
+                              <Button
+                                size="sm"
+                                className="text-xs h-7 bg-orange-600 hover:bg-orange-700 text-white"
+                              >
                                 <CreditCard className="h-3 w-3 mr-1" />
                                 Late Fee
                               </Button>
@@ -1951,11 +2174,17 @@ export default function FeesHomePage() {
                   <Button size="sm" variant="outline" className="text-xs sm:text-sm">
                     Select All
                   </Button>
-                  <Button size="sm" className="text-xs sm:text-sm bg-green-600 hover:bg-green-700 text-white">
+                  <Button
+                    size="sm"
+                    className="text-xs sm:text-sm bg-green-600 hover:bg-green-700 text-white"
+                  >
                     <Check className="h-3 w-3 mr-1" />
                     Approve Selected
                   </Button>
-                  <Button size="sm" className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white">
+                  <Button
+                    size="sm"
+                    className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white"
+                  >
                     <X className="h-3 w-3 mr-1" />
                     Reject Selected
                   </Button>
@@ -1972,16 +2201,34 @@ export default function FeesHomePage() {
                       <TableHead className="bg-muted font-semibold w-12">
                         <input type="checkbox" />
                       </TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[120px]">Receipt/Challan No</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Payment Date</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Payment Mode</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[120px]">Student</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Program-Course</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[80px]">Semester</TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[120px]">
+                        Receipt/Challan No
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Payment Date
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Payment Mode
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[120px]">
+                        Student
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Program-Course
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[80px]">
+                        Semester
+                      </TableHead>
                       <TableHead className="bg-muted font-semibold min-w-[80px]">Shift</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[140px]">Reason for Refund</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Requested Date</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[150px]">Actions</TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[140px]">
+                        Reason for Refund
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Requested Date
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[150px]">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2065,17 +2312,26 @@ export default function FeesHomePage() {
                           </TableCell>
                           <TableCell>{row.student}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                            >
                               {row.programCourse}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                            >
                               {row.semester}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                            >
                               {row.shift}
                             </Badge>
                           </TableCell>
@@ -2083,11 +2339,17 @@ export default function FeesHomePage() {
                           <TableCell>{row.requestedDate}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button size="sm" className="text-xs h-7 bg-green-600 hover:bg-green-700 text-white">
+                              <Button
+                                size="sm"
+                                className="text-xs h-7 bg-green-600 hover:bg-green-700 text-white"
+                              >
                                 <Check className="h-3 w-3 mr-1" />
                                 Approve
                               </Button>
-                              <Button size="sm" className="text-xs h-7 bg-red-600 hover:bg-red-700 text-white">
+                              <Button
+                                size="sm"
+                                className="text-xs h-7 bg-red-600 hover:bg-red-700 text-white"
+                              >
                                 <X className="h-3 w-3 mr-1" />
                                 Reject
                               </Button>
@@ -2123,14 +2385,26 @@ export default function FeesHomePage() {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-4">
                 <Input placeholder="Search installments..." className="w-full sm:max-w-sm" />
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" className="text-xs sm:text-sm flex-1 sm:flex-none">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs sm:text-sm flex-1 sm:flex-none"
+                  >
                     Select All
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs sm:text-sm flex-1 sm:flex-none">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs sm:text-sm flex-1 sm:flex-none"
+                  >
                     <Send className="h-3 w-3 mr-1" />
                     Send Reminders
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs sm:text-sm flex-1 sm:flex-none">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs sm:text-sm flex-1 sm:flex-none"
+                  >
                     <Download className="h-3 w-3 mr-1" />
                     Export
                   </Button>
@@ -2143,15 +2417,27 @@ export default function FeesHomePage() {
                       <TableHead className="bg-muted font-semibold w-12">
                         <input type="checkbox" />
                       </TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[120px]">Student</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Program-Course</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[80px]">Semester</TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[120px]">
+                        Student
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Program-Course
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[80px]">
+                        Semester
+                      </TableHead>
                       <TableHead className="bg-muted font-semibold min-w-[80px]">Shift</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Installments</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Due Date</TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Installments
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Due Date
+                      </TableHead>
                       <TableHead className="bg-muted font-semibold min-w-[100px]">Amount</TableHead>
                       <TableHead className="bg-muted font-semibold min-w-[100px]">Status</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[150px]">Actions</TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[150px]">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2167,17 +2453,26 @@ export default function FeesHomePage() {
                           </TableCell>
                           <TableCell>{row.student}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                            >
                               B.Sc
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                            >
                               {row.installment.split("/")[1] || "I"}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                            >
                               Morning
                             </Badge>
                           </TableCell>
@@ -2194,11 +2489,17 @@ export default function FeesHomePage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button size="sm" className="text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white">
+                              <Button
+                                size="sm"
+                                className="text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white"
+                              >
                                 <Send className="h-3 w-3 mr-1" />
                                 Remind
                               </Button>
-                              <Button size="sm" className="text-xs h-7 bg-teal-600 hover:bg-teal-700 text-white">
+                              <Button
+                                size="sm"
+                                className="text-xs h-7 bg-teal-600 hover:bg-teal-700 text-white"
+                              >
                                 <Receipt className="h-3 w-3 mr-1" />
                                 Receipt
                               </Button>
@@ -2234,7 +2535,11 @@ export default function FeesHomePage() {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-4">
                 <Input placeholder="Search configurations..." className="w-full sm:max-w-sm" />
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" className="text-xs sm:text-sm flex-1 sm:flex-none">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs sm:text-sm flex-1 sm:flex-none"
+                  >
                     Select All
                   </Button>
                   <Button
@@ -2244,7 +2549,11 @@ export default function FeesHomePage() {
                     <Settings className="h-3 w-3 mr-1" />
                     Create Missing Structures
                   </Button>
-                  <Button size="sm" variant="outline" className="text-xs sm:text-sm flex-1 sm:flex-none">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs sm:text-sm flex-1 sm:flex-none"
+                  >
                     <Download className="h-3 w-3 mr-1" />
                     Export
                   </Button>
@@ -2258,12 +2567,22 @@ export default function FeesHomePage() {
                         <input type="checkbox" />
                       </TableHead>
                       <TableHead className="bg-muted font-semibold min-w-[60px]">Sr. No</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[100px]">Program-Course</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[80px]">Semester</TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[100px]">
+                        Program-Course
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[80px]">
+                        Semester
+                      </TableHead>
                       <TableHead className="bg-muted font-semibold min-w-[80px]">Shift</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[120px]">Late Fee Applicable</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[130px]">Installment Plans</TableHead>
-                      <TableHead className="bg-muted font-semibold min-w-[120px]">Actions</TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[120px]">
+                        Late Fee Applicable
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[130px]">
+                        Installment Plans
+                      </TableHead>
+                      <TableHead className="bg-muted font-semibold min-w-[120px]">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2304,25 +2623,39 @@ export default function FeesHomePage() {
                         installmentPlans: "Configured",
                       },
                     ]
-                      .slice((missingConfigPage - 1) * missingConfigPageSize, missingConfigPage * missingConfigPageSize)
+                      .slice(
+                        (missingConfigPage - 1) * missingConfigPageSize,
+                        missingConfigPage * missingConfigPageSize,
+                      )
                       .map((row, idx) => (
                         <TableRow key={idx}>
                           <TableCell>
                             <input type="checkbox" />
                           </TableCell>
-                          <TableCell>{(missingConfigPage - 1) * missingConfigPageSize + idx + 1}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                            {(missingConfigPage - 1) * missingConfigPageSize + idx + 1}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                            >
                               {row.programCourse}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                            >
                               {row.semester}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50"
+                            >
                               {row.shift}
                             </Badge>
                           </TableCell>
@@ -2330,7 +2663,9 @@ export default function FeesHomePage() {
                             <Badge
                               variant={row.lateFeeApplicable === "Yes" ? "default" : "outline"}
                               className={
-                                row.lateFeeApplicable === "Yes" ? "bg-green-100 text-green-800 border-green-300" : ""
+                                row.lateFeeApplicable === "Yes"
+                                  ? "bg-green-100 text-green-800 border-green-300"
+                                  : ""
                               }
                             >
                               {row.lateFeeApplicable}
@@ -2338,7 +2673,9 @@ export default function FeesHomePage() {
                           </TableCell>
                           <TableCell>
                             <Badge
-                              variant={row.installmentPlans === "Configured" ? "default" : "destructive"}
+                              variant={
+                                row.installmentPlans === "Configured" ? "default" : "destructive"
+                              }
                               className={
                                 row.installmentPlans === "Configured"
                                   ? "bg-green-100 text-green-800 border-green-300"
@@ -2349,7 +2686,10 @@ export default function FeesHomePage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Button size="sm" className="text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white">
+                            <Button
+                              size="sm"
+                              className="text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
                               <Settings className="h-3 w-3 mr-1" />
                               Configure
                             </Button>

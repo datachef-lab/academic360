@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useState, useTransition, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,18 +10,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, Upload, Download, Loader2, FileText, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
-import { AddReligionDialog, DeleteReligionDialog } from './religion-dialog';
+import {
+  Pencil,
+  Upload,
+  Download,
+  Loader2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+} from "lucide-react";
+import { AddReligionDialog, DeleteReligionDialog } from "./religion-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from 'xlsx';
-import { uploadReligionsFromFile } from './actions';
-import { ReligionService, type ApiResponse } from '@/services/religion.service';
+import * as XLSX from "xlsx";
+import { uploadReligionsFromFile } from "./actions";
+import { ReligionService, type ApiResponse } from "@/services/religion.service";
 import { type Religion } from "@/db/schema";
 
 const ITEMS_PER_PAGE = 10;
-const REQUIRED_HEADERS = ['name', 'sequence'];
+const REQUIRED_HEADERS = ["name", "sequence"];
 
 export default function ReligionPage() {
   const [data, setData] = useState<Religion[]>([]);
@@ -63,17 +72,14 @@ export default function ReligionPage() {
   }, [fetchReligions]);
 
   const downloadTemplate = () => {
-    const sampleData = [
-      REQUIRED_HEADERS,
-      ['Sample Religion', 1],
-    ];
+    const sampleData = [REQUIRED_HEADERS, ["Sample Religion", 1]];
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(sampleData);
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Religion Template');
+    XLSX.utils.book_append_sheet(wb, ws, "Religion Template");
 
-    XLSX.writeFile(wb, 'religion_template.xlsx');
+    XLSX.writeFile(wb, "religion_template.xlsx");
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,7 +90,7 @@ export default function ReligionPage() {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
 
@@ -93,7 +99,6 @@ export default function ReligionPage() {
           } else {
             setNumberOfEntries(0);
           }
-
         } catch (error) {
           console.error("Error reading file for entry count:", error);
           setSelectedFile(null);
@@ -118,17 +123,17 @@ export default function ReligionPage() {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
-          const headers = (jsonData[0] as string[]).map(h => h.trim());
+          const headers = (jsonData[0] as string[]).map((h) => h.trim());
 
-          const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+          const missingHeaders = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
 
           if (missingHeaders.length > 0) {
             toast({
               title: "Invalid File Format",
-              description: `Missing required headers: ${missingHeaders.join(', ')}`,
+              description: `Missing required headers: ${missingHeaders.join(", ")}`,
               variant: "destructive",
             });
             resolve(false);
@@ -165,7 +170,7 @@ export default function ReligionPage() {
     }
 
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    formData.append("file", selectedFile);
 
     startUploadTransition(async () => {
       const result = await uploadReligionsFromFile(formData);
@@ -182,8 +187,8 @@ export default function ReligionPage() {
         });
         setSelectedFile(null);
         setNumberOfEntries(0);
-        if(fileInputRef.current) {
-          fileInputRef.current.value = '';
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
         }
         fetchReligions();
       }
@@ -242,7 +247,7 @@ export default function ReligionPage() {
 
   const handleDelete = async (id: number | undefined) => {
     if (!id) return;
-    
+
     if (confirm("Are you sure you want to delete this religion?")) {
       setLoading(true);
       const response = await ReligionService.deleteReligion(id);
@@ -268,52 +273,52 @@ export default function ReligionPage() {
       <div className="flex flex-col gap-4 mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Religions Management</h1>
         <div className="flex flex-wrap justify-between items-center gap-3">
-           <div className="flex items-center gap-2">
-             <form onSubmit={handleUploadSubmit} className="flex items-center gap-2">
-                <Input
-                  id="religion-upload"
-                  type="file"
-                  accept=".xlsx, .xls"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                  ref={fileInputRef}
-                />
-                <Button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2"
-                >
-                  <Upload size={20} />
-                  Choose File
-                </Button>
-                 <Button type="submit" size="sm" disabled={!selectedFile || isPendingUpload}>
-                  {isPendingUpload ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload File
-                    </>
-                  )}
-                </Button>
-             </form>
-           </div>
-           <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <form onSubmit={handleUploadSubmit} className="flex items-center gap-2">
+              <Input
+                id="religion-upload"
+                type="file"
+                accept=".xlsx, .xls"
+                className="hidden"
+                onChange={handleFileSelect}
+                ref={fileInputRef}
+              />
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
-                onClick={downloadTemplate}
-                className="bg-gray-500 hover:bg-gray-600 text-white flex items-center gap-2"
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2"
               >
-                <FileText size={20} />
-                Download Template
+                <Upload size={20} />
+                Choose File
               </Button>
-             <AddReligionDialog onSuccess={handleAddSuccess} />
-           </div>
+              <Button type="submit" size="sm" disabled={!selectedFile || isPendingUpload}>
+                {isPendingUpload ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload File
+                  </>
+                )}
+              </Button>
+            </form>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={downloadTemplate}
+              className="bg-gray-500 hover:bg-gray-600 text-white flex items-center gap-2"
+            >
+              <FileText size={20} />
+              Download Template
+            </Button>
+            <AddReligionDialog onSuccess={handleAddSuccess} />
+          </div>
         </div>
       </div>
 
@@ -337,19 +342,30 @@ export default function ReligionPage() {
             <TableBody>
               {paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500">No religions found.</TableCell>
+                  <TableCell colSpan={6} className="text-center text-gray-500">
+                    No religions found.
+                  </TableCell>
                 </TableRow>
               ) : (
                 paginatedData.map((religion) => (
                   <TableRow key={religion.id} className="hover:bg-gray-50">
                     <TableCell className="font-medium text-gray-700">{religion.id}</TableCell>
                     <TableCell className="text-gray-700">{religion.name}</TableCell>
-                    <TableCell className="text-gray-700">{religion.sequence ?? 'N/A'}</TableCell>
-                    <TableCell className="text-gray-700">{religion.createdAt ? new Date(religion.createdAt).toLocaleString() : 'N/A'}</TableCell>
-                    <TableCell className="text-gray-700">{religion.updatedAt ? new Date(religion.updatedAt).toLocaleString() : 'N/A'}</TableCell>
+                    <TableCell className="text-gray-700">{religion.sequence ?? "N/A"}</TableCell>
+                    <TableCell className="text-gray-700">
+                      {religion.createdAt ? new Date(religion.createdAt).toLocaleString() : "N/A"}
+                    </TableCell>
+                    <TableCell className="text-gray-700">
+                      {religion.updatedAt ? new Date(religion.updatedAt).toLocaleString() : "N/A"}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
-                        <Button variant="ghost" size="icon" className="hover:bg-gray-100" onClick={() => handleEdit(religion)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-gray-100"
+                          onClick={() => handleEdit(religion)}
+                        >
                           <Pencil className="h-4 w-4 text-blue-500" />
                         </Button>
                         {/* <DeleteReligionDialog religionId={religion.id as number} onSuccess={handleDeleteSuccess} /> */}
@@ -388,12 +404,14 @@ export default function ReligionPage() {
       {editingReligion && (
         <AddReligionDialog
           open={!!editingReligion}
-          onOpenChange={(open: boolean) => {!open && setEditingReligion(null)}}
+          onOpenChange={(open: boolean) => {
+            !open && setEditingReligion(null);
+          }}
           onSuccess={handleEditSuccess}
           initialData={{
             id: editingReligion.id || 0,
             name: editingReligion.name,
-            sequence: editingReligion.sequence
+            sequence: editingReligion.sequence,
           }}
         />
       )}

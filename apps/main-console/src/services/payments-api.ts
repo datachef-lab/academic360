@@ -43,7 +43,9 @@ export interface PaymentStatusResponse {
   amount?: string;
 }
 
-export async function getPaymentStatus(orderId: string): Promise<ApiResponse<PaymentStatusResponse>> {
+export async function getPaymentStatus(
+  orderId: string,
+): Promise<ApiResponse<PaymentStatusResponse>> {
   const response = await axiosInstance.get(`${PAYMENTS_BASE}/status/${orderId}`);
   return response.data;
 }

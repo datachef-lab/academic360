@@ -1,9 +1,21 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 
 const dummyPayments = [
   {
@@ -39,7 +51,9 @@ export default function FeePaymentReviewPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Fee Payment Review</CardTitle>
-            <p className="text-gray-500 text-sm mt-1">Review and manage all fee payment records for admissions.</p>
+            <p className="text-gray-500 text-sm mt-1">
+              Review and manage all fee payment records for admissions.
+            </p>
           </div>
           <Button variant="outline">Export</Button>
         </CardHeader>
@@ -79,20 +93,26 @@ export default function FeePaymentReviewPage() {
                     <TableCell>{payment.course}</TableCell>
                     <TableCell>{payment.amount}</TableCell>
                     <TableCell>
-                      <span className={
-                        payment.status === "Paid"
-                          ? "text-green-600 font-medium"
-                          : payment.status === "Pending"
-                          ? "text-yellow-600 font-medium"
-                          : "text-red-600 font-medium"
-                      }>
+                      <span
+                        className={
+                          payment.status === "Paid"
+                            ? "text-green-600 font-medium"
+                            : payment.status === "Pending"
+                              ? "text-yellow-600 font-medium"
+                              : "text-red-600 font-medium"
+                        }
+                      >
                         {payment.status}
                       </span>
                     </TableCell>
                     <TableCell>{payment.date}</TableCell>
                     <TableCell>
-                      <Button size="sm" variant="outline">View</Button>
-                      <Button size="sm" className="ml-2">Download</Button>
+                      <Button size="sm" variant="outline">
+                        View
+                      </Button>
+                      <Button size="sm" className="ml-2">
+                        Download
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

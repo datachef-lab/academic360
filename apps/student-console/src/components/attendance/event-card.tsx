@@ -19,9 +19,7 @@ type EventCardProps = {
 };
 
 export default function EventCard({ event, mockData }: EventCardProps) {
-  const [showEventDetails, setShowEventDetails] = React.useState<number | null>(
-    null
-  );
+  const [showEventDetails, setShowEventDetails] = React.useState<number | null>(null);
 
   return (
     <>
@@ -34,15 +32,10 @@ export default function EventCard({ event, mockData }: EventCardProps) {
         </div>
         <div className="flex-grow flex justify-between items-start">
           <div>
-            <h3 className="font-semibold text-indigo-800 mb-1">
-              {event.title}
-            </h3>
+            <h3 className="font-semibold text-indigo-800 mb-1">{event.title}</h3>
             <p className="text-sm text-gray-600">{event.description}</p>
             <div className="flex flex-wrap items-center gap-y-2 gap-x-4 mt-3">
-              <Badge
-                variant="outline"
-                className="bg-indigo-100 text-indigo-800 border-indigo-300"
-              >
+              <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-300">
                 {event.type}
               </Badge>
               <span className="text-sm text-gray-500 flex items-center">

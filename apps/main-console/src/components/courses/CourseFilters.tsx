@@ -1,14 +1,14 @@
-import React from 'react';
-import { Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import React from "react";
+import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 interface CourseFiltersProps {
   searchQuery: string;
@@ -51,10 +51,7 @@ const CourseFilters: React.FC<CourseFiltersProps> = ({
           </div>
 
           {/* Degree filter */}
-          <Select
-            value={degreeFilter}
-            onValueChange={setDegreeFilter}
-          >
+          <Select value={degreeFilter} onValueChange={setDegreeFilter}>
             <SelectTrigger className="w-full md:w-[180px] bg-white">
               <SelectValue placeholder="Filter by Degree" />
             </SelectTrigger>
@@ -69,10 +66,7 @@ const CourseFilters: React.FC<CourseFiltersProps> = ({
           </Select>
 
           {/* Programme filter */}
-          <Select
-            value={programmeFilter}
-            onValueChange={setProgrammeFilter}
-          >
+          <Select value={programmeFilter} onValueChange={setProgrammeFilter}>
             <SelectTrigger className="w-full md:w-[180px] bg-white">
               <SelectValue placeholder="Filter by Programme" />
             </SelectTrigger>
@@ -99,11 +93,11 @@ const CourseFilters: React.FC<CourseFiltersProps> = ({
 
         {/* Results count */}
         <div className="text-sm text-purple-600">
-          Showing {filteredCoursesCount} {filteredCoursesCount === 1 ? 'course' : 'courses'}
+          Showing {filteredCoursesCount} {filteredCoursesCount === 1 ? "course" : "courses"}
         </div>
       </div>
     </div>
   );
 };
 
-export default CourseFilters; 
+export default CourseFilters;

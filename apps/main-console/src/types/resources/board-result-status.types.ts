@@ -1,6 +1,6 @@
 /**
  * Board Result Status Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Board Result Status module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -14,7 +14,7 @@
  */
 export enum BoardResultType {
   FAIL = "FAIL",
-  PASS = "PASS"
+  PASS = "PASS",
 }
 
 // ============================================================================
@@ -25,7 +25,7 @@ export enum BoardResultType {
  * Main Board Result Status interface that mirrors the backend model
  */
 export interface BoardResultStatus {
-    readonly id?: number;
+  readonly id?: number;
   name: string;
   spclType: string;
   result: BoardResultType;
@@ -142,15 +142,15 @@ export interface BoardResultStatusState {
  * Action types for board result status state management
  */
 export type BoardResultStatusAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_BOARD_RESULT_STATUSES'; payload: BoardResultStatus[] }
-  | { type: 'SET_CURRENT_BOARD_RESULT_STATUS'; payload: BoardResultStatus | null }
-  | { type: 'ADD_BOARD_RESULT_STATUS'; payload: BoardResultStatus }
-  | { type: 'UPDATE_BOARD_RESULT_STATUS'; payload: BoardResultStatus }
-  | { type: 'DELETE_BOARD_RESULT_STATUS'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_BOARD_RESULT_STATUSES"; payload: BoardResultStatus[] }
+  | { type: "SET_CURRENT_BOARD_RESULT_STATUS"; payload: BoardResultStatus | null }
+  | { type: "ADD_BOARD_RESULT_STATUS"; payload: BoardResultStatus }
+  | { type: "UPDATE_BOARD_RESULT_STATUS"; payload: BoardResultStatus }
+  | { type: "DELETE_BOARD_RESULT_STATUS"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -165,7 +165,7 @@ export interface BoardResultStatusTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -184,7 +184,7 @@ export interface BoardResultStatusFilter {
  */
 export interface BoardResultStatusSort {
   field: keyof BoardResultStatus;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -224,8 +224,8 @@ export type BoardResultStatusDisabled = boolean;
  * Default values for board result status
  */
 export const DEFAULT_BOARD_RESULT_STATUS: CreateBoardResultStatusPayload = {
-  name: '',
-  spclType: '',
+  name: "",
+  spclType: "",
   result: BoardResultType.PASS,
   sequence: null,
   disabled: false,
@@ -235,10 +235,10 @@ export const DEFAULT_BOARD_RESULT_STATUS: CreateBoardResultStatusPayload = {
  * Default form data for board result status
  */
 export const DEFAULT_BOARD_RESULT_STATUS_FORM: BoardResultStatusFormData = {
-  name: '',
-  spclType: '',
+  name: "",
+  spclType: "",
   result: BoardResultType.PASS,
-  sequence: '',
+  sequence: "",
   disabled: false,
 };
 
@@ -246,22 +246,22 @@ export const DEFAULT_BOARD_RESULT_STATUS_FORM: BoardResultStatusFormData = {
  * Table columns configuration for board result status
  */
 export const BOARD_RESULT_STATUS_TABLE_COLUMNS: BoardResultStatusTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Name', sortable: true, filterable: true },
-  { key: 'spclType', label: 'Special Type', sortable: true, filterable: true },
-  { key: 'result', label: 'Result', sortable: true, filterable: true, width: '100px' },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Name", sortable: true, filterable: true },
+  { key: "spclType", label: "Special Type", sortable: true, filterable: true },
+  { key: "result", label: "Result", sortable: true, filterable: true, width: "100px" },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Board result type options for forms
  */
 export const BOARD_RESULT_TYPE_OPTIONS = [
-  { value: BoardResultType.PASS, label: 'Pass' },
-  { value: BoardResultType.FAIL, label: 'Fail' },
+  { value: BoardResultType.PASS, label: "Pass" },
+  { value: BoardResultType.FAIL, label: "Fail" },
 ] as const;
 
 // ============================================================================
@@ -274,42 +274,58 @@ export const BOARD_RESULT_TYPE_OPTIONS = [
 export function isBoardResultStatus(obj: object): obj is BoardResultStatus {
   return (
     obj &&
-    typeof (obj as BoardResultStatus).id === 'number' &&
-    typeof (obj as BoardResultStatus).name === 'string' &&
-    typeof (obj as BoardResultStatus).spclType === 'string' &&
+    typeof (obj as BoardResultStatus).id === "number" &&
+    typeof (obj as BoardResultStatus).name === "string" &&
+    typeof (obj as BoardResultStatus).spclType === "string" &&
     Object.values(BoardResultType).includes((obj as BoardResultStatus).result) &&
-    ((obj as BoardResultStatus).sequence === null || typeof (obj as BoardResultStatus).sequence === 'number') &&
-    typeof (obj as BoardResultStatus).disabled === 'boolean' &&
-    typeof (obj as BoardResultStatus).createdAt === 'string' &&
-    typeof (obj as BoardResultStatus).updatedAt === 'string'
+    ((obj as BoardResultStatus).sequence === null ||
+      typeof (obj as BoardResultStatus).sequence === "number") &&
+    typeof (obj as BoardResultStatus).disabled === "boolean" &&
+    typeof (obj as BoardResultStatus).createdAt === "string" &&
+    typeof (obj as BoardResultStatus).updatedAt === "string"
   );
 }
 
 /**
  * Type guard to check if an object is a CreateBoardResultStatusPayload
  */
-export function isCreateBoardResultStatusPayload(obj: object): obj is CreateBoardResultStatusPayload {
+export function isCreateBoardResultStatusPayload(
+  obj: object,
+): obj is CreateBoardResultStatusPayload {
   return (
     obj &&
-    typeof (obj as CreateBoardResultStatusPayload).name === 'string' &&
-    typeof (obj as CreateBoardResultStatusPayload).spclType === 'string' &&
+    typeof (obj as CreateBoardResultStatusPayload).name === "string" &&
+    typeof (obj as CreateBoardResultStatusPayload).spclType === "string" &&
     Object.values(BoardResultType).includes((obj as CreateBoardResultStatusPayload).result) &&
-    ((obj as CreateBoardResultStatusPayload).sequence === undefined || (obj as CreateBoardResultStatusPayload).sequence === null || typeof (obj as CreateBoardResultStatusPayload).sequence === 'number') &&
-    ((obj as CreateBoardResultStatusPayload).disabled === undefined || typeof (obj as CreateBoardResultStatusPayload).disabled === 'boolean')
+    ((obj as CreateBoardResultStatusPayload).sequence === undefined ||
+      (obj as CreateBoardResultStatusPayload).sequence === null ||
+      typeof (obj as CreateBoardResultStatusPayload).sequence === "number") &&
+    ((obj as CreateBoardResultStatusPayload).disabled === undefined ||
+      typeof (obj as CreateBoardResultStatusPayload).disabled === "boolean")
   );
 }
 
 /**
  * Type guard to check if an object is an UpdateBoardResultStatusPayload
  */
-export function isUpdateBoardResultStatusPayload(obj: object): obj is UpdateBoardResultStatusPayload {
+export function isUpdateBoardResultStatusPayload(
+  obj: object,
+): obj is UpdateBoardResultStatusPayload {
   return (
     obj &&
-    ((obj as UpdateBoardResultStatusPayload).name === undefined || typeof (obj as UpdateBoardResultStatusPayload).name === 'string') &&
-    ((obj as UpdateBoardResultStatusPayload).spclType === undefined || typeof (obj as UpdateBoardResultStatusPayload).spclType === 'string') &&
-    ((obj as UpdateBoardResultStatusPayload).result === undefined || Object.values(BoardResultType).includes((obj as UpdateBoardResultStatusPayload).result as BoardResultType)) &&
-    ((obj as UpdateBoardResultStatusPayload).sequence === undefined || (obj as UpdateBoardResultStatusPayload).sequence === null || typeof (obj as UpdateBoardResultStatusPayload).sequence === 'number') &&
-    ((obj as UpdateBoardResultStatusPayload).disabled === undefined || typeof (obj as UpdateBoardResultStatusPayload).disabled === 'boolean')
+    ((obj as UpdateBoardResultStatusPayload).name === undefined ||
+      typeof (obj as UpdateBoardResultStatusPayload).name === "string") &&
+    ((obj as UpdateBoardResultStatusPayload).spclType === undefined ||
+      typeof (obj as UpdateBoardResultStatusPayload).spclType === "string") &&
+    ((obj as UpdateBoardResultStatusPayload).result === undefined ||
+      Object.values(BoardResultType).includes(
+        (obj as UpdateBoardResultStatusPayload).result as BoardResultType,
+      )) &&
+    ((obj as UpdateBoardResultStatusPayload).sequence === undefined ||
+      (obj as UpdateBoardResultStatusPayload).sequence === null ||
+      typeof (obj as UpdateBoardResultStatusPayload).sequence === "number") &&
+    ((obj as UpdateBoardResultStatusPayload).disabled === undefined ||
+      typeof (obj as UpdateBoardResultStatusPayload).disabled === "boolean")
   );
 }
 
@@ -327,7 +343,9 @@ export function isBoardResultType(value: unknown): value is BoardResultType {
 /**
  * Convert form data to API payload
  */
-export function formDataToPayload(formData: BoardResultStatusFormData): CreateBoardResultStatusPayload {
+export function formDataToPayload(
+  formData: BoardResultStatusFormData,
+): CreateBoardResultStatusPayload {
   return {
     name: formData.name.trim(),
     spclType: formData.spclType.trim(),
@@ -345,7 +363,7 @@ export function apiDataToFormData(boardResultStatus: BoardResultStatus): BoardRe
     name: boardResultStatus.name,
     spclType: boardResultStatus.spclType,
     result: boardResultStatus.result,
-    sequence: boardResultStatus.sequence?.toString() || '',
+    sequence: boardResultStatus.sequence?.toString() || "",
     disabled: boardResultStatus.disabled,
   };
 }
@@ -382,26 +400,26 @@ export function formatBoardResultStatusSpclType(spclType: string): string {
  * Get board result type display text
  */
 export function getBoardResultTypeText(result: BoardResultType): string {
-  return result === BoardResultType.PASS ? 'Pass' : 'Fail';
+  return result === BoardResultType.PASS ? "Pass" : "Fail";
 }
 
 /**
  * Get board result type color
  */
 export function getBoardResultTypeColor(result: BoardResultType): string {
-  return result === BoardResultType.PASS ? 'text-green-600' : 'text-red-600';
+  return result === BoardResultType.PASS ? "text-green-600" : "text-red-600";
 }
 
 /**
  * Get board result status status text
  */
 export function getBoardResultStatusStatusText(disabled: boolean): string {
-  return disabled ? 'Inactive' : 'Active';
+  return disabled ? "Inactive" : "Active";
 }
 
 /**
  * Get board result status status color
  */
 export function getBoardResultStatusStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
-} 
+  return disabled ? "text-red-600" : "text-green-600";
+}

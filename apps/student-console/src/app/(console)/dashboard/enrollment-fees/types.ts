@@ -18,4 +18,4 @@ export interface Fee {
 
 export interface EnrollmentFeesClientProps {
   initialFeesData: Fee[];
-} 
+}

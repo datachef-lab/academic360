@@ -1,4 +1,3 @@
-
 import { useMemo, useState } from "react";
 import {
   ColumnDef,
@@ -11,7 +10,14 @@ import {
   useReactTable,
   ColumnFiltersState,
 } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { DataTablePagination } from "./Pagination";
 import { Skeleton } from "../ui/skeleton";
 
@@ -45,7 +51,6 @@ export function DataTable<TData, TValue>({
       onPaginationChange(newPagination);
     },
 
-
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -58,71 +63,69 @@ export function DataTable<TData, TValue>({
       pagination,
     },
   });
-  const skeletonRows = useMemo(
-    () => Array(pagination.pageSize).fill(null),
-    [pagination.pageSize]
-  );
+  const skeletonRows = useMemo(() => Array(pagination.pageSize).fill(null), [pagination.pageSize]);
 
   return (
     <div className=" p-4 space-y-4">
-
-
       <div className="rounded-xl  drop-shadow-md overflow-x-hidden ">
-      <Table className="border-separate  border-spacing-y-4 w-full">
-              <TableHeader >
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-gray-50 whitespace-nowrap hover:bg-gray-50  ">
-                    {headerGroup.headers.map((header) => (
-                      <TableHead 
-                        key={header.id} 
-                        className="py-6 px-4 first:pl-9 text-center   font-semibold text-base"
-                        style={{ width: header.getSize() }}
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
+        <Table className="border-separate  border-spacing-y-4 w-full">
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow
+                key={headerGroup.id}
+                className="bg-gray-50 whitespace-nowrap hover:bg-gray-50  "
+              >
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    className="py-6 px-4 first:pl-9 text-center   font-semibold text-base"
+                    style={{ width: header.getSize() }}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
                 ))}
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  skeletonRows.map((_, index) => (
-                    <TableRow key={index} className="bg-gray-50 rounded-lg">
-                      {columns.map((_, colIndex) => (
-                        <TableCell 
-                          key={colIndex} 
-                          className="px-4 py-3  first:rounded-l-lg last:rounded-r-lg"
-                        >
-                          <Skeleton className="h-4 w-full rounded-full" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow 
-                      key={row.id} 
-                       className="  my-24 drop-shadow-sm  bg-gray-100 whitespace-nowrap  rounded-full hover:bg-gray-100 "
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              skeletonRows.map((_, index) => (
+                <TableRow key={index} className="bg-gray-50 rounded-lg">
+                  {columns.map((_, colIndex) => (
+                    <TableCell
+                      key={colIndex}
+                      className="px-4 py-3  first:rounded-l-lg last:rounded-r-lg"
                     >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell 
-                          key={cell.id} 
-                          className="px-4 py-3 first:pl-10  text-center first:rounded-l-lg last:rounded-r-lg"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No results found.
+                      <Skeleton className="h-4 w-full rounded-full" />
                     </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableRow>
+              ))
+            ) : table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="  my-24 drop-shadow-sm  bg-gray-100 whitespace-nowrap  rounded-full hover:bg-gray-100 "
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      className="px-4 py-3 first:pl-10  text-center first:rounded-l-lg last:rounded-r-lg"
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  No results found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       <div className="flex items-center justify-end space-x-2 py-4">

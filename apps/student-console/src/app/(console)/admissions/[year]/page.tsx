@@ -316,20 +316,17 @@ export default function AdmissionFormPage() {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        setError(
-          errorData.message ||
-          "Unable to load the admission year. Please try again later."
-        );
+        setError(errorData.message || "Unable to load the admission year. Please try again later.");
         setAdmisson(null);
         return;
       }
-      const data = (await response.json()) as {admission: Admission};
+      const data = (await response.json()) as { admission: Admission };
       console.log("adm data (raw):", data);
       setAdmisson({ ...data.admission });
     } catch (err) {
       console.error("Error fetching admission details:", err);
       setError(
-        "Something went wrong while loading the admission year. Please check your network connection."
+        "Something went wrong while loading the admission year. Please check your network connection.",
       );
       setAdmisson(null);
     } finally {
@@ -378,7 +375,7 @@ export default function AdmissionFormPage() {
 
   return (
     <>
-      {(admission.isClosed !== undefined && !admission.isClosed) ? (
+      {admission.isClosed !== undefined && !admission.isClosed ? (
         <ApplicationFormProvider admission={admission}>
           <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             <AdmissionForm />
@@ -388,9 +385,7 @@ export default function AdmissionFormPage() {
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
           <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
             <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Admission Closed
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Admission Closed</h2>
             <p className="text-gray-600">
               The admission process for this year is currently closed.
             </p>

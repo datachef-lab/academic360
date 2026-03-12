@@ -4,7 +4,9 @@ import type { AdmissionAcademicInfoDto } from "@repo/db/dtos/admissions";
 
 const BASE_URL = "/api/admissions/academic-info";
 
-export async function getAcademicInfoById(id: number): Promise<ApiResponse<AdmissionAcademicInfoDto | null>> {
+export async function getAcademicInfoById(
+  id: number,
+): Promise<ApiResponse<AdmissionAcademicInfoDto | null>> {
   const res = await axiosInstance.get(`${BASE_URL}/${id}`);
   return res.data;
 }

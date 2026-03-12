@@ -3,12 +3,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, Droplet, Ruler, Scale, AlertTriangle, Stethoscope, Eye } from "lucide-react";
 import { Health } from "@/types/user/health";
-
-
 
 interface HealthDetailsFormProps {
   onSubmit: (data: Health) => void;
@@ -54,10 +58,7 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
   };
 
   return (
-    <div
-
-      className="space-y-6 bg-white rounded-xl shadow-sm p-6"
-    >
+    <div className="space-y-6 bg-white rounded-xl shadow-sm p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="bloodGroup" className="flex items-center gap-2 text-gray-700">
@@ -67,16 +68,16 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
           <div className="relative">
             <Select
               value={formData.bloodGroup?.type || ""}
-            //   onValueChange={(value) => setFormData({ 
-            //     ...formData, 
-            //     bloodGroup: value ? { 
-            //       type: value,
-            //       disabled: false,
-            //       sequence: null,
-            //       createdAt: new Date(),
-            //       updatedAt: new Date()
-            //     } : null 
-            //   })}
+              //   onValueChange={(value) => setFormData({
+              //     ...formData,
+              //     bloodGroup: value ? {
+              //       type: value,
+              //       disabled: false,
+              //       sequence: null,
+              //       createdAt: new Date(),
+              //       updatedAt: new Date()
+              //     } : null
+              //   })}
             >
               <SelectTrigger className="pl-10">
                 <SelectValue placeholder="Select blood group" />
@@ -224,7 +225,7 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
 
       <div className="flex justify-end mt-6">
         <Button
-        onClick={handleSubmit}
+          onClick={handleSubmit}
           type="submit"
           disabled={isSubmitting}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
@@ -244,4 +245,4 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
       </div>
     </div>
   );
-} 
+}

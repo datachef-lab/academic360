@@ -27,7 +27,10 @@ export async function deleteCourse(courseId: number): Promise<ApiResponse<void>>
 }
 
 // Update a course
-export async function updateCourse(courseId: number, course: Partial<Course>): Promise<ApiResponse<Course>> {
+export async function updateCourse(
+  courseId: number,
+  course: Partial<Course>,
+): Promise<ApiResponse<Course>> {
   console.log("in fe, course:", course);
   const response = await axiosInstance.put(`/api/v1/courses/${courseId}`, course);
   return response.data;

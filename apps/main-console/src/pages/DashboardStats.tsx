@@ -1,5 +1,11 @@
-import  { useState } from "react";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import Cards from "@/components/home/Cards";
 import { ChartBarHorizontal } from "@/components/charts/ChartBarHorizontal";
 
@@ -49,7 +55,9 @@ export default function DashboardStats() {
           </SelectTrigger>
           <SelectContent>
             {academicYears.map((y) => (
-              <SelectItem key={y} value={y}>{y}</SelectItem>
+              <SelectItem key={y} value={y}>
+                {y}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -59,7 +67,11 @@ export default function DashboardStats() {
       <Cards />
 
       {/* 2. Course-wise Students as Horizontal Bar Chart */}
-      <ChartBarHorizontal data={courseStats} title="Course-wise Student Stats" description={`Showing stats for ${year}`} />
+      <ChartBarHorizontal
+        data={courseStats}
+        title="Course-wise Student Stats"
+        description={`Showing stats for ${year}`}
+      />
     </div>
   );
-} 
+}

@@ -69,7 +69,9 @@ const LibraryDashboard: React.FC = () => {
             </motion.div>
             <div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Library Management </h2>
-              <p className="text-sm text-purple-600 font-medium">Track, manage and analyze your library resources</p>
+              <p className="text-sm text-purple-600 font-medium">
+                Track, manage and analyze your library resources
+              </p>
             </div>
           </div>
 
@@ -166,7 +168,11 @@ const LibraryDashboard: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[1, 2].map((item) => (
-                  <motion.div key={item} whileHover={{ scale: 1.02 }} className="bg-white/80 p-4 rounded-xl shadow-sm">
+                  <motion.div
+                    key={item}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-white/80 p-4 rounded-xl shadow-sm"
+                  >
                     <div className="flex gap-4">
                       <div className="w-20 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
                         <BookText className="h-8 w-8 text-white" />
@@ -253,10 +259,26 @@ const LibraryDashboard: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { icon: <BookOpen className="h-5 w-5" />, label: "Add Book", color: "from-indigo-500 to-purple-600" },
-                  { icon: <User className="h-5 w-5" />, label: "Add Member", color: "from-cyan-500 to-blue-600" },
-                  { icon: <Clock className="h-5 w-5" />, label: "Check Out", color: "from-rose-500 to-pink-600" },
-                  { icon: <Bookmark className="h-5 w-5" />, label: "Reserve", color: "from-amber-500 to-orange-600" },
+                  {
+                    icon: <BookOpen className="h-5 w-5" />,
+                    label: "Add Book",
+                    color: "from-indigo-500 to-purple-600",
+                  },
+                  {
+                    icon: <User className="h-5 w-5" />,
+                    label: "Add Member",
+                    color: "from-cyan-500 to-blue-600",
+                  },
+                  {
+                    icon: <Clock className="h-5 w-5" />,
+                    label: "Check Out",
+                    color: "from-rose-500 to-pink-600",
+                  },
+                  {
+                    icon: <Bookmark className="h-5 w-5" />,
+                    label: "Reserve",
+                    color: "from-amber-500 to-orange-600",
+                  },
                 ].map((action, index) => (
                   <motion.button
                     key={index}

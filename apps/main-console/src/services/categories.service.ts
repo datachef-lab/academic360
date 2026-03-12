@@ -13,12 +13,12 @@ import {
 
 /**
  * Category Service
- * 
+ *
  * This service handles all CRUD operations for the Category module.
  * It provides type-safe API communication with the backend.
  */
 
-const BASE_URL = '/api/categories';
+const BASE_URL = "/api/categories";
 
 // ============================================================================
 // GET OPERATIONS
@@ -32,21 +32,21 @@ export async function getAllCategories(): Promise<Category[]> {
   try {
     const response = await axiosInstance.get<MultipleCategoryResponse>(BASE_URL);
     const responseData = response.data;
-    
+
     // Check if response has payload property (like personal details API)
-    if ('payload' in responseData && Array.isArray(responseData.payload)) {
+    if ("payload" in responseData && Array.isArray(responseData.payload)) {
       return responseData.payload;
     }
-    
+
     // Fallback to data property (original expected structure)
-    if ('data' in responseData && Array.isArray(responseData.data)) {
+    if ("data" in responseData && Array.isArray(responseData.data)) {
       return responseData.data;
     }
-    
+
     // Return empty array if neither structure matches
     return [];
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    console.error("Error fetching categories:", error);
     throw error;
   }
 }
@@ -59,7 +59,7 @@ export async function getAllCategories(): Promise<Category[]> {
 export async function getCategoryById(id: number): Promise<Category> {
   try {
     if (!id) {
-      throw new Error('Category ID is required');
+      throw new Error("Category ID is required");
     }
 
     const response = await axiosInstance.get<SingleCategoryResponse>(`${BASE_URL}/${id}`);
@@ -76,10 +76,12 @@ export async function getCategoryById(id: number): Promise<Category> {
  */
 export async function getActiveCategories(): Promise<Category[]> {
   try {
-    const response = await axiosInstance.get<MultipleCategoryResponse>(`${BASE_URL}?disabled=false`);
+    const response = await axiosInstance.get<MultipleCategoryResponse>(
+      `${BASE_URL}?disabled=false`,
+    );
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching active categories:', error);
+    console.error("Error fetching active categories:", error);
     throw error;
   }
 }
@@ -96,13 +98,13 @@ export async function getActiveCategories(): Promise<Category[]> {
 export async function createCategory(payload: CreateCategoryPayload): Promise<Category> {
   try {
     if (!payload.name || payload.name.trim().length === 0) {
-      throw new Error('Category name is required');
+      throw new Error("Category name is required");
     }
 
     const response = await axiosInstance.post<SingleCategoryResponse>(BASE_URL, payload);
     return response.data.data;
   } catch (error) {
-    console.error('Error creating category:', error);
+    console.error("Error creating category:", error);
     throw error;
   }
 }
@@ -117,14 +119,17 @@ export async function createCategory(payload: CreateCategoryPayload): Promise<Ca
  * @param payload - Category update data
  * @returns Promise<Category> - Updated category data
  */
-export async function updateCategory(id: number, payload: UpdateCategoryPayload): Promise<Category> {
+export async function updateCategory(
+  id: number,
+  payload: UpdateCategoryPayload,
+): Promise<Category> {
   try {
     if (!id) {
-      throw new Error('Category ID is required');
+      throw new Error("Category ID is required");
     }
 
     if (payload.name !== undefined && payload.name.trim().length === 0) {
-      throw new Error('Category name cannot be empty');
+      throw new Error("Category name cannot be empty");
     }
 
     const response = await axiosInstance.put<SingleCategoryResponse>(`${BASE_URL}/${id}`, payload);
@@ -147,7 +152,7 @@ export async function updateCategory(id: number, payload: UpdateCategoryPayload)
 export async function deleteCategory(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('Category ID is required');
+      throw new Error("Category ID is required");
     }
 
     await axiosInstance.delete(`${BASE_URL}/${id}`);
@@ -173,11 +178,11 @@ export async function searchCategories(searchTerm: string): Promise<Category[]> 
     }
 
     const response = await axiosInstance.get<MultipleCategoryResponse>(
-      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
+      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
     return response.data.data;
   } catch (error) {
-    console.error('Error searching categories:', error);
+    console.error("Error searching categories:", error);
     throw error;
   }
 }
@@ -198,11 +203,11 @@ export async function checkCategoryExists(name: string): Promise<boolean> {
     }
 
     const response = await axiosInstance.get<MultipleCategoryResponse>(
-      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
+      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`,
     );
     return response.data.data.length > 0;
   } catch (error) {
-    console.error('Error checking category existence:', error);
+    console.error("Error checking category existence:", error);
     return false;
   }
 }
@@ -216,19 +221,19 @@ export const categoryService = {
   getAllCategories,
   getCategoryById,
   getActiveCategories,
-  
+
   // Create operations
   createCategory,
-  
+
   // Update operations
   updateCategory,
-  
+
   // Delete operations
   deleteCategory,
-  
+
   // Search and filter operations
   searchCategories,
-  
+
   // Utility functions
   checkCategoryExists,
-}; 
+};

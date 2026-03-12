@@ -8,7 +8,9 @@ export async function fetchExamGroupById(id: number): Promise<ExamGroupDto> {
 }
 
 export async function deleteExamGroupById(examGroupId: number): Promise<{ examGroupId: number }> {
-  const response = await axiosInstance.delete<ApiResponse<{ examGroupId: number }>>(`/api/exam-groups/${examGroupId}`);
+  const response = await axiosInstance.delete<ApiResponse<{ examGroupId: number }>>(
+    `/api/exam-groups/${examGroupId}`,
+  );
   return response.data.payload;
 }
 

@@ -4,8 +4,18 @@ import { Input } from "@/components/ui/input";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AddressDto, PersonalDetailsDto } from "@repo/db/dtos";
-import type { ReligionT as UiReligion, CategoryT as UiCategory, NationalityT as UiNationality } from "@repo/db/schemas";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type {
+  ReligionT as UiReligion,
+  CategoryT as UiCategory,
+  NationalityT as UiNationality,
+} from "@repo/db/schemas";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Disability } from "@/types/enums";
 import { getAllReligions } from "@/services/religion.service";
 import { getAllCategories } from "@/services/categories.service";
@@ -18,12 +28,17 @@ import { getAllLanguageMediums } from "@/services/language-medium.service";
 import type { LanguageMedium } from "@/types/resources/language-medium.types";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { updatePersonalDetail, updatePersonalDetailByStudentId } from "@/services/personal-details.service";
+import {
+  updatePersonalDetail,
+  updatePersonalDetailByStudentId,
+} from "@/services/personal-details.service";
 import { updateAddress } from "@/services/address.service";
 
 function stripDates<T>(obj: T): T {
   return JSON.parse(
-    JSON.stringify(obj, (key, value) => (key === "createdAt" || key === "updatedAt" ? undefined : value)),
+    JSON.stringify(obj, (key, value) =>
+      key === "createdAt" || key === "updatedAt" ? undefined : value,
+    ),
   ) as T;
 }
 
@@ -31,7 +46,9 @@ type IdName = { id: number; name: string };
 
 type PersonalDetailProps = {
   studentId: number;
-  initialData?: (PersonalDetailsDto & { residentialAddress?: AddressDto; mailingAddress?: AddressDto }) | null;
+  initialData?:
+    | (PersonalDetailsDto & { residentialAddress?: AddressDto; mailingAddress?: AddressDto })
+    | null;
   personalEmail?: string | null;
 };
 
@@ -50,7 +67,10 @@ function SectionHeader({ title }: { title: string }) {
 }
 
 // Augment local view: PersonalDetails may be accompanied by shaped addresses in some screens
-type PersonalDetailsAug = PersonalDetailsDto & { residentialAddress?: AddressDto; mailingAddress?: AddressDto };
+type PersonalDetailsAug = PersonalDetailsDto & {
+  residentialAddress?: AddressDto;
+  mailingAddress?: AddressDto;
+};
 
 // Typed helpers to safely update address without unsafe casts (using local augmented view)
 type AddressRel = NonNullable<PersonalDetailsAug["residentialAddress"]>;
@@ -95,12 +115,18 @@ type AddressUpdate = {
   districtId?: number | null;
 } & AddressExtras;
 
-export default function PersonalDetailsReadOnly({ studentId, initialData, personalEmail }: PersonalDetailProps) {
+export default function PersonalDetailsReadOnly({
+  studentId,
+  initialData,
+  personalEmail,
+}: PersonalDetailProps) {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState<string>(initialData?.email ?? personalEmail ?? "");
   const [pd, setPd] = useState<PersonalDetailsAug | null>(initialData ?? null);
   const [userPhone, setUserPhone] = useState<string>(initialData?.userDetails?.phone ?? "");
-  const [userWhatsapp, setUserWhatsapp] = useState<string>(initialData?.userDetails?.whatsappNumber ?? "");
+  const [userWhatsapp, setUserWhatsapp] = useState<string>(
+    initialData?.userDetails?.whatsappNumber ?? "",
+  );
   const [residentialPostOffice, setResidentialPostOffice] = useState<string>("");
   const [residentialPoliceStation, setResidentialPoliceStation] = useState<string>("");
   const [mailingPostOffice, setMailingPostOffice] = useState<string>("");
@@ -109,16 +135,24 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   const [resCountryIdSel, setResCountryIdSel] = useState<number | null>(
     initialData?.residentialAddress?.country?.id ?? null,
   );
-  const [resStateIdSel, setResStateIdSel] = useState<number | null>(initialData?.residentialAddress?.state?.id ?? null);
-  const [resCityIdSel, setResCityIdSel] = useState<number | null>(initialData?.residentialAddress?.city?.id ?? null);
+  const [resStateIdSel, setResStateIdSel] = useState<number | null>(
+    initialData?.residentialAddress?.state?.id ?? null,
+  );
+  const [resCityIdSel, setResCityIdSel] = useState<number | null>(
+    initialData?.residentialAddress?.city?.id ?? null,
+  );
   const [resDistrictId, setResDistrictId] = useState<number | null>(
     initialData?.residentialAddress?.district?.id ?? null,
   );
   const [mailCountryIdSel, setMailCountryIdSel] = useState<number | null>(
     initialData?.mailingAddress?.country?.id ?? null,
   );
-  const [mailStateIdSel, setMailStateIdSel] = useState<number | null>(initialData?.mailingAddress?.state?.id ?? null);
-  const [mailCityIdSel, setMailCityIdSel] = useState<number | null>(initialData?.mailingAddress?.city?.id ?? null);
+  const [mailStateIdSel, setMailStateIdSel] = useState<number | null>(
+    initialData?.mailingAddress?.state?.id ?? null,
+  );
+  const [mailCityIdSel, setMailCityIdSel] = useState<number | null>(
+    initialData?.mailingAddress?.city?.id ?? null,
+  );
   const [mailDistrictId, setMailDistrictId] = useState<number | null>(
     initialData?.mailingAddress?.district?.id ?? null,
   );
@@ -128,7 +162,10 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
     setEmail(initialData?.email ?? personalEmail ?? "");
     setUserPhone(initialData?.userDetails?.phone ?? "");
     setUserWhatsapp(initialData?.userDetails?.whatsappNumber ?? "");
-    const resAddr = initialData?.residentialAddress as (AddressRel & AddressExtras) | null | undefined;
+    const resAddr = initialData?.residentialAddress as
+      | (AddressRel & AddressExtras)
+      | null
+      | undefined;
     const mailAddr = initialData?.mailingAddress as (AddressRel & AddressExtras) | null | undefined;
     setResidentialPostOffice(resAddr?.otherPostoffice ?? "");
     setResidentialPoliceStation(resAddr?.otherPoliceStation ?? "");
@@ -147,9 +184,15 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   // Master dropdowns
   const { data: religions } = useQuery({ queryKey: ["religions"], queryFn: getAllReligions });
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getAllCategories });
-  const { data: nationalities } = useQuery({ queryKey: ["nationalities"], queryFn: getAllNationalities });
+  const { data: nationalities } = useQuery({
+    queryKey: ["nationalities"],
+    queryFn: getAllNationalities,
+  });
   const { data: countries } = useQuery({ queryKey: ["countries"], queryFn: getAllCountries });
-  const { data: languages } = useQuery({ queryKey: ["language-mediums"], queryFn: getAllLanguageMediums });
+  const { data: languages } = useQuery({
+    queryKey: ["language-mediums"],
+    queryFn: getAllLanguageMediums,
+  });
 
   // Normalize lists to avoid undefined
   const countryOptions: IdName[] = (countries as IdName[] | undefined) ?? [];
@@ -215,7 +258,10 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   const resSelectedDistrict = pd?.residentialAddress?.district as DistrictLike;
   const resDistrictOptionsWithSelected = useMemo(() => {
     const list = [...resDistrictOptionsStable];
-    if (resSelectedDistrict?.id != null && !list.some((d) => String(d.id) === String(resSelectedDistrict.id))) {
+    if (
+      resSelectedDistrict?.id != null &&
+      !list.some((d) => String(d.id) === String(resSelectedDistrict.id))
+    ) {
       const name =
         resSelectedDistrict && typeof (resSelectedDistrict as { name?: string }).name === "string"
           ? (resSelectedDistrict as { name?: string }).name!
@@ -284,7 +330,8 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
       const payload = buildPayload() as UpdatePayload;
 
       // Persist address changes first so personal details can reference updated address ids
-      const residential = (payload as Partial<{ residentialAddress: AddressUpdate }>).residentialAddress;
+      const residential = (payload as Partial<{ residentialAddress: AddressUpdate }>)
+        .residentialAddress;
       if (residential && residential.id) {
         try {
           const resUpdate: AddressUpdate = {
@@ -346,7 +393,11 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="flex flex-col gap-1 md:col-span-2">
               <FieldLabel>Personal Email</FieldLabel>
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter personal email" />
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter personal email"
+              />
             </div>
           </div>
 
@@ -376,7 +427,9 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
                 type="date"
                 value={pd?.dateOfBirth ?? ""}
                 onChange={(e) =>
-                  setPd((prev) => (prev ? ({ ...prev, dateOfBirth: e.target.value } as PersonalDetailsDto) : prev))
+                  setPd((prev) =>
+                    prev ? ({ ...prev, dateOfBirth: e.target.value } as PersonalDetailsDto) : prev,
+                  )
                 }
               />
             </div>
@@ -384,7 +437,9 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <FieldLabel>Place of Birth</FieldLabel>
               <Input
                 value={pd?.placeOfBirth ?? ""}
-                onChange={(e) => setPd((prev) => (prev ? { ...prev, placeOfBirth: e.target.value } : prev))}
+                onChange={(e) =>
+                  setPd((prev) => (prev ? { ...prev, placeOfBirth: e.target.value } : prev))
+                }
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -392,7 +447,9 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <Select
                 value={pd?.gender ?? ""}
                 onValueChange={(v) =>
-                  setPd((prev) => (prev ? { ...prev, gender: v as "MALE" | "FEMALE" | "OTHER" } : prev))
+                  setPd((prev) =>
+                    prev ? { ...prev, gender: v as "MALE" | "FEMALE" | "OTHER" } : prev,
+                  )
                 }
               >
                 <SelectTrigger>
@@ -484,8 +541,14 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
                 value={pd?.motherTongue?.id ? String(pd.motherTongue.id) : ""}
                 onValueChange={(v) => {
                   const lm = languageOptions.find((l) => String(l.id) === v) ?? null;
-                  const mt = lm ? ({ id: lm.id, name: lm.name } as { id: number; name: string }) : null;
-                  setPd((prev) => (prev ? { ...prev, motherTongue: mt as PersonalDetailsDto["motherTongue"] } : prev));
+                  const mt = lm
+                    ? ({ id: lm.id, name: lm.name } as { id: number; name: string })
+                    : null;
+                  setPd((prev) =>
+                    prev
+                      ? { ...prev, motherTongue: mt as PersonalDetailsDto["motherTongue"] }
+                      : prev,
+                  );
                 }}
               >
                 <SelectTrigger>
@@ -504,7 +567,9 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <FieldLabel>Gujarati</FieldLabel>
               <Select
                 value={pd?.isGujarati ? "YES" : "NO"}
-                onValueChange={(v) => setPd((prev) => (prev ? { ...prev, isGujarati: v === "YES" } : prev))}
+                onValueChange={(v) =>
+                  setPd((prev) => (prev ? { ...prev, isGujarati: v === "YES" } : prev))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select" />
@@ -519,7 +584,9 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <FieldLabel>Disability</FieldLabel>
               <Select
                 value={pd?.disability ?? ""}
-                onValueChange={(v) => setPd((prev) => (prev ? { ...prev, disability: v as Disability } : prev))}
+                onValueChange={(v) =>
+                  setPd((prev) => (prev ? { ...prev, disability: v as Disability } : prev))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select disability" />
@@ -541,21 +608,27 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <FieldLabel>Aadhaar Number</FieldLabel>
               <Input
                 value={pd?.aadhaarCardNumber ?? ""}
-                onChange={(e) => setPd((prev) => (prev ? { ...prev, aadhaarCardNumber: e.target.value } : prev))}
+                onChange={(e) =>
+                  setPd((prev) => (prev ? { ...prev, aadhaarCardNumber: e.target.value } : prev))
+                }
               />
             </div>
             <div className="flex flex-col gap-1">
               <FieldLabel>Passport Number</FieldLabel>
               <Input
                 value={pd?.passportNumber ?? ""}
-                onChange={(e) => setPd((prev) => (prev ? { ...prev, passportNumber: e.target.value } : prev))}
+                onChange={(e) =>
+                  setPd((prev) => (prev ? { ...prev, passportNumber: e.target.value } : prev))
+                }
               />
             </div>
             <div className="flex flex-col gap-1">
               <FieldLabel>Voter ID</FieldLabel>
               <Input
                 value={pd?.voterId ?? ""}
-                onChange={(e) => setPd((prev) => (prev ? { ...prev, voterId: e.target.value } : prev))}
+                onChange={(e) =>
+                  setPd((prev) => (prev ? { ...prev, voterId: e.target.value } : prev))
+                }
               />
             </div>
           </div>
@@ -649,11 +722,17 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               </div>
               <div className="flex flex-col gap-1">
                 <FieldLabel>Post Office</FieldLabel>
-                <Input value={residentialPostOffice} onChange={(e) => setResidentialPostOffice(e.target.value)} />
+                <Input
+                  value={residentialPostOffice}
+                  onChange={(e) => setResidentialPostOffice(e.target.value)}
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <FieldLabel>Police Station</FieldLabel>
-                <Input value={residentialPoliceStation} onChange={(e) => setResidentialPoliceStation(e.target.value)} />
+                <Input
+                  value={residentialPoliceStation}
+                  onChange={(e) => setResidentialPoliceStation(e.target.value)}
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <FieldLabel>Address Line</FieldLabel>
@@ -804,11 +883,17 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               </div>
               <div className="flex flex-col gap-1">
                 <FieldLabel>Post Office</FieldLabel>
-                <Input value={mailingPostOffice} onChange={(e) => setMailingPostOffice(e.target.value)} />
+                <Input
+                  value={mailingPostOffice}
+                  onChange={(e) => setMailingPostOffice(e.target.value)}
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <FieldLabel>Police Station</FieldLabel>
-                <Input value={mailingPoliceStation} onChange={(e) => setMailingPoliceStation(e.target.value)} />
+                <Input
+                  value={mailingPoliceStation}
+                  onChange={(e) => setMailingPoliceStation(e.target.value)}
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <FieldLabel>Address Line</FieldLabel>

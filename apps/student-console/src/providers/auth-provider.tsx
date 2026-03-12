@@ -34,7 +34,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const isProtectedRoute = pathname && (pathname.startsWith("/dashboard") || pathname.startsWith("/settings"));
+  const isProtectedRoute =
+    pathname && (pathname.startsWith("/dashboard") || pathname.startsWith("/settings"));
 
   const login = (accessToken: string, userData: UserDto) => {
     console.log("🔑 Login called");
@@ -83,7 +84,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log("🔄 Attempting token refresh...");
 
     try {
-      const response = await axiosInstance.get<ApiResponse>("/auth/refresh", { withCredentials: true });
+      const response = await axiosInstance.get<ApiResponse>("/auth/refresh", {
+        withCredentials: true,
+      });
 
       if (response.data?.payload) {
         const payload = response.data.payload as { accessToken: string; user: UserDto };

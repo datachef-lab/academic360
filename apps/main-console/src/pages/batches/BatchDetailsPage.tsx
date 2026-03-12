@@ -3,7 +3,14 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { CustomPaginationState } from "@/components/settings/SettingsContent";
 import React from "react";
 // import { motion } from "framer-motion";
@@ -127,7 +134,10 @@ export default function BatchDetailsPage() {
       <ul className="space-y-2 mb-4">
         {subLinks.map((link) => (
           <li key={link.title}>
-            <a href={link.url} className="flex items-center gap-2 px-4 py-2 rounded hover:bg-gray-100 transition">
+            <a
+              href={link.url}
+              className="flex items-center gap-2 px-4 py-2 rounded hover:bg-gray-100 transition"
+            >
               <link.icon className="h-5 w-5" />
               <span>{link.title}</span>
             </a>
@@ -165,8 +175,12 @@ export default function BatchDetailsPage() {
         return (
           <div className="flex flex-col gap-1 min-w-[140px]">
             {/* <span className="inline-block text-sm font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-600 w-fit mb-0.5">{row.original.uid}</span> */}
-            <span className="text-md font-bold text-gray-800 leading-tight">{row.original.studentName}</span>
-            <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded ${statusColor} w-fit mt-0.5`}>
+            <span className="text-md font-bold text-gray-800 leading-tight">
+              {row.original.studentName}
+            </span>
+            <span
+              className={`inline-block text-xs font-semibold px-2 py-0.5 rounded ${statusColor} w-fit mt-0.5`}
+            >
               {status.replace(/_/g, " ")}
             </span>
           </div>
@@ -249,23 +263,33 @@ export default function BatchDetailsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
                 <div>
                   <span className="text-gray-500 font-medium">Course: </span>
-                  <span className="font-semibold text-gray-800">{batchDetails?.course?.name || "-"}</span>
+                  <span className="font-semibold text-gray-800">
+                    {batchDetails?.course?.name || "-"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-500 font-medium">Class: </span>
-                  <span className="font-semibold text-gray-800">{batchDetails?.academicClass?.name || "-"}</span>
+                  <span className="font-semibold text-gray-800">
+                    {batchDetails?.academicClass?.name || "-"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-500 font-medium">Section: </span>
-                  <span className="font-semibold text-gray-800">{batchDetails?.section?.name || "-"}</span>
+                  <span className="font-semibold text-gray-800">
+                    {batchDetails?.section?.name || "-"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-500 font-medium">Session: </span>
-                  <span className="font-semibold text-gray-800">{batchDetails?.session?.name || "-"}</span>
+                  <span className="font-semibold text-gray-800">
+                    {batchDetails?.session?.name || "-"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-500 font-medium">Shift: </span>
-                  <span className="font-semibold text-gray-800">{batchDetails?.shift?.name || "-"}</span>
+                  <span className="font-semibold text-gray-800">
+                    {batchDetails?.shift?.name || "-"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -339,7 +363,9 @@ export default function BatchDetailsPage() {
                 setSearchText={setSearchText}
                 setDataLength={() => {}}
                 refetch={async () =>
-                  Promise.resolve({} as QueryObserverResult<StudentBatchSubjectEntry[] | undefined, Error>)
+                  Promise.resolve(
+                    {} as QueryObserverResult<StudentBatchSubjectEntry[] | undefined, Error>,
+                  )
                 }
               />
             </div>
@@ -352,11 +378,36 @@ export default function BatchDetailsPage() {
               <DialogTitle className="text-2xl">Edit Batch Details</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
-              <Input className="w-full" value={editBatch?.id || ""} readOnly placeholder="Batch ID" />
-              <Input className="w-full" value={editBatch?.course?.name || ""} readOnly placeholder="Course" />
-              <Input className="w-full" value={editBatch?.section?.name || ""} readOnly placeholder="Section" />
-              <Input className="w-full" value={editBatch?.session?.name || ""} readOnly placeholder="Session" />
-              <Input className="w-full" value={editBatch?.shift?.name || ""} readOnly placeholder="Shift" />
+              <Input
+                className="w-full"
+                value={editBatch?.id || ""}
+                readOnly
+                placeholder="Batch ID"
+              />
+              <Input
+                className="w-full"
+                value={editBatch?.course?.name || ""}
+                readOnly
+                placeholder="Course"
+              />
+              <Input
+                className="w-full"
+                value={editBatch?.section?.name || ""}
+                readOnly
+                placeholder="Section"
+              />
+              <Input
+                className="w-full"
+                value={editBatch?.session?.name || ""}
+                readOnly
+                placeholder="Session"
+              />
+              <Input
+                className="w-full"
+                value={editBatch?.shift?.name || ""}
+                readOnly
+                placeholder="Shift"
+              />
             </div>
             <DialogFooter className="flex gap-2 justify-end">
               <Button onClick={handleEditSave} className="font-semibold">
@@ -369,7 +420,10 @@ export default function BatchDetailsPage() {
           </DialogContent>
         </Dialog>
         {/* View Subjects Modal */}
-        <Dialog open={viewSubjectsModal.open} onOpenChange={(open) => setViewSubjectsModal((v) => ({ ...v, open }))}>
+        <Dialog
+          open={viewSubjectsModal.open}
+          onOpenChange={(open) => setViewSubjectsModal((v) => ({ ...v, open }))}
+        >
           <DialogContent
             className="max-w-5xl min-w-[500px] min-h-[500px] max-h-[80vh] w-[90vw] h-[70vh] p-8 flex flex-col rounded-2xl shadow-lg"
             style={{ resize: "both", overflow: "auto", display: "flex" }}

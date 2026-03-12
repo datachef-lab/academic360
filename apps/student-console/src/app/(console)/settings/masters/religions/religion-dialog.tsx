@@ -1,14 +1,23 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useFormStatus } from 'react-dom';
-import { Loader2, Trash2, Plus } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useFormStatus } from "react-dom";
+import { Loader2, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ReligionService, type ApiResponse } from '@/services/religion.service';
+import { ReligionService, type ApiResponse } from "@/services/religion.service";
 import { type Religion } from "@/db/schema";
 
 // --- Add/Edit Religion Dialog ---
@@ -23,19 +32,24 @@ interface AddReligionDialogProps {
   };
 }
 
-export function AddReligionDialog({ onSuccess, open, onOpenChange, initialData }: AddReligionDialogProps) {
-  const [name, setName] = useState(initialData?.name || '');
-  const [sequence, setSequence] = useState<number | ''>(initialData?.sequence ?? '');
+export function AddReligionDialog({
+  onSuccess,
+  open,
+  onOpenChange,
+  initialData,
+}: AddReligionDialogProps) {
+  const [name, setName] = useState(initialData?.name || "");
+  const [sequence, setSequence] = useState<number | "">(initialData?.sequence ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (initialData) {
       setName(initialData.name);
-      setSequence(initialData.sequence ?? '');
+      setSequence(initialData.sequence ?? "");
     } else {
-      setName('');
-      setSequence('');
+      setName("");
+      setSequence("");
     }
   }, [initialData]);
 
@@ -53,9 +67,9 @@ export function AddReligionDialog({ onSuccess, open, onOpenChange, initialData }
     setIsSubmitting(true);
     let response: ApiResponse<Religion>;
 
-    const religionData: Omit<Religion, 'id' | 'createdAt' | 'updatedAt'> = {
+    const religionData: Omit<Religion, "id" | "createdAt" | "updatedAt"> = {
       name: name.trim(),
-      sequence: sequence === '' ? null : Number(sequence),
+      sequence: sequence === "" ? null : Number(sequence),
     };
 
     if (initialData) {
@@ -82,8 +96,8 @@ export function AddReligionDialog({ onSuccess, open, onOpenChange, initialData }
           description: "The religion has been successfully added.",
         });
         onSuccess();
-        setName('');
-        setSequence('');
+        setName("");
+        setSequence("");
         if (onOpenChange) onOpenChange(false);
       } else {
         toast({
@@ -100,19 +114,20 @@ export function AddReligionDialog({ onSuccess, open, onOpenChange, initialData }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild={!initialData}>
-        {!initialData && 
-        <Button
-          className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Religion
-        </Button>}
+        {!initialData && (
+          <Button className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Religion
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{initialData ? 'Edit Religion' : 'Add New Religion'}</DialogTitle>
+          <DialogTitle>{initialData ? "Edit Religion" : "Add New Religion"}</DialogTitle>
           <DialogDescription>
-            {initialData ? 'Edit the religion details here.' : "Add a new religion here. Click save when you're done."}
+            {initialData
+              ? "Edit the religion details here."
+              : "Add a new religion here. Click save when you're done."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -150,8 +165,10 @@ export function AddReligionDialog({ onSuccess, open, onOpenChange, initialData }
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
                 </>
+              ) : initialData ? (
+                "Save changes"
               ) : (
-                initialData ? 'Save changes' : 'Add Religion'
+                "Add Religion"
               )}
             </Button>
           </DialogFooter>
@@ -171,7 +188,7 @@ function SubmitButton() {
           Saving...
         </>
       ) : (
-        'Save changes'
+        "Save changes"
       )}
     </Button>
   );
@@ -196,14 +213,14 @@ export function DeleteReligionDialog({ religionId, onSuccess }: DeleteReligionDi
     if (!response.success) {
       setError(response.message);
       toast({
-         title: "Deletion failed",
-         description: response.message || "An error occurred while deleting.",
-         variant: "destructive",
+        title: "Deletion failed",
+        description: response.message || "An error occurred while deleting.",
+        variant: "destructive",
       });
     } else {
       toast({
-         title: "Religion deleted",
-         description: "The religion has been successfully deleted.",
+        title: "Religion deleted",
+        description: "The religion has been successfully deleted.",
       });
       setIsOpen(false);
       onSuccess();
@@ -228,7 +245,9 @@ export function DeleteReligionDialog({ religionId, onSuccess }: DeleteReligionDi
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline" disabled={isDeleting}>Cancel</Button>
+            <Button type="button" variant="outline" disabled={isDeleting}>
+              Cancel
+            </Button>
           </DialogClose>
           <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
             {isDeleting ? (
@@ -237,11 +256,11 @@ export function DeleteReligionDialog({ religionId, onSuccess }: DeleteReligionDi
                 Deleting...
               </>
             ) : (
-              'Delete'
+              "Delete"
             )}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

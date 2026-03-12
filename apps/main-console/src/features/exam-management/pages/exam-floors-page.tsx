@@ -13,7 +13,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { getAllFloors, createFloor, updateFloor, deleteFloor, type FloorT } from "@/services/floor.service";
+import {
+  getAllFloors,
+  createFloor,
+  updateFloor,
+  deleteFloor,
+  type FloorT,
+} from "@/services/floor.service";
 
 type FloorFormValues = {
   name: string;
@@ -60,7 +66,9 @@ export default function ExamFloorsPage() {
   const filteredFloors = floors.filter((f) => {
     const query = searchText.trim().toLowerCase();
     if (!query) return true;
-    return [f.id?.toString() || "", f.name || "", f.shortName || ""].some((v) => v.toLowerCase().includes(query));
+    return [f.id?.toString() || "", f.name || "", f.shortName || ""].some((v) =>
+      v.toLowerCase().includes(query),
+    );
   });
 
   const handleAddNew = () => {
@@ -190,7 +198,9 @@ export default function ExamFloorsPage() {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedFloor ? "Edit Floor" : "Add New Floor"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedFloor ? "Edit Floor" : "Add New Floor"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <FloorForm
                   initialData={selectedFloor ?? undefined}
@@ -233,7 +243,9 @@ export default function ExamFloorsPage() {
                   <div className="flex-shrink-0 basis-[12%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     Status
                   </div>
-                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 flex items-center justify-center">Actions</div>
+                  <div className="flex-shrink-0 basis-[10%] px-3 py-2 flex items-center justify-center">
+                    Actions
+                  </div>
                 </div>
               </div>
 
@@ -257,7 +269,10 @@ export default function ExamFloorsPage() {
                         {index + 1}
                       </div>
                       <div className="flex-shrink-0 basis-[32%] px-3 py-3 border-r border-slate-200 flex flex-col">
-                        <span className="font-medium text-slate-800 truncate" title={floor.name ?? undefined}>
+                        <span
+                          className="font-medium text-slate-800 truncate"
+                          title={floor.name ?? undefined}
+                        >
                           {floor.name}
                         </span>
                         <span className="text-xs text-muted-foreground">ID: {floor.id ?? "—"}</span>
@@ -271,7 +286,9 @@ export default function ExamFloorsPage() {
                       <div className="flex-shrink-0 basis-[12%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            floor.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                            floor.isActive
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
                           }`}
                         >
                           {floor.isActive ? "Active" : "Inactive"}
@@ -323,7 +340,9 @@ type FloorFormProps = {
 function FloorForm({ initialData, onSubmit, onCancel, isSubmitting = false }: FloorFormProps) {
   const [name, setName] = React.useState(initialData?.name ?? "");
   const [shortName, setShortName] = React.useState(initialData?.shortName ?? "");
-  const [sequence, setSequence] = React.useState<number | undefined>(initialData?.sequence ?? undefined);
+  const [sequence, setSequence] = React.useState<number | undefined>(
+    initialData?.sequence ?? undefined,
+  );
   const [isActive, setIsActive] = React.useState(initialData?.isActive ?? true);
 
   React.useEffect(() => {

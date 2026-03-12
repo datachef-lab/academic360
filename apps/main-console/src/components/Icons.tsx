@@ -19,11 +19,7 @@ export const LogoIcon = () => {
 
 export const MedalIcon = () => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 128 128"
-      className="w-14 fill-primary"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" className="w-14 fill-primary">
       <title>Free Icons</title>
       <g id="Layer_8" data-name="Layer 8">
         <path
@@ -97,29 +93,19 @@ export const MedalIcon = () => {
 
 export const MapIcon = () => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 128 128"
-      className="w-14 fill-primary"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" className="w-14 fill-primary">
       <title>Free Icons</title>
       <g id="Layer_45" data-name="Layer 45">
         <polygon
           className="cls-1"
           points="11.43 77.06 7.94 77.58 38.75 118.18 116.65 109.76 118.12 106.39 40.63 113.44 11.43 77.06"
         />
-        <path
-          className="cls-1"
-          d="M67.52,47.87a6,6,0,0,1-6,5.77,5.68,5.68,0,1,1,6-5.77Z"
-        />
+        <path className="cls-1" d="M67.52,47.87a6,6,0,0,1-6,5.77,5.68,5.68,0,1,1,6-5.77Z" />
         <path
           className="cls-1"
           d="M38.25,39.06a20.73,20.73,0,0,0-.65,6.57,25.84,25.84,0,0,0,1.32,6.54,21.35,21.35,0,0,0,.88,2.3c.3.76.68,1.49,1,2.23A68.07,68.07,0,0,0,50.82,71c1.71,2,3.52,3.85,5.34,5.69,2.33,2.38,4.76,4.68,6.89,7.27.66.8.5.76-.22.24a36.43,36.43,0,0,1-3.47-2.78Q55.63,78,52.11,74.24a85.26,85.26,0,0,1-6.63-7.9A59,59,0,0,1,38.9,55.5a27,27,0,0,1-2.42-13.75,22.48,22.48,0,0,1,2.65-8.22,31,31,0,0,1,3.8-5.32,24.3,24.3,0,0,1,5-4.12,29.55,29.55,0,0,1,9.23-3.72c.72-.18,1.43-.29,2.15-.42s1.25-.16,1.72-.19.87,0,1.18,0a4.27,4.27,0,0,1,1.3.24,3.54,3.54,0,0,1,.39.13c.26.17-.84.3-2.76.69-5.69.78-11.62,2.86-16.06,6.92A24.21,24.21,0,0,0,40.94,33a20.72,20.72,0,0,0-2.65,6.11Z"
         />
-        <path
-          className="cls-1"
-          d="M58.48,80.3S51.27,83,54.22,84.46s9.54.47,9.54.47Z"
-        />
+        <path className="cls-1" d="M58.48,80.3S51.27,83,54.22,84.46s9.54.47,9.54.47Z" />
         <path
           className="cls-1"
           d="M72.46,78.55c.19-.3,3.78-.27,5.2.49s.14,2-.89,2.6A24.56,24.56,0,0,1,69,84Z"
@@ -171,11 +157,7 @@ export const MapIcon = () => {
 
 export const PlaneIcon = () => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 128 128"
-      className="w-14 fill-primary"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" className="w-14 fill-primary">
       <title>Free Icons</title>
       <g id="Layer_4" data-name="Layer 4">
         <path
@@ -229,11 +211,7 @@ export const PlaneIcon = () => {
 
 export const GiftIcon = () => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 128 128"
-      className="w-14 fill-primary"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" className="w-14 fill-primary">
       <title>Free Icons</title>
       <g id="Layer_14" data-name="Layer 14">
         <path
@@ -327,11 +305,7 @@ export const GiftIcon = () => {
 
 export const LightBulbIcon = () => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 128 128"
-      className="w-12 fill-primary"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" className="w-12 fill-primary">
       <title>Free Icons</title>
       <g id="Layer_49" data-name="Layer 49">
         <path
@@ -401,11 +375,7 @@ export const LightBulbIcon = () => {
 
 export const WalletIcon = () => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 128 128"
-      className="w-12 fill-primary"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" className="w-12 fill-primary">
       <title>Free Icons</title>
       <g id="Layer_21" data-name="Layer 21">
         <path
@@ -491,11 +461,7 @@ export const WalletIcon = () => {
 
 export const ChartIcon = () => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 128 128"
-      className="w-12 fill-primary"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" className="w-12 fill-primary">
       <title>Free Icons</title>
       <g id="Layer_10" data-name="Layer 10">
         <path
@@ -561,11 +527,7 @@ export const ChartIcon = () => {
 
 export const MagnifierIcon = () => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 128 128"
-      className="w-12 fill-primary"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" className="w-12 fill-primary">
       <title>Free Icons</title>
       <g id="Layer_46" data-name="Layer 46">
         <path

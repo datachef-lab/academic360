@@ -9,7 +9,10 @@ export default function SidebarHeader() {
   const { user } = useAuth();
 
   return (
-    <View className="flex-row items-center gap-3 p-2  " style={{ borderColor: theme.border, borderBottomWidth: 1 }}>
+    <View
+      className="flex-row items-center gap-3 p-2  "
+      style={{ borderColor: theme.border, borderBottomWidth: 1 }}
+    >
       <Image
         source={{
           uri: "https://besc.academic360.app/api/api/v1/settings/file/4",

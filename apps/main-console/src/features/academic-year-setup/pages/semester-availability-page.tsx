@@ -2,9 +2,22 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Calendar, Plus, Edit, Trash2, Download, ChevronsUpDown, Check } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { useTablePagination } from "@/hooks/useTablePagination";
@@ -18,7 +31,13 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 
 // Mock data - expanded for testing scroll behavior
 const semesterAvailability = [
@@ -274,13 +293,20 @@ export default function SemesterAvailabilityPage() {
   // Extend search to include derived subject category and semester labels (e.g., "AECC", "III")
   const filteredAvailability = semesterAvailability.filter((item) => {
     const matchesProgramCourse =
-      !selectedProgramCourse || selectedProgramCourse === "all" || item.programCourse === selectedProgramCourse;
+      !selectedProgramCourse ||
+      selectedProgramCourse === "all" ||
+      item.programCourse === selectedProgramCourse;
     const matchesSemester =
-      !selectedSemester || selectedSemester === "all" || item.availableSemesters.includes(selectedSemester);
+      !selectedSemester ||
+      selectedSemester === "all" ||
+      item.availableSemesters.includes(selectedSemester);
 
     const s = tableData.searchTerm.trim().toLowerCase();
     const derivedCategory = getSubjectCategory(item.programCourse).toLowerCase();
-    const semesterTokens = item.availableSemesters.flatMap((sem) => [sem.toLowerCase(), toRoman(sem).toLowerCase()]);
+    const semesterTokens = item.availableSemesters.flatMap((sem) => [
+      sem.toLowerCase(),
+      toRoman(sem).toLowerCase(),
+    ]);
 
     const matchesSearch =
       !s ||
@@ -338,11 +364,15 @@ export default function SemesterAvailabilityPage() {
                 Semester Availability
               </CardTitle>
               <div className="text-muted-foreground">
-                Configure semester availability for subjects. Define which semesters each subject is available in.
+                Configure semester availability for subjects. Define which semesters each subject is
+                available in.
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => setIsAddDialogOpen(true)}>
+              <Button
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={() => setIsAddDialogOpen(true)}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add
               </Button>
@@ -436,9 +466,14 @@ export default function SemesterAvailabilityPage() {
                 <TableBody>
                   {paginatedAvailability.map((item, index) => (
                     <TableRow key={item.id} className="border-b border-gray-200 hover:bg-gray-50">
-                      <TableCell className="w-16 border-r border-gray-300">{startIndex + index + 1}</TableCell>
+                      <TableCell className="w-16 border-r border-gray-300">
+                        {startIndex + index + 1}
+                      </TableCell>
                       <TableCell className="w-64 border-r border-gray-300">
-                        <Badge variant="outline" className="border-purple-500 text-purple-700 bg-purple-50">
+                        <Badge
+                          variant="outline"
+                          className="border-purple-500 text-purple-700 bg-purple-50"
+                        >
                           {getSubjectCategory(item.programCourse)}
                         </Badge>
                       </TableCell>
@@ -469,10 +504,19 @@ export default function SemesterAvailabilityPage() {
                       </TableCell>
                       <TableCell className="w-24 border-r border-gray-300">
                         <div className="flex items-center justify-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(index)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openEdit(index)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-600 hover:text-red-700"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -514,7 +558,9 @@ export default function SemesterAvailabilityPage() {
                 <TableHeader className="sticky top-0 z-10 bg-gray-100">
                   <TableRow>
                     <TableHead className="w-16 border-r border-gray-300">Sr. No.</TableHead>
-                    <TableHead className="w-64 border-r border-gray-300">Subject Category</TableHead>
+                    <TableHead className="w-64 border-r border-gray-300">
+                      Subject Category
+                    </TableHead>
                     <TableHead className="w-[20rem] border-r border-gray-300">Classes</TableHead>
                     <TableHead className="text-center w-24">Action</TableHead>
                   </TableRow>
@@ -568,7 +614,10 @@ export default function SemesterAvailabilityPage() {
                           </PopoverTrigger>
                           <PopoverContent className="w-56 p-0 max-h-64 overflow-auto" align="start">
                             <Command className="max-h-64 overflow-auto">
-                              <CommandInput placeholder="Search semesters..." className="text-gray-700" />
+                              <CommandInput
+                                placeholder="Search semesters..."
+                                className="text-gray-700"
+                              />
                               <CommandEmpty>No semesters</CommandEmpty>
                               <CommandGroup>
                                 {semesters.map((s) => (
@@ -576,7 +625,9 @@ export default function SemesterAvailabilityPage() {
                                     key={s}
                                     onSelect={() => {
                                       const exists = row.classes.includes(s);
-                                      const next = exists ? row.classes.filter((v) => v !== s) : [...row.classes, s];
+                                      const next = exists
+                                        ? row.classes.filter((v) => v !== s)
+                                        : [...row.classes, s];
                                       updateAddRow(idx, { classes: next });
                                     }}
                                     className="text-gray-700"

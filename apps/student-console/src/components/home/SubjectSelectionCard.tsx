@@ -40,8 +40,8 @@ export default function SubjectSelectionCard() {
           <div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">Subject Selection</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Choose your subjects for the upcoming semester and plan your academic journey. Build your perfect schedule
-              with our intuitive subject selection tool.
+              Choose your subjects for the upcoming semester and plan your academic journey. Build
+              your perfect schedule with our intuitive subject selection tool.
             </p>
           </div>
         </div>

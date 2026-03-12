@@ -3,7 +3,10 @@ import { CustomPaginationState } from "@/components/settings/SettingsContent";
 import { useQuery, RefetchOptions, QueryObserverResult } from "@tanstack/react-query";
 import { getAllStudents, getSearchedStudents } from "@/services/student";
 import { DataTable } from "@/components/ui/data-table";
-import { studentSearchColumns, StudentSearchType } from "@/components/tables/users/student-search-column";
+import {
+  studentSearchColumns,
+  StudentSearchType,
+} from "@/components/tables/users/student-search-column";
 import { formattedStudent } from "@/components/StudentSearch/helper";
 import { useReportStore } from "@/components/globals/useReportStore";
 import { Student } from "@/types/user/student";
@@ -30,7 +33,10 @@ export default function SearchStudentPage() {
   }, []);
 
   const { isFetching: isFetchingDefault } = useQuery({
-    queryKey: ["search-student", { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
+    queryKey: [
+      "search-student",
+      { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize },
+    ],
     queryFn: async () => {
       const data = await getAllStudents(pagination.pageIndex + 1, pagination.pageSize);
       console.log("fetched data", JSON.stringify(data.content[0], null, 2));
@@ -39,7 +45,12 @@ export default function SearchStudentPage() {
       console.log("content/***", content);
       setStudentData(content as unknown as Student[]);
 
-      console.log({ pageIndex: pagination.pageIndex, pageSize: pagination.pageSize, totalElements, totalPages });
+      console.log({
+        pageIndex: pagination.pageIndex,
+        pageSize: pagination.pageSize,
+        totalElements,
+        totalPages,
+      });
 
       setPagination((prev) => ({ ...prev, totalElements, totalPages }));
 
@@ -102,7 +113,9 @@ export default function SearchStudentPage() {
     enabled: false,
   }) as {
     isFetching: boolean;
-    refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>>;
+    refetch: (
+      options?: RefetchOptions,
+    ) => Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>>;
   };
 
   function refetchWrapper(

@@ -11,7 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Upload, Download, FileText, Plus, FolderOpen, Loader2, CheckCircle } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import axiosInstance from "@/utils/api";
@@ -66,7 +72,13 @@ interface FieldConfig {
 const getFieldConfig = (settingType: string): FieldConfig[] => {
   const configs: Record<string, FieldConfig[]> = {
     "Board Universities": [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter board/university name" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter board/university name",
+      },
       { name: "code", label: "Code", type: "text", required: false, placeholder: "Enter code" },
       {
         name: "passingMarks",
@@ -75,24 +87,66 @@ const getFieldConfig = (settingType: string): FieldConfig[] => {
         required: false,
         placeholder: "Enter passing marks",
       },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     Institutions: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter institution name" },
-      { name: "degreeId", label: "Degree", type: "select", required: true, placeholder: "Select a degree" },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter institution name",
+      },
+      {
+        name: "degreeId",
+        label: "Degree",
+        type: "select",
+        required: true,
+        placeholder: "Select a degree",
+      },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     Categories: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter category name" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter category name",
+      },
       { name: "code", label: "Code", type: "text", required: true, placeholder: "Enter code" },
       { name: "documentRequired", label: "Document Required", type: "boolean", required: true },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     Degree: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter degree name" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter degree name",
+      },
       {
         name: "level",
         label: "Level",
@@ -105,21 +159,57 @@ const getFieldConfig = (settingType: string): FieldConfig[] => {
           { value: DegreeLevel.POST_GRADUATE, label: "Post Graduate" },
         ],
       },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     Religion: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter religion name" },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter religion name",
+      },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     "Language Medium": [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter language name" },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter language name",
+      },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     Documents: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter document name" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter document name",
+      },
       {
         name: "description",
         label: "Description",
@@ -127,7 +217,13 @@ const getFieldConfig = (settingType: string): FieldConfig[] => {
         required: false,
         placeholder: "Enter document description",
       },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     "Blood Groups": [
@@ -138,27 +234,81 @@ const getFieldConfig = (settingType: string): FieldConfig[] => {
         required: true,
         placeholder: "Enter blood group type (e.g., A+, B-, O+)",
       },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     Occupation: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter occupation name" },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter occupation name",
+      },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     Qualifications: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter qualification name" },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter qualification name",
+      },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     Nationality: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter nationality name" },
-      { name: "code", label: "Code", type: "number", required: false, placeholder: "Enter nationality code" },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter nationality name",
+      },
+      {
+        name: "code",
+        label: "Code",
+        type: "number",
+        required: false,
+        placeholder: "Enter nationality code",
+      },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     Country: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter country name" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter country name",
+      },
       {
         name: "code",
         label: "Country Code",
@@ -166,21 +316,57 @@ const getFieldConfig = (settingType: string): FieldConfig[] => {
         required: false,
         placeholder: "Enter country code (e.g., IN, US)",
       },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     State: [
-      { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter state name" },
-      { name: "countryId", label: "Country", type: "select", required: true, placeholder: "Select a country" },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "name",
+        label: "Name",
+        type: "text",
+        required: true,
+        placeholder: "Enter state name",
+      },
+      {
+        name: "countryId",
+        label: "Country",
+        type: "select",
+        required: true,
+        placeholder: "Select a country",
+      },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     City: [
       { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter city name" },
       { name: "code", label: "Code", type: "text", required: true, placeholder: "Enter city code" },
-      { name: "stateId", label: "State", type: "select", required: true, placeholder: "Select a state" },
+      {
+        name: "stateId",
+        label: "State",
+        type: "select",
+        required: true,
+        placeholder: "Select a state",
+      },
       { name: "documentRequired", label: "Document Required", type: "boolean", required: true },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
     "Annual Income": [
@@ -191,7 +377,13 @@ const getFieldConfig = (settingType: string): FieldConfig[] => {
         required: true,
         placeholder: "Enter income range (e.g., 0-50000, 50000-100000)",
       },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ],
   };
@@ -199,7 +391,13 @@ const getFieldConfig = (settingType: string): FieldConfig[] => {
   return (
     configs[settingType] || [
       { name: "name", label: "Name", type: "text", required: true, placeholder: "Enter name" },
-      { name: "sequence", label: "Sequence", type: "number", required: false, placeholder: "Enter sequence number" },
+      {
+        name: "sequence",
+        label: "Sequence",
+        type: "number",
+        required: false,
+        placeholder: "Enter sequence number",
+      },
       { name: "disabled", label: "Disabled", type: "boolean", required: false },
     ]
   );
@@ -429,7 +627,9 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
           }));
         } else {
           // Fallback: show a message that no degrees are available
-          degreeField.options = [{ value: "no-degrees", label: "No degrees available. Please create degrees first." }];
+          degreeField.options = [
+            { value: "no-degrees", label: "No degrees available. Please create degrees first." },
+          ];
           degreeField.required = false; // Make it optional if no degrees
         }
       }
@@ -447,7 +647,10 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
         } else {
           // Fallback: show a message that no countries are available
           countryField.options = [
-            { value: "no-countries", label: "No countries available. Please create countries first." },
+            {
+              value: "no-countries",
+              label: "No countries available. Please create countries first.",
+            },
           ];
           countryField.required = false; // Make it optional if no countries
         }
@@ -465,7 +668,9 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
           }));
         } else {
           // Fallback: show a message that no states are available
-          stateField.options = [{ value: "no-states", label: "No states available. Please create states first." }];
+          stateField.options = [
+            { value: "no-states", label: "No states available. Please create states first." },
+          ];
           stateField.required = false; // Make it optional if no states
         }
       }
@@ -553,7 +758,11 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
 
       // Convert number fields and select fields that should be numbers
       fieldConfig.forEach((field) => {
-        if (field.type === "number" && payload[field.name] !== undefined && payload[field.name] !== "") {
+        if (
+          field.type === "number" &&
+          payload[field.name] !== undefined &&
+          payload[field.name] !== ""
+        ) {
           payload[field.name] = Number(payload[field.name]);
         }
 
@@ -571,7 +780,9 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
       // Use the appropriate service function with proper typing
       try {
         const result = await (
-          serviceFunction as (payload: Record<string, string | number | boolean | null>) => Promise<unknown>
+          serviceFunction as (
+            payload: Record<string, string | number | boolean | null>,
+          ) => Promise<unknown>
         )(payload);
 
         // If result is undefined, create a mock result to indicate success
@@ -600,7 +811,11 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
       // Convert number fields and select fields that should be numbers
       const payload: Record<string, string | number | boolean | null> = { ...data };
       fieldConfig.forEach((field) => {
-        if (field.type === "number" && payload[field.name] !== undefined && payload[field.name] !== "") {
+        if (
+          field.type === "number" &&
+          payload[field.name] !== undefined &&
+          payload[field.name] !== ""
+        ) {
           payload[field.name] = Number(payload[field.name]);
         }
         if (
@@ -739,7 +954,10 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
 
   const renderField = useCallback(
     (field: FieldConfig) => {
-      const value = formData[field.name] !== undefined && formData[field.name] !== null ? formData[field.name] : "";
+      const value =
+        formData[field.name] !== undefined && formData[field.name] !== null
+          ? formData[field.name]
+          : "";
       const error = errors[field.name];
 
       switch (field.type) {
@@ -971,42 +1189,71 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
       case "file-select":
         return (
           <Button onClick={() => fileInputRef.current?.click()} disabled={isProcessing}>
-            {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FolderOpen className="w-4 h-4 mr-2" />}
+            {isProcessing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <FolderOpen className="w-4 h-4 mr-2" />
+            )}
             Select File
           </Button>
         );
       case "file-upload":
         return (
           <Button onClick={handleFileUpload} disabled={isDisabled}>
-            {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+            {isProcessing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4 mr-2" />
+            )}
             Upload File
           </Button>
         );
       case "download":
         return (
           <Button onClick={handleDownload} disabled={isProcessing}>
-            {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            {isProcessing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
             Download
           </Button>
         );
       case "add":
         return (
           <Button onClick={handleAdd} disabled={isDisabled}>
-            {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+            {isProcessing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4 mr-2" />
+            )}
             Add
           </Button>
         );
       case "edit":
         return (
           <Button onClick={handleEdit} disabled={isDisabled}>
-            {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+            {isProcessing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4 mr-2" />
+            )}
             Save
           </Button>
         );
       default:
         return null;
     }
-  }, [type, isProcessing, selectedFile, isFormValid, handleFileUpload, handleDownload, handleAdd, handleEdit]);
+  }, [
+    type,
+    isProcessing,
+    selectedFile,
+    isFormValid,
+    handleFileUpload,
+    handleDownload,
+    handleAdd,
+    handleEdit,
+  ]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

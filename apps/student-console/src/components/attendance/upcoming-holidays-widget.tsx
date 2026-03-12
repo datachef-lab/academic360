@@ -7,9 +7,7 @@ type UpcomingHolidaysWidgetProps = {
   mockData: MockData;
 };
 
-export default function UpcomingHolidaysWidget({
-  mockData,
-}: UpcomingHolidaysWidgetProps) {
+export default function UpcomingHolidaysWidget({ mockData }: UpcomingHolidaysWidgetProps) {
   return (
     <div className="space-y-6">
       <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-indigo-100 shadow-md">

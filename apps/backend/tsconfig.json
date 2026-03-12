@@ -23,6 +23,7 @@
       //   "@/*": ["./src/*"] // General path for other imports
       "@repo/db/*": ["../../packages/db/src/*"],
       "@repo/utils/*": ["../../packages/utils/src/*"],
+      //  "@repo/eslint-config/*": ["../../packages/eslint-config/src/*"],
       "@/*": ["./src/*", "../../packages/db/src/*"]
     }
   },

@@ -1,4 +1,3 @@
-
 export interface Stats {
   admissionYearCount: number;
   totalApplications: number;

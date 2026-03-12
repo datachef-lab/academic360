@@ -45,7 +45,12 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
 
   const { refetch: getSearchStudent, isLoading } = useQuery({
     queryKey: ["SearchStudent", debouncePagination],
-    queryFn: () => getSearchedStudents(searchQuery, debouncePagination.pageIndex + 1, debouncePagination.pageSize),
+    queryFn: () =>
+      getSearchedStudents(
+        searchQuery,
+        debouncePagination.pageIndex + 1,
+        debouncePagination.pageSize,
+      ),
     enabled: false,
   });
 
@@ -88,7 +93,11 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
     <Dialog open={open} onOpenChange={handleModalClose}>
       <DialogContent className="sm:max-w-[900px] md:max-w-[1000px] h-[90vh] overflow-hidden flex flex-col p-0 gap-0 rounded-2xl border-0 shadow-2xl">
         <div className="fixed inset-0 w-full h-full ">
-          <img src={bhawanipurImg} alt="Background" className="w-full h-full object-cover opacity-90  blur-[3px]" />
+          <img
+            src={bhawanipurImg}
+            alt="Background"
+            className="w-full h-full object-cover opacity-90  blur-[3px]"
+          />
           <div className="absolute inset-0 bg-purple-900/75 backdrop-blur-[1px]"></div>
         </div>
 
@@ -131,7 +140,11 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
                 onClick={handleSearch}
                 className="h-12 bg-purple-600 hover:bg-purple-600  text-white transition-all duration-200 shadow-lg hover:shadow-purple-500/25 rounded-xl text-lg font-medium"
               >
-                {isSearching ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Search className="h-5 w-5 mr-2" />}
+                {isSearching ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <Search className="h-5 w-5 mr-2" />
+                )}
                 Search
               </Button>
             </motion.div>
@@ -172,8 +185,12 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
                         <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-2xl"></div>
                         <UserRoundSearch className="h-20 w-20 mb-4 text-purple-200 relative z-10" />
                       </div>
-                      <p className="text-center text-2xl text-white font-semibold">No students found</p>
-                      <p className="text-center text-base text-purple-100 mt-2">Try adjusting your search criteria</p>
+                      <p className="text-center text-2xl text-white font-semibold">
+                        No students found
+                      </p>
+                      <p className="text-center text-base text-purple-100 mt-2">
+                        Try adjusting your search criteria
+                      </p>
                     </motion.div>
                   ) : (
                     <motion.div

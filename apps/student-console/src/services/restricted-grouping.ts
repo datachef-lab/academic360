@@ -11,7 +11,9 @@ export async function fetchRestrictedGroupings(params?: {
   subjectType?: string;
   programCourseId?: number;
 }) {
-  const res = await api.get<ApiResponse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>>(BASE, {
+  const res = await api.get<
+    ApiResponse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>
+  >(BASE, {
     params,
   });
   const p = res.data.payload as any;

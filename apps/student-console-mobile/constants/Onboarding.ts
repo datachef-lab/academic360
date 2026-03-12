@@ -12,7 +12,8 @@ export const onboardingSlides: OnboardingSlide[] = [
     id: 1,
     title: "Welcome to \n BESC Console",
     subtitle: "Your academic companion",
-    description: "Your college essentials — classes, exams, fees, library, and services — all in one convenient app.",
+    description:
+      "Your college essentials — classes, exams, fees, library, and services — all in one convenient app.",
     illustration: "onboarding-campus",
     cta: "Next",
   },
@@ -20,7 +21,8 @@ export const onboardingSlides: OnboardingSlide[] = [
     id: 2,
     title: "Stay on Track Every Day",
     subtitle: "Classes • Attendance • Timetable",
-    description: "View today’s classes, mark attendance, track your timetable, and never miss an academic activity.",
+    description:
+      "View today’s classes, mark attendance, track your timetable, and never miss an academic activity.",
     illustration: "onboarding-schedule",
     cta: "Next",
   },
@@ -28,7 +30,8 @@ export const onboardingSlides: OnboardingSlide[] = [
     id: 3,
     title: "Exams, Results & Documents",
     subtitle: "Everything exam-related",
-    description: "Fill exam forms, download admit cards, check results, and access your marksheets securely.",
+    description:
+      "Fill exam forms, download admit cards, check results, and access your marksheets securely.",
     illustration: "onboarding-exams",
     cta: "Next",
   },

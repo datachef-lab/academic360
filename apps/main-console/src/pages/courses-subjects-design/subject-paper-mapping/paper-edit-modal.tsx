@@ -3,8 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Plus, Trash2, X } from "lucide-react";
 import type {
   Subject,
@@ -123,7 +136,8 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
             if (paperData) {
               setForm({ ...(paperData as EditablePaper) });
               // Load existing components from payload (backend includes them)
-              const fetchedComponents = (paperData as unknown as { components?: PaperComponentDto[] }).components || [];
+              const fetchedComponents =
+                (paperData as unknown as { components?: PaperComponentDto[] }).components || [];
               setComponents(fetchedComponents);
             }
           })
@@ -207,7 +221,9 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   // Component handlers
   const addComponent = useCallback(() => {
     const selectedComponentIds = components.map((comp) => comp.examComponent.id);
-    const availableComponents = examComponents.filter((ec) => !selectedComponentIds.includes(ec.id!));
+    const availableComponents = examComponents.filter(
+      (ec) => !selectedComponentIds.includes(ec.id!),
+    );
     if (availableComponents.length > 0) {
       const newComponent: PaperComponentDto = {
         examComponent: availableComponents[0]!,
@@ -227,7 +243,9 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
 
   const updateComponent = useCallback(
     (index: number, field: keyof PaperComponentDto, value: string | number | ExamComponent) => {
-      setComponents((prev) => prev.map((comp, i) => (i === index ? { ...comp, [field]: value } : comp)));
+      setComponents((prev) =>
+        prev.map((comp, i) => (i === index ? { ...comp, [field]: value } : comp)),
+      );
     },
     [],
   );
@@ -306,7 +324,13 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                 Active
               </Label>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0" disabled={isLoadingPaper}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClose}
+              className="h-8 w-8 p-0"
+              disabled={isLoadingPaper}
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -366,7 +390,10 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     {regulationTypes.map((regulationType) => (
-                      <SelectItem key={regulationType.id} value={regulationType.id?.toString() || ""}>
+                      <SelectItem
+                        key={regulationType.id}
+                        value={regulationType.id?.toString() || ""}
+                      >
                         {regulationType.name}
                       </SelectItem>
                     ))}
@@ -414,7 +441,10 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                       </SelectTrigger>
                       <SelectContent>
                         {programCourses.map((programCourse) => (
-                          <SelectItem key={programCourse.id} value={programCourse.id?.toString() || ""}>
+                          <SelectItem
+                            key={programCourse.id}
+                            value={programCourse.id?.toString() || ""}
+                          >
                             {programCourse.name}
                           </SelectItem>
                         ))}
@@ -512,13 +542,19 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                               .map((comp, i) => (i !== index ? comp.examComponent?.id : null))
                               .filter((id) => id !== null);
                             const availableComponents = examComponents.filter(
-                              (ec) => ec.id === component.examComponent?.id || !otherSelectedIds.includes(ec.id!),
+                              (ec) =>
+                                ec.id === component.examComponent?.id ||
+                                !otherSelectedIds.includes(ec.id!),
                             );
                             return (
                               <TableRow key={index} className="hover:bg-gray-50">
                                 <TableCell>
                                   <Select
-                                    value={component.examComponent?.id ? component.examComponent.id.toString() : ""}
+                                    value={
+                                      component.examComponent?.id
+                                        ? component.examComponent.id.toString()
+                                        : ""
+                                    }
                                     onValueChange={(value) =>
                                       updateComponent(
                                         index,
@@ -543,7 +579,9 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                                   <Input
                                     type="number"
                                     value={component.fullMarks ?? 0}
-                                    onChange={(e) => updateComponent(index, "fullMarks", Number(e.target.value))}
+                                    onChange={(e) =>
+                                      updateComponent(index, "fullMarks", Number(e.target.value))
+                                    }
                                     placeholder="0"
                                     className="w-20"
                                   />
@@ -552,7 +590,9 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                                   <Input
                                     type="number"
                                     value={component.credit ?? 0}
-                                    onChange={(e) => updateComponent(index, "credit", Number(e.target.value))}
+                                    onChange={(e) =>
+                                      updateComponent(index, "credit", Number(e.target.value))
+                                    }
                                     placeholder="0"
                                     className="w-20"
                                   />
@@ -589,7 +629,11 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
             </Button>
           </div>
           <div className="flex items-center gap-3">
-            <Button onClick={handleFormSubmit} disabled={isLoading} className="bg-purple-600 hover:bg-purple-700">
+            <Button
+              onClick={handleFormSubmit}
+              disabled={isLoading}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
               {isLoading ? "Saving..." : paperId ? "Update Paper" : "Create Paper"}
             </Button>
           </div>

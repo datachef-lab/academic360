@@ -11,7 +11,14 @@ import {
   ColumnFiltersState,
 } from "@tanstack/react-table";
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import { DataTablePagination } from "@/components/reports/Pagination";
 import { useNavigate } from "react-router-dom";
@@ -81,7 +88,9 @@ export function StudentSearchDataTable<TData extends SearchStudent, TValue>({
                       key={header.id}
                       className={`text-center border-r border-b text-black rounded-t-lg  bg-slate-50 dark:bg-gray-700 dark:text-white`}
                     >
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   );
                 })}

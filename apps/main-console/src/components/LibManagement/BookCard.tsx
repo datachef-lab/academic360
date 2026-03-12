@@ -1,5 +1,3 @@
-
-
 import { Button } from "@/components/ui/button";
 import { BookOpen } from "lucide-react";
 import React from "react";
@@ -24,9 +22,7 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
       <div className="relative w-full h-40 sm:h-48 md:h-52 bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-lg font-bold rounded-t-2xl">
         <span
           className={`absolute right-3 top-2 px-2 py-[3px] text-xs font-semibold rounded-full ${
-            book.available_copies > 0
-              ? "bg-green-200 text-green-700"
-              : "bg-red-200 text-red-700"
+            book.available_copies > 0 ? "bg-green-200 text-green-700" : "bg-red-200 text-red-700"
           }`}
         >
           {book.available_copies > 0 ? (
@@ -50,9 +46,7 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
           </span>
           <span className="text-xs mr-6 font-semibold">ISBN: {book.isbn}</span>
         </div>
-        <h2 className="text-md mt-3 font-bold text-gray-800 mb-1">
-          {book.title}
-        </h2>
+        <h2 className="text-md mt-3 font-bold text-gray-800 mb-1">{book.title}</h2>
         <p className="text-gray-600 text-xs mb-2">By {book.author}</p>
 
         <div className="flex flex-col sm:flex-row justify-between text-gray-500 text-xs mt-5 gap-2 sm:gap-0">
@@ -70,4 +64,3 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
 };
 
 export default BookCard;
-

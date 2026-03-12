@@ -10,14 +10,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, Upload, Download, Loader2, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Pencil,
+  Upload,
+  Download,
+  Loader2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { CourseDialog } from "./course-dialog";
-import { downloadCourses, handleCourseSubmit, uploadCoursesFromFile, fetchPaginatedCourses } from "./actions";
+import {
+  downloadCourses,
+  handleCourseSubmit,
+  uploadCoursesFromFile,
+  fetchPaginatedCourses,
+} from "./actions";
 import { type Course } from "@/db/schema";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 
 interface CourseListProps {
   initialCourses: Course[];
@@ -25,7 +38,7 @@ interface CourseListProps {
   limit: number;
 }
 
-const REQUIRED_HEADERS = ['name', 'shortName', 'codePrefix', 'universityCode', 'amount'];
+const REQUIRED_HEADERS = ["name", "shortName", "codePrefix", "universityCode", "amount"];
 const ITEMS_PER_PAGE = 10; // Define items per page
 
 export function CourseList({ initialCourses, totalCount, limit }: CourseListProps) {
@@ -51,8 +64,8 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
     // Create a sample row with empty values
     const sampleData = [
       REQUIRED_HEADERS,
-      ['', '', '', '', ''], // Empty row for example
-      ['Bachelor of Computer Science', 'BCS', 'CS', 'UNI001', 10000], // Example row
+      ["", "", "", "", ""], // Empty row for example
+      ["Bachelor of Computer Science", "BCS", "CS", "UNI001", 10000], // Example row
     ];
 
     // Create a new workbook and worksheet
@@ -60,10 +73,10 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
     const ws = XLSX.utils.aoa_to_sheet(sampleData);
 
     // Add the worksheet to the workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Course Template');
+    XLSX.utils.book_append_sheet(wb, ws, "Course Template");
 
     // Generate Excel file
-    XLSX.writeFile(wb, 'course_template.xlsx');
+    XLSX.writeFile(wb, "course_template.xlsx");
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,16 +87,17 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
-          
-          if (jsonData.length > 1) { // Subtract 1 for header row
+
+          if (jsonData.length > 1) {
+            // Subtract 1 for header row
             setNumberOfEntries(jsonData.length - 1);
           } else {
             setNumberOfEntries(0);
           }
-          
+
           // We'll still do full validation on submit
         } catch (error) {
           console.error("Error reading file for entry count:", error);
@@ -109,17 +123,17 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
-          const headers = (jsonData[0] as string[]).map(h => h.trim());
-          
-          const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
-          
+          const headers = (jsonData[0] as string[]).map((h) => h.trim());
+
+          const missingHeaders = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
+
           if (missingHeaders.length > 0) {
             toast({
               title: "Invalid File Format",
-              description: `Missing required headers: ${missingHeaders.join(', ')}`,
+              description: `Missing required headers: ${missingHeaders.join(", ")}`,
               variant: "destructive",
             });
             resolve(false);
@@ -161,7 +175,7 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
 
     console.log("File valid, preparing formData...");
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    formData.append("file", selectedFile);
 
     console.log("Starting upload transition...");
     startUploadTransition(async () => {
@@ -184,8 +198,8 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
         setSelectedFile(null);
         setNumberOfEntries(0);
         // Clear the file input
-        if(fileInputRef.current) {
-          fileInputRef.current.value = '';
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
         }
       }
     });
@@ -230,12 +244,12 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
           });
         }
       } else if (!result.success) {
-         console.error("Download failed with error from server action:", result.error);
-         toast({
-           title: "Download Failed",
-           description: result.error || "Failed to fetch courses for download.",
-           variant: "destructive",
-         });
+        console.error("Download failed with error from server action:", result.error);
+        toast({
+          title: "Download Failed",
+          description: result.error || "Failed to fetch courses for download.",
+          variant: "destructive",
+        });
       }
     });
   };
@@ -257,19 +271,20 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
       <div className="flex flex-col gap-4 mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Course Management</h1>
         <div className="flex flex-wrap justify-between items-center gap-3">
-           <form onSubmit={handleUploadSubmit} className="flex items-center gap-2">
-            
+          <form onSubmit={handleUploadSubmit} className="flex items-center gap-2">
             <div className="flex items-center gap-2">
-              <Input 
-                id="course-upload" 
-                type="file" 
-                name="file" 
-                accept=".xlsx" 
+              <Input
+                id="course-upload"
+                type="file"
+                name="file"
+                accept=".xlsx"
                 className="hidden"
                 onChange={handleFileSelect}
                 ref={fileInputRef}
               />
-              <Button type="button" onClick={() => fileInputRef.current?.click()}
+              <Button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
                 className="bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
               >
                 <Upload size={20} />
@@ -295,10 +310,10 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
                 </>
               )}
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={downloadTemplate}
               className="bg-gray-500 hover:bg-gray-600 text-white flex items-center gap-2"
             >
@@ -309,10 +324,10 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
 
           <div className="flex items-center gap-2">
             <CourseDialog mode="add" />
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={handleDownloadClick}
               disabled={isPendingDownload}
               className="bg-purple-500 hover:bg-purple-600 text-white flex items-center gap-2"
@@ -349,16 +364,22 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">Loading courses...</TableCell>
+                <TableCell colSpan={7} className="text-center">
+                  Loading courses...
+                </TableCell>
               </TableRow>
             ) : courses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center">No courses found.</TableCell>
+                <TableCell colSpan={7} className="text-center">
+                  No courses found.
+                </TableCell>
               </TableRow>
             ) : (
               courses.map((course, index) => (
                 <TableRow key={`course-${course.id}-${index}`} className="hover:bg-gray-50">
-                  <TableCell className="font-medium text-gray-600">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                  <TableCell className="font-medium text-gray-600">
+                    {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                  </TableCell>
                   <TableCell className="text-gray-700">{course.name}</TableCell>
                   <TableCell className="text-gray-700">{course.shortName}</TableCell>
                   <TableCell className="text-gray-700">{course.codePrefix}</TableCell>
@@ -408,4 +429,4 @@ export function CourseList({ initialCourses, totalCount, limit }: CourseListProp
       )}
     </div>
   );
-} 
+}

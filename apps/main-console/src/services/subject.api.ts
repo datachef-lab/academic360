@@ -31,7 +31,9 @@ export const getSubjectById = async (id: number): Promise<Subject> => {
 };
 
 // Create subject
-export const createSubject = async (data: Omit<Subject, "id" | "createdAt" | "updatedAt">): Promise<Subject> => {
+export const createSubject = async (
+  data: Omit<Subject, "id" | "createdAt" | "updatedAt">,
+): Promise<Subject> => {
   const res = await axiosInstance.post<Subject>(BASE, data);
   return res.data;
 };
@@ -56,10 +58,14 @@ export const bulkUploadSubjects = async (file: File): Promise<BulkUploadResult> 
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(`${BASE}/bulk-upload`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(
+    `${BASE}/bulk-upload`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     },
-  });
+  );
   return res.data.payload;
 };

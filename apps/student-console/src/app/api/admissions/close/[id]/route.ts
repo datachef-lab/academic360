@@ -28,7 +28,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     console.log("in adm close request, updatedAdmission.isClosed:", updatedAdmission?.isClosed);
 
     if (!updatedAdmission) {
-      return NextResponse.json({ error: "Admission not found or could not be closed" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Admission not found or could not be closed" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json(

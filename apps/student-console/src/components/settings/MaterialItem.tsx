@@ -9,11 +9,7 @@ type MaterialItemProps = {
   onDelete: (id: number | undefined) => Promise<void>;
 };
 
-export default function MaterialItem({
-  material,
-  openEditModal,
-  onDelete,
-}: MaterialItemProps) {
+export default function MaterialItem({ material, openEditModal, onDelete }: MaterialItemProps) {
   return (
     <div
       key={material.id}
@@ -25,11 +21,7 @@ export default function MaterialItem({
         rel="noopener noreferrer"
         className="text-primary hover:underline flex items-center gap-1.5 font-medium flex-1"
       >
-        {material.type === "link" ? (
-          <ExternalLink size={14} />
-        ) : (
-          <Download size={14} />
-        )}
+        {material.type === "link" ? <ExternalLink size={14} /> : <Download size={14} />}
         <span>{material.title}</span>
       </a>
       <div className="flex gap-1 opacity-70 group-hover:opacity-100 transition-opacity">

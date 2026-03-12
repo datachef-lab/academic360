@@ -21,12 +21,17 @@ export const boardSubjectUnivSubjectMappingService = {
     return res.data.payload ?? null;
   },
 
-  async create(data: BoardSubjectUnivSubjectMappingDto): Promise<BoardSubjectUnivSubjectMappingDto> {
+  async create(
+    data: BoardSubjectUnivSubjectMappingDto,
+  ): Promise<BoardSubjectUnivSubjectMappingDto> {
     const res = await axiosInstance.post(API_BASE_URL, data);
     return res.data.payload as BoardSubjectUnivSubjectMappingDto;
   },
 
-  async update(id: number, data: BoardSubjectUnivSubjectMappingDto): Promise<BoardSubjectUnivSubjectMappingDto> {
+  async update(
+    id: number,
+    data: BoardSubjectUnivSubjectMappingDto,
+  ): Promise<BoardSubjectUnivSubjectMappingDto> {
     const res = await axiosInstance.put(`${API_BASE_URL}/${id}`, data);
     return res.data.payload as BoardSubjectUnivSubjectMappingDto;
   },

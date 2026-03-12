@@ -3,7 +3,7 @@ import { BatchSubject } from "@/types/academics/batch-subjects";
 import { RowDataPacket } from "mysql2";
 
 export async function findSubjectsByCourseAndClass(courseId: number, classId: number) {
-    const sqlQuery = `
+  const sqlQuery = `
         SELECT DISTINCT
             sb.id AS subjectId,
             co.coursename,
@@ -30,8 +30,8 @@ export async function findSubjectsByCourseAndClass(courseId: number, classId: nu
             AND m.classid = cl.id
             AND p.paperId = pl.id
     `;
-    console.log("Fetching subjects for course:", courseId, "class:", classId);
-    const subjects = await query<RowDataPacket[]>(sqlQuery, [courseId, classId]) as BatchSubject[];
-    console.log("Found subjects:", subjects.length);
-    return subjects;
+  console.log("Fetching subjects for course:", courseId, "class:", classId);
+  const subjects = (await query<RowDataPacket[]>(sqlQuery, [courseId, classId])) as BatchSubject[];
+  console.log("Found subjects:", subjects.length);
+  return subjects;
 }

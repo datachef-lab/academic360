@@ -21,7 +21,12 @@ interface CourseWithSelection extends Course {
   selected: boolean;
 }
 
-export default function CourseApplicationStep({ stepNotes, onNext, onPrev, currentStep }: CourseApplicationStepProps) {
+export default function CourseApplicationStep({
+  stepNotes,
+  onNext,
+  onPrev,
+  currentStep,
+}: CourseApplicationStepProps) {
   const { applicationForm } = useApplicationForm();
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [admissionCourses, setAdmissionCourses] = useState<AdmissionCourse[]>([]);
@@ -172,15 +177,23 @@ export default function CourseApplicationStep({ stepNotes, onNext, onPrev, curre
           <table className="w-full">
             <thead className="sticky top-0 bg-gray-100 z-10">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-1/12">Select</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-8/12">Course</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase w-3/12">Amount</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-1/12">
+                  Select
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-8/12">
+                  Course
+                </th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase w-3/12">
+                  Amount
+                </th>
               </tr>
             </thead>
             <tbody>
               {availableCourses?.map((course) => {
                 const admissionCourse = admissionCourses.find((ac) => ac.courseId === course.id);
-                const selected = selectedCourses.find((sc) => sc.admissionCourseId === admissionCourse?.id);
+                const selected = selectedCourses.find(
+                  (sc) => sc.admissionCourseId === admissionCourse?.id,
+                );
                 return (
                   <tr
                     key={course.id}
@@ -188,11 +201,18 @@ export default function CourseApplicationStep({ stepNotes, onNext, onPrev, curre
                     onClick={() => {
                       if (!admissionCourse) return;
                       if (selected) {
-                        setSelectedCourses(selectedCourses.filter((sc) => sc.admissionCourseId !== admissionCourse.id));
+                        setSelectedCourses(
+                          selectedCourses.filter(
+                            (sc) => sc.admissionCourseId !== admissionCourse.id,
+                          ),
+                        );
                       } else {
                         setSelectedCourses([
                           ...selectedCourses,
-                          { admissionCourseId: admissionCourse.id as number, applicationFormId: applicationForm!.id! },
+                          {
+                            admissionCourseId: admissionCourse.id as number,
+                            applicationFormId: applicationForm!.id!,
+                          },
                         ]);
                       }
                     }}
@@ -215,7 +235,9 @@ export default function CourseApplicationStep({ stepNotes, onNext, onPrev, curre
                             ]);
                           } else {
                             setSelectedCourses(
-                              selectedCourses.filter((sc) => sc.admissionCourseId !== admissionCourse.id),
+                              selectedCourses.filter(
+                                (sc) => sc.admissionCourseId !== admissionCourse.id,
+                              ),
                             );
                           }
                         }}

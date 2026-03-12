@@ -9,7 +9,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 
 export function NavUser() {
@@ -53,7 +58,10 @@ export function NavUser() {
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <UserAvatar
                   user={
-                    { name: user?.name || undefined, image: user?.image || undefined } as unknown as {
+                    {
+                      name: user?.name || undefined,
+                      image: user?.image || undefined,
+                    } as unknown as {
                       name?: string;
                       image?: string;
                     }

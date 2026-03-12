@@ -1,13 +1,21 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useFormStatus } from 'react-dom';
-import { Loader2 } from 'lucide-react';
-import { addBloodGroup, type AddBloodGroupResult } from './actions';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useFormStatus } from "react-dom";
+import { Loader2 } from "lucide-react";
+import { addBloodGroup, type AddBloodGroupResult } from "./actions";
 import { useToast } from "@/hooks/use-toast";
 
 // --- Add/Edit Blood Group Dialog ---
@@ -21,8 +29,13 @@ interface AddBloodGroupDialogProps {
   };
 }
 
-export function BloodGroupDialog({ onSuccess, open, onOpenChange, initialData }: AddBloodGroupDialogProps) {
-  const [type, setType] = useState(initialData?.type || '');
+export function BloodGroupDialog({
+  onSuccess,
+  open,
+  onOpenChange,
+  initialData,
+}: AddBloodGroupDialogProps) {
+  const [type, setType] = useState(initialData?.type || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -38,16 +51,16 @@ export function BloodGroupDialog({ onSuccess, open, onOpenChange, initialData }:
 
     try {
       const formData = new FormData();
-      formData.append('type', type);
+      formData.append("type", type);
 
       const result: AddBloodGroupResult = await addBloodGroup(formData);
-      
+
       if (result.success) {
         toast({
           title: "Success",
           description: result.message || "Blood group saved successfully.",
         });
-        setType('');
+        setType("");
         onSuccess();
         if (onOpenChange) {
           onOpenChange(false);
@@ -77,9 +90,11 @@ export function BloodGroupDialog({ onSuccess, open, onOpenChange, initialData }:
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{initialData ? 'Edit Blood Group' : 'Add New Blood Group'}</DialogTitle>
+          <DialogTitle>{initialData ? "Edit Blood Group" : "Add New Blood Group"}</DialogTitle>
           <DialogDescription>
-            {initialData ? 'Edit the blood group details here.' : "Add a new blood group here. Click save when you're done."}
+            {initialData
+              ? "Edit the blood group details here."
+              : "Add a new blood group here. Click save when you're done."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -105,7 +120,7 @@ export function BloodGroupDialog({ onSuccess, open, onOpenChange, initialData }:
                   Saving...
                 </>
               ) : (
-                'Save changes'
+                "Save changes"
               )}
             </Button>
           </DialogFooter>
@@ -113,4 +128,4 @@ export function BloodGroupDialog({ onSuccess, open, onOpenChange, initialData }:
       </DialogContent>
     </Dialog>
   );
-} 
+}

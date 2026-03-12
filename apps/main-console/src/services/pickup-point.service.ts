@@ -7,7 +7,7 @@ import {
   MultiplePickupPointResponse,
 } from "@/types/resources/pickup-point.types";
 
-const BASE_URL = '/api/pickup-points';
+const BASE_URL = "/api/pickup-points";
 
 export async function getAllPickupPoints(): Promise<PickupPoint[]> {
   const response = await axiosInstance.get<MultiplePickupPointResponse>(BASE_URL);
@@ -24,7 +24,10 @@ export async function createPickupPoint(payload: CreatePickupPointPayload): Prom
   return response.data.data;
 }
 
-export async function updatePickupPoint(id: number, payload: UpdatePickupPointPayload): Promise<PickupPoint> {
+export async function updatePickupPoint(
+  id: number,
+  payload: UpdatePickupPointPayload,
+): Promise<PickupPoint> {
   const response = await axiosInstance.put<SinglePickupPointResponse>(`${BASE_URL}/${id}`, payload);
   return response.data.data;
 }
@@ -39,4 +42,4 @@ export const pickupPointService = {
   createPickupPoint,
   updatePickupPoint,
   deletePickupPoint,
-}; 
+};

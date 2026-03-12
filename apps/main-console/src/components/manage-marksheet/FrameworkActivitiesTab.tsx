@@ -2,7 +2,7 @@
 import ManageMarksheetWrapper from "./ManageMarksheetWrapper";
 
 export default function FrameworkActivitiesTab() {
-//   const { framework } = useParams();
+  //   const { framework } = useParams();
 
   return <ManageMarksheetWrapper></ManageMarksheetWrapper>;
 }

@@ -1,6 +1,6 @@
 /**
  * Nationality Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Nationality module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -125,15 +125,15 @@ export interface NationalityState {
  * Action types for nationality state management
  */
 export type NationalityAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_NATIONALITIES'; payload: Nationality[] }
-  | { type: 'SET_CURRENT_NATIONALITY'; payload: Nationality | null }
-  | { type: 'ADD_NATIONALITY'; payload: Nationality }
-  | { type: 'UPDATE_NATIONALITY'; payload: Nationality }
-  | { type: 'DELETE_NATIONALITY'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_NATIONALITIES"; payload: Nationality[] }
+  | { type: "SET_CURRENT_NATIONALITY"; payload: Nationality | null }
+  | { type: "ADD_NATIONALITY"; payload: Nationality }
+  | { type: "UPDATE_NATIONALITY"; payload: Nationality }
+  | { type: "DELETE_NATIONALITY"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -148,7 +148,7 @@ export interface NationalityTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -166,7 +166,7 @@ export interface NationalityFilter {
  */
 export interface NationalitySort {
   field: keyof Nationality;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -206,7 +206,7 @@ export type NationalityDisabled = boolean;
  * Default values for nationality
  */
 export const DEFAULT_NATIONALITY: CreateNationalityPayload = {
-  name: '',
+  name: "",
   code: null,
   sequence: null,
   disabled: false,
@@ -216,9 +216,9 @@ export const DEFAULT_NATIONALITY: CreateNationalityPayload = {
  * Default form data for nationality
  */
 export const DEFAULT_NATIONALITY_FORM: NationalityFormData = {
-  name: '',
-  code: '',
-  sequence: '',
+  name: "",
+  code: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -226,27 +226,37 @@ export const DEFAULT_NATIONALITY_FORM: NationalityFormData = {
  * Table columns configuration for nationality
  */
 export const NATIONALITY_TABLE_COLUMNS: NationalityTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Nationality', sortable: true, filterable: true },
-  { key: 'code', label: 'Code', sortable: true, filterable: true, width: '100px' },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Nationality", sortable: true, filterable: true },
+  { key: "code", label: "Code", sortable: true, filterable: true, width: "100px" },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Common nationalities for reference
  */
 export const COMMON_NATIONALITIES = [
-  'Indian', 'American', 'British', 'Canadian', 'Australian', 'German',
-  'French', 'Japanese', 'Chinese', 'Brazilian', 'Mexican', 'South African'
+  "Indian",
+  "American",
+  "British",
+  "Canadian",
+  "Australian",
+  "German",
+  "French",
+  "Japanese",
+  "Chinese",
+  "Brazilian",
+  "Mexican",
+  "South African",
 ] as const;
 
 /**
  * Type for common nationality values
  */
-export type CommonNationality = typeof COMMON_NATIONALITIES[number];
+export type CommonNationality = (typeof COMMON_NATIONALITIES)[number];
 
 // ============================================================================
 // TYPE GUARDS
@@ -258,13 +268,13 @@ export type CommonNationality = typeof COMMON_NATIONALITIES[number];
 export function isNationality(obj: object): obj is Nationality {
   return (
     obj &&
-    typeof (obj as Nationality).id === 'number' &&
-    typeof (obj as Nationality).name === 'string' &&
-    ((obj as Nationality).code === null || typeof (obj as Nationality).code === 'number') &&
-    ((obj as Nationality).sequence === null || typeof (obj as Nationality).sequence === 'number') &&
-    typeof (obj as Nationality).disabled === 'boolean' &&
-    typeof (obj as Nationality).createdAt === 'string' &&
-    typeof (obj as Nationality).updatedAt === 'string'
+    typeof (obj as Nationality).id === "number" &&
+    typeof (obj as Nationality).name === "string" &&
+    ((obj as Nationality).code === null || typeof (obj as Nationality).code === "number") &&
+    ((obj as Nationality).sequence === null || typeof (obj as Nationality).sequence === "number") &&
+    typeof (obj as Nationality).disabled === "boolean" &&
+    typeof (obj as Nationality).createdAt === "string" &&
+    typeof (obj as Nationality).updatedAt === "string"
   );
 }
 
@@ -274,10 +284,15 @@ export function isNationality(obj: object): obj is Nationality {
 export function isCreateNationalityPayload(obj: object): obj is CreateNationalityPayload {
   return (
     obj &&
-    typeof (obj as CreateNationalityPayload).name === 'string' &&
-    ((obj as CreateNationalityPayload).code === undefined || (obj as CreateNationalityPayload).code === null || typeof (obj as CreateNationalityPayload).code === 'number') &&
-    ((obj as CreateNationalityPayload).sequence === undefined || (obj as CreateNationalityPayload).sequence === null || typeof (obj as CreateNationalityPayload).sequence === 'number') &&
-    ((obj as CreateNationalityPayload).disabled === undefined || typeof (obj as CreateNationalityPayload).disabled === 'boolean')
+    typeof (obj as CreateNationalityPayload).name === "string" &&
+    ((obj as CreateNationalityPayload).code === undefined ||
+      (obj as CreateNationalityPayload).code === null ||
+      typeof (obj as CreateNationalityPayload).code === "number") &&
+    ((obj as CreateNationalityPayload).sequence === undefined ||
+      (obj as CreateNationalityPayload).sequence === null ||
+      typeof (obj as CreateNationalityPayload).sequence === "number") &&
+    ((obj as CreateNationalityPayload).disabled === undefined ||
+      typeof (obj as CreateNationalityPayload).disabled === "boolean")
   );
 }
 
@@ -287,10 +302,16 @@ export function isCreateNationalityPayload(obj: object): obj is CreateNationalit
 export function isUpdateNationalityPayload(obj: object): obj is UpdateNationalityPayload {
   return (
     obj &&
-    ((obj as UpdateNationalityPayload).name === undefined || typeof (obj as UpdateNationalityPayload).name === 'string') &&
-    ((obj as UpdateNationalityPayload).code === undefined || (obj as UpdateNationalityPayload).code === null || typeof (obj as UpdateNationalityPayload).code === 'number') &&
-    ((obj as UpdateNationalityPayload).sequence === undefined || (obj as UpdateNationalityPayload).sequence === null || typeof (obj as UpdateNationalityPayload).sequence === 'number') &&
-    ((obj as UpdateNationalityPayload).disabled === undefined || typeof (obj as UpdateNationalityPayload).disabled === 'boolean')
+    ((obj as UpdateNationalityPayload).name === undefined ||
+      typeof (obj as UpdateNationalityPayload).name === "string") &&
+    ((obj as UpdateNationalityPayload).code === undefined ||
+      (obj as UpdateNationalityPayload).code === null ||
+      typeof (obj as UpdateNationalityPayload).code === "number") &&
+    ((obj as UpdateNationalityPayload).sequence === undefined ||
+      (obj as UpdateNationalityPayload).sequence === null ||
+      typeof (obj as UpdateNationalityPayload).sequence === "number") &&
+    ((obj as UpdateNationalityPayload).disabled === undefined ||
+      typeof (obj as UpdateNationalityPayload).disabled === "boolean")
   );
 }
 
@@ -323,8 +344,8 @@ export function formDataToPayload(formData: NationalityFormData): CreateNational
 export function apiDataToFormData(nationality: Nationality): NationalityFormData {
   return {
     name: nationality.name,
-    code: nationality.code?.toString() || '',
-    sequence: nationality.sequence?.toString() || '',
+    code: nationality.code?.toString() || "",
+    sequence: nationality.sequence?.toString() || "",
     disabled: nationality.disabled,
   };
 }
@@ -354,14 +375,14 @@ export function formatNationalityName(name: string): string {
  * Get nationality status text
  */
 export function getNationalityStatusText(disabled: boolean): string {
-  return disabled ? 'Inactive' : 'Active';
+  return disabled ? "Inactive" : "Active";
 }
 
 /**
  * Get nationality status color
  */
 export function getNationalityStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
+  return disabled ? "text-red-600" : "text-green-600";
 }
 
 /**
@@ -369,21 +390,21 @@ export function getNationalityStatusColor(disabled: boolean): string {
  */
 export function getNationalityFlag(nationalityName: string): string {
   const flagMap: Record<string, string> = {
-    'Indian': '🇮🇳',
-    'American': '🇺🇸',
-    'British': '🇬🇧',
-    'Canadian': '🇨🇦',
-    'Australian': '🇦🇺',
-    'German': '🇩🇪',
-    'French': '🇫🇷',
-    'Japanese': '🇯🇵',
-    'Chinese': '🇨🇳',
-    'Brazilian': '🇧🇷',
-    'Mexican': '🇲🇽',
-    'South African': '🇿🇦',
+    Indian: "🇮🇳",
+    American: "🇺🇸",
+    British: "🇬🇧",
+    Canadian: "🇨🇦",
+    Australian: "🇦🇺",
+    German: "🇩🇪",
+    French: "🇫🇷",
+    Japanese: "🇯🇵",
+    Chinese: "🇨🇳",
+    Brazilian: "🇧🇷",
+    Mexican: "🇲🇽",
+    "South African": "🇿🇦",
   };
-  
-  return flagMap[nationalityName] || '🌍';
+
+  return flagMap[nationalityName] || "🌍";
 }
 
 /**
@@ -392,4 +413,4 @@ export function getNationalityFlag(nationalityName: string): string {
 export function getNationalityDisplayName(nationalityName: string): string {
   const flag = getNationalityFlag(nationalityName);
   return `${flag} ${nationalityName}`;
-} 
+}

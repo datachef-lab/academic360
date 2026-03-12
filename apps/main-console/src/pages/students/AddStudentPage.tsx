@@ -339,7 +339,9 @@ export default function AddStudentPage() {
           </motion.div>
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Add Students</h2>
-            <p className="text-sm text-purple-600 font-medium">Complete the multi-step form to register students </p>
+            <p className="text-sm text-purple-600 font-medium">
+              Complete the multi-step form to register students{" "}
+            </p>
           </div>
         </div>
 
@@ -359,7 +361,11 @@ export default function AddStudentPage() {
         >
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4 text-white">
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
               <h1 className="text-xl font-bold">Add New Student</h1>
               <p className="text-blue-100 ">Complete all steps to register a new student</p>
             </motion.div>
@@ -474,10 +480,16 @@ export default function AddStudentPage() {
                 <div className="flex items-center gap-3 mb-2">
                   <div
                     className={`p-2 rounded-lg ${
-                      completedSteps.includes(current) ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600"
+                      completedSteps.includes(current)
+                        ? "bg-green-100 text-green-600"
+                        : "bg-blue-100 text-blue-600"
                     }`}
                   >
-                    {completedSteps.includes(current) ? <CheckCircle2 className="w-6 h-6" /> : steps[current]?.icon}
+                    {completedSteps.includes(current) ? (
+                      <CheckCircle2 className="w-6 h-6" />
+                    ) : (
+                      steps[current]?.icon
+                    )}
                   </div>
                   <h2 className="text-2xl font-semibold text-gray-800">{steps[current]?.title}</h2>
                 </div>

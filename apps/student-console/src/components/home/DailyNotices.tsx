@@ -6,7 +6,6 @@ import { Button } from "../ui/button";
 import { FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-
 const dailyNotices = [
   // {
   //   id: 1,
@@ -18,8 +17,7 @@ const dailyNotices = [
   {
     id: 2,
     title: "Exam schedule",
-    description:
-      "Check the exams section for your personal schedule and room assignments.",
+    description: "Check the exams section for your personal schedule and room assignments.",
     link: "/dashboard/exams",
   },
   {
@@ -45,9 +43,7 @@ export default function DailyNotices() {
   return (
     <Card className="border-0 shadow-md rounded-2xl overflow-hidden bg-white">
       <CardHeader className="pt-3 pb-2 px-5 flex flex-row items-center justify-between">
-        <CardTitle className="text-base font-semibold text-black">
-          Daily Notice
-        </CardTitle>
+        <CardTitle className="text-base font-semibold text-black">Daily Notice</CardTitle>
         <Button
           variant="link"
           size="sm"

@@ -9,16 +9,28 @@ import { toast } from "sonner";
 
 // Work around strict shadcn typings with proper type extensions
 const TabsFixed = Tabs as React.ComponentType<
-  React.ComponentProps<typeof Tabs> & { children?: React.ReactNode; className?: string; defaultValue?: string }
+  React.ComponentProps<typeof Tabs> & {
+    children?: React.ReactNode;
+    className?: string;
+    defaultValue?: string;
+  }
 >;
 const TabsListFixed = TabsList as React.ComponentType<
   React.ComponentProps<typeof TabsList> & { children?: React.ReactNode; className?: string }
 >;
 const TabsTriggerFixed = TabsTrigger as React.ComponentType<
-  React.ComponentProps<typeof TabsTrigger> & { children?: React.ReactNode; value?: string; className?: string }
+  React.ComponentProps<typeof TabsTrigger> & {
+    children?: React.ReactNode;
+    value?: string;
+    className?: string;
+  }
 >;
 const TabsContentFixed = TabsContent as React.ComponentType<
-  React.ComponentProps<typeof TabsContent> & { children?: React.ReactNode; value?: string; className?: string }
+  React.ComponentProps<typeof TabsContent> & {
+    children?: React.ReactNode;
+    value?: string;
+    className?: string;
+  }
 >;
 import { useStudent } from "@/providers/student-provider";
 import { format, parseISO } from "date-fns";
@@ -214,7 +226,9 @@ export default function ExamsContent() {
         const socketModule = await import("socket.io-client");
         // Use the same backend URL as API calls from NEXT_PUBLIC_API_URL
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "http://localhost:3000";
 
         // Wrap URL parsing in try-catch for better error handling
         let parsed: URL;
@@ -516,7 +530,8 @@ export default function ExamsContent() {
     const styles = variantStyles[variant];
 
     // Icon based on variant
-    const Icon = variant === "completed" ? FileText : variant === "today" ? GraduationCap : Calendar;
+    const Icon =
+      variant === "completed" ? FileText : variant === "today" ? GraduationCap : Calendar;
 
     // Determine which paper to display based on variant
     const getRelevantPaper = () => {
@@ -561,7 +576,9 @@ export default function ExamsContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: index * 0.1 }}
       >
-        <Card className={`shadow-md hover:shadow-lg transition-all overflow-hidden group ${styles.border}`}>
+        <Card
+          className={`shadow-md hover:shadow-lg transition-all overflow-hidden group ${styles.border}`}
+        >
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
               <div className="flex items-start gap-3 sm:gap-4 w-full sm:w-auto min-w-0">
@@ -638,8 +655,9 @@ export default function ExamsContent() {
       )
       .map((s) => s.id),
   ).size;
-  const completedSubjectCount = new Set(previousExams.flatMap((exam) => (exam.examSubjects ?? []).map((s) => s.id)))
-    .size;
+  const completedSubjectCount = new Set(
+    previousExams.flatMap((exam) => (exam.examSubjects ?? []).map((s) => s.id)),
+  ).size;
 
   // Tab-specific stats for display
   const displayPrimaryCount =
@@ -649,7 +667,11 @@ export default function ExamsContent() {
         ? recentExamGroupCount
         : previousExamGroupCount;
   const displayPrimaryLabel =
-    activeTab === "upcoming" ? "Upcoming Exams" : activeTab === "recent" ? "Today's Exams" : "Completed Exams";
+    activeTab === "upcoming"
+      ? "Upcoming Exams"
+      : activeTab === "recent"
+        ? "Today's Exams"
+        : "Completed Exams";
   const displayTodayCount = activeTab === "recent" ? recentExamGroupCount : 0;
   const displaySubjectCount =
     activeTab === "upcoming"
@@ -682,7 +704,10 @@ export default function ExamsContent() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 sm:gap-5 min-w-0">
               <div className="flex-shrink-0 bg-white/10 backdrop-blur-sm p-2 sm:p-4 rounded-lg sm:rounded-xl shadow-xl border border-white/10">
-                <GraduationCap size={28} className="sm:w-9 sm:h-9 w-7 h-7 text-white drop-shadow-md" />
+                <GraduationCap
+                  size={28}
+                  className="sm:w-9 sm:h-9 w-7 h-7 text-white drop-shadow-md"
+                />
               </div>
               <div className="min-w-0">
                 <h1 className="text-xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2 text-white drop-shadow-md truncate">
@@ -709,8 +734,12 @@ export default function ExamsContent() {
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm text-blue-600 font-medium truncate">{displayPrimaryLabel}</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-blue-700">{displayPrimaryCount}</p>
+                    <p className="text-xs sm:text-sm text-blue-600 font-medium truncate">
+                      {displayPrimaryLabel}
+                    </p>
+                    <p className="text-2xl sm:text-3xl font-bold text-blue-700">
+                      {displayPrimaryCount}
+                    </p>
                   </div>
                   <div className="bg-blue-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-blue-200 flex-shrink-0">
                     <Calendar size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-blue-600" />
@@ -729,8 +758,12 @@ export default function ExamsContent() {
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm text-amber-600 font-medium truncate">Next Exam</p>
-                    <p className="text-lg sm:text-3xl font-bold text-amber-700 truncate">{displayNextExam}</p>
+                    <p className="text-xs sm:text-sm text-amber-600 font-medium truncate">
+                      Next Exam
+                    </p>
+                    <p className="text-lg sm:text-3xl font-bold text-amber-700 truncate">
+                      {displayNextExam}
+                    </p>
                   </div>
                   <div className="bg-amber-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-amber-200 flex-shrink-0">
                     <Clock size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-amber-600" />
@@ -749,8 +782,12 @@ export default function ExamsContent() {
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm text-purple-600 font-medium truncate">Total Papers</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-purple-700">{displaySubjectCount}</p>
+                    <p className="text-xs sm:text-sm text-purple-600 font-medium truncate">
+                      Total Papers
+                    </p>
+                    <p className="text-2xl sm:text-3xl font-bold text-purple-700">
+                      {displaySubjectCount}
+                    </p>
                   </div>
                   <div className="bg-purple-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-purple-200 flex-shrink-0">
                     <FileText size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-purple-600" />
@@ -769,8 +806,12 @@ export default function ExamsContent() {
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm text-emerald-600 font-medium truncate">Today&apos;s Exams</p>
-                    <p className="text-2xl sm:text-3xl font-bold text-emerald-700">{displayTodayCount}</p>
+                    <p className="text-xs sm:text-sm text-emerald-600 font-medium truncate">
+                      Today&apos;s Exams
+                    </p>
+                    <p className="text-2xl sm:text-3xl font-bold text-emerald-700">
+                      {displayTodayCount}
+                    </p>
                   </div>
                   <div className="bg-emerald-50 p-2 sm:p-3 rounded-lg sm:rounded-xl border border-emerald-200 flex-shrink-0">
                     <BarChart size={20} className="sm:w-6 sm:h-6 w-5 h-5 text-emerald-600" />
@@ -807,8 +848,8 @@ export default function ExamsContent() {
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-700 mb-2">No Exams Found</h3>
               <p className="text-gray-500 max-w-md mx-auto">
-                We couldn&apos;t find any exams for your account. If you believe this is an error, please contact the
-                administrative staff.
+                We couldn&apos;t find any exams for your account. If you believe this is an error,
+                please contact the administrative staff.
               </p>
             </div>
           ) : (
@@ -855,13 +896,18 @@ export default function ExamsContent() {
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-blue-800">Important Notice</h3>
-                        <p className="text-blue-700">Please arrive 15 minutes prior to the start time of all exams.</p>
+                        <p className="text-blue-700">
+                          Please arrive 15 minutes prior to the start time of all exams.
+                        </p>
                       </div>
                     </div>
                     {Array.from(
                       new Map(
                         upcomingExams
-                          .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
+                          .filter(
+                            (exam) =>
+                              selectedSemester === "all" || exam.class.name === selectedSemester,
+                          )
                           .map((exam) => [exam.examGroupId, exam]),
                       ).values(),
                     ).map((exam, index) => (
@@ -886,7 +932,9 @@ export default function ExamsContent() {
                   <div className="text-center py-8 bg-emerald-50/50 rounded-lg">
                     <Clock className="h-12 w-12 mx-auto text-emerald-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-700 mb-2">No Exams Today</h3>
-                    <p className="text-gray-500 max-w-md mx-auto">You don&apos;t have any exams scheduled for today.</p>
+                    <p className="text-gray-500 max-w-md mx-auto">
+                      You don&apos;t have any exams scheduled for today.
+                    </p>
                   </div>
                 ) : (
                   <>
@@ -896,8 +944,12 @@ export default function ExamsContent() {
                         <Clock className="w-5 h-5 text-amber-600" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-amber-800">Today&apos;s Reminder</h3>
-                        <p className="text-amber-700">Please arrive 15 minutes prior to the start time of all exams.</p>
+                        <h3 className="text-sm font-medium text-amber-800">
+                          Today&apos;s Reminder
+                        </h3>
+                        <p className="text-amber-700">
+                          Please arrive 15 minutes prior to the start time of all exams.
+                        </p>
                       </div>
                     </div>
 
@@ -909,7 +961,9 @@ export default function ExamsContent() {
                             <Clock className="w-5 h-5 text-emerald-600" />
                           </div>
                           <div>
-                            <h3 className="text-sm font-medium text-emerald-800">Total Exam Time Today</h3>
+                            <h3 className="text-sm font-medium text-emerald-800">
+                              Total Exam Time Today
+                            </h3>
                             <p className="text-lg font-bold text-emerald-600">
                               {formatMinutesToHoursMinutes(getTotalTodayExamDuration())}
                             </p>
@@ -926,7 +980,10 @@ export default function ExamsContent() {
                     {Array.from(
                       new Map(
                         recentExams
-                          .filter((exam) => selectedSemester === "all" || exam.class.name === selectedSemester)
+                          .filter(
+                            (exam) =>
+                              selectedSemester === "all" || exam.class.name === selectedSemester,
+                          )
                           .map((exam) => [exam.examGroupId, exam]),
                       ).values(),
                     ).map((exam, index) => {
@@ -964,7 +1021,9 @@ export default function ExamsContent() {
                     return (
                       <div className="text-center py-8 bg-gray-50 rounded-lg">
                         <History className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-700 mb-2">No Completed Exams</h3>
+                        <h3 className="text-lg font-medium text-gray-700 mb-2">
+                          No Completed Exams
+                        </h3>
                         <p className="text-gray-500 max-w-md mx-auto">
                           You don&apos;t have any completed exam records.
                         </p>

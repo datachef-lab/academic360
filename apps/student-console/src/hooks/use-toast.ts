@@ -1,16 +1,16 @@
-import { useState, useCallback, Key } from 'react';
+import { useState, useCallback, Key } from "react";
 
 interface Toast {
   [x: string]: Key | null | undefined;
   title: string;
   description?: string;
-  variant?: 'default' | 'destructive';
+  variant?: "default" | "destructive";
 }
 
 export function useToast() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const toast = useCallback(({ title, description, variant = 'default' }: Toast) => {
+  const toast = useCallback(({ title, description, variant = "default" }: Toast) => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, title, description, variant }]);
 
@@ -25,4 +25,4 @@ export function useToast() {
   }, []);
 
   return { toast, toasts, removeToast };
-} 
+}

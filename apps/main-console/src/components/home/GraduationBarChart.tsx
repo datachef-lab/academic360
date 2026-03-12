@@ -1,5 +1,12 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const graduateData: {
   year: string;
@@ -74,7 +81,12 @@ export function GraduationBarChart() {
         <CardDescription>Total Students Graduated (Semester 6)</CardDescription>
       </CardHeader>
       <CardContent className="flex justify-center">
-        <BarChart width={600} height={400} data={graduateData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+        <BarChart
+          width={600}
+          height={400}
+          data={graduateData}
+          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="year" />
           <YAxis />
@@ -92,7 +104,9 @@ export function GraduationBarChart() {
         <div className="flex items-center gap-2 font-medium leading-none">
           Yearly graduation data for Semester 6 across all streams.
         </div>
-        <div className="leading-none text-muted-foreground">Hover over the bars for more detailed information.</div>
+        <div className="leading-none text-muted-foreground">
+          Hover over the bars for more detailed information.
+        </div>
       </CardFooter>
     </Card>
   );

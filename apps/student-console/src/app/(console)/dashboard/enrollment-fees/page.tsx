@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import {
@@ -92,7 +99,9 @@ export default function FeesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedFeeType, setSelectedFeeType] = useState<string | null>(null);
   const [groupedInstalments, setGroupedInstalments] = useState<Record<string, Instalment[]>>({});
-  const [feeSummaries, setFeeSummaries] = useState<Record<string, { total: number; paid: number; status: string }>>({});
+  const [feeSummaries, setFeeSummaries] = useState<
+    Record<string, { total: number; paid: number; status: string }>
+  >({});
 
   useEffect(() => {
     const fetchInstalments = async () => {
@@ -134,7 +143,8 @@ export default function FeesPage() {
           } else {
             // Check if instalment is overdue
             const isOverdue =
-              instalment.metadata.lastDate && new Date(String(instalment.metadata.lastDate)) < new Date();
+              instalment.metadata.lastDate &&
+              new Date(String(instalment.metadata.lastDate)) < new Date();
 
             if (isOverdue) {
               status = "overdue";
@@ -291,7 +301,9 @@ export default function FeesPage() {
               <School size={40} className="text-white drop-shadow-md" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-5xl font-bold mb-3 text-white drop-shadow-md">Fees & Instalments</h1>
+              <h1 className="text-3xl md:text-5xl font-bold mb-3 text-white drop-shadow-md">
+                Fees & Instalments
+              </h1>
               <p className="text-blue-50 text-xl drop-shadow max-w-2xl">
                 Track your fee payments and upcoming instalments all in one place
               </p>
@@ -337,7 +349,8 @@ export default function FeesPage() {
                             {instalments.length > 0 && (
                               <p className="text-lg text-blue-600 flex items-center gap-2 pl-5">
                                 <Calendar className="h-5 w-5 text-blue-500" />
-                                {instalments[0].metadata.className} - {instalments[0].metadata.sessionName}
+                                {instalments[0].metadata.className} -{" "}
+                                {instalments[0].metadata.sessionName}
                               </p>
                             )}
                           </div>
@@ -385,7 +398,9 @@ export default function FeesPage() {
                                   </span>
                                   Total Amount
                                 </p>
-                                <p className="text-3xl font-bold text-blue-800 pl-6">{formatCurrency(summary.total)}</p>
+                                <p className="text-3xl font-bold text-blue-800 pl-6">
+                                  {formatCurrency(summary.total)}
+                                </p>
                               </div>
                               <div className="p-6 border-b md:border-b-0 md:border-r border-green-100 bg-gradient-to-br from-green-50/50 to-green-50/20">
                                 <p className="text-base font-medium text-green-600 mb-1 flex items-center gap-2">
@@ -394,7 +409,9 @@ export default function FeesPage() {
                                   </span>
                                   Paid Amount
                                 </p>
-                                <p className="text-3xl font-bold text-green-800 pl-6">{formatCurrency(summary.paid)}</p>
+                                <p className="text-3xl font-bold text-green-800 pl-6">
+                                  {formatCurrency(summary.paid)}
+                                </p>
                               </div>
                               <div className="p-6 bg-gradient-to-br from-purple-50/50 to-purple-50/20">
                                 <p className="text-base font-medium text-purple-600 mb-1 flex items-center gap-2">
@@ -405,11 +422,16 @@ export default function FeesPage() {
                                 </p>
                                 <div className="pl-6 pt-2">
                                   <Progress
-                                    value={summary.total > 0 ? (summary.paid / summary.total) * 100 : 0}
+                                    value={
+                                      summary.total > 0 ? (summary.paid / summary.total) * 100 : 0
+                                    }
                                     // className="h-3 bg-purple-100"
                                   />
                                   <p className="text-lg font-bold text-purple-800 mt-1">
-                                    {summary.total > 0 ? Math.round((summary.paid / summary.total) * 100) : 0}%
+                                    {summary.total > 0
+                                      ? Math.round((summary.paid / summary.total) * 100)
+                                      : 0}
+                                    %
                                   </p>
                                 </div>
                               </div>
@@ -427,11 +449,21 @@ export default function FeesPage() {
                                   <Table>
                                     <TableHeader>
                                       <TableRow className="bg-gradient-to-r from-indigo-50 to-blue-50">
-                                        <TableHead className="text-indigo-700 font-semibold">No.</TableHead>
-                                        <TableHead className="text-indigo-700 font-semibold">Amount</TableHead>
-                                        <TableHead className="text-indigo-700 font-semibold">Due Date</TableHead>
-                                        <TableHead className="text-indigo-700 font-semibold">Status</TableHead>
-                                        <TableHead className="text-indigo-700 font-semibold">Payment Details</TableHead>
+                                        <TableHead className="text-indigo-700 font-semibold">
+                                          No.
+                                        </TableHead>
+                                        <TableHead className="text-indigo-700 font-semibold">
+                                          Amount
+                                        </TableHead>
+                                        <TableHead className="text-indigo-700 font-semibold">
+                                          Due Date
+                                        </TableHead>
+                                        <TableHead className="text-indigo-700 font-semibold">
+                                          Status
+                                        </TableHead>
+                                        <TableHead className="text-indigo-700 font-semibold">
+                                          Payment Details
+                                        </TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -451,7 +483,9 @@ export default function FeesPage() {
 
                                                 {/* Show concession indicators if any exists */}
                                                 {instalment.details.components?.some(
-                                                  (comp) => comp.metadata.concession && comp.metadata.concession > 0,
+                                                  (comp) =>
+                                                    comp.metadata.concession &&
+                                                    comp.metadata.concession > 0,
                                                 ) && (
                                                   <div className="flex items-center mt-1 text-xs text-green-600 font-medium">
                                                     <Percent className="h-3 w-3 mr-1" />
@@ -461,8 +495,12 @@ export default function FeesPage() {
 
                                                 {/* Show scholarship indicators if any exists */}
                                                 {instalment.details.components?.some((comp) => {
-                                                  const metadata = comp.metadata as ExtendedComponentMetadata;
-                                                  return metadata?.scholarshipAmount && metadata.scholarshipAmount > 0;
+                                                  const metadata =
+                                                    comp.metadata as ExtendedComponentMetadata;
+                                                  return (
+                                                    metadata?.scholarshipAmount &&
+                                                    metadata.scholarshipAmount > 0
+                                                  );
                                                 }) && (
                                                   <div className="flex items-center mt-1 text-xs text-purple-600 font-medium">
                                                     <Award className="h-3 w-3 mr-1" />
@@ -476,36 +514,40 @@ export default function FeesPage() {
                                                 {formatDate(instalment.metadata.lastDate)}
 
                                                 {/* Show due date indicator */}
-                                                {!instalment.hasPaid && instalment.metadata.lastDate && (
-                                                  <div className="mt-1">
-                                                    {(() => {
-                                                      const dueInfo = getPaymentDueDateInfo(
-                                                        typeof instalment.metadata.lastDate === "string"
-                                                          ? instalment.metadata.lastDate
-                                                          : instalment.metadata.lastDate?.toISOString(),
-                                                      );
-                                                      if (dueInfo) {
-                                                        return (
-                                                          <div
-                                                            className={`inline-flex text-xs items-center ${dueInfo.color} ${dueInfo.bgColor} px-2 py-0.5 rounded-md ${dueInfo.borderColor} border`}
-                                                          >
-                                                            <Hourglass className="w-3 h-3 mr-1" />
-                                                            {dueInfo.status === "overdue" ? (
-                                                              <>Overdue by {dueInfo.days}d</>
-                                                            ) : (
-                                                              <>Due in {dueInfo.days}d</>
-                                                            )}
-                                                          </div>
+                                                {!instalment.hasPaid &&
+                                                  instalment.metadata.lastDate && (
+                                                    <div className="mt-1">
+                                                      {(() => {
+                                                        const dueInfo = getPaymentDueDateInfo(
+                                                          typeof instalment.metadata.lastDate ===
+                                                            "string"
+                                                            ? instalment.metadata.lastDate
+                                                            : instalment.metadata.lastDate?.toISOString(),
                                                         );
-                                                      }
-                                                      return null;
-                                                    })()}
-                                                  </div>
-                                                )}
+                                                        if (dueInfo) {
+                                                          return (
+                                                            <div
+                                                              className={`inline-flex text-xs items-center ${dueInfo.color} ${dueInfo.bgColor} px-2 py-0.5 rounded-md ${dueInfo.borderColor} border`}
+                                                            >
+                                                              <Hourglass className="w-3 h-3 mr-1" />
+                                                              {dueInfo.status === "overdue" ? (
+                                                                <>Overdue by {dueInfo.days}d</>
+                                                              ) : (
+                                                                <>Due in {dueInfo.days}d</>
+                                                              )}
+                                                            </div>
+                                                          );
+                                                        }
+                                                        return null;
+                                                      })()}
+                                                    </div>
+                                                  )}
                                               </div>
                                             </TableCell>
                                             <TableCell>
-                                              <Badge className={`px-2 py-1 shadow-sm ${statusInfo.color}`}>
+                                              <Badge
+                                                className={`px-2 py-1 shadow-sm ${statusInfo.color}`}
+                                              >
                                                 <span className="flex items-center gap-1">
                                                   {statusInfo.icon}
                                                   {statusInfo.status.toUpperCase()}
@@ -538,106 +580,127 @@ export default function FeesPage() {
                               </div>
 
                               {/* Components Section */}
-                              {instalments.length > 0 && instalments[0].details.components.length > 0 && (
-                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 shadow-sm">
-                                  <h3 className="text-xl font-bold text-blue-800 mb-5 flex items-center gap-2">
-                                    <div className="p-1.5 bg-blue-100 rounded-lg">
-                                      <CreditCard className="w-5 h-5 text-blue-600" />
-                                    </div>
-                                    Fee Components
-                                  </h3>
-                                  <div className="rounded-xl overflow-hidden border border-blue-100 bg-white shadow-sm">
-                                    <Table>
-                                      <TableHeader>
-                                        <TableRow className="bg-gradient-to-r from-blue-50 to-indigo-50">
-                                          <TableHead className="text-blue-700 font-semibold">Component</TableHead>
-                                          <TableHead className="text-blue-700 font-semibold">Type</TableHead>
-                                          <TableHead className="text-blue-700 font-semibold">Amount</TableHead>
-                                          <TableHead className="text-blue-700 font-semibold">Concession</TableHead>
-                                          <TableHead className="text-blue-700 font-semibold">Status</TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {instalments[0].details.components.map((component, cIndex) => (
-                                          <TableRow
-                                            key={`${component.id}-${cIndex}`}
-                                            className="hover:bg-blue-50/50 transition-colors"
-                                          >
-                                            <TableCell className="font-medium text-gray-800">
-                                              {component.headName}
-                                            </TableCell>
-                                            <TableCell className="text-gray-700">{component.metadata.type}</TableCell>
-                                            <TableCell className="font-medium text-gray-900">
-                                              {formatCurrency(component.metadata.amount)}
-                                            </TableCell>
-                                            <TableCell className="text-gray-700">
-                                              {component.metadata.concession !== null &&
-                                              component.metadata.concession > 0 ? (
-                                                <div className="flex items-center text-green-600">
-                                                  <Percent className="w-4 h-4 mr-1.5" />
-                                                  {formatCurrency(component.metadata.concession)}
-                                                </div>
-                                              ) : (
-                                                <span className="text-gray-400">-</span>
-                                              )}
-                                            </TableCell>
-                                            <TableCell>
-                                              <Badge
-                                                className={`px-2 py-1 shadow-sm ${
-                                                  component.hasPaid
-                                                    ? "bg-green-100 text-green-800"
-                                                    : "bg-yellow-100 text-yellow-800"
-                                                }`}
-                                              >
-                                                <span className="flex items-center gap-1">
-                                                  {component.hasPaid ? (
-                                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                                  ) : (
-                                                    <Clock className="h-4 w-4 text-yellow-600" />
-                                                  )}
-                                                  {component.hasPaid ? "PAID" : "PENDING"}
-                                                </span>
-                                              </Badge>
-
-                                              {!component.hasPaid &&
-                                                (component.metadata as ExtendedComponentMetadata).dueDate && (
-                                                  <div className="mt-1.5">
-                                                    {(() => {
-                                                      const dueInfo = getPaymentDueDateInfo(
-                                                        (component.metadata as ExtendedComponentMetadata).dueDate,
-                                                      );
-                                                      if (dueInfo) {
-                                                        return (
-                                                          <div
-                                                            className={`flex items-center text-xs ${dueInfo.color} ${dueInfo.bgColor} px-2 py-1 rounded-md ${dueInfo.borderColor} border`}
-                                                          >
-                                                            <Hourglass className="w-3 h-3 mr-1" />
-                                                            {dueInfo.status === "overdue" ? (
-                                                              <>
-                                                                Overdue by {dueInfo.days} day
-                                                                {dueInfo.days !== 1 ? "s" : ""}
-                                                              </>
-                                                            ) : (
-                                                              <>
-                                                                Due in {dueInfo.days} day
-                                                                {dueInfo.days !== 1 ? "s" : ""}
-                                                              </>
-                                                            )}
-                                                          </div>
-                                                        );
-                                                      }
-                                                      return null;
-                                                    })()}
-                                                  </div>
-                                                )}
-                                            </TableCell>
+                              {instalments.length > 0 &&
+                                instalments[0].details.components.length > 0 && (
+                                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 shadow-sm">
+                                    <h3 className="text-xl font-bold text-blue-800 mb-5 flex items-center gap-2">
+                                      <div className="p-1.5 bg-blue-100 rounded-lg">
+                                        <CreditCard className="w-5 h-5 text-blue-600" />
+                                      </div>
+                                      Fee Components
+                                    </h3>
+                                    <div className="rounded-xl overflow-hidden border border-blue-100 bg-white shadow-sm">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                                            <TableHead className="text-blue-700 font-semibold">
+                                              Component
+                                            </TableHead>
+                                            <TableHead className="text-blue-700 font-semibold">
+                                              Type
+                                            </TableHead>
+                                            <TableHead className="text-blue-700 font-semibold">
+                                              Amount
+                                            </TableHead>
+                                            <TableHead className="text-blue-700 font-semibold">
+                                              Concession
+                                            </TableHead>
+                                            <TableHead className="text-blue-700 font-semibold">
+                                              Status
+                                            </TableHead>
                                           </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {instalments[0].details.components.map(
+                                            (component, cIndex) => (
+                                              <TableRow
+                                                key={`${component.id}-${cIndex}`}
+                                                className="hover:bg-blue-50/50 transition-colors"
+                                              >
+                                                <TableCell className="font-medium text-gray-800">
+                                                  {component.headName}
+                                                </TableCell>
+                                                <TableCell className="text-gray-700">
+                                                  {component.metadata.type}
+                                                </TableCell>
+                                                <TableCell className="font-medium text-gray-900">
+                                                  {formatCurrency(component.metadata.amount)}
+                                                </TableCell>
+                                                <TableCell className="text-gray-700">
+                                                  {component.metadata.concession !== null &&
+                                                  component.metadata.concession > 0 ? (
+                                                    <div className="flex items-center text-green-600">
+                                                      <Percent className="w-4 h-4 mr-1.5" />
+                                                      {formatCurrency(
+                                                        component.metadata.concession,
+                                                      )}
+                                                    </div>
+                                                  ) : (
+                                                    <span className="text-gray-400">-</span>
+                                                  )}
+                                                </TableCell>
+                                                <TableCell>
+                                                  <Badge
+                                                    className={`px-2 py-1 shadow-sm ${
+                                                      component.hasPaid
+                                                        ? "bg-green-100 text-green-800"
+                                                        : "bg-yellow-100 text-yellow-800"
+                                                    }`}
+                                                  >
+                                                    <span className="flex items-center gap-1">
+                                                      {component.hasPaid ? (
+                                                        <CheckCircle className="h-4 w-4 text-green-600" />
+                                                      ) : (
+                                                        <Clock className="h-4 w-4 text-yellow-600" />
+                                                      )}
+                                                      {component.hasPaid ? "PAID" : "PENDING"}
+                                                    </span>
+                                                  </Badge>
+
+                                                  {!component.hasPaid &&
+                                                    (
+                                                      component.metadata as ExtendedComponentMetadata
+                                                    ).dueDate && (
+                                                      <div className="mt-1.5">
+                                                        {(() => {
+                                                          const dueInfo = getPaymentDueDateInfo(
+                                                            (
+                                                              component.metadata as ExtendedComponentMetadata
+                                                            ).dueDate,
+                                                          );
+                                                          if (dueInfo) {
+                                                            return (
+                                                              <div
+                                                                className={`flex items-center text-xs ${dueInfo.color} ${dueInfo.bgColor} px-2 py-1 rounded-md ${dueInfo.borderColor} border`}
+                                                              >
+                                                                <Hourglass className="w-3 h-3 mr-1" />
+                                                                {dueInfo.status === "overdue" ? (
+                                                                  <>
+                                                                    Overdue by {dueInfo.days} day
+                                                                    {dueInfo.days !== 1 ? "s" : ""}
+                                                                  </>
+                                                                ) : (
+                                                                  <>
+                                                                    Due in {dueInfo.days} day
+                                                                    {dueInfo.days !== 1 ? "s" : ""}
+                                                                  </>
+                                                                )}
+                                                              </div>
+                                                            );
+                                                          }
+                                                          return null;
+                                                        })()}
+                                                      </div>
+                                                    )}
+                                                </TableCell>
+                                              </TableRow>
+                                            ),
+                                          )}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
                             </div>
                           </div>
                         </CardContent>
@@ -658,7 +721,11 @@ export default function FeesPage() {
                 const firstInstalment = feeInstalments[0];
 
                 return (
-                  <motion.div key={`${feeType}`} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <motion.div
+                    key={`${feeType}`}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
                     <Card
                       className="cursor-pointer hover:shadow-xl transition-all border-none bg-white shadow-lg overflow-hidden rounded-xl h-full"
                       onClick={() => handleCardClick(feeType)}
@@ -679,13 +746,17 @@ export default function FeesPage() {
                                       : "bg-yellow-500"
                               }`}
                             ></div>
-                            <CardTitle className="text-xl font-bold text-gray-800">{feeType}</CardTitle>
+                            <CardTitle className="text-xl font-bold text-gray-800">
+                              {feeType}
+                            </CardTitle>
                           </div>
                         </CardHeader>
                         <CardContent className="relative flex-grow">
                           <div className="flex justify-between items-center mb-4">
                             <div className="flex items-center gap-2">
-                              <p className="text-2xl font-bold text-blue-700">{formatCurrency(summary.total)}</p>
+                              <p className="text-2xl font-bold text-blue-700">
+                                {formatCurrency(summary.total)}
+                              </p>
                               <Badge
                                 className={`px-3 py-1.5 shadow-sm rounded-lg ${getStatusColorClass(summary.status)}`}
                               >
@@ -699,14 +770,17 @@ export default function FeesPage() {
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                             <Calendar className="w-4 h-4 text-indigo-500" />
                             <span>
-                              {firstInstalment.metadata.className} - {firstInstalment.metadata.sessionName}
+                              {firstInstalment.metadata.className} -{" "}
+                              {firstInstalment.metadata.sessionName}
                             </span>
                           </div>
 
                           {/* Display instalment number */}
                           <div className="flex items-center gap-2 text-sm text-gray-700 mb-3">
                             <Receipt className="w-4 h-4 text-indigo-500" />
-                            <span className="font-medium">Instalment {firstInstalment.instalmentNumber}</span>
+                            <span className="font-medium">
+                              Instalment {firstInstalment.instalmentNumber}
+                            </span>
                           </div>
 
                           {/* Payment information for unpaid fees */}
@@ -722,12 +796,14 @@ export default function FeesPage() {
                                   {formatDate(firstInstalment.metadata.lastDate)}
                                 </p>
                                 <p>
-                                  <span className="font-medium">Payment Methods:</span> Online, Bank Transfer, Cash at
-                                  Office
+                                  <span className="font-medium">Payment Methods:</span> Online, Bank
+                                  Transfer, Cash at Office
                                 </p>
                                 {firstInstalment.metadata.lastOnlineDateTo && (
                                   <p>
-                                    <span className="font-medium">Online Payment Available Until:</span>{" "}
+                                    <span className="font-medium">
+                                      Online Payment Available Until:
+                                    </span>{" "}
                                     {formatDate(firstInstalment.metadata.lastOnlineDateTo)}
                                   </p>
                                 )}
@@ -756,7 +832,9 @@ export default function FeesPage() {
                             {feeInstalments.some((i) =>
                               i.details?.components?.some((comp) => {
                                 const metadata = comp.metadata as ExtendedComponentMetadata;
-                                return metadata?.scholarshipAmount && metadata.scholarshipAmount > 0;
+                                return (
+                                  metadata?.scholarshipAmount && metadata.scholarshipAmount > 0
+                                );
                               }),
                             ) && (
                               <span className="inline-flex items-center text-xs text-purple-700 bg-purple-50 px-2 py-1 rounded-md border border-purple-100">
@@ -769,7 +847,9 @@ export default function FeesPage() {
                             {(() => {
                               // For a single installment, directly check its due date
                               if (!firstInstalment.hasPaid && firstInstalment.metadata.lastDate) {
-                                const dueInfo = getPaymentDueDateInfo(String(firstInstalment.metadata.lastDate));
+                                const dueInfo = getPaymentDueDateInfo(
+                                  String(firstInstalment.metadata.lastDate),
+                                );
                                 if (dueInfo) {
                                   return (
                                     <span
@@ -793,7 +873,10 @@ export default function FeesPage() {
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-gray-500">Payment Status</span>
                               <span className="font-medium text-blue-700">
-                                {summary.total > 0 ? Math.round((summary.paid / summary.total) * 100) : 0}%
+                                {summary.total > 0
+                                  ? Math.round((summary.paid / summary.total) * 100)
+                                  : 0}
+                                %
                               </span>
                             </div>
                             <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">

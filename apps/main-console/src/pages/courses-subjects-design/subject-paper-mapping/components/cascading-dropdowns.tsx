@@ -11,7 +11,7 @@
 // import { Button } from '@/components/ui/button';
 // import { Plus } from 'lucide-react';
 // import { Affiliation, RegulationType, Subject } from '@/types/course-design';
-// // import { 
+// // import {
 // //   getAcademicYearsByAffiliation,
 // //   getRegulationTypesByAffiliationAndAcademicYear,
 // //   getSubjectsByAffiliationAcademicYearAndRegulation
@@ -49,8 +49,8 @@
 //         name="affiliationId"
 //         control={control}
 //         render={({ field }) => (
-//           <Select 
-//             value={field.value ? field.value.toString() : ''} 
+//           <Select
+//             value={field.value ? field.value.toString() : ''}
 //             onValueChange={(value) => {
 //               const affiliationId = Number(value);
 //               field.onChange(affiliationId);
@@ -91,8 +91,8 @@
 //         name="academicYearId"
 //         control={control}
 //         render={({ field }) => (
-//           <Select 
-//             value={field.value ? field.value.toString() : ''} 
+//           <Select
+//             value={field.value ? field.value.toString() : ''}
 //             onValueChange={(value) => {
 //               const academicYearId = Number(value);
 //               field.onChange(academicYearId);
@@ -133,8 +133,8 @@
 //         name="regulationTypeId"
 //         control={control}
 //         render={({ field }) => (
-//           <Select 
-//             value={field.value ? field.value.toString() : ''} 
+//           <Select
+//             value={field.value ? field.value.toString() : ''}
 //             onValueChange={(value) => {
 //               const regulationTypeId = Number(value);
 //               field.onChange(regulationTypeId);
@@ -175,8 +175,8 @@
 //         name="subjectId"
 //         control={control}
 //         render={({ field }) => (
-//           <Select 
-//             value={field.value ? field.value.toString() : ''} 
+//           <Select
+//             value={field.value ? field.value.toString() : ''}
 //             onValueChange={(value) => {
 //               const subjectId = Number(value);
 //               field.onChange(subjectId);
@@ -272,14 +272,10 @@
 //       )}
 //     </div>
 //   );
-// }; 
-
-
+// };
 
 // // import React from 'react'
 
 export default function CascadingDropdowns() {
-  return (
-    <div></div>
-  )
+  return <div></div>;
 }

@@ -50,7 +50,10 @@ export async function PUT(req: Request) {
     const validatedData = createDepartmentSchema.parse(body);
     const updatedDepartment = await updateDepartment(Number(id), validatedData);
     if (!updatedDepartment) {
-      return NextResponse.json({ success: false, message: "Department not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Department not found" },
+        { status: 404 },
+      );
     }
     return NextResponse.json({ success: true, data: updatedDepartment });
   } catch (error: any) {
@@ -70,7 +73,10 @@ export async function DELETE(req: Request) {
     }
     const deleted = await deleteDepartment(Number(id));
     if (!deleted) {
-      return NextResponse.json({ success: false, message: "Department not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Department not found" },
+        { status: 404 },
+      );
     }
     return NextResponse.json({ success: true });
   } catch (error: any) {

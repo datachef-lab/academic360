@@ -33,16 +33,17 @@ export function CourseDialog({ mode, course, children }: CourseDialogProps) {
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    
+
     startTransition(async () => {
       const result = await handleCourseSubmit(formData);
-      
+
       if (result.success) {
         toast({
           title: mode === "add" ? "Course created" : "Course updated",
-          description: mode === "add" 
-            ? "The course has been created successfully."
-            : "The course has been updated successfully.",
+          description:
+            mode === "add"
+              ? "The course has been created successfully."
+              : "The course has been updated successfully.",
         });
         setOpen(false);
       } else {
@@ -63,12 +64,10 @@ export function CourseDialog({ mode, course, children }: CourseDialogProps) {
             {mode === "add" ? (
               <>
                 <Plus className="mr-2 h-4 w-4" />
-                
               </>
             ) : (
               <>
                 <Pencil className="mr-2 h-4 w-4" />
-                
               </>
             )}
           </Button>
@@ -157,8 +156,10 @@ export function CourseDialog({ mode, course, children }: CourseDialogProps) {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {mode === "add" ? "Creating..." : "Updating..."}
                 </>
+              ) : mode === "add" ? (
+                "Create Course"
               ) : (
-                mode === "add" ? "Create Course" : "Update Course"
+                "Update Course"
               )}
             </Button>
           </DialogFooter>
@@ -166,4 +167,4 @@ export function CourseDialog({ mode, course, children }: CourseDialogProps) {
       </DialogContent>
     </Dialog>
   );
-} 
+}

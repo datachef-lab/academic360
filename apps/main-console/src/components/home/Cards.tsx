@@ -8,9 +8,7 @@ export default function Cards() {
             <FaGraduationCap />
           </div>
           <div className="px-4 text-gray-700 ">
-            <h3 className="text-sm tracking-wider font-medium text-center">
-              TOTAL
-            </h3>
+            <h3 className="text-sm tracking-wider font-medium text-center">TOTAL</h3>
             <p className="text-3xl font-medium text-center">0</p>
           </div>
         </div>
@@ -19,9 +17,7 @@ export default function Cards() {
             <FaGraduationCap />
           </div>
           <div className="px-4 text-gray-700 ">
-            <h3 className="text-sm tracking-wider font-medium text-center">
-              BA
-            </h3>
+            <h3 className="text-sm tracking-wider font-medium text-center">BA</h3>
             <p className="text-3xl font-medium text-center">0</p>
           </div>
         </div>
@@ -30,9 +26,7 @@ export default function Cards() {
             <FaGraduationCap />
           </div>
           <div className="px-4 text-gray-700 ">
-            <h3 className="text-sm tracking-wider font-medium text-center">
-              B.COM
-            </h3>
+            <h3 className="text-sm tracking-wider font-medium text-center">B.COM</h3>
             <p className="text-3xl font-medium text-center">0</p>
           </div>
         </div>
@@ -41,9 +35,7 @@ export default function Cards() {
             <FaGraduationCap />
           </div>
           <div className="px-4 text-gray-700 ">
-            <h3 className="text-sm tracking-wider font-medium text-center">
-              B.SC
-            </h3>
+            <h3 className="text-sm tracking-wider font-medium text-center">B.SC</h3>
             <p className="text-3xl font-medium text-center">0</p>
           </div>
         </div>
@@ -52,9 +44,7 @@ export default function Cards() {
             <FaGraduationCap />
           </div>
           <div className="px-4 text-gray-700 ">
-            <h3 className="text-sm tracking-wider font-medium text-center">
-              BBA
-            </h3>
+            <h3 className="text-sm tracking-wider font-medium text-center">BBA</h3>
             <p className="text-3xl font-medium text-center">0</p>
           </div>
         </div>
@@ -63,9 +53,7 @@ export default function Cards() {
             <FaGraduationCap />
           </div>
           <div className="px-4 text-gray-700 ">
-            <h3 className="text-sm tracking-wider font-medium text-center">
-              M.A
-            </h3>
+            <h3 className="text-sm tracking-wider font-medium text-center">M.A</h3>
             <p className="text-3xl font-medium text-center">0</p>
           </div>
         </div>
@@ -74,9 +62,7 @@ export default function Cards() {
             <FaGraduationCap />
           </div>
           <div className="px-4 text-gray-700 ">
-            <h3 className="text-sm tracking-wider font-medium text-center">
-              M.COM
-            </h3>
+            <h3 className="text-sm tracking-wider font-medium text-center">M.COM</h3>
             <p className="text-3xl font-medium text-center">0</p>
           </div>
         </div>

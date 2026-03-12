@@ -9,16 +9,13 @@ export const Cta = () => {
         </div>
         <h2 className="max-w-lg mb-6 font-sans text-3xl font-bold leading-none tracking-tight text-gray-900 sm:text-4xl md:mx-auto">
           <span className="relative inline-block">
-            <span className="relative">
-              "Streamline Your Institution's Workflow Today!
-            </span>
+            <span className="relative">"Streamline Your Institution's Workflow Today!</span>
           </span>
         </h2>
         <p className="text-base text-gray-700 md:text-lg">
-          Empower educators, engage students, and simplify administration with
-          our all-in-one student management solution. Transform the way you
-          handle attendance, grades, schedules, and communication – all in one
-          place.
+          Empower educators, engage students, and simplify administration with our all-in-one
+          student management solution. Transform the way you handle attendance, grades, schedules,
+          and communication – all in one place.
         </p>
       </div>
       <div className="px-2 py-20 w-full flex justify-center">
@@ -37,13 +34,12 @@ export const Cta = () => {
               <span className="text-indigo-600">Choices</span>
             </h2>
             <p className="mt-4 text-gray-600">
-              "Simplify Education Management – Empower Learning!" Transform the
-              way you manage students, courses, and academic activities with our
-              powerful student management platform. Streamline. Connect.
-              Succeed. Access real-time insights, enhance communication, and
-              create an engaging academic environment that drives success for
-              students, teachers, and administrators. Take the next step in
-              education management – Get started today!
+              "Simplify Education Management – Empower Learning!" Transform the way you manage
+              students, courses, and academic activities with our powerful student management
+              platform. Streamline. Connect. Succeed. Access real-time insights, enhance
+              communication, and create an engaging academic environment that drives success for
+              students, teachers, and administrators. Take the next step in education management –
+              Get started today!
             </p>
           </div>
         </div>

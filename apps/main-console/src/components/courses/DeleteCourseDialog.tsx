@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 // import { Course } from '@/types/course';
-import { Course } from '@/types/course-design';
+import { Course } from "@/types/course-design";
 
 interface DeleteCourseDialogProps {
   isOpen: boolean;
@@ -33,9 +33,11 @@ const DeleteCourseDialog: React.FC<DeleteCourseDialogProps> = ({
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure you want to delete this course?</AlertDialogTitle>
           <AlertDialogDescription>
-            You are about to delete the course <span className="font-semibold text-purple-700">{course?.name}</span>.
+            You are about to delete the course{" "}
+            <span className="font-semibold text-purple-700">{course?.name}</span>.
             <br />
-            This action cannot be undone. Deleting this course may affect students and programs associated with it.
+            This action cannot be undone. Deleting this course may affect students and programs
+            associated with it.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -56,4 +58,4 @@ const DeleteCourseDialog: React.FC<DeleteCourseDialogProps> = ({
   );
 };
 
-export default DeleteCourseDialog; 
+export default DeleteCourseDialog;

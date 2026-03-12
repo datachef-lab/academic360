@@ -82,7 +82,9 @@ export function MisStatsCard({ stats, isLoading }: MisStatsCardProps) {
             </div>
             <div>
               <p className="text-xs text-gray-600">Selection Done</p>
-              <p className="text-sm font-semibold">{stats.totalSubjectSelectionDone.toLocaleString()}</p>
+              <p className="text-sm font-semibold">
+                {stats.totalSubjectSelectionDone.toLocaleString()}
+              </p>
             </div>
           </div>
         </div>

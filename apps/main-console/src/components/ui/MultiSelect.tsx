@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuTrigger,
-    DropdownMenuItem,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,7 +22,6 @@ const MultiSelect = ({
   selectedOptions: selectedItems,
   onChange,
 }: ISelectProps) => {
-
   const handleSelectChange = (value: string) => {
     let updated: string[];
     if (!selectedItems.includes(value)) {
@@ -38,34 +37,26 @@ const MultiSelect = ({
   };
 
   // Compute selected labels for display
-  const selectedLabels = values
-    .filter((v) => selectedItems.includes(v.value))
-    .map((v) => v.label);
+  const selectedLabels = values.filter((v) => selectedItems.includes(v.value)).map((v) => v.label);
   const display = selectedLabels.join(", ");
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild className="w-full">
-          <Button
-            variant="outline"
-            className="w-full flex items-center justify-between min-w-0"
-          >
+          <Button variant="outline" className="w-full flex items-center justify-between min-w-0">
             <div className="truncate text-left w-full">
               {selectedItems.length === 0 ? placeholder : display}
             </div>
             <ChevronDown className="h-4 w-4 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          className="w-56"
-          onCloseAutoFocus={(e) => e.preventDefault()}
-        >
+        <DropdownMenuContent className="w-56" onCloseAutoFocus={(e) => e.preventDefault()}>
           {values.map((value: ISelectProps["options"][0], index: number) => (
             <DropdownMenuItem
               key={index}
               className="flex items-center gap-2 whitespace-normal pr-2 cursor-pointer"
-              onSelect={e => {
+              onSelect={(e) => {
                 e.preventDefault();
                 handleSelectChange(value.value);
               }}

@@ -95,7 +95,11 @@ export function calculateBestOfFourWithFullMarks(
       }
       return null;
     })
-    .filter(Boolean) as Array<{ totalMarks: number; fullMarks: number; subject: StudentAcademicSubjectsDto }>;
+    .filter(Boolean) as Array<{
+    totalMarks: number;
+    fullMarks: number;
+    subject: StudentAcademicSubjectsDto;
+  }>;
 
   if (validSubjects.length === 0) {
     return null;

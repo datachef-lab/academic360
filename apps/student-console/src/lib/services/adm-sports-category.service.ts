@@ -2,7 +2,7 @@ import { dbPostgres } from "@/db";
 import { sportsCategories, SportsCategory } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-export async function createSportCategory(givenSportCategory: Omit<SportsCategory, 'id'>) {
+export async function createSportCategory(givenSportCategory: Omit<SportsCategory, "id">) {
   const [newCategory] = await dbPostgres
     .insert(sportsCategories)
     .values(givenSportCategory)
@@ -22,7 +22,10 @@ export async function getSportCategoryById(id: number) {
   return category || null;
 }
 
-export async function updateSportCategory(id: number, update: Partial<typeof sportsCategories._.inferInsert>) {
+export async function updateSportCategory(
+  id: number,
+  update: Partial<typeof sportsCategories._.inferInsert>,
+) {
   const [updated] = await dbPostgres
     .update(sportsCategories)
     .set(update)

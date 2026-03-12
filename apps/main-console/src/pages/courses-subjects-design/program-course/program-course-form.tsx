@@ -6,9 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import type {
   ProgramCourse,
   Stream,
@@ -50,7 +63,12 @@ interface ProgramCourseFormProps {
   isLoading?: boolean;
 }
 
-export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading = false }: ProgramCourseFormProps) {
+export function ProgramCourseForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+}: ProgramCourseFormProps) {
   const isEdit = !!initialData;
 
   // State for dropdown options
@@ -67,15 +85,21 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
     const fetchOptions = async () => {
       try {
         setLoadingOptions(true);
-        const [streamsData, coursesData, courseTypesData, courseLevelsData, affiliationsData, regulationTypesData] =
-          await Promise.all([
-            getStreams(),
-            getCourses(),
-            getCourseTypes(),
-            getCourseLevels(),
-            getAffiliations(),
-            getRegulationTypes(),
-          ]);
+        const [
+          streamsData,
+          coursesData,
+          courseTypesData,
+          courseLevelsData,
+          affiliationsData,
+          regulationTypesData,
+        ] = await Promise.all([
+          getStreams(),
+          getCourses(),
+          getCourseTypes(),
+          getCourseLevels(),
+          getAffiliations(),
+          getRegulationTypes(),
+        ]);
 
         setStreams((streamsData as Stream[]) || []);
         setCourses((coursesData as Course[]) || []);
@@ -157,7 +181,8 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
 
     const courseName = selectedCourse?.name?.trim() || "";
 
-    const levelNameForCheck = `${selectedLevel?.shortName || ""} ${selectedLevel?.name || ""}`.toLowerCase();
+    const levelNameForCheck =
+      `${selectedLevel?.shortName || ""} ${selectedLevel?.name || ""}`.toLowerCase();
     const isPG = /(post\s*grad|pg|postgrad|master|m\.|ph\.?d|doctor)/i.test(levelNameForCheck);
     const streamPrefix = (isPG ? selectedStream?.pgPrefix : selectedStream?.ugPrefix)?.trim();
 
@@ -222,7 +247,10 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Stream</FormLabel>
-                <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                <Select
+                  onValueChange={(value) => field.onChange(Number(value))}
+                  value={String(field.value)}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select stream" />
@@ -247,7 +275,10 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Course</FormLabel>
-                <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                <Select
+                  onValueChange={(value) => field.onChange(Number(value))}
+                  value={String(field.value)}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select course" />
@@ -272,7 +303,10 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Course Type</FormLabel>
-                <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                <Select
+                  onValueChange={(value) => field.onChange(Number(value))}
+                  value={String(field.value)}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select course type" />
@@ -297,7 +331,10 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Course Level</FormLabel>
-                <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                <Select
+                  onValueChange={(value) => field.onChange(Number(value))}
+                  value={String(field.value)}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select level" />
@@ -364,7 +401,10 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Affiliated To</FormLabel>
-                <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                <Select
+                  onValueChange={(value) => field.onChange(Number(value))}
+                  value={String(field.value)}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select affiliation" />
@@ -389,7 +429,10 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Regulation Type</FormLabel>
-                <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                <Select
+                  onValueChange={(value) => field.onChange(Number(value))}
+                  value={String(field.value)}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select regulation" />
@@ -417,7 +460,12 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
               <FormItem>
                 <FormLabel>Name (auto)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Auto-composed name" {...field} value={field.value || ""} readOnly />
+                  <Input
+                    placeholder="Auto-composed name"
+                    {...field}
+                    value={field.value || ""}
+                    readOnly
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -430,7 +478,11 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
               <FormItem>
                 <FormLabel>Short Name (optional)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Leave empty if not needed" {...field} value={field.value || ""} />
+                  <Input
+                    placeholder="Leave empty if not needed"
+                    {...field}
+                    value={field.value || ""}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -448,7 +500,11 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
                   name="isActive"
                   control={form.control}
                   render={({ field }) => (
-                    <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isLoading} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isLoading}
+                    />
                   )}
                 />
               </FormControl>

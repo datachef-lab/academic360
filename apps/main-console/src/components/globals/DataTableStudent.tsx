@@ -10,7 +10,7 @@ import {
   useReactTable,
   ColumnFiltersState,
 } from "@tanstack/react-table";
-import { Table,  TableCell, TableRow } from "@/components/ui/table";
+import { Table, TableCell, TableRow } from "@/components/ui/table";
 import { Skeleton } from "../ui/skeleton";
 
 interface DataTableProps<TData, TValue> {
@@ -60,10 +60,7 @@ export function DataTableStudent<TData, TValue>({
     },
   });
 
-  const skeletonRows = useMemo(
-    () => Array(pagination.pageSize).fill(null),
-    [pagination.pageSize]
-  );
+  const skeletonRows = useMemo(() => Array(pagination.pageSize).fill(null), [pagination.pageSize]);
 
   return (
     <div className="space-y-4">
@@ -73,9 +70,9 @@ export function DataTableStudent<TData, TValue>({
             skeletonRows.map((_, index) => (
               <TableRow key={index} className="bg-gray-50/5 hover:bg-white/5 backdrop-blur-sm">
                 {columns.map((_, colIndex) => (
-                  <TableCell 
-                    key={colIndex} 
-                    className={`px-4 py-3 text-center ${colIndex === 0 ? 'pl-10' : ''}`}
+                  <TableCell
+                    key={colIndex}
+                    className={`px-4 py-3 text-center ${colIndex === 0 ? "pl-10" : ""}`}
                   >
                     <Skeleton className="h-4 w-[80%] mx-auto rounded-full bg-gray-200/5" />
                   </TableCell>
@@ -84,15 +81,9 @@ export function DataTableStudent<TData, TValue>({
             ))
           ) : table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow 
-                key={row.id} 
-                className="hover:bg-white/10 bg-transparent"
-              >
+              <TableRow key={row.id} className="hover:bg-white/10 bg-transparent">
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell 
-                    key={cell.id} 
-                    className="px-4 py-3 first:pl-10 text-center"
-                  >
+                  <TableCell key={cell.id} className="px-4 py-3 first:pl-10 text-center">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

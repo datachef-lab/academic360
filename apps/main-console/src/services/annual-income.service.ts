@@ -11,12 +11,12 @@ import {
 
 /**
  * Annual Income Service
- * 
+ *
  * This service handles all CRUD operations for the Annual Income module.
  * It provides type-safe API communication with the backend.
  */
 
-const BASE_URL = '/api/annual-incomes';
+const BASE_URL = "/api/annual-incomes";
 
 // ============================================================================
 // GET OPERATIONS
@@ -31,7 +31,7 @@ export async function getAllAnnualIncomes(): Promise<AnnualIncome[]> {
     const response = await axiosInstance.get(BASE_URL);
     return response.data.payload;
   } catch (error) {
-    console.error('Error fetching annual incomes:', error);
+    console.error("Error fetching annual incomes:", error);
     throw error;
   }
 }
@@ -44,7 +44,7 @@ export async function getAllAnnualIncomes(): Promise<AnnualIncome[]> {
 export async function getAnnualIncomeById(id: number): Promise<AnnualIncome> {
   try {
     if (!id) {
-      throw new Error('Annual income ID is required');
+      throw new Error("Annual income ID is required");
     }
 
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
@@ -64,7 +64,7 @@ export async function getActiveAnnualIncomes(): Promise<AnnualIncome[]> {
     const response = await axiosInstance.get(`${BASE_URL}?disabled=false`);
     return response.data.payload;
   } catch (error) {
-    console.error('Error fetching active annual incomes:', error);
+    console.error("Error fetching active annual incomes:", error);
     throw error;
   }
 }
@@ -78,16 +78,18 @@ export async function getActiveAnnualIncomes(): Promise<AnnualIncome[]> {
  * @param payload - Annual income creation data
  * @returns Promise<AnnualIncome> - Created annual income data
  */
-export async function createAnnualIncome(payload: CreateAnnualIncomePayload): Promise<AnnualIncome> {
+export async function createAnnualIncome(
+  payload: CreateAnnualIncomePayload,
+): Promise<AnnualIncome> {
   try {
     if (!payload.range || payload.range.trim().length === 0) {
-      throw new Error('Annual income range is required');
+      throw new Error("Annual income range is required");
     }
 
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data.payload;
   } catch (error) {
-    console.error('Error creating annual income:', error);
+    console.error("Error creating annual income:", error);
     throw error;
   }
 }
@@ -102,14 +104,17 @@ export async function createAnnualIncome(payload: CreateAnnualIncomePayload): Pr
  * @param payload - Annual income update data
  * @returns Promise<AnnualIncome> - Updated annual income data
  */
-export async function updateAnnualIncome(id: number, payload: UpdateAnnualIncomePayload): Promise<AnnualIncome> {
+export async function updateAnnualIncome(
+  id: number,
+  payload: UpdateAnnualIncomePayload,
+): Promise<AnnualIncome> {
   try {
     if (!id) {
-      throw new Error('Annual income ID is required');
+      throw new Error("Annual income ID is required");
     }
 
     if (payload.range !== undefined && payload.range.trim().length === 0) {
-      throw new Error('Annual income range cannot be empty');
+      throw new Error("Annual income range cannot be empty");
     }
 
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
@@ -132,7 +137,7 @@ export async function updateAnnualIncome(id: number, payload: UpdateAnnualIncome
 export async function deleteAnnualIncome(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('Annual income ID is required');
+      throw new Error("Annual income ID is required");
     }
 
     await axiosInstance.delete(`${BASE_URL}/${id}`);
@@ -158,11 +163,11 @@ export async function searchAnnualIncomes(searchTerm: string): Promise<AnnualInc
     }
 
     const response = await axiosInstance.get(
-      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
+      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
     return response.data.payload;
   } catch (error) {
-    console.error('Error searching annual incomes:', error);
+    console.error("Error searching annual incomes:", error);
     throw error;
   }
 }
@@ -182,12 +187,10 @@ export async function checkAnnualIncomeExists(name: string): Promise<boolean> {
       return false;
     }
 
-    const response = await axiosInstance.get(
-      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
-    );
+    const response = await axiosInstance.get(`${BASE_URL}?name=${encodeURIComponent(name.trim())}`);
     return response.data.payload.length > 0;
   } catch (error) {
-    console.error('Error checking annual income existence:', error);
+    console.error("Error checking annual income existence:", error);
     return false;
   }
 }
@@ -201,19 +204,19 @@ export const annualIncomeService = {
   getAllAnnualIncomes,
   getAnnualIncomeById,
   getActiveAnnualIncomes,
-  
+
   // Create operations
   createAnnualIncome,
-  
+
   // Update operations
   updateAnnualIncome,
-  
+
   // Delete operations
   deleteAnnualIncome,
-  
+
   // Search and filter operations
   searchAnnualIncomes,
-  
+
   // Utility functions
   checkAnnualIncomeExists,
-}; 
+};

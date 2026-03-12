@@ -89,7 +89,10 @@ export default function SubjectSelectionScreen() {
 
   if (loading && !hasExistingSelections) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: theme.background }}>
+      <View
+        className="flex-1 items-center justify-center"
+        style={{ backgroundColor: theme.background }}
+      >
         <ActivityIndicator size="large" color={accent} />
         <Text style={{ color: theme.text, marginTop: 12 }}>Loading subject options...</Text>
       </View>
@@ -98,9 +101,24 @@ export default function SubjectSelectionScreen() {
 
   if (isBlocked) {
     return (
-      <View className="flex-1 items-center justify-center p-8" style={{ backgroundColor: theme.background }}>
-        <AlertCircle size={64} color={isDark ? "#f59e0b" : "#d97706"} style={{ marginBottom: 16 }} />
-        <Text style={{ color: theme.text, fontSize: 20, fontWeight: "600", textAlign: "center", marginBottom: 8 }}>
+      <View
+        className="flex-1 items-center justify-center p-8"
+        style={{ backgroundColor: theme.background }}
+      >
+        <AlertCircle
+          size={64}
+          color={isDark ? "#f59e0b" : "#d97706"}
+          style={{ marginBottom: 16 }}
+        />
+        <Text
+          style={{
+            color: theme.text,
+            fontSize: 20,
+            fontWeight: "600",
+            textAlign: "center",
+            marginBottom: 8,
+          }}
+        >
           Subject Selection Not Available
         </Text>
         <Text style={{ color: theme.text, fontSize: 16, textAlign: "center", opacity: 0.9 }}>
@@ -143,9 +161,17 @@ export default function SubjectSelectionScreen() {
             <Text style={{ color: "#fff", fontSize: 14, fontWeight: "500" }}>Notes</Text>
           </Pressable>
 
-          <Modal visible={openNotes} transparent animationType="slide" onRequestClose={() => setOpenNotes(false)}>
+          <Modal
+            visible={openNotes}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setOpenNotes(false)}
+          >
             <View style={{ flex: 1 }}>
-              <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} onPress={() => setOpenNotes(false)} />
+              <Pressable
+                style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}
+                onPress={() => setOpenNotes(false)}
+              />
               <View
                 style={{
                   position: "absolute",
@@ -170,7 +196,9 @@ export default function SubjectSelectionScreen() {
                     borderBottomColor: isDark ? "rgba(255,255,255,0.1)" : "#e5e7eb",
                   }}
                 >
-                  <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600" }}>Important Notes & Guide</Text>
+                  <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600" }}>
+                    Important Notes & Guide
+                  </Text>
                   <Pressable onPress={() => setOpenNotes(false)} style={{ padding: 8 }}>
                     <Text style={{ color: accent, fontSize: 14, fontWeight: "500" }}>Close</Text>
                   </Pressable>
@@ -180,7 +208,11 @@ export default function SubjectSelectionScreen() {
                   contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
                   showsVerticalScrollIndicator={false}
                 >
-                  <SubjectSelectionInstructions compact student={student} visibleCategories={visibleCategories} />
+                  <SubjectSelectionInstructions
+                    compact
+                    student={student}
+                    visibleCategories={visibleCategories}
+                  />
                 </ScrollView>
               </View>
             </View>
@@ -191,7 +223,11 @@ export default function SubjectSelectionScreen() {
       <ScrollView
         className="flex-1"
         style={{ backgroundColor: theme.background }}
-        contentContainerStyle={{ padding: 16, paddingTop: hasExistingSelections ? 16 : 56, paddingBottom: 32 }}
+        contentContainerStyle={{
+          padding: 16,
+          paddingTop: hasExistingSelections ? 16 : 56,
+          paddingBottom: 32,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <Text style={{ color: theme.text }} className="text-xl font-semibold mb-4">
@@ -239,7 +275,9 @@ export default function SubjectSelectionScreen() {
             {/* Minor Subjects */}
             {hasActualOptions(admissionMinor1Subjects) && (
               <View>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
                   {getDynamicLabel("MN", "I")}
                 </Text>
                 <Select
@@ -257,50 +295,58 @@ export default function SubjectSelectionScreen() {
               </View>
             )}
 
-            {hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) && (
-              <View>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
-                  {getDynamicLabel("MN", "III")}
-                </Text>
-                <Select
-                  options={convertToSelectOptions(
-                    preserveAecIfPresent(
-                      admissionMinor2Subjects,
-                      getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
-                    ),
-                    getGlobalExcludes(minor2),
-                  )}
-                  value={minor2}
-                  onChange={(v) => handleFieldChange(setMinor2, v, "minor2")}
-                  placeholder={`Select ${getDynamicLabel("MN", "III").split("(")[0].trim()}`}
-                />
-              </View>
-            )}
+            {hasActualOptions(admissionMinor1Subjects) &&
+              hasActualOptions(admissionMinor2Subjects) && (
+                <View>
+                  <Text
+                    style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                  >
+                    {getDynamicLabel("MN", "III")}
+                  </Text>
+                  <Select
+                    options={convertToSelectOptions(
+                      preserveAecIfPresent(
+                        admissionMinor2Subjects,
+                        getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
+                      ),
+                      getGlobalExcludes(minor2),
+                    )}
+                    value={minor2}
+                    onChange={(v) => handleFieldChange(setMinor2, v, "minor2")}
+                    placeholder={`Select ${getDynamicLabel("MN", "III").split("(")[0].trim()}`}
+                  />
+                </View>
+              )}
 
-            {!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) && (
-              <View>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
-                  Minor (Semester III to VI)
-                </Text>
-                <Select
-                  options={convertToSelectOptions(
-                    preserveAecIfPresent(
-                      admissionMinor3Subjects,
-                      getFilteredByCategory(admissionMinor3Subjects, minor3, "MN", ["III"]),
-                    ),
-                    getGlobalExcludes(minor3),
-                  )}
-                  value={minor3}
-                  onChange={(v) => handleFieldChange(setMinor3, v, "minor3")}
-                  placeholder="Select Minor"
-                />
-              </View>
-            )}
+            {!hasActualOptions(admissionMinor1Subjects) &&
+              hasActualOptions(admissionMinor3Subjects) && (
+                <View>
+                  <Text
+                    style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                  >
+                    Minor (Semester III to VI)
+                  </Text>
+                  <Select
+                    options={convertToSelectOptions(
+                      preserveAecIfPresent(
+                        admissionMinor3Subjects,
+                        getFilteredByCategory(admissionMinor3Subjects, minor3, "MN", ["III"]),
+                      ),
+                      getGlobalExcludes(minor3),
+                    )}
+                    value={minor3}
+                    onChange={(v) => handleFieldChange(setMinor3, v, "minor3")}
+                    placeholder="Select Minor"
+                  />
+                </View>
+              )}
 
             {/* AEC */}
             {hasActualOptions(availableAecSubjects) && (
               <View>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
                   {getDynamicLabel("AEC")}
                 </Text>
                 <Select
@@ -315,14 +361,21 @@ export default function SubjectSelectionScreen() {
             {/* IDC */}
             {hasActualOptions(availableIdcSem1Subjects) && (
               <View>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
                   {getDynamicLabel("IDC", "I")}
                 </Text>
                 <Select
                   options={convertToSelectOptions(
                     preserveAecIfPresent(
                       availableIdcSem1Subjects,
-                      getFilteredByCategory(getFilteredIdcOptions(availableIdcSem1Subjects, idc1), idc1, "IDC", "I"),
+                      getFilteredByCategory(
+                        getFilteredIdcOptions(availableIdcSem1Subjects, idc1),
+                        idc1,
+                        "IDC",
+                        "I",
+                      ),
                     ),
                     getGlobalExcludes(idc1),
                   )}
@@ -335,14 +388,21 @@ export default function SubjectSelectionScreen() {
 
             {hasActualOptions(availableIdcSem2Subjects) && (
               <View>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
                   {getDynamicLabel("IDC", "II")}
                 </Text>
                 <Select
                   options={convertToSelectOptions(
                     preserveAecIfPresent(
                       availableIdcSem2Subjects,
-                      getFilteredByCategory(getFilteredIdcOptions(availableIdcSem2Subjects, idc2), idc2, "IDC", "II"),
+                      getFilteredByCategory(
+                        getFilteredIdcOptions(availableIdcSem2Subjects, idc2),
+                        idc2,
+                        "IDC",
+                        "II",
+                      ),
                     ),
                     getGlobalExcludes(idc2),
                   )}
@@ -355,14 +415,21 @@ export default function SubjectSelectionScreen() {
 
             {hasActualOptions(availableIdcSem3Subjects) && (
               <View>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
                   {getDynamicLabel("IDC", "III")}
                 </Text>
                 <Select
                   options={convertToSelectOptions(
                     preserveAecIfPresent(
                       availableIdcSem3Subjects,
-                      getFilteredByCategory(getFilteredIdcOptions(availableIdcSem3Subjects, idc3), idc3, "IDC", "III"),
+                      getFilteredByCategory(
+                        getFilteredIdcOptions(availableIdcSem3Subjects, idc3),
+                        idc3,
+                        "IDC",
+                        "III",
+                      ),
                     ),
                     getGlobalExcludes(idc3),
                   )}
@@ -376,7 +443,9 @@ export default function SubjectSelectionScreen() {
             {/* CVAC */}
             {hasActualOptions(availableCvacOptions) && (
               <View>
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
+                <Text
+                  style={{ color: theme.text, fontSize: 14, fontWeight: "500", marginBottom: 6 }}
+                >
                   {getDynamicLabel("CVAC")}
                 </Text>
                 <Select
@@ -391,7 +460,10 @@ export default function SubjectSelectionScreen() {
         )}
 
         {step === 1 && hasExistingSelections && (
-          <View className="rounded-xl overflow-hidden mb-4" style={{ borderWidth: 1, borderColor: tableBorder }}>
+          <View
+            className="rounded-xl overflow-hidden mb-4"
+            style={{ borderWidth: 1, borderColor: tableBorder }}
+          >
             <View
               className="p-3"
               style={{
@@ -400,14 +472,19 @@ export default function SubjectSelectionScreen() {
                 borderBottomColor: tableBorder,
               }}
             >
-              <Text style={{ color: isDark ? "#4ade80" : "#166534", fontWeight: "600" }}>Your Subject Selections</Text>
+              <Text style={{ color: isDark ? "#4ade80" : "#166534", fontWeight: "600" }}>
+                Your Subject Selections
+              </Text>
               <Text style={{ color: theme.text, opacity: 0.8, fontSize: 13, marginTop: 2 }}>
                 Your selections have been saved successfully.
               </Text>
             </View>
             <View className="p-0">
               {savedSelections.minor1 && (
-                <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                <View
+                  className="flex-row items-start py-2 px-3 border-b"
+                  style={{ borderColor: tableBorder }}
+                >
                   <View
                     style={{
                       flex: 1,
@@ -417,15 +494,22 @@ export default function SubjectSelectionScreen() {
                       borderRightColor: tableBorder,
                     }}
                   >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("MN", "I")}</Text>
+                    <Text style={{ color: theme.text, opacity: 0.8 }}>
+                      {getDynamicLabel("MN", "I")}
+                    </Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>{savedSelections.minor1}</Text>
+                    <Text style={{ color: theme.text, fontWeight: "500" }}>
+                      {savedSelections.minor1}
+                    </Text>
                   </View>
                 </View>
               )}
               {savedSelections.minor2 && hasActualOptions(admissionMinor1Subjects) && (
-                <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                <View
+                  className="flex-row items-start py-2 px-3 border-b"
+                  style={{ borderColor: tableBorder }}
+                >
                   <View
                     style={{
                       flex: 1,
@@ -435,15 +519,22 @@ export default function SubjectSelectionScreen() {
                       borderRightColor: tableBorder,
                     }}
                   >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("MN", "III")}</Text>
+                    <Text style={{ color: theme.text, opacity: 0.8 }}>
+                      {getDynamicLabel("MN", "III")}
+                    </Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>{savedSelections.minor2}</Text>
+                    <Text style={{ color: theme.text, fontWeight: "500" }}>
+                      {savedSelections.minor2}
+                    </Text>
                   </View>
                 </View>
               )}
               {savedSelections.minor3 && !hasActualOptions(admissionMinor1Subjects) && (
-                <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                <View
+                  className="flex-row items-start py-2 px-3 border-b"
+                  style={{ borderColor: tableBorder }}
+                >
                   <View
                     style={{
                       flex: 1,
@@ -453,15 +544,22 @@ export default function SubjectSelectionScreen() {
                       borderRightColor: tableBorder,
                     }}
                   >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>Minor (Semester III to VI)</Text>
+                    <Text style={{ color: theme.text, opacity: 0.8 }}>
+                      Minor (Semester III to VI)
+                    </Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>{savedSelections.minor3}</Text>
+                    <Text style={{ color: theme.text, fontWeight: "500" }}>
+                      {savedSelections.minor3}
+                    </Text>
                   </View>
                 </View>
               )}
               {savedSelections.idc1 && (
-                <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                <View
+                  className="flex-row items-start py-2 px-3 border-b"
+                  style={{ borderColor: tableBorder }}
+                >
                   <View
                     style={{
                       flex: 1,
@@ -471,15 +569,22 @@ export default function SubjectSelectionScreen() {
                       borderRightColor: tableBorder,
                     }}
                   >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("IDC", "I")}</Text>
+                    <Text style={{ color: theme.text, opacity: 0.8 }}>
+                      {getDynamicLabel("IDC", "I")}
+                    </Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>{savedSelections.idc1}</Text>
+                    <Text style={{ color: theme.text, fontWeight: "500" }}>
+                      {savedSelections.idc1}
+                    </Text>
                   </View>
                 </View>
               )}
               {savedSelections.idc2 && (
-                <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                <View
+                  className="flex-row items-start py-2 px-3 border-b"
+                  style={{ borderColor: tableBorder }}
+                >
                   <View
                     style={{
                       flex: 1,
@@ -489,15 +594,22 @@ export default function SubjectSelectionScreen() {
                       borderRightColor: tableBorder,
                     }}
                   >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("IDC", "II")}</Text>
+                    <Text style={{ color: theme.text, opacity: 0.8 }}>
+                      {getDynamicLabel("IDC", "II")}
+                    </Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>{savedSelections.idc2}</Text>
+                    <Text style={{ color: theme.text, fontWeight: "500" }}>
+                      {savedSelections.idc2}
+                    </Text>
                   </View>
                 </View>
               )}
               {savedSelections.idc3 && (
-                <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                <View
+                  className="flex-row items-start py-2 px-3 border-b"
+                  style={{ borderColor: tableBorder }}
+                >
                   <View
                     style={{
                       flex: 1,
@@ -507,15 +619,22 @@ export default function SubjectSelectionScreen() {
                       borderRightColor: tableBorder,
                     }}
                   >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("IDC", "III")}</Text>
+                    <Text style={{ color: theme.text, opacity: 0.8 }}>
+                      {getDynamicLabel("IDC", "III")}
+                    </Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>{savedSelections.idc3}</Text>
+                    <Text style={{ color: theme.text, fontWeight: "500" }}>
+                      {savedSelections.idc3}
+                    </Text>
                   </View>
                 </View>
               )}
               {savedSelections.aec3 && (
-                <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: theme.border }}>
+                <View
+                  className="flex-row items-start py-2 px-3 border-b"
+                  style={{ borderColor: theme.border }}
+                >
                   <View
                     style={{
                       flex: 1,
@@ -525,15 +644,22 @@ export default function SubjectSelectionScreen() {
                       borderRightColor: theme.border,
                     }}
                   >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("AEC")}</Text>
+                    <Text style={{ color: theme.text, opacity: 0.8 }}>
+                      {getDynamicLabel("AEC")}
+                    </Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>{savedSelections.aec3}</Text>
+                    <Text style={{ color: theme.text, fontWeight: "500" }}>
+                      {savedSelections.aec3}
+                    </Text>
                   </View>
                 </View>
               )}
               {savedSelections.cvac4 && (
-                <View className="flex-row items-start py-2 px-3" style={{ borderColor: tableBorder }}>
+                <View
+                  className="flex-row items-start py-2 px-3"
+                  style={{ borderColor: tableBorder }}
+                >
                   <View
                     style={{
                       flex: 1,
@@ -543,10 +669,14 @@ export default function SubjectSelectionScreen() {
                       borderRightColor: tableBorder,
                     }}
                   >
-                    <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("CVAC")}</Text>
+                    <Text style={{ color: theme.text, opacity: 0.8 }}>
+                      {getDynamicLabel("CVAC")}
+                    </Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                    <Text style={{ color: theme.text, fontWeight: "500" }}>{savedSelections.cvac4}</Text>
+                    <Text style={{ color: theme.text, fontWeight: "500" }}>
+                      {savedSelections.cvac4}
+                    </Text>
                   </View>
                 </View>
               )}
@@ -565,7 +695,9 @@ export default function SubjectSelectionScreen() {
                   borderColor: "#fecaca",
                 }}
               >
-                <Text style={{ color: "#ef4444", fontWeight: "600", marginBottom: 4 }}>Please fix the following:</Text>
+                <Text style={{ color: "#ef4444", fontWeight: "600", marginBottom: 4 }}>
+                  Please fix the following:
+                </Text>
                 {errors.map((e, i) => (
                   <Text key={i} style={{ color: "#ef4444", fontSize: 14 }}>
                     • {e}
@@ -584,7 +716,9 @@ export default function SubjectSelectionScreen() {
                     borderColor: theme.border,
                   }}
                 >
-                  <Text style={{ color: theme.text, fontWeight: "600", marginBottom: 8 }}>Declarations</Text>
+                  <Text style={{ color: theme.text, fontWeight: "600", marginBottom: 8 }}>
+                    Declarations
+                  </Text>
                   <Checkbox
                     checked={agree1}
                     onCheckedChange={setAgree1}
@@ -602,10 +736,16 @@ export default function SubjectSelectionScreen() {
                   />
                 </View>
 
-                <View className="mb-4 rounded-lg overflow-hidden" style={{ borderWidth: 1, borderColor: tableBorder }}>
+                <View
+                  className="mb-4 rounded-lg overflow-hidden"
+                  style={{ borderWidth: 1, borderColor: tableBorder }}
+                >
                   <View
                     className="flex-row items-start py-2 px-3 border-b"
-                    style={{ backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f1f5f9", borderColor: tableBorder }}
+                    style={{
+                      backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f1f5f9",
+                      borderColor: tableBorder,
+                    }}
                   >
                     <View
                       style={{
@@ -623,7 +763,10 @@ export default function SubjectSelectionScreen() {
                     </View>
                   </View>
                   {admissionMinor1Subjects.length > 0 && (
-                    <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: theme.border }}>
+                    <View
+                      className="flex-row items-start py-2 px-3 border-b"
+                      style={{ borderColor: theme.border }}
+                    >
                       <View
                         style={{
                           flex: 1,
@@ -633,51 +776,74 @@ export default function SubjectSelectionScreen() {
                           borderRightColor: theme.border,
                         }}
                       >
-                        <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("MN", "I")}</Text>
+                        <Text style={{ color: theme.text, opacity: 0.8 }}>
+                          {getDynamicLabel("MN", "I")}
+                        </Text>
                       </View>
                       <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                        <Text style={{ color: theme.text, fontWeight: "500" }}>{minor1 || "-"}</Text>
+                        <Text style={{ color: theme.text, fontWeight: "500" }}>
+                          {minor1 || "-"}
+                        </Text>
                       </View>
                     </View>
                   )}
-                  {hasActualOptions(admissionMinor1Subjects) && admissionMinor2Subjects.length > 0 && (
-                    <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                  {hasActualOptions(admissionMinor1Subjects) &&
+                    admissionMinor2Subjects.length > 0 && (
                       <View
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          paddingRight: 12,
-                          borderRightWidth: 1,
-                          borderRightColor: tableBorder,
-                        }}
+                        className="flex-row items-start py-2 px-3 border-b"
+                        style={{ borderColor: tableBorder }}
                       >
-                        <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("MN", "III")}</Text>
+                        <View
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            paddingRight: 12,
+                            borderRightWidth: 1,
+                            borderRightColor: tableBorder,
+                          }}
+                        >
+                          <Text style={{ color: theme.text, opacity: 0.8 }}>
+                            {getDynamicLabel("MN", "III")}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
+                          <Text style={{ color: theme.text, fontWeight: "500" }}>
+                            {minor2 || "-"}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                        <Text style={{ color: theme.text, fontWeight: "500" }}>{minor2 || "-"}</Text>
-                      </View>
-                    </View>
-                  )}
-                  {!hasActualOptions(admissionMinor1Subjects) && admissionMinor3Subjects.length > 0 && (
-                    <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                    )}
+                  {!hasActualOptions(admissionMinor1Subjects) &&
+                    admissionMinor3Subjects.length > 0 && (
                       <View
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          paddingRight: 12,
-                          borderRightWidth: 1,
-                          borderRightColor: tableBorder,
-                        }}
+                        className="flex-row items-start py-2 px-3 border-b"
+                        style={{ borderColor: tableBorder }}
                       >
-                        <Text style={{ color: theme.text, opacity: 0.8 }}>Minor (Semester III to VI)</Text>
+                        <View
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            paddingRight: 12,
+                            borderRightWidth: 1,
+                            borderRightColor: tableBorder,
+                          }}
+                        >
+                          <Text style={{ color: theme.text, opacity: 0.8 }}>
+                            Minor (Semester III to VI)
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
+                          <Text style={{ color: theme.text, fontWeight: "500" }}>
+                            {minor3 || "-"}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
-                        <Text style={{ color: theme.text, fontWeight: "500" }}>{minor3 || "-"}</Text>
-                      </View>
-                    </View>
-                  )}
+                    )}
                   {availableIdcSem1Subjects.length > 0 && (
-                    <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                    <View
+                      className="flex-row items-start py-2 px-3 border-b"
+                      style={{ borderColor: tableBorder }}
+                    >
                       <View
                         style={{
                           flex: 1,
@@ -687,7 +853,9 @@ export default function SubjectSelectionScreen() {
                           borderRightColor: tableBorder,
                         }}
                       >
-                        <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("IDC", "I")}</Text>
+                        <Text style={{ color: theme.text, opacity: 0.8 }}>
+                          {getDynamicLabel("IDC", "I")}
+                        </Text>
                       </View>
                       <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
                         <Text style={{ color: theme.text, fontWeight: "500" }}>{idc1 || "-"}</Text>
@@ -695,7 +863,10 @@ export default function SubjectSelectionScreen() {
                     </View>
                   )}
                   {availableIdcSem2Subjects.length > 0 && (
-                    <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                    <View
+                      className="flex-row items-start py-2 px-3 border-b"
+                      style={{ borderColor: tableBorder }}
+                    >
                       <View
                         style={{
                           flex: 1,
@@ -705,7 +876,9 @@ export default function SubjectSelectionScreen() {
                           borderRightColor: tableBorder,
                         }}
                       >
-                        <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("IDC", "II")}</Text>
+                        <Text style={{ color: theme.text, opacity: 0.8 }}>
+                          {getDynamicLabel("IDC", "II")}
+                        </Text>
                       </View>
                       <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
                         <Text style={{ color: theme.text, fontWeight: "500" }}>{idc2 || "-"}</Text>
@@ -713,7 +886,10 @@ export default function SubjectSelectionScreen() {
                     </View>
                   )}
                   {availableIdcSem3Subjects.length > 0 && (
-                    <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                    <View
+                      className="flex-row items-start py-2 px-3 border-b"
+                      style={{ borderColor: tableBorder }}
+                    >
                       <View
                         style={{
                           flex: 1,
@@ -723,7 +899,9 @@ export default function SubjectSelectionScreen() {
                           borderRightColor: tableBorder,
                         }}
                       >
-                        <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("IDC", "III")}</Text>
+                        <Text style={{ color: theme.text, opacity: 0.8 }}>
+                          {getDynamicLabel("IDC", "III")}
+                        </Text>
                       </View>
                       <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
                         <Text style={{ color: theme.text, fontWeight: "500" }}>{idc3 || "-"}</Text>
@@ -731,7 +909,10 @@ export default function SubjectSelectionScreen() {
                     </View>
                   )}
                   {availableAecSubjects.length > 0 && (
-                    <View className="flex-row items-start py-2 px-3 border-b" style={{ borderColor: tableBorder }}>
+                    <View
+                      className="flex-row items-start py-2 px-3 border-b"
+                      style={{ borderColor: tableBorder }}
+                    >
                       <View
                         style={{
                           flex: 1,
@@ -741,7 +922,9 @@ export default function SubjectSelectionScreen() {
                           borderRightColor: tableBorder,
                         }}
                       >
-                        <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("AEC")}</Text>
+                        <Text style={{ color: theme.text, opacity: 0.8 }}>
+                          {getDynamicLabel("AEC")}
+                        </Text>
                       </View>
                       <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
                         <Text style={{ color: theme.text, fontWeight: "500" }}>{aec3 || "-"}</Text>
@@ -749,7 +932,10 @@ export default function SubjectSelectionScreen() {
                     </View>
                   )}
                   {availableCvacOptions.length > 0 && (
-                    <View className="flex-row items-start py-2 px-3" style={{ borderColor: tableBorder }}>
+                    <View
+                      className="flex-row items-start py-2 px-3"
+                      style={{ borderColor: tableBorder }}
+                    >
                       <View
                         style={{
                           flex: 1,
@@ -759,7 +945,9 @@ export default function SubjectSelectionScreen() {
                           borderRightColor: tableBorder,
                         }}
                       >
-                        <Text style={{ color: theme.text, opacity: 0.8 }}>{getDynamicLabel("CVAC")}</Text>
+                        <Text style={{ color: theme.text, opacity: 0.8 }}>
+                          {getDynamicLabel("CVAC")}
+                        </Text>
                       </View>
                       <View style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
                         <Text style={{ color: theme.text, fontWeight: "500" }}>{cvac4 || "-"}</Text>
@@ -779,7 +967,9 @@ export default function SubjectSelectionScreen() {
                   borderColor: "#86efac",
                 }}
               >
-                <Text style={{ color: "#22c55e", fontWeight: "600" }}>Subject selections saved successfully!</Text>
+                <Text style={{ color: "#22c55e", fontWeight: "600" }}>
+                  Subject selections saved successfully!
+                </Text>
               </View>
             )}
 
@@ -809,11 +999,12 @@ export default function SubjectSelectionScreen() {
             }}
           >
             <Text style={{ color: theme.text }}>
-              Your current Minor I and II subject combination is different from the one you had selected at the time of
-              admission.
+              Your current Minor I and II subject combination is different from the one you had
+              selected at the time of admission.
             </Text>
             <Text style={{ color: theme.text, marginTop: 4, fontSize: 13 }}>
-              Previously saved: {earlierMinorSelections?.[0] || "-"} and {earlierMinorSelections?.[1] || "-"}
+              Previously saved: {earlierMinorSelections?.[0] || "-"} and{" "}
+              {earlierMinorSelections?.[1] || "-"}
             </Text>
           </View>
         )}
@@ -836,7 +1027,10 @@ export default function SubjectSelectionScreen() {
         )}
 
         {!hasExistingSelections && (
-          <View className="flex-row gap-3 mt-6 pt-4" style={{ borderTopWidth: 1, borderTopColor: theme.border }}>
+          <View
+            className="flex-row gap-3 mt-6 pt-4"
+            style={{ borderTopWidth: 1, borderTopColor: theme.border }}
+          >
             {step === 1 && (
               <Pressable
                 onPress={() => {

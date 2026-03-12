@@ -6,8 +6,20 @@ const overdueBooks = [
 ];
 
 const borrowingHistory = [
-  { title: "Book X", borrowedDate: "2024-01-10", dueDate: "2024-01-25", returnDate: "2024-01-24", status: "Returned on time" },
-  { title: "Book Y", borrowedDate: "2023-12-15", dueDate: "2024-01-01", returnDate: "2024-01-05", status: "Returned late" },
+  {
+    title: "Book X",
+    borrowedDate: "2024-01-10",
+    dueDate: "2024-01-25",
+    returnDate: "2024-01-24",
+    status: "Returned on time",
+  },
+  {
+    title: "Book Y",
+    borrowedDate: "2023-12-15",
+    dueDate: "2024-01-01",
+    returnDate: "2024-01-05",
+    status: "Returned late",
+  },
 ];
 
 const fineChartData = [
@@ -25,9 +37,10 @@ const LibReport = () => {
         </p>
         <p className="text-sm text-gray-600 dark:text-gray-400">₹10 per day after the due date.</p>
         <p className="text-sm text-red-500 flex items-center gap-2">
-          Borrowing privileges may be suspended if not paid within 30 days. <XCircle className="text-red-500" />
+          Borrowing privileges may be suspended if not paid within 30 days.{" "}
+          <XCircle className="text-red-500" />
         </p>
-        
+
         <h3 className="text-lg font-semibold mt-4">Fine Breakdown</h3>
         <div className="overflow-x-auto">
           <table className="w-full lg:max-w-[30%] border-collapse border border-gray-300 dark:border-gray-700 mt-2">
@@ -41,8 +54,17 @@ const LibReport = () => {
               {fineChartData.map((book, index) => (
                 <tr key={index} className="border border-gray-300 dark:border-gray-700">
                   <td className="p-2 border border-gray-300 dark:border-gray-700">{book.name}</td>
-                  <td className={`p-2 border border-gray-300 dark:border-gray-700 flex items-center gap-2 ${book.fine > 80 ? 'text-red-500' : book.fine > 50 ? 'text-yellow-500' : 'text-green-500'}`}>
-                    ₹{book.fine} {book.fine > 80 ? <XCircle className="text-red-500" /> : book.fine > 50 ? <AlertCircle className="text-yellow-500" /> : <CheckCircle className="text-green-500" />}
+                  <td
+                    className={`p-2 border border-gray-300 dark:border-gray-700 flex items-center gap-2 ${book.fine > 80 ? "text-red-500" : book.fine > 50 ? "text-yellow-500" : "text-green-500"}`}
+                  >
+                    ₹{book.fine}{" "}
+                    {book.fine > 80 ? (
+                      <XCircle className="text-red-500" />
+                    ) : book.fine > 50 ? (
+                      <AlertCircle className="text-yellow-500" />
+                    ) : (
+                      <CheckCircle className="text-green-500" />
+                    )}
                   </td>
                 </tr>
               ))}
@@ -50,7 +72,7 @@ const LibReport = () => {
           </table>
         </div>
       </div>
-      
+
       <div className="p-4 shadow-lg bg-white dark:bg-gray-800 rounded-2xl overflow-x-auto">
         <h2 className="text-xl font-bold mb-4">Overdue Books List</h2>
         <table className="w-full lg:max-w-[70%] border-collapse border border-gray-300 dark:border-gray-700">
@@ -67,14 +89,16 @@ const LibReport = () => {
               <tr key={index} className="border border-gray-300 dark:border-gray-700">
                 <td className="p-2 border border-gray-300 dark:border-gray-700">{book.title}</td>
                 <td className="p-2 border border-gray-300 dark:border-gray-700">{book.dueDate}</td>
-                <td className="p-2 border border-gray-300 dark:border-gray-700">{book.overdueDays}</td>
+                <td className="p-2 border border-gray-300 dark:border-gray-700">
+                  {book.overdueDays}
+                </td>
                 <td className="p-2 border border-gray-300 dark:border-gray-700">₹{book.fine}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      
+
       <div className="p-4 shadow-lg bg-white dark:bg-gray-800 rounded-2xl overflow-x-auto">
         <h2 className="text-xl font-bold mb-4">Borrowing History</h2>
         <table className="w-full lg:max-w-[70%] border-collapse border border-gray-300 dark:border-gray-700">
@@ -91,20 +115,28 @@ const LibReport = () => {
             {borrowingHistory.map((book, index) => (
               <tr key={index} className="border border-gray-300 dark:border-gray-700">
                 <td className="p-2 border border-gray-300 dark:border-gray-700">{book.title}</td>
-                <td className="p-2 border border-gray-300 dark:border-gray-700">{book.borrowedDate}</td>
+                <td className="p-2 border border-gray-300 dark:border-gray-700">
+                  {book.borrowedDate}
+                </td>
                 <td className="p-2 border border-gray-300 dark:border-gray-700">{book.dueDate}</td>
-                <td className="p-2 border border-gray-300 dark:border-gray-700">{book.returnDate}</td>
+                <td className="p-2 border border-gray-300 dark:border-gray-700">
+                  {book.returnDate}
+                </td>
                 <td className="p-2 border border-gray-300 dark:border-gray-700">{book.status}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      
+
       <div className="flex flex-wrap gap-4">
-        
-        <button onClick={()=>{window.print()}} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-          <Printer size={18} /> Print 
+        <button
+          onClick={() => {
+            window.print();
+          }}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+        >
+          <Printer size={18} /> Print
         </button>
       </div>
     </div>

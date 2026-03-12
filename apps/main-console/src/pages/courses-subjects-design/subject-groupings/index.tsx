@@ -23,8 +23,20 @@ import type {
 } from "@repo/db/index";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { Edit, FileText, PlusCircle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { AcademicYear } from "@/types/academics/academic-year";
@@ -63,7 +75,9 @@ function SubjectGroupingsPage() {
   const [programCourseSearch, setProgramCourseSearch] = useState("");
   const [subjectSearch, setSubjectSearch] = useState("");
 
-  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(currentAcademicYear?.id ?? null);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(
+    currentAcademicYear?.id ?? null,
+  );
   const [selectedAffiliationId, setSelectedAffiliationId] = useState<number | null>(null);
   const [selectedRegulationTypeId, setSelectedRegulationTypeId] = useState<number | null>(null);
   const [selectedSubjectTypeId, setSelectedSubjectTypeId] = useState<number | null>(null);
@@ -73,7 +87,9 @@ function SubjectGroupingsPage() {
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
   const [editingGroupingId, setEditingGroupingId] = useState<number | null>(null);
 
-  const [filterAcademicYearId, setFilterAcademicYearId] = useState<number | null>(currentAcademicYear?.id ?? null);
+  const [filterAcademicYearId, setFilterAcademicYearId] = useState<number | null>(
+    currentAcademicYear?.id ?? null,
+  );
   const [filterSubjectTypeId, setFilterSubjectTypeId] = useState<number | null>(null);
 
   const loadGroupings = useCallback(async () => {
@@ -84,17 +100,22 @@ function SubjectGroupingsPage() {
       if (!isMounted) return;
       const typed = data as unknown as SubjectGroupingMainDto[];
       setGroupings(typed);
-      const mapped: UISubjectGroupingRow[] = typed.map((g: SubjectGroupingMainDto, idx: number) => ({
-        id: g.id ?? idx,
-        name: g.name || "",
-        code: (g as SubjectGroupingMainDto & { code?: string | null }).code ?? null,
-        academicYearId: (g.academicYear as AcademicYear | undefined)?.id ?? null,
-        subjectTypeId: g.subjectType?.id ?? null,
-        programCourses:
-          g.subjectGroupingProgramCourses?.map((pc) => pc.programCourse?.name || "").filter(Boolean) || [],
-        subjectType: g.subjectType?.code || g.subjectType?.name || "",
-        subjects: g.subjectGroupingSubjects?.map((s) => s.subject?.name || "").filter(Boolean) || [],
-      }));
+      const mapped: UISubjectGroupingRow[] = typed.map(
+        (g: SubjectGroupingMainDto, idx: number) => ({
+          id: g.id ?? idx,
+          name: g.name || "",
+          code: (g as SubjectGroupingMainDto & { code?: string | null }).code ?? null,
+          academicYearId: (g.academicYear as AcademicYear | undefined)?.id ?? null,
+          subjectTypeId: g.subjectType?.id ?? null,
+          programCourses:
+            g.subjectGroupingProgramCourses
+              ?.map((pc) => pc.programCourse?.name || "")
+              .filter(Boolean) || [],
+          subjectType: g.subjectType?.code || g.subjectType?.name || "",
+          subjects:
+            g.subjectGroupingSubjects?.map((s) => s.subject?.name || "").filter(Boolean) || [],
+        }),
+      );
       setRows(mapped);
       setError(null);
     } catch (err: unknown) {
@@ -168,10 +189,14 @@ function SubjectGroupingsPage() {
     setGroupingName(g.name || "");
     setGroupingCode(g.code || "");
     setSelectedProgramCourseIds(
-      (g.subjectGroupingProgramCourses || []).map((pc) => pc.programCourseId).filter((id): id is number => !!id),
+      (g.subjectGroupingProgramCourses || [])
+        .map((pc) => pc.programCourseId)
+        .filter((id): id is number => !!id),
     );
     setSelectedSubjectIds(
-      (g.subjectGroupingSubjects || []).map((s) => s.subjectId).filter((id: number): id is number => !!id),
+      (g.subjectGroupingSubjects || [])
+        .map((s) => s.subjectId)
+        .filter((id: number): id is number => !!id),
     );
     // Clear filters/search so all relevant options are visible when editing
     setSelectedAffiliationId(null);
@@ -189,7 +214,8 @@ function SubjectGroupingsPage() {
         const pc = programCourses.find((p) => p.id === id);
         if (!pc) return false;
         if (selectedAffiliationId && pc.affiliationId !== selectedAffiliationId) return false;
-        if (selectedRegulationTypeId && pc.regulationTypeId !== selectedRegulationTypeId) return false;
+        if (selectedRegulationTypeId && pc.regulationTypeId !== selectedRegulationTypeId)
+          return false;
         return true;
       }),
     );
@@ -299,7 +325,9 @@ function SubjectGroupingsPage() {
               </DialogTrigger>
               <DialogContent className="w-[100vw] sm:w-full max-w-[90vw] h-[90vh] flex flex-col overflow-hidden">
                 <DialogHeader className="flex-shrink-0">
-                  <DialogTitle>{editingGroupingId ? "Edit Subject Grouping" : "Create Subject Grouping"}</DialogTitle>
+                  <DialogTitle>
+                    {editingGroupingId ? "Edit Subject Grouping" : "Create Subject Grouping"}
+                  </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 flex-1 min-h-0 overflow-hidden">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -307,7 +335,9 @@ function SubjectGroupingsPage() {
                       <div className="text-xs text-muted-foreground">Academic Year</div>
                       <Select
                         value={selectedAcademicYearId?.toString() ?? ""}
-                        onValueChange={(value) => setSelectedAcademicYearId(value ? Number(value) : null)}
+                        onValueChange={(value) =>
+                          setSelectedAcademicYearId(value ? Number(value) : null)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select academic year" />
@@ -325,7 +355,9 @@ function SubjectGroupingsPage() {
                       <div className="text-xs text-muted-foreground">Affiliation</div>
                       <Select
                         value={selectedAffiliationId?.toString() ?? "all"}
-                        onValueChange={(value) => setSelectedAffiliationId(value === "all" ? null : Number(value))}
+                        onValueChange={(value) =>
+                          setSelectedAffiliationId(value === "all" ? null : Number(value))
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="All affiliations" />
@@ -344,7 +376,9 @@ function SubjectGroupingsPage() {
                       <div className="text-xs text-muted-foreground">Regulation Type</div>
                       <Select
                         value={selectedRegulationTypeId?.toString() ?? "all"}
-                        onValueChange={(value) => setSelectedRegulationTypeId(value === "all" ? null : Number(value))}
+                        onValueChange={(value) =>
+                          setSelectedRegulationTypeId(value === "all" ? null : Number(value))
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="All regulation types" />
@@ -363,7 +397,9 @@ function SubjectGroupingsPage() {
                       <div className="text-xs text-muted-foreground">Subject Type</div>
                       <Select
                         value={selectedSubjectTypeId?.toString() ?? ""}
-                        onValueChange={(value) => setSelectedSubjectTypeId(value ? Number(value) : null)}
+                        onValueChange={(value) =>
+                          setSelectedSubjectTypeId(value ? Number(value) : null)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select subject type" />
@@ -418,24 +454,35 @@ function SubjectGroupingsPage() {
                           <div className="flex-1 overflow-y-auto space-y-2">
                             {programCourses
                               .filter((pc) =>
-                                selectedAffiliationId ? pc.affiliationId === selectedAffiliationId : true,
+                                selectedAffiliationId
+                                  ? pc.affiliationId === selectedAffiliationId
+                                  : true,
                               )
                               .filter((pc) =>
-                                selectedRegulationTypeId ? pc.regulationTypeId === selectedRegulationTypeId : true,
+                                selectedRegulationTypeId
+                                  ? pc.regulationTypeId === selectedRegulationTypeId
+                                  : true,
                               )
                               .filter((pc) =>
                                 programCourseSearch.trim()
-                                  ? (pc.name || "").toLowerCase().includes(programCourseSearch.trim().toLowerCase())
+                                  ? (pc.name || "")
+                                      .toLowerCase()
+                                      .includes(programCourseSearch.trim().toLowerCase())
                                   : true,
                               )
                               .map((pc) => (
-                                <label key={pc.id} className="flex items-center gap-2 text-slate-800">
+                                <label
+                                  key={pc.id}
+                                  className="flex items-center gap-2 text-slate-800"
+                                >
                                   <Checkbox
                                     className="border-slate-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                     checked={selectedProgramCourseIds.includes(pc.id!)}
                                     onCheckedChange={(checked) => {
                                       setSelectedProgramCourseIds((prev) =>
-                                        checked ? [...prev, pc.id!] : prev.filter((id) => id !== pc.id),
+                                        checked
+                                          ? [...prev, pc.id!]
+                                          : prev.filter((id) => id !== pc.id),
                                       );
                                     }}
                                   />
@@ -451,20 +498,29 @@ function SubjectGroupingsPage() {
                             {programCourses
                               .filter((pc) => selectedProgramCourseIds.includes(pc.id!))
                               .filter((pc) =>
-                                selectedAffiliationId ? pc.affiliationId === selectedAffiliationId : true,
+                                selectedAffiliationId
+                                  ? pc.affiliationId === selectedAffiliationId
+                                  : true,
                               )
                               .filter((pc) =>
-                                selectedRegulationTypeId ? pc.regulationTypeId === selectedRegulationTypeId : true,
+                                selectedRegulationTypeId
+                                  ? pc.regulationTypeId === selectedRegulationTypeId
+                                  : true,
                               )
                               .map((pc) => (
-                                <div key={pc.id} className="flex items-center justify-between gap-2  text-slate-800">
+                                <div
+                                  key={pc.id}
+                                  className="flex items-center justify-between gap-2  text-slate-800"
+                                >
                                   <span className="truncate">{pc.name}</span>
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-6 w-6 text-slate-500 hover:text-slate-800"
                                     onClick={() =>
-                                      setSelectedProgramCourseIds((prev) => prev.filter((id) => id !== pc.id))
+                                      setSelectedProgramCourseIds((prev) =>
+                                        prev.filter((id) => id !== pc.id),
+                                      )
                                     }
                                   >
                                     ×
@@ -472,7 +528,9 @@ function SubjectGroupingsPage() {
                                 </div>
                               ))}
                             {selectedProgramCourseIds.length === 0 && (
-                              <div className=" text-slate-400 italic">No program courses selected</div>
+                              <div className=" text-slate-400 italic">
+                                No program courses selected
+                              </div>
                             )}
                           </div>
                         </div>
@@ -506,13 +564,18 @@ function SubjectGroupingsPage() {
                                   : true,
                               )
                               .map((s) => (
-                                <label key={s.id} className="flex items-center gap-2 text-slate-800">
+                                <label
+                                  key={s.id}
+                                  className="flex items-center gap-2 text-slate-800"
+                                >
                                   <Checkbox
                                     className="border-slate-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                     checked={selectedSubjectIds.includes(s.id!)}
                                     onCheckedChange={(checked) => {
                                       setSelectedSubjectIds((prev) =>
-                                        checked ? [...prev, s.id!] : prev.filter((id) => id !== s.id),
+                                        checked
+                                          ? [...prev, s.id!]
+                                          : prev.filter((id) => id !== s.id),
                                       );
                                     }}
                                   />
@@ -528,13 +591,20 @@ function SubjectGroupingsPage() {
                             {subjects
                               .filter((s) => selectedSubjectIds.includes(s.id!))
                               .map((s) => (
-                                <div key={s.id} className="flex items-center justify-between gap-2 text-slate-800">
+                                <div
+                                  key={s.id}
+                                  className="flex items-center justify-between gap-2 text-slate-800"
+                                >
                                   <span className="truncate">{s.code || s.name}</span>
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-6 w-6 text-slate-500 hover:text-slate-800"
-                                    onClick={() => setSelectedSubjectIds((prev) => prev.filter((id) => id !== s.id))}
+                                    onClick={() =>
+                                      setSelectedSubjectIds((prev) =>
+                                        prev.filter((id) => id !== s.id),
+                                      )
+                                    }
                                   >
                                     ×
                                   </Button>
@@ -596,10 +666,14 @@ function SubjectGroupingsPage() {
                           : await createSubjectGrouping(payload);
                         if (!result) {
                           toast.error(
-                            isEdit ? "Failed to update subject grouping" : "Failed to create subject grouping",
+                            isEdit
+                              ? "Failed to update subject grouping"
+                              : "Failed to create subject grouping",
                           );
                         } else {
-                          toast.success(isEdit ? "Subject grouping updated" : "Subject grouping created");
+                          toast.success(
+                            isEdit ? "Subject grouping updated" : "Subject grouping created",
+                          );
                           setIsAddOpen(false);
                           setEditingGroupingId(null);
                           resetModalStateForCreate();
@@ -681,7 +755,10 @@ function SubjectGroupingsPage() {
           <div className="relative z-10 bg-white" style={{ height: "600px" }}>
             <div className="overflow-y-auto text-[14px] overflow-x-auto h-full border rounded-md">
               {/* Fixed Header */}
-              <div className="sticky top-0 z-50 text-gray-500 bg-gray-100 border-b" style={{ minWidth: "980px" }}>
+              <div
+                className="sticky top-0 z-50 text-gray-500 bg-gray-100 border-b"
+                style={{ minWidth: "980px" }}
+              >
                 <div className="flex">
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
@@ -731,23 +808,38 @@ function SubjectGroupingsPage() {
               {/* Table Body */}
               <div className="bg-white relative">
                 {loading ? (
-                  <div className="flex items-center justify-center p-4 text-center" style={{ minWidth: "800px" }}>
+                  <div
+                    className="flex items-center justify-center p-4 text-center"
+                    style={{ minWidth: "800px" }}
+                  >
                     Loading subject groupings...
                   </div>
                 ) : !Array.isArray(pagedRows) || pagedRows.length === 0 ? (
-                  <div className="flex items-center justify-center p-4 text-center" style={{ minWidth: "800px" }}>
-                    {!Array.isArray(pagedRows) ? "Error loading data" : "No subject groupings found."}
+                  <div
+                    className="flex items-center justify-center p-4 text-center"
+                    style={{ minWidth: "800px" }}
+                  >
+                    {!Array.isArray(pagedRows)
+                      ? "Error loading data"
+                      : "No subject groupings found."}
                   </div>
                 ) : (
                   pagedRows.map((row, idx) => (
-                    <div key={row.id} className="flex border-b hover:bg-gray-50 group" style={{ minWidth: "980px" }}>
+                    <div
+                      key={row.id}
+                      className="flex border-b hover:bg-gray-50 group"
+                      style={{ minWidth: "980px" }}
+                    >
                       <div
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
                         style={{ width: "6%" }}
                       >
                         {(currentPage - 1) * itemsPerPage + idx + 1}
                       </div>
-                      <div className="flex-shrink-0 p-3 border-r flex items-center" style={{ width: "18%" }}>
+                      <div
+                        className="flex-shrink-0 p-3 border-r flex items-center"
+                        style={{ width: "18%" }}
+                      >
                         <span className=" text-slate-800 truncate">{row.name || "-"}</span>
                       </div>
                       <div
@@ -756,10 +848,15 @@ function SubjectGroupingsPage() {
                       >
                         <span className=" text-slate-700">{row.code || "-"}</span>
                       </div>
-                      <div className="flex-shrink-0 p-3 border-r flex items-center" style={{ width: "24%" }}>
+                      <div
+                        className="flex-shrink-0 p-3 border-r flex items-center"
+                        style={{ width: "24%" }}
+                      >
                         <div className="flex flex-wrap gap-1">
                           {row.programCourses.length === 0 ? (
-                            <span className=" text-muted-foreground">No program courses mapped</span>
+                            <span className=" text-muted-foreground">
+                              No program courses mapped
+                            </span>
                           ) : (
                             row.programCourses.map((name) => (
                               <Badge
@@ -791,7 +888,9 @@ function SubjectGroupingsPage() {
                       <div className="flex-shrink-0 p-3 flex items-center" style={{ width: "20%" }}>
                         <div className="flex flex-wrap gap-1">
                           {row.subjects.length === 0 ? (
-                            <span className="text-xs text-muted-foreground">No subjects mapped</span>
+                            <span className="text-xs text-muted-foreground">
+                              No subjects mapped
+                            </span>
                           ) : (
                             row.subjects.map((name) => (
                               <Badge
@@ -809,7 +908,12 @@ function SubjectGroupingsPage() {
                         className="flex-shrink-0 p-3 border-l flex items-center justify-center"
                         style={{ width: "8%" }}
                       >
-                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => openEditModal(row.id)}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => openEditModal(row.id)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                       </div>
@@ -827,8 +931,8 @@ function SubjectGroupingsPage() {
         <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-2 sm:px-0">
           <div className="sm: text-gray-600 text-center sm:text-left">
             <span className="hidden sm:inline">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
-              {totalItems} results
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+              {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} results
             </span>
             <span className="sm:hidden">
               Page {currentPage} of {totalPages} ({totalItems} total)

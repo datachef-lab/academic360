@@ -2,12 +2,37 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Plus, Edit, Trash2, BookOpen, Download } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
@@ -98,9 +123,12 @@ export default function MandatorySubjectsPage() {
         subject.subjectCode.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesProgramCourse =
-        !selectedProgramCourse || selectedProgramCourse === "all" || subject.programCourse === selectedProgramCourse;
+        !selectedProgramCourse ||
+        selectedProgramCourse === "all" ||
+        subject.programCourse === selectedProgramCourse;
 
-      const matchesClass = !selectedClass || selectedClass === "all" || subject.classes.includes(selectedClass);
+      const matchesClass =
+        !selectedClass || selectedClass === "all" || subject.classes.includes(selectedClass);
 
       return matchesSearch && matchesProgramCourse && matchesClass;
     });
@@ -173,7 +201,9 @@ export default function MandatorySubjectsPage() {
 
   const updateRowSubject = (idx: number, subject: string) => {
     const found = subjectsCatalog.find((s) => s.subject === subject);
-    setDialogRows((prev) => prev.map((r, i) => (i === idx ? { ...r, subject, code: found?.code ?? "" } : r)));
+    setDialogRows((prev) =>
+      prev.map((r, i) => (i === idx ? { ...r, subject, code: found?.code ?? "" } : r)),
+    );
   };
 
   const updateRowClasses = (idx: number, next: string[]) => {
@@ -194,7 +224,10 @@ export default function MandatorySubjectsPage() {
       "5th": "V",
       "6th": "VI",
     };
-    return classes.map((c) => ({ label: c === "12th" ? "12th Board" : `Sem ${toRoman[c] || c}`, value: c }));
+    return classes.map((c) => ({
+      label: c === "12th" ? "12th Board" : `Sem ${toRoman[c] || c}`,
+      value: c,
+    }));
   }, []);
 
   return (
@@ -209,12 +242,15 @@ export default function MandatorySubjectsPage() {
                 Mandatory Subjects
               </CardTitle>
               <div className="text-muted-foreground">
-                Configure mandatory subjects for each program and course. These subjects are required for all students
-                in the specified program.
+                Configure mandatory subjects for each program and course. These subjects are
+                required for all students in the specified program.
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={openAddDialog}>
+              <Button
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={openAddDialog}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add
               </Button>
@@ -321,7 +357,9 @@ export default function MandatorySubjectsPage() {
                     <TableHead className="bg-gray-100 font-semibold text-gray-700 border-r border-gray-300 w-20">
                       Status
                     </TableHead>
-                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-700 w-24">Actions</TableHead>
+                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-700 w-24">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
               </Table>
@@ -332,9 +370,16 @@ export default function MandatorySubjectsPage() {
               <Table className="table-fixed">
                 <TableBody>
                   {paginatedSubjects.map((subject, index) => (
-                    <TableRow key={subject.id} className="border-b border-gray-200 hover:bg-gray-50">
-                      <TableCell className="border-r border-gray-300 w-16">{startIndex + index + 1}</TableCell>
-                      <TableCell className="font-medium border-r border-gray-300 w-48">{subject.subject}</TableCell>
+                    <TableRow
+                      key={subject.id}
+                      className="border-b border-gray-200 hover:bg-gray-50"
+                    >
+                      <TableCell className="border-r border-gray-300 w-16">
+                        {startIndex + index + 1}
+                      </TableCell>
+                      <TableCell className="font-medium border-r border-gray-300 w-48">
+                        {subject.subject}
+                      </TableCell>
                       <TableCell className="border-r border-gray-300 w-32">
                         <Badge variant="outline">{subject.subjectCode}</Badge>
                       </TableCell>
@@ -389,7 +434,11 @@ export default function MandatorySubjectsPage() {
                           <Button variant="ghost" size="sm" onClick={() => openEditDialog(subject)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -425,7 +474,9 @@ export default function MandatorySubjectsPage() {
         <DialogContent className="max-w-5xl h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{dialogMode === "add" ? "Add" : "Edit"} Mandatory Subjects</DialogTitle>
-            <DialogDescription>Use the table to add one or more subject rows, then Save.</DialogDescription>
+            <DialogDescription>
+              Use the table to add one or more subject rows, then Save.
+            </DialogDescription>
           </DialogHeader>
 
           {/* Table-style form with fixed header and scrollable body */}
@@ -496,7 +547,10 @@ export default function MandatorySubjectsPage() {
                           </PopoverTrigger>
                           <PopoverContent className="w-72 p-0 max-h-64 overflow-auto" align="end">
                             <Command className="max-h-64 overflow-auto">
-                              <CommandInput placeholder="Search classes..." className="text-gray-700" />
+                              <CommandInput
+                                placeholder="Search classes..."
+                                className="text-gray-700"
+                              />
                               <CommandEmpty>No classes found.</CommandEmpty>
                               <CommandGroup>
                                 {classOptions.map((opt) => (
@@ -546,7 +600,10 @@ export default function MandatorySubjectsPage() {
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveDialog} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button
+                onClick={handleSaveDialog}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
                 Save
               </Button>
             </div>

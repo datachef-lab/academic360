@@ -3,7 +3,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Download, Edit, BookText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -15,7 +22,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { boardSubjectNameService, type BoardSubjectNameDto } from "@/services/board-subject-name.service";
+import {
+  boardSubjectNameService,
+  type BoardSubjectNameDto,
+} from "@/services/board-subject-name.service";
 
 // Mock data removed - now using real API
 
@@ -26,7 +36,12 @@ const BoardSubjectNameForm = ({
   isLoading,
 }: {
   initialData: BoardSubjectNameDto | null;
-  onSubmit: (data: { name: string; code?: string | null; sequence?: number | null; isActive: boolean }) => void;
+  onSubmit: (data: {
+    name: string;
+    code?: string | null;
+    sequence?: number | null;
+    isActive: boolean;
+  }) => void;
   onCancel: () => void;
   isLoading: boolean;
 }) => {
@@ -109,7 +124,9 @@ export default function BoardSubjectNamePage() {
   const [error, setError] = React.useState<string | null>(null);
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedSubjectName, setSelectedSubjectName] = React.useState<BoardSubjectNameDto | null>(null);
+  const [selectedSubjectName, setSelectedSubjectName] = React.useState<BoardSubjectNameDto | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Load subject names on component mount
@@ -146,8 +163,13 @@ export default function BoardSubjectNamePage() {
     try {
       if (selectedSubjectName?.id) {
         // Update existing subject name
-        const updatedSubjectName = await boardSubjectNameService.update(selectedSubjectName.id, data);
-        setSubjectNames((prev) => prev.map((sn) => (sn.id === selectedSubjectName.id ? updatedSubjectName : sn)));
+        const updatedSubjectName = await boardSubjectNameService.update(
+          selectedSubjectName.id,
+          data,
+        );
+        setSubjectNames((prev) =>
+          prev.map((sn) => (sn.id === selectedSubjectName.id ? updatedSubjectName : sn)),
+        );
         toast.success("Subject name updated successfully");
       } else {
         // Create new subject name
@@ -209,12 +231,17 @@ export default function BoardSubjectNamePage() {
               <BookText className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400" />
               Subjects
             </CardTitle>
-            <div className="text-sm sm:text-base text-muted-foreground mt-1">Manage master list of subjects.</div>
+            <div className="text-sm sm:text-base text-muted-foreground mt-1">
+              Manage master list of subjects.
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
+                <Button
+                  onClick={handleAddNew}
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+                >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Add Subjects</span>
                   <span className="sm:hidden">Add</span>
@@ -222,7 +249,9 @@ export default function BoardSubjectNamePage() {
               </AlertDialogTrigger>
               <AlertDialogContent className="w-[95vw] sm:w-full max-w-2xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedSubjectName ? "Edit Subject" : "Add New Subject"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedSubjectName ? "Edit Subject" : "Add New Subject"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <BoardSubjectNameForm
                   initialData={selectedSubjectName}
@@ -232,7 +261,11 @@ export default function BoardSubjectNamePage() {
                 />
               </AlertDialogContent>
             </AlertDialog>
-            <Button variant="outline" className="flex items-center gap-2 flex-shrink-0" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 flex-shrink-0"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Download</span>
             </Button>
@@ -253,32 +286,62 @@ export default function BoardSubjectNamePage() {
                 <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
                     <TableHead
-                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                      style={{
+                        background: "#f3f4f6",
+                        color: "#374151",
+                        whiteSpace: "nowrap",
+                        padding: "12px 8px",
+                      }}
                     >
                       ID
                     </TableHead>
                     <TableHead
-                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                      style={{
+                        background: "#f3f4f6",
+                        color: "#374151",
+                        whiteSpace: "nowrap",
+                        padding: "12px 8px",
+                      }}
                     >
                       Subject Name
                     </TableHead>
                     <TableHead
-                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                      style={{
+                        background: "#f3f4f6",
+                        color: "#374151",
+                        whiteSpace: "nowrap",
+                        padding: "12px 8px",
+                      }}
                     >
                       Code
                     </TableHead>
                     <TableHead
-                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                      style={{
+                        background: "#f3f4f6",
+                        color: "#374151",
+                        whiteSpace: "nowrap",
+                        padding: "12px 8px",
+                      }}
                     >
                       Sequence
                     </TableHead>
                     <TableHead
-                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                      style={{
+                        background: "#f3f4f6",
+                        color: "#374151",
+                        whiteSpace: "nowrap",
+                        padding: "12px 8px",
+                      }}
                     >
                       Status
                     </TableHead>
                     <TableHead
-                      style={{ background: "#f3f4f6", color: "#374151", whiteSpace: "nowrap", padding: "12px 8px" }}
+                      style={{
+                        background: "#f3f4f6",
+                        color: "#374151",
+                        whiteSpace: "nowrap",
+                        padding: "12px 8px",
+                      }}
                     >
                       Actions
                     </TableHead>
@@ -312,14 +375,21 @@ export default function BoardSubjectNamePage() {
                         <TableCell style={{ padding: "12px 8px" }}>{sn.sequence ?? "-"}</TableCell>
                         <TableCell style={{ padding: "12px 8px" }}>
                           {sn.isActive ? (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">
+                              Active
+                            </Badge>
                           ) : (
                             <Badge variant="secondary">Inactive</Badge>
                           )}
                         </TableCell>
                         <TableCell style={{ padding: "12px 8px" }}>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(sn)} className="h-5 w-5 p-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(sn)}
+                              className="h-5 w-5 p-0"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           </div>

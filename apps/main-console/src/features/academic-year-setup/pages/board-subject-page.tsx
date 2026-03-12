@@ -3,7 +3,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Download, Edit, GraduationCap, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -14,12 +21,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { boardSubjectService, type BoardSubjectDto } from "@/services/board-subject.service";
 import { boardService, type BoardDto } from "@/services/board.service";
-import { boardSubjectNameService, type BoardSubjectNameDto } from "@/services/board-subject-name.service";
+import {
+  boardSubjectNameService,
+  type BoardSubjectNameDto,
+} from "@/services/board-subject-name.service";
 import { degreeService, type DegreeDto } from "@/services/degree.service";
 
 // ----------------- Board Subject Form -------------------
@@ -87,9 +103,12 @@ const BoardSubjectForm = ({
       boardId: formData.boardId,
       boardSubjectNameId: formData.boardSubjectNameId,
       fullMarksTheory: formData.fullMarksTheory === "" ? null : Number(formData.fullMarksTheory),
-      passingMarksTheory: formData.passingMarksTheory === "" ? null : Number(formData.passingMarksTheory),
-      fullMarksPractical: formData.fullMarksPractical === "" ? null : Number(formData.fullMarksPractical),
-      passingMarksPractical: formData.passingMarksPractical === "" ? null : Number(formData.passingMarksPractical),
+      passingMarksTheory:
+        formData.passingMarksTheory === "" ? null : Number(formData.passingMarksTheory),
+      fullMarksPractical:
+        formData.fullMarksPractical === "" ? null : Number(formData.fullMarksPractical),
+      passingMarksPractical:
+        formData.passingMarksPractical === "" ? null : Number(formData.passingMarksPractical),
       isActive: formData.isActive,
     });
   };
@@ -208,10 +227,14 @@ export default function BoardSubjectPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedBoardSubject, setSelectedBoardSubject] = React.useState<BoardSubjectDto | null>(null);
+  const [selectedBoardSubject, setSelectedBoardSubject] = React.useState<BoardSubjectDto | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [boardOptions, setBoardOptions] = React.useState<BoardDto[]>([]);
-  const [boardSubjectNameOptions, setBoardSubjectNameOptions] = React.useState<BoardSubjectNameDto[]>([]);
+  const [boardSubjectNameOptions, setBoardSubjectNameOptions] = React.useState<
+    BoardSubjectNameDto[]
+  >([]);
   const [degreeOptions, setDegreeOptions] = React.useState<DegreeDto[]>([]);
 
   // Pagination state
@@ -260,7 +283,12 @@ export default function BoardSubjectPage() {
       try {
         setLoading(true);
         setError(null);
-        const result = await boardSubjectService.getAll(currentPage, pageSize, searchText, selectedDegreeId);
+        const result = await boardSubjectService.getAll(
+          currentPage,
+          pageSize,
+          searchText,
+          selectedDegreeId,
+        );
 
         if (!isMounted) return; // Prevent state updates if component unmounted
 
@@ -309,7 +337,9 @@ export default function BoardSubjectPage() {
       if (selectedBoardSubject?.id) {
         // Update existing board subject
         const updatedBoardSubject = await boardSubjectService.update(selectedBoardSubject.id, data);
-        setBoardSubjects((prev) => prev.map((bs) => (bs.id === selectedBoardSubject.id ? updatedBoardSubject : bs)));
+        setBoardSubjects((prev) =>
+          prev.map((bs) => (bs.id === selectedBoardSubject.id ? updatedBoardSubject : bs)),
+        );
         toast.success("Board subject mapping updated successfully");
       } else {
         // Create new board subject
@@ -342,7 +372,11 @@ export default function BoardSubjectPage() {
 
     try {
       // First, get total count to calculate progress
-      console.log("Getting total count for download with filters:", { searchText, selectedDegreeId, selectedBoardId });
+      console.log("Getting total count for download with filters:", {
+        searchText,
+        selectedDegreeId,
+        selectedBoardId,
+      });
       setDownloadProgress(5);
       toast.info("Calculating total records...");
 
@@ -449,7 +483,10 @@ export default function BoardSubjectPage() {
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
+                <Button
+                  onClick={handleAddNew}
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+                >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Add Mapping</span>
                   <span className="sm:hidden">Add</span>
@@ -458,7 +495,9 @@ export default function BoardSubjectPage() {
               <AlertDialogContent className="w-[95vw] sm:w-full max-w-4xl">
                 <AlertDialogHeader>
                   <AlertDialogTitle className="text-lg sm:text-xl">
-                    {selectedBoardSubject ? "Edit Board Subject Mapping" : "Add New Board Subject Mapping"}
+                    {selectedBoardSubject
+                      ? "Edit Board Subject Mapping"
+                      : "Add New Board Subject Mapping"}
                   </AlertDialogTitle>
                 </AlertDialogHeader>
                 <BoardSubjectForm
@@ -478,11 +517,17 @@ export default function BoardSubjectPage() {
                 onClick={handleDownloadAll}
                 disabled={isDownloading}
               >
-                {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {isDownloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
                 <span className="hidden sm:inline">
                   {isDownloading ? `Downloading... ${Math.round(downloadProgress)}%` : "Download"}
                 </span>
-                <span className="sm:hidden">{isDownloading ? `${Math.round(downloadProgress)}%` : ""}</span>
+                <span className="sm:hidden">
+                  {isDownloading ? `${Math.round(downloadProgress)}%` : ""}
+                </span>
               </Button>
               {isDownloading && (
                 <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -713,10 +758,14 @@ export default function BoardSubjectPage() {
                   ) : (
                     boardSubjects.map((bs, index) => (
                       <TableRow key={bs.id} className="group">
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           {index + 1}
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           {bs.board.code ? (
                             <Badge
                               variant="outline"
@@ -728,7 +777,9 @@ export default function BoardSubjectPage() {
                             "-"
                           )}
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           <div
                             className="truncate"
                             title={`${bs.boardSubjectName.name}${bs.boardSubjectName.code && bs.boardSubjectName.code !== "-" ? ` (${bs.boardSubjectName.code})` : ""}`}
@@ -737,7 +788,9 @@ export default function BoardSubjectPage() {
                               <span className="text-sm">
                                 {bs.boardSubjectName.name}
                                 {bs.boardSubjectName.code && bs.boardSubjectName.code !== "-" && (
-                                  <span className="text-muted-foreground ml-1">({bs.boardSubjectName.code})</span>
+                                  <span className="text-muted-foreground ml-1">
+                                    ({bs.boardSubjectName.code})
+                                  </span>
                                 )}
                               </span>
                             ) : (
@@ -745,19 +798,29 @@ export default function BoardSubjectPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           <span className="text-sm">{bs.fullMarksTheory ?? "-"}</span>
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           <span className="text-sm">{bs.passingMarksTheory ?? "-"}</span>
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           <span className="text-sm">{bs.fullMarksPractical ?? "-"}</span>
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           <span className="text-sm">{bs.passingMarksPractical ?? "-"}</span>
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           {bs.board.degree?.name ? (
                             <Badge
                               variant="outline"
@@ -769,9 +832,13 @@ export default function BoardSubjectPage() {
                             "-"
                           )}
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           {bs.isActive ? (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">Active</Badge>
+                            <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">
+                              Active
+                            </Badge>
                           ) : (
                             <Badge variant="secondary" className="text-xs">
                               Inactive
@@ -780,7 +847,12 @@ export default function BoardSubjectPage() {
                         </TableCell>
                         <TableCell style={{ padding: "12px 8px" }}>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(bs)} className="h-5 w-5 p-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(bs)}
+                              className="h-5 w-5 p-0"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           </div>
@@ -798,8 +870,8 @@ export default function BoardSubjectPage() {
             <div className="mt-4 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
               <div className="text-xs sm:text-sm text-gray-600">
                 <span className="hidden sm:inline">
-                  Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of{" "}
-                  {totalItems} results
+                  Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                  {Math.min(currentPage * pageSize, totalItems)} of {totalItems} results
                 </span>
                 <span className="sm:hidden">
                   Page {currentPage} of {Math.ceil(totalItems / pageSize)} ({totalItems} total)
@@ -818,7 +890,9 @@ export default function BoardSubjectPage() {
                 </Button>
                 <div className="flex items-center gap-1 overflow-x-auto">
                   {Array.from({ length: Math.min(5, Math.ceil(totalItems / pageSize)) }, (_, i) => {
-                    const pageNum = Math.max(1, Math.min(Math.ceil(totalItems / pageSize) - 4, currentPage - 2)) + i;
+                    const pageNum =
+                      Math.max(1, Math.min(Math.ceil(totalItems / pageSize) - 4, currentPage - 2)) +
+                      i;
                     if (pageNum > Math.ceil(totalItems / pageSize)) return null;
                     return (
                       <Button
@@ -836,7 +910,9 @@ export default function BoardSubjectPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage((prev) => Math.min(Math.ceil(totalItems / pageSize), prev + 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(Math.ceil(totalItems / pageSize), prev + 1))
+                  }
                   disabled={currentPage === Math.ceil(totalItems / pageSize)}
                   className="flex-shrink-0"
                 >

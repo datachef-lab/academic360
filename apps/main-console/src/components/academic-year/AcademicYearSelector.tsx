@@ -1,5 +1,11 @@
 import React, { useEffect } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays } from "lucide-react";
@@ -26,8 +32,14 @@ export const AcademicYearSelector: React.FC<AcademicYearSelectorProps> = ({
   showLabel = true,
 }) => {
   const { accessToken } = useAuth();
-  const { currentAcademicYear, availableAcademicYears, loading, error, setCurrentYear, loadAcademicYears } =
-    useAcademicYear();
+  const {
+    currentAcademicYear,
+    availableAcademicYears,
+    loading,
+    error,
+    setCurrentYear,
+    loadAcademicYears,
+  } = useAcademicYear();
 
   // Load academic years only when access token is available
   useEffect(() => {

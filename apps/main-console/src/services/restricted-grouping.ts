@@ -16,6 +16,8 @@ export async function fetchRestrictedGroupings(params?: {
   >(BASE, {
     params,
   });
-  const p = res.data.payload as RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] };
+  const p = res.data.payload as
+    | RestrictedGroupingMainDto[]
+    | { content: RestrictedGroupingMainDto[] };
   return (Array.isArray(p) ? p : p?.content) as RestrictedGroupingMainDto[];
 }

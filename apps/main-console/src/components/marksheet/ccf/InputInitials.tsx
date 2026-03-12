@@ -3,8 +3,8 @@ import { Plus } from "lucide-react";
 
 interface InputInitialsProps {
   marksheet: Marksheet | null | undefined;
-//   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-//   onAddRow: () => void;
+  //   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  //   onAddRow: () => void;
 }
 
 export default function InputInitials({ marksheet }: InputInitialsProps) {

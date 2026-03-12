@@ -9,11 +9,7 @@ type BacklogDialogProps = {
   backlogs: SubjectMetadataType[] | null;
 };
 
-export default function BacklogDialog({
-  open,
-  backlogs,
-  setOpen,
-}: BacklogDialogProps) {
+export default function BacklogDialog({ open, backlogs, setOpen }: BacklogDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
@@ -31,9 +27,7 @@ export default function BacklogDialog({
               ))}
             </div>
           ) : (
-            <p className="text-center text-gray-500">
-              No backlog details available
-            </p>
+            <p className="text-center text-gray-500">No backlog details available</p>
           )}
         </div>
       </DialogContent>
@@ -55,13 +49,9 @@ export function BacklogCard({ backlog }: { backlog: SubjectMetadataType }) {
           </p>
         )}
         {backlog.fullMarks && (
-          <p className="text-sm text-gray-600">
-            Full Marks: {backlog.fullMarks}
-          </p>
+          <p className="text-sm text-gray-600">Full Marks: {backlog.fullMarks}</p>
         )}
-        {backlog.credit && (
-          <p className="text-sm text-gray-600">Credits: {backlog.credit}</p>
-        )}
+        {backlog.credit && <p className="text-sm text-gray-600">Credits: {backlog.credit}</p>}
       </div>
     </div>
   );

@@ -28,7 +28,9 @@ export interface StudentSubjectSelectionApiResponse {
   session?: { id: number; name?: string; [key: string]: any }; // session information
 }
 
-export async function fetchStudentSubjectSelections(studentId: number): Promise<StudentSubjectSelectionApiResponse> {
+export async function fetchStudentSubjectSelections(
+  studentId: number,
+): Promise<StudentSubjectSelectionApiResponse> {
   const res = await axiosInstance.get(`/api/subject-selection/students/${studentId}/selections`);
   // Backward compatibility: if old payload shape (array), map into new structure
   const payload = res.data?.payload;
@@ -43,6 +45,8 @@ export async function fetchStudentSubjectSelections(studentId: number): Promise<
 
 // Fetch mandatory subjects for a student (non-optional papers for their academic year)
 export async function fetchMandatorySubjects(studentId: number) {
-  const res = await axiosInstance.get(`/api/subject-selection/students/${studentId}/mandatory-papers`);
+  const res = await axiosInstance.get(
+    `/api/subject-selection/students/${studentId}/mandatory-papers`,
+  );
   return res.data.payload;
 }

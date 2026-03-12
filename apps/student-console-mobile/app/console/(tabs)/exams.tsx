@@ -45,7 +45,9 @@ function hasPapersToday(exam: ExamDto, today: Date): boolean {
 
 function allPapersCompleted(exam: ExamDto, now: Date): boolean {
   if (!exam.examSubjects?.length) return false;
-  const last = exam.examSubjects.reduce((a, b) => (new Date(b.endTime) > new Date(a.endTime) ? b : a));
+  const last = exam.examSubjects.reduce((a, b) =>
+    new Date(b.endTime) > new Date(a.endTime) ? b : a,
+  );
   return now > new Date(last.endTime);
 }
 
@@ -115,10 +117,17 @@ export default function ExamsScreen() {
     });
 
   const completedExams = exams
-    .filter((e) => allPapersCompleted(e, now) && !hasUpcomingPapers(e, today) && !hasPapersToday(e, today))
+    .filter(
+      (e) =>
+        allPapersCompleted(e, now) && !hasUpcomingPapers(e, today) && !hasPapersToday(e, today),
+    )
     .sort((a, b) => {
-      const lastA = (a.examSubjects || []).reduce((x, y) => (new Date(y.endTime) > new Date(x.endTime) ? y : x));
-      const lastB = (b.examSubjects || []).reduce((x, y) => (new Date(y.endTime) > new Date(x.endTime) ? y : x));
+      const lastA = (a.examSubjects || []).reduce((x, y) =>
+        new Date(y.endTime) > new Date(x.endTime) ? y : x,
+      );
+      const lastB = (b.examSubjects || []).reduce((x, y) =>
+        new Date(y.endTime) > new Date(x.endTime) ? y : x,
+      );
       return new Date(lastB.endTime).getTime() - new Date(lastA.endTime).getTime();
     });
 
@@ -210,7 +219,8 @@ export default function ExamsScreen() {
         ? { border: cardBorder, iconBg: "rgba(255,255,255,0.08)", text: theme.text }
         : { border: cardBorder, iconBg: "#f3f4f6", text: theme.text },
     }[variant];
-    const Icon = variant === "completed" ? FileText : variant === "today" ? GraduationCap : Calendar;
+    const Icon =
+      variant === "completed" ? FileText : variant === "today" ? GraduationCap : Calendar;
 
     let displayPaper: (typeof exam.examSubjects)[0] | null = null;
     if (exam.examSubjects?.length) {
@@ -233,7 +243,9 @@ export default function ExamsScreen() {
           .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
         displayPaper = td[0] ?? exam.examSubjects[0];
       } else {
-        displayPaper = (exam.examSubjects || []).reduce((a, b) => (new Date(b.endTime) > new Date(a.endTime) ? b : a));
+        displayPaper = (exam.examSubjects || []).reduce((a, b) =>
+          new Date(b.endTime) > new Date(a.endTime) ? b : a,
+        );
       }
     }
 
@@ -249,7 +261,13 @@ export default function ExamsScreen() {
           marginBottom: 12,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+          }}
+        >
           <View style={{ flex: 1, flexDirection: "row", alignItems: "flex-start" }}>
             <View
               style={{
@@ -299,7 +317,9 @@ export default function ExamsScreen() {
                 backgroundColor: styles.iconBg,
               }}
             >
-              <Text style={{ color: styles.text, fontSize: 12, fontWeight: "500" }}>{exam.class?.name ?? ""}</Text>
+              <Text style={{ color: styles.text, fontSize: 12, fontWeight: "500" }}>
+                {exam.class?.name ?? ""}
+              </Text>
             </View>
             <Pressable
               onPress={onPress}
@@ -322,7 +342,10 @@ export default function ExamsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Tabs - same style as adm-registration */}
         <ScrollView
           horizontal
@@ -338,9 +361,19 @@ export default function ExamsScreen() {
         >
           {(
             [
-              { key: "upcoming" as const, label: "Upcoming", icon: Calendar, count: upcomingExams.length },
+              {
+                key: "upcoming" as const,
+                label: "Upcoming",
+                icon: Calendar,
+                count: upcomingExams.length,
+              },
               { key: "today" as const, label: "Today", icon: Clock, count: todayExams.length },
-              { key: "completed" as const, label: "Completed", icon: History, count: completedExams.length },
+              {
+                key: "completed" as const,
+                label: "Completed",
+                icon: History,
+                count: completedExams.length,
+              },
             ] as const
           ).map(({ key, label, icon: Icon, count }) => {
             const isActive = activeTab === key;
@@ -392,7 +425,9 @@ export default function ExamsScreen() {
         ) : exams.length === 0 ? (
           <View style={{ alignItems: "center", paddingVertical: 48 }}>
             <FileText size={48} color={theme.text} style={{ opacity: 0.4 }} />
-            <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginTop: 12 }}>No Exams Found</Text>
+            <Text style={{ color: theme.text, fontSize: 16, fontWeight: "600", marginTop: 12 }}>
+              No Exams Found
+            </Text>
             <Text style={{ color: theme.text, opacity: 0.7, marginTop: 4, textAlign: "center" }}>
               We couldn&apos;t find any exams for your account.
             </Text>
@@ -413,7 +448,9 @@ export default function ExamsScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <Clock size={20} color="#15803d" />
                   <View>
-                    <Text style={{ color: theme.text, fontSize: 13, fontWeight: "600" }}>Total Exam Time Today</Text>
+                    <Text style={{ color: theme.text, fontSize: 13, fontWeight: "600" }}>
+                      Total Exam Time Today
+                    </Text>
                     <Text style={{ color: "#15803d", fontSize: 18, fontWeight: "700" }}>
                       {formatMinutesToHoursMinutes(totalTodayMinutes)}
                     </Text>
@@ -443,7 +480,9 @@ export default function ExamsScreen() {
                 {upcomingExams.length === 0 ? (
                   <View style={{ alignItems: "center", paddingVertical: 32 }}>
                     <Calendar size={40} color={theme.text} style={{ opacity: 0.4 }} />
-                    <Text style={{ color: theme.text, fontWeight: "600", marginTop: 12 }}>No Upcoming Exams</Text>
+                    <Text style={{ color: theme.text, fontWeight: "600", marginTop: 12 }}>
+                      No Upcoming Exams
+                    </Text>
                   </View>
                 ) : (
                   upcomingExams.map((exam) => (
@@ -463,7 +502,9 @@ export default function ExamsScreen() {
                 {todayExams.length === 0 ? (
                   <View style={{ alignItems: "center", paddingVertical: 32 }}>
                     <Clock size={40} color={theme.text} style={{ opacity: 0.4 }} />
-                    <Text style={{ color: theme.text, fontWeight: "600", marginTop: 12 }}>No Exams Today</Text>
+                    <Text style={{ color: theme.text, fontWeight: "600", marginTop: 12 }}>
+                      No Exams Today
+                    </Text>
                   </View>
                 ) : (
                   todayExams.map((exam) => (
@@ -483,7 +524,9 @@ export default function ExamsScreen() {
                 {completedExams.length === 0 ? (
                   <View style={{ alignItems: "center", paddingVertical: 32 }}>
                     <History size={40} color={theme.text} style={{ opacity: 0.4 }} />
-                    <Text style={{ color: theme.text, fontWeight: "600", marginTop: 12 }}>No Completed Exams</Text>
+                    <Text style={{ color: theme.text, fontWeight: "600", marginTop: 12 }}>
+                      No Completed Exams
+                    </Text>
                   </View>
                 ) : (
                   completedExams.map((exam) => (

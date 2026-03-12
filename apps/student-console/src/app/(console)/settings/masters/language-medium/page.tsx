@@ -10,18 +10,28 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Upload, Download, Loader2, FileText, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  Download,
+  Loader2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { LanguageMedium } from "@/db/schema";
 import { LanguageMediumDialog } from "./language-medium-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 import { columns } from "./columns";
 import { DataTable } from "@/components/ui/data-table";
 
 const ITEMS_PER_PAGE = 10;
-const REQUIRED_HEADERS = ['name'];
+const REQUIRED_HEADERS = ["name"];
 
 export default function LanguageMediumPage() {
   const [data, setData] = useState<LanguageMedium[]>([]);
@@ -48,7 +58,9 @@ export default function LanguageMediumPage() {
   const fetchLanguageMediums = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/language-mediums?page=${currentPage}&limit=${ITEMS_PER_PAGE}`);
+      const response = await fetch(
+        `/api/language-mediums?page=${currentPage}&limit=${ITEMS_PER_PAGE}`,
+      );
       const result = await response.json();
       if (result.success) {
         setData(result.data);
@@ -99,7 +111,7 @@ export default function LanguageMediumPage() {
   const handleToggleStatus = async (languageMedium: LanguageMedium) => {
     try {
       const response = await fetch(`/api/language-mediums?id=${languageMedium.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
       });
       const result = await response.json();
 
@@ -127,17 +139,13 @@ export default function LanguageMediumPage() {
   };
 
   const downloadTemplate = () => {
-    const sampleData = [
-      REQUIRED_HEADERS,
-      ['English'],
-      ['Hindi'],
-    ];
+    const sampleData = [REQUIRED_HEADERS, ["English"], ["Hindi"]];
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(sampleData);
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Language Medium Template');
-    XLSX.writeFile(wb, 'language_medium_template.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, "Language Medium Template");
+    XLSX.writeFile(wb, "language_medium_template.xlsx");
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,7 +156,7 @@ export default function LanguageMediumPage() {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
 
@@ -181,17 +189,17 @@ export default function LanguageMediumPage() {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
-          const headers = (jsonData[0] as string[]).map(h => h.trim());
+          const headers = (jsonData[0] as string[]).map((h) => h.trim());
 
-          const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+          const missingHeaders = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
 
           if (missingHeaders.length > 0) {
             toast({
               title: "Invalid File Format",
-              description: `Missing required headers: ${missingHeaders.join(', ')}`,
+              description: `Missing required headers: ${missingHeaders.join(", ")}`,
               variant: "destructive",
             });
             resolve(false);
@@ -227,12 +235,12 @@ export default function LanguageMediumPage() {
     }
 
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    formData.append("file", selectedFile);
 
     startUploadTransition(async () => {
       try {
-        const response = await fetch('/api/language-mediums/upload', {
-          method: 'POST',
+        const response = await fetch("/api/language-mediums/upload", {
+          method: "POST",
           body: formData,
         });
         const result = await response.json();
@@ -245,7 +253,7 @@ export default function LanguageMediumPage() {
           setSelectedFile(null);
           setNumberOfEntries(0);
           if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+            fileInputRef.current.value = "";
           }
           fetchLanguageMediums();
         } else {
@@ -269,12 +277,12 @@ export default function LanguageMediumPage() {
   const handleDownloadLanguageMediums = async () => {
     startDownloadTransition(async () => {
       try {
-        const response = await fetch('/api/language-mediums/download');
+        const response = await fetch("/api/language-mediums/download");
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
-        a.download = 'language_mediums.xlsx';
+        a.download = "language_mediums.xlsx";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -329,24 +337,30 @@ export default function LanguageMediumPage() {
             )}
 
             {/* Upload File Button */}
-            <Button 
-              type="button" 
-              size="sm" 
-              onClick={handleUploadSubmit} 
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleUploadSubmit}
               disabled={!selectedFile || isPendingUpload}
               className="bg-green-500 hover:bg-green-600 text-white flex items-center gap-2"
             >
               {isPendingUpload ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
               ) : (
-                <><Upload className="mr-2 h-4 w-4" />Upload File</>
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload File
+                </>
               )}
             </Button>
             {/* Download Template Button */}
-            <Button 
-              type="button" 
-              size="sm" 
-              onClick={downloadTemplate} 
+            <Button
+              type="button"
+              size="sm"
+              onClick={downloadTemplate}
               className="bg-gray-400 hover:bg-gray-500 text-white flex items-center gap-2"
             >
               <FileText size={20} />
@@ -356,24 +370,30 @@ export default function LanguageMediumPage() {
 
           {/* Add and Download Group */}
           <div className="flex justify-end gap-2">
-            <Button 
+            <Button
               onClick={handleAdd}
               className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Language Medium
             </Button>
-            <Button 
-              type="button" 
-              size="sm" 
-              onClick={handleDownloadLanguageMediums} 
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleDownloadLanguageMediums}
               disabled={isPendingDownload}
               className="bg-yellow-500 hover:bg-yellow-600 text-white flex items-center gap-2"
             >
               {isPendingDownload ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Downloading...</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Downloading...
+                </>
               ) : (
-                <><Download className="h-4 w-4" />Download Language Mediums</>
+                <>
+                  <Download className="h-4 w-4" />
+                  Download Language Mediums
+                </>
               )}
             </Button>
           </div>

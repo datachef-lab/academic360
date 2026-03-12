@@ -33,7 +33,9 @@ export async function GET(request: Request) {
       return NextResponse.json(university);
     }
 
-    const universities = await getAllBoardUniversities(disabled === null ? undefined : disabled === "true");
+    const universities = await getAllBoardUniversities(
+      disabled === null ? undefined : disabled === "true",
+    );
     return NextResponse.json(universities);
   } catch (error) {
     console.error("Error fetching board universities:", error);
@@ -98,6 +100,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error toggling board university status:", error);
-    return NextResponse.json({ error: "Failed to toggle board university status" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to toggle board university status" },
+      { status: 500 },
+    );
   }
 }

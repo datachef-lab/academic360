@@ -206,7 +206,7 @@ type ReportFilters = {
 export const getAllReports = async (filters: ReportFilters = {}) => {
   try {
     const { export: isExport, ...rest } = filters;
-    
+
     // Build query string from rest filters
     let query = Object.entries(rest)
       .filter(([, value]) => value !== undefined && value !== null && value !== "")
@@ -225,14 +225,13 @@ export const getAllReports = async (filters: ReportFilters = {}) => {
         Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
     });
-    
+
     return response.data;
   } catch (error) {
     console.error("Error fetching reports:", error);
     throw error;
   }
 };
-
 
 type marksheetFilters = {
   page?: number;
@@ -245,15 +244,15 @@ type marksheetFilters = {
   export?: boolean;
 };
 export const getAllMarksheet = async (filters: marksheetFilters = {}) => {
-  const {export:isExport, ...rest} = filters;
+  const { export: isExport, ...rest } = filters;
   // console.log("Filters in getAllReports:", filters);
   let query = Object.entries(rest)
     .filter(([, value]) => value !== undefined && value !== null && value !== "")
     .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
     .join("&");
-    if(isExport){
-      query += "isExport=true";
-    }
+  if (isExport) {
+    query += "isExport=true";
+  }
   // console.log("Query string:", query);
   const url = `/api/marksheets/query${query ? "?" + query : ""}`;
   // console.log("URL:", url);

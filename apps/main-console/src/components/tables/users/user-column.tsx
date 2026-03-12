@@ -43,7 +43,7 @@
 // //       ),
 // //       cell: ({ row }) => {
 // //         const name = row.original.name;
-        
+
 // //         const stringToColor = (str: string) => {
 // //           let hash = 0;
 // //           for (let i = 0; i < str.length; i++) {
@@ -51,9 +51,9 @@
 // //           }
 // //           return `hsl(${hash % 360}, 70%, 60%)`;
 // //         };
-      
+
 // //         const bgColor = stringToColor(name);
-      
+
 // //         return (
 // //           <div className="flex items-center justify-center">
 // //             <Avatar className="h-8 w-8">
@@ -90,9 +90,9 @@
 // //     header: "Actions",
 // //     cell: ({ row }) => {
 // //       return <ActionMenu user={row.original} />},
-     
+
 // //     },
- 
+
 // // ];
 import { ColumnDef } from "@tanstack/react-table";
 import ActionMenu from "@/components/tables/users/ActionMenu";
@@ -100,16 +100,15 @@ import { User } from "@/types/user/user";
 // import { DataTableColumnHeader } from "@/components/globals/DataColumnHeader";
 // import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  BookUser, 
-  Mail, 
-  Smartphone, 
+import {
+  BookUser,
+  Mail,
+  Smartphone,
   MessageSquare,
   User as UserIcon,
   Eye,
-
-  Shield
-} from 'lucide-react';
+  Shield,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export const userColumns: ColumnDef<User>[] = [
@@ -121,7 +120,7 @@ export const userColumns: ColumnDef<User>[] = [
   //       onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
   //       aria-label="Select all"
   //       className="border-gray-500 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
-       
+
   //     />
   //   ),
   //   cell: ({ row }) => (
@@ -145,7 +144,7 @@ export const userColumns: ColumnDef<User>[] = [
     ),
     cell: ({ row }) => {
       const name = row.original.name;
-      
+
       const stringToColor = (str: string) => {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -153,27 +152,26 @@ export const userColumns: ColumnDef<User>[] = [
         }
         return `hsl(${hash % 360}, 70%, 60%)`;
       };
-    
+
       const bgColor = stringToColor(name);
-    
+
       return (
         <div className="flex items-center whitespace-nowrap justify-start">
-        <Avatar className="h-9 w-9 border border-purple-100/50 shadow-sm">
-          <AvatarFallback 
-            style={{ 
-              backgroundColor: bgColor,
-              color: 'white',
-              fontWeight: 600
-            }}
-          >
-            {name.charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className="ml-2">
-          <div className="text-sm font-semibold text-gray-800">{name}</div>
-         
+          <Avatar className="h-9 w-9 border border-purple-100/50 shadow-sm">
+            <AvatarFallback
+              style={{
+                backgroundColor: bgColor,
+                color: "white",
+                fontWeight: 600,
+              }}
+            >
+              {name.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="ml-2">
+            <div className="text-sm font-semibold text-gray-800">{name}</div>
+          </div>
         </div>
-      </div>
       );
     },
   },
@@ -200,35 +198,34 @@ export const userColumns: ColumnDef<User>[] = [
     ),
     cell: ({ row }) => {
       const type = row.getValue("type") as string;
-      
+
       const typeBadges = {
         ADMIN: {
-   icon: <Shield className="h-3.5 w-3.5" />,
+          icon: <Shield className="h-3.5 w-3.5" />,
           className: "bg-red-100/50 text-red-800 border border-red-100 hover:bg-red-100",
           label: "Admin",
         },
-      
+
         STUDENT: {
-    icon: <BookUser className="h-3.5 w-3.5" />,
+          icon: <BookUser className="h-3.5 w-3.5" />,
           className: "bg-green-100/50 text-green-800 border border-green-200 hover:bg-green-100",
           label: "Student",
         },
-       
       };
-  
+
       const config = typeBadges[type as keyof typeof typeBadges] || {
-  icon: <UserIcon className="h-3.5 w-3.5" />,
+        icon: <UserIcon className="h-3.5 w-3.5" />,
         className: "bg-gray-100/50 text-gray-800 hover:bg-gray-100",
-        label: type || 'Unknown'
+        label: type || "Unknown",
       };
-  
+
       return (
         <Badge className={` gap-1 px-3 py-1  text-xs font-medium ${config.className}`}>
-   {config.icon}        
-  {config.label}
+          {config.icon}
+          {config.label}
         </Badge>
       );
-    }
+    },
   },
 
   // {
@@ -241,7 +238,7 @@ export const userColumns: ColumnDef<User>[] = [
   //   ),
   //   cell: ({ row }) => {
   //     const type = row.getValue("type") as string;
-      
+
   //     const typeBadges = {
   //       ADMIN: {
   //         icon: <Shield className="h-3.5 w-3.5" />,
@@ -264,15 +261,15 @@ export const userColumns: ColumnDef<User>[] = [
   //         label: "Staff",
   //       }
   //     };
-  
+
   //     const config = typeBadges[type as keyof typeof typeBadges] || {
   //       icon: <UserIcon className="h-3.5 w-3.5" />,
   //       className: "bg-gray-500/10 text-gray-600 border-gray-200",
   //       label: type || 'Unknown'
   //     };
-  
+
   //     return (
-  //       <Badge 
+  //       <Badge
   //         variant="outline"
   //         className={`flex items-center justify-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium ${config.className}`}
   //       >
@@ -294,11 +291,13 @@ export const userColumns: ColumnDef<User>[] = [
       const phone = row.getValue("phone") as string;
       return (
         <div className="flex items-center justify-center gap-2">
-                       <Badge variant="outline" className="px-2.5 py-1 text-xs bg-blue-50 text-blue-600 border-blue-100">
-                         
-                         {phone}
-                       </Badge>
-                     </div>
+          <Badge
+            variant="outline"
+            className="px-2.5 py-1 text-xs bg-blue-50 text-blue-600 border-blue-100"
+          >
+            {phone}
+          </Badge>
+        </div>
       );
     },
   },
@@ -310,23 +309,22 @@ export const userColumns: ColumnDef<User>[] = [
         <span>WhatsApp No.</span>
       </div>
     ),
- cell: ({ row }) => {
-  const whatsapp = row.getValue("whatsappNumber") as string;
+    cell: ({ row }) => {
+      const whatsapp = row.getValue("whatsappNumber") as string;
 
-  if (!whatsapp) {
-    return <span className="text-slate-500">-</span>;
-  }
+      if (!whatsapp) {
+        return <span className="text-slate-500">-</span>;
+      }
 
-  return (
-    <Badge
-      variant="outline"
-      className="px-2.5 py-1 text-xs bg-green-50 text-green-600 border-green-100"
-    >
-      {whatsapp}
-    </Badge>
-  );
-},
-
+      return (
+        <Badge
+          variant="outline"
+          className="px-2.5 py-1 text-xs bg-green-50 text-green-600 border-green-100"
+        >
+          {whatsapp}
+        </Badge>
+      );
+    },
   },
   {
     id: "actions",
@@ -347,10 +345,10 @@ export const userColumns: ColumnDef<User>[] = [
 // import { User } from "@/types/user/user";
 // import { Checkbox } from "@/components/ui/checkbox";
 // import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-// import { 
-//   BookUser, 
-//   Mail, 
-//   Smartphone, 
+// import {
+//   BookUser,
+//   Mail,
+//   Smartphone,
 //   MessageSquare,
 //   User as UserIcon,
 //   Eye,
@@ -392,7 +390,7 @@ export const userColumns: ColumnDef<User>[] = [
 //     ),
 //     cell: ({ row }) => {
 //       const name = row.original.name;
-      
+
 //       const stringToColor = (str: string) => {
 //         let hash = 0;
 //         for (let i = 0; i < str.length; i++) {
@@ -400,27 +398,27 @@ export const userColumns: ColumnDef<User>[] = [
 //         }
 //         return `hsl(${hash % 360}, 70%, 60%)`;
 //       };
-    
+
 //       const bgColor = stringToColor(name);
-    
+
 //       return (
-        // <div className="flex items-center justify-start">
-        //   <Avatar className="h-9 w-9 border border-purple-100/50 shadow-sm">
-        //     <AvatarFallback 
-        //       style={{ 
-        //         backgroundColor: bgColor,
-        //         color: 'white',
-        //         fontWeight: 600
-        //       }}
-        //     >
-        //       {name.charAt(0).toUpperCase()}
-        //     </AvatarFallback>
-        //   </Avatar>
-        //   <div className="ml-3">
-        //     <div className="text-sm font-semibold text-gray-800">{name}</div>
-        //     <div className="text-xs text-gray-500">{row.original.email}</div>
-        //   </div>
-        // </div>
+// <div className="flex items-center justify-start">
+//   <Avatar className="h-9 w-9 border border-purple-100/50 shadow-sm">
+//     <AvatarFallback
+//       style={{
+//         backgroundColor: bgColor,
+//         color: 'white',
+//         fontWeight: 600
+//       }}
+//     >
+//       {name.charAt(0).toUpperCase()}
+//     </AvatarFallback>
+//   </Avatar>
+//   <div className="ml-3">
+//     <div className="text-sm font-semibold text-gray-800">{name}</div>
+//     <div className="text-xs text-gray-500">{row.original.email}</div>
+//   </div>
+// </div>
 //       );
 //     },
 //   },
@@ -457,7 +455,7 @@ export const userColumns: ColumnDef<User>[] = [
 //     ),
 //     cell: ({ row }) => {
 //       const type = row.getValue("type") as string;
-      
+
 //       const typeBadges = {
 //         ADMIN: {
 //           icon: <Shield className="h-3.5 w-3.5" />,
@@ -480,15 +478,15 @@ export const userColumns: ColumnDef<User>[] = [
 //           label: "Staff",
 //         }
 //       };
-  
+
 //       const config = typeBadges[type as keyof typeof typeBadges] || {
 //         icon: <UserIcon className="h-3.5 w-3.5" />,
 //         className: "bg-gray-500/10 text-gray-600 border-gray-200",
 //         label: type || 'Unknown'
 //       };
-  
+
 //       return (
-//         <Badge 
+//         <Badge
 //           variant="outline"
 //           className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-medium ${config.className}`}
 //         >
@@ -509,7 +507,7 @@ export const userColumns: ColumnDef<User>[] = [
 //     cell: ({ row }) => {
 //       const phone = row.getValue("phone") as string;
 //       const whatsapp = row.getValue("whatsappNumber") as string;
-      
+
 //       return (
 //         <div className="flex flex-col gap-2">
 //           {phone && (
@@ -522,10 +520,10 @@ export const userColumns: ColumnDef<User>[] = [
 //           )}
 //           {whatsapp && (
 //             <div className="flex items-center gap-2">
-              // <Badge variant="outline" className="px-2.5 py-1 text-xs bg-green-50 text-green-600 border-green-100">
-              //   <MessageSquare className="h-3 w-3 mr-1" />
-              //   {whatsapp}
-              // </Badge>
+// <Badge variant="outline" className="px-2.5 py-1 text-xs bg-green-50 text-green-600 border-green-100">
+//   <MessageSquare className="h-3 w-3 mr-1" />
+//   {whatsapp}
+// </Badge>
 //             </div>
 //           )}
 //           {!phone && !whatsapp && <p className="text-sm text-gray-400">-</p>}

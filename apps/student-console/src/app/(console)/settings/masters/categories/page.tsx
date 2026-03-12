@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useState, useTransition, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, Upload, Download, Loader2, FileText, ChevronLeft, ChevronRight } from "lucide-react";
-import { AddCategoryDialog, DeleteCategoryDialog } from './category-dialog';
+import {
+  Pencil,
+  Upload,
+  Download,
+  Loader2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { AddCategoryDialog, DeleteCategoryDialog } from "./category-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from 'xlsx';
-import { uploadCategoriesFromFile, downloadCategories, fetchCategories as getCategories } from './actions';
+import * as XLSX from "xlsx";
+import {
+  uploadCategoriesFromFile,
+  downloadCategories,
+  fetchCategories as getCategories,
+} from "./actions";
 import { Category } from "@/db/schema";
 
 // Define the expected return type for the placeholder downloadCategories action
@@ -30,7 +42,7 @@ interface DownloadCategoriesResult {
 const ITEMS_PER_PAGE = 10;
 
 // Placeholder required headers for category template (adjust as needed)
-const REQUIRED_HEADERS = ['name', 'code', 'documentRequired'];
+const REQUIRED_HEADERS = ["name", "code", "documentRequired"];
 
 export default function CategoriesPage() {
   const [data, setData] = useState<Category[]>([]);
@@ -88,8 +100,8 @@ export default function CategoriesPage() {
     // Create a sample row with empty values
     const sampleData = [
       REQUIRED_HEADERS,
-      [''], // Empty row for example
-      ['Sample Category'], // Example row
+      [""], // Empty row for example
+      ["Sample Category"], // Example row
     ];
 
     // Create a new workbook and worksheet
@@ -97,10 +109,10 @@ export default function CategoriesPage() {
     const ws = XLSX.utils.aoa_to_sheet(sampleData);
 
     // Add the worksheet to the workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Category Template');
+    XLSX.utils.book_append_sheet(wb, ws, "Category Template");
 
     // Generate Excel file
-    XLSX.writeFile(wb, 'category_template.xlsx');
+    XLSX.writeFile(wb, "category_template.xlsx");
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,16 +123,17 @@ export default function CategoriesPage() {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
-          
-          if (jsonData.length > 1) { // Subtract 1 for header row
+
+          if (jsonData.length > 1) {
+            // Subtract 1 for header row
             setNumberOfEntries(jsonData.length - 1);
           } else {
             setNumberOfEntries(0);
           }
-          
+
           // We'll still do full validation on submit
         } catch (error) {
           console.error("Error reading file for entry count:", error);
@@ -146,17 +159,17 @@ export default function CategoriesPage() {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
-          const headers = (jsonData[0] as string[]).map(h => h.trim());
-          
-          const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
-          
+          const headers = (jsonData[0] as string[]).map((h) => h.trim());
+
+          const missingHeaders = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
+
           if (missingHeaders.length > 0) {
             toast({
               title: "Invalid File Format",
-              description: `Missing required headers: ${missingHeaders.join(', ')}`,
+              description: `Missing required headers: ${missingHeaders.join(", ")}`,
               variant: "destructive",
             });
             resolve(false);
@@ -198,7 +211,7 @@ export default function CategoriesPage() {
 
     console.log("File valid, preparing formData...");
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    formData.append("file", selectedFile);
 
     console.log("Starting upload transition...");
     startUploadTransition(async () => {
@@ -221,8 +234,8 @@ export default function CategoriesPage() {
         setSelectedFile(null);
         setNumberOfEntries(0);
         // Clear the file input
-        if(fileInputRef.current) {
-          fileInputRef.current.value = '';
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
         }
         // Refresh data after upload
         fetchCategories();
@@ -258,12 +271,12 @@ export default function CategoriesPage() {
           });
         }
       } else if (!result.success) {
-         console.error("Download failed with error from server action:", result.error);
-         toast({
-           title: "Download Failed",
-           description: result.error || "Failed to fetch categories for download.",
-           variant: "destructive",
-         });
+        console.error("Download failed with error from server action:", result.error);
+        toast({
+          title: "Download Failed",
+          description: result.error || "Failed to fetch categories for download.",
+          variant: "destructive",
+        });
       }
     });
   };
@@ -284,7 +297,6 @@ export default function CategoriesPage() {
   //   handlePageChange(currentPage);
   // };
 
-
   return (
     <div className="container mx-auto pb-10">
       <div className="flex justify-between items-center mb-4">
@@ -299,14 +311,12 @@ export default function CategoriesPage() {
             className="hidden"
             accept=".xlsx,.xls"
           />
-          <Button onClick={() => fileInputRef.current?.click()}>
-            Choose File
-          </Button>
+          <Button onClick={() => fileInputRef.current?.click()}>Choose File</Button>
           <Button
             onClick={() => {
               if (selectedFile) {
                 const formData = new FormData();
-                formData.append('file', selectedFile);
+                formData.append("file", selectedFile);
                 startUploadTransition(async () => {
                   const result = await uploadCategoriesFromFile(formData);
                   if (result.success) {
@@ -406,8 +416,8 @@ export default function CategoriesPage() {
                         onSuccess={refreshData}
                       />
                       {category.id && (
-                        <DeleteCategoryDialog 
-                          categoryId={category.id.toString()} 
+                        <DeleteCategoryDialog
+                          categoryId={category.id.toString()}
                           onSuccess={refreshData}
                         />
                       )}

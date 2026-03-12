@@ -5,7 +5,14 @@ import { useStudent } from "@/providers/student-provider";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { DbCourseMaterial } from "@/types/academics/course-material";
@@ -33,7 +40,9 @@ export default function CourseCataloguePage() {
       setIsLoadingMaterials(true);
 
       // Extract all subject IDs from the batch
-      const subjectIds = batchSubjects.filter((subject) => subject.subjectId).map((subject) => subject.subjectId!);
+      const subjectIds = batchSubjects
+        .filter((subject) => subject.subjectId)
+        .map((subject) => subject.subjectId!);
 
       if (subjectIds.length === 0) return;
 
@@ -117,7 +126,9 @@ export default function CourseCataloguePage() {
               <GraduationCap size={36} className="text-white drop-shadow-md" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">Course Catalogue</h1>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">
+                Course Catalogue
+              </h1>
               <p className="text-blue-50 text-lg drop-shadow max-w-2xl">
                 Explore your academic journey and access course materials
               </p>
@@ -167,7 +178,8 @@ export default function CourseCataloguePage() {
                             {batches[selectedBatch].coursename}
                           </CardTitle>
                           <p className="text-lg text-gray-600 ml-11">
-                            {batches[selectedBatch].classname} ({batches[selectedBatch].sectionName})
+                            {batches[selectedBatch].classname} ({batches[selectedBatch].sectionName}
+                            )
                           </p>
                         </div>
                         <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-1 text-sm">
@@ -191,7 +203,8 @@ export default function CourseCataloguePage() {
                           <Book className="w-5 h-5 mr-2 text-indigo-600" />
                           Subjects & Papers
                         </h3>
-                        {batches[selectedBatch].papers && batches[selectedBatch].papers.length > 0 ? (
+                        {batches[selectedBatch].papers &&
+                        batches[selectedBatch].papers.length > 0 ? (
                           <div
                             className="rounded-xl border border-indigo-100 overflow-hidden bg-white"
                             onClick={(e) => e.stopPropagation()}
@@ -199,17 +212,29 @@ export default function CourseCataloguePage() {
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-indigo-100">
-                                  <TableHead className="w-[25%] text-indigo-900 font-semibold">Subject</TableHead>
-                                  <TableHead className="w-[25%] text-indigo-900 font-semibold">Paper</TableHead>
-                                  <TableHead className="w-[20%] text-indigo-900 font-semibold">Type</TableHead>
-                                  <TableHead className="w-[30%] text-indigo-900 font-semibold">Materials</TableHead>
+                                  <TableHead className="w-[25%] text-indigo-900 font-semibold">
+                                    Subject
+                                  </TableHead>
+                                  <TableHead className="w-[25%] text-indigo-900 font-semibold">
+                                    Paper
+                                  </TableHead>
+                                  <TableHead className="w-[20%] text-indigo-900 font-semibold">
+                                    Type
+                                  </TableHead>
+                                  <TableHead className="w-[30%] text-indigo-900 font-semibold">
+                                    Materials
+                                  </TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {batches[selectedBatch].papers.map((paper, index) => (
                                   <TableRow key={index} className="hover:bg-gray-50/50">
-                                    <TableCell className="font-medium text-gray-900">{paper.subjectname}</TableCell>
-                                    <TableCell className="text-gray-700">{paper.paperName}</TableCell>
+                                    <TableCell className="font-medium text-gray-900">
+                                      {paper.subjectname}
+                                    </TableCell>
+                                    <TableCell className="text-gray-700">
+                                      {paper.paperName}
+                                    </TableCell>
                                     <TableCell>
                                       <Badge
                                         variant="outline"
@@ -279,7 +304,9 @@ export default function CourseCataloguePage() {
                           </div>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 text-center mt-6">Press ESC or click anywhere to close</p>
+                      <p className="text-sm text-gray-500 text-center mt-6">
+                        Press ESC or click anywhere to close
+                      </p>
                     </CardContent>
                   </Card>
                 </motion.div>

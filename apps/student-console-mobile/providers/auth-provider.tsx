@@ -3,7 +3,14 @@ import type { ApiResponse } from "@/lib/auth-service";
 import { deleteRefreshToken, getRefreshToken, setRefreshToken } from "@/lib/secure-storage";
 import type { UserDto } from "@repo/db/dtos/user";
 import { router } from "expo-router";
-import React, { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import { Platform } from "react-native";
 
 const isWeb = Platform.OS === "web";
@@ -46,18 +53,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshSubscribers.current = [];
   };
 
-  const login = useCallback(async (newAccessToken: string, userData: UserDto, refreshToken?: string) => {
-    if (userData?.type !== "STUDENT") {
-      return;
-    }
-    setAccessToken(newAccessToken);
-    setAccessTokenForApi(newAccessToken);
-    setUser(userData);
-    // Store on all platforms - web needs it for cross-origin (cookies don't work)
-    if (refreshToken) {
-      await setRefreshToken(refreshToken);
-    }
-  }, []);
+  const login = useCallback(
+    async (newAccessToken: string, userData: UserDto, refreshToken?: string) => {
+      if (userData?.type !== "STUDENT") {
+        return;
+      }
+      setAccessToken(newAccessToken);
+      setAccessTokenForApi(newAccessToken);
+      setUser(userData);
+      // Store on all platforms - web needs it for cross-origin (cookies don't work)
+      if (refreshToken) {
+        await setRefreshToken(refreshToken);
+      }
+    },
+    [],
+  );
 
   const logout = useCallback(async () => {
     setAccessToken(null);
@@ -73,23 +83,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const generateNewToken = useCallback(
-    async (options?: { onFailureRedirect?: boolean }): Promise<{ token: string | null; user: UserDto | null }> => {
+    async (options?: {
+      onFailureRedirect?: boolean;
+    }): Promise<{ token: string | null; user: UserDto | null }> => {
       const shouldRedirect = options?.onFailureRedirect ?? true;
       try {
         // Prefer stored token (header) when available - works for both web (cross-origin)
         // and native. Cookies don't work cross-origin (e.g. localhost:8081 -> 192.168.x.x:8080).
         const storedRefresh = await getRefreshToken();
         if (__DEV__) {
-          console.log(`[Auth] refresh check: platform=${Platform.OS} hasStoredToken=${!!storedRefresh}`);
+          console.log(
+            `[Auth] refresh check: platform=${Platform.OS} hasStoredToken=${!!storedRefresh}`,
+          );
         }
         if (storedRefresh) {
           if (__DEV__) console.log("[Auth] initiating /auth/refresh request");
-          const response = await axiosInstance.get<ApiResponse<{ accessToken: string; user: UserDto }>>(
-            "/auth/refresh",
-            {
-              headers: { "X-Refresh-Token": storedRefresh },
-            },
-          );
+          const response = await axiosInstance.get<
+            ApiResponse<{ accessToken: string; user: UserDto }>
+          >("/auth/refresh", {
+            headers: { "X-Refresh-Token": storedRefresh },
+          });
           const payload = response.data.payload;
           if (payload.user?.type === "STUDENT") {
             setAccessToken(payload.accessToken);
@@ -102,10 +115,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // Fallback: cookies (only works same-origin on web)
         if (isWeb) {
-          const response = await axiosInstance.get<ApiResponse<{ accessToken: string; user: UserDto }>>(
-            "/auth/refresh",
-            { withCredentials: true },
-          );
+          const response = await axiosInstance.get<
+            ApiResponse<{ accessToken: string; user: UserDto }>
+          >("/auth/refresh", { withCredentials: true });
           const payload = response.data.payload;
           if (payload.user?.type === "STUDENT") {
             setAccessToken(payload.accessToken);

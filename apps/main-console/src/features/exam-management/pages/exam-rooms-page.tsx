@@ -14,7 +14,13 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { toast } from "sonner";
-import { getAllRooms, createRoom, updateRoom, deleteRoom, type RoomT } from "@/services/room.service";
+import {
+  getAllRooms,
+  createRoom,
+  updateRoom,
+  deleteRoom,
+  type RoomT,
+} from "@/services/room.service";
 import { getAllFloors, type FloorT } from "@/services/floor.service";
 import { RoomDto } from "@/dtos";
 
@@ -35,11 +41,19 @@ type RoomFormProps = {
   floors: FloorT[];
 };
 
-function RoomForm({ initialData, onSubmit, onCancel, isSubmitting = false, floors }: RoomFormProps) {
+function RoomForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  isSubmitting = false,
+  floors,
+}: RoomFormProps) {
   const [name, setName] = useState(initialData?.name ?? "");
   const [shortName, setShortName] = useState(initialData?.shortName ?? "");
   const [numberOfBenches, setNumberOfBenches] = useState<number>(initialData?.numberOfBenches ?? 0);
-  const [maxStudentsPerBench, setMaxStudentsPerBench] = useState<number>(initialData?.maxStudentsPerBench ?? 0);
+  const [maxStudentsPerBench, setMaxStudentsPerBench] = useState<number>(
+    initialData?.maxStudentsPerBench ?? 0,
+  );
   const [floorId, setFloorId] = useState<number | undefined>(initialData?.floor.id ?? undefined);
   const [isActive, setIsActive] = useState<boolean>(initialData?.isActive ?? true);
 
@@ -315,7 +329,9 @@ export default function ExamRoomsPage() {
               <DoorOpen className="mr-1 h-8 w-8 border rounded-md p-1 border-slate-400" />
               Room Management
             </CardTitle>
-            <p className="text-muted-foreground text-sm">Manage exam rooms, assign floors, and toggle availability.</p>
+            <p className="text-muted-foreground text-sm">
+              Manage exam rooms, assign floors, and toggle availability.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" className="shadow-none border-slate-200">
@@ -362,7 +378,10 @@ export default function ExamRoomsPage() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2 border-slate-200 shadow-none">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 border-slate-200 shadow-none"
+            >
               <Download className="h-4 w-4" />
               Export List
             </Button>
@@ -393,7 +412,9 @@ export default function ExamRoomsPage() {
                   <div className="flex-shrink-0 basis-[10%] px-3 py-2 border-r border-slate-300 flex items-center justify-center">
                     Status
                   </div>
-                  <div className="flex-shrink-0 basis-[13%] px-3 py-2 flex items-center justify-center">Actions</div>
+                  <div className="flex-shrink-0 basis-[13%] px-3 py-2 flex items-center justify-center">
+                    Actions
+                  </div>
                 </div>
               </div>
 
@@ -420,11 +441,16 @@ export default function ExamRoomsPage() {
                         </div>
                         <div className="flex-shrink-0 basis-[20%] px-3 py-3 border-r border-slate-200 flex items-center">
                           <div className="flex flex-col">
-                            <span className="font-medium text-slate-800 truncate" title={room.name ?? undefined}>
+                            <span
+                              className="font-medium text-slate-800 truncate"
+                              title={room.name ?? undefined}
+                            >
                               {room.name}
                             </span>
                             {room.legacyRoomId && (
-                              <span className="text-xs text-muted-foreground">Legacy ID: {room.legacyRoomId}</span>
+                              <span className="text-xs text-muted-foreground">
+                                Legacy ID: {room.legacyRoomId}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -443,7 +469,9 @@ export default function ExamRoomsPage() {
                         <div className="flex-shrink-0 basis-[10%] px-3 py-3 border-r border-slate-200 flex items-center justify-center">
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              room.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                              room.isActive
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
                             }`}
                           >
                             {room.isActive ? "Active" : "Inactive"}

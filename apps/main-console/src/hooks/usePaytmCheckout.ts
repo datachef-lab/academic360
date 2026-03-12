@@ -113,7 +113,8 @@ export function usePaytmCheckout() {
 
         params.onBeforeInvoke?.();
 
-        const paytmHost = config.host?.replace(/^https?:\/\//, "") || "securestage.paytmpayments.com";
+        const paytmHost =
+          config.host?.replace(/^https?:\/\//, "") || "securestage.paytmpayments.com";
         const showPaymentUrl = `https://${paytmHost}/theia/api/v1/showPaymentPage?mid=${config.mid}&orderId=${initData.orderId}`;
 
         const form = document.createElement("form");
@@ -140,7 +141,8 @@ export function usePaytmCheckout() {
         setLoading(false);
       } catch (err: unknown) {
         const axiosData = (err as { response?: { data?: { message?: string } } })?.response?.data;
-        const msg = axiosData?.message || (err instanceof Error ? err.message : "Failed to open payment");
+        const msg =
+          axiosData?.message || (err instanceof Error ? err.message : "Failed to open payment");
         setError(msg);
         params.onFailure?.(msg);
         setLoading(false);
@@ -149,12 +151,19 @@ export function usePaytmCheckout() {
     [],
   );
 
-  const pollPaymentStatus = useCallback(async (orderId: string): Promise<"SUCCESS" | "FAILED" | "PENDING"> => {
-    const res = await getPaymentStatus(orderId);
-    return (
-      res.payload?.status === "TXN_SUCCESS" ? "SUCCESS" : res.payload?.status === "TXN_FAILURE" ? "FAILED" : "PENDING"
-    ) as "SUCCESS" | "FAILED" | "PENDING";
-  }, []);
+  const pollPaymentStatus = useCallback(
+    async (orderId: string): Promise<"SUCCESS" | "FAILED" | "PENDING"> => {
+      const res = await getPaymentStatus(orderId);
+      return (
+        res.payload?.status === "TXN_SUCCESS"
+          ? "SUCCESS"
+          : res.payload?.status === "TXN_FAILURE"
+            ? "FAILED"
+            : "PENDING"
+      ) as "SUCCESS" | "FAILED" | "PENDING";
+    },
+    [],
+  );
 
   return { openPaytmCheckout, pollPaymentStatus, loading, error };
 }

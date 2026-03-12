@@ -1,20 +1,6 @@
 import React, { useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "../ui/sheet";
-import {
-  Bell,
-  ClipboardList,
-  FileText,
-  GraduationCap,
-  Star,
-  Users,
-  X,
-} from "lucide-react";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../ui/sheet";
+import { Bell, ClipboardList, FileText, GraduationCap, Star, Users, X } from "lucide-react";
 import { Notification } from "./NotificationCorner";
 
 type NotificationFilter = "all" | "unread" | "important";
@@ -67,19 +53,15 @@ export default function NotificationSheet({
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>("all");
 
   const dismissNotification = (id: number) => {
-    setNotifications(
-      notifications.filter((notification) => notification.id !== id)
-    );
+    setNotifications(notifications.filter((notification) => notification.id !== id));
   };
 
   // Mark a notification as read
   const markAsRead = (id: number) => {
     setNotifications(
       notifications.map((notification) =>
-        notification.id === id
-          ? { ...notification, isRead: true }
-          : notification
-      )
+        notification.id === id ? { ...notification, isRead: true } : notification,
+      ),
     );
   };
 
@@ -89,8 +71,8 @@ export default function NotificationSheet({
       notifications.map((notification) =>
         notification.id === id
           ? { ...notification, isImportant: !notification.isImportant }
-          : notification
-      )
+          : notification,
+      ),
     );
   };
 
@@ -205,17 +187,13 @@ export default function NotificationSheet({
                         <FileText className={`w-5 h-5 ${colorClasses.text}`} />
                       )}
                       {notification.type === "quiz" && (
-                        <ClipboardList
-                          className={`w-5 h-5 ${colorClasses.text}`}
-                        />
+                        <ClipboardList className={`w-5 h-5 ${colorClasses.text}`} />
                       )}
                       {notification.type === "class" && (
                         <Users className={`w-5 h-5 ${colorClasses.text}`} />
                       )}
                       {notification.type === "exam" && (
-                        <GraduationCap
-                          className={`w-5 h-5 ${colorClasses.text}`}
-                        />
+                        <GraduationCap className={`w-5 h-5 ${colorClasses.text}`} />
                       )}
                       {notification.type === "feedback" && (
                         <Star className={`w-5 h-5 ${colorClasses.text}`} />
@@ -227,18 +205,14 @@ export default function NotificationSheet({
                         <div>
                           <h4
                             className={`text-sm font-medium ${
-                              !notification.isRead
-                                ? "text-gray-900 font-semibold"
-                                : "text-gray-700"
+                              !notification.isRead ? "text-gray-900 font-semibold" : "text-gray-700"
                             }`}
                           >
                             {notification.title}
                           </h4>
                           <p
                             className={`text-sm ${
-                              !notification.isRead
-                                ? "text-gray-600"
-                                : "text-gray-500"
+                              !notification.isRead ? "text-gray-600" : "text-gray-500"
                             } mt-1`}
                           >
                             {notification.course}
@@ -296,12 +270,10 @@ export default function NotificationSheet({
               <div className="w-20 h-20 rounded-full bg-white shadow-sm flex items-center justify-center mb-4">
                 <Bell className="w-8 h-8 text-gray-300" />
               </div>
-              <p className="text-gray-800 font-medium text-lg mb-2">
-                All caught up!
-              </p>
+              <p className="text-gray-800 font-medium text-lg mb-2">All caught up!</p>
               <p className="text-gray-500 text-sm max-w-xs px-4">
-                You don&apos;t have any notifications at the moment. We&apos;ll
-                notify you when something new arrives.
+                You don&apos;t have any notifications at the moment. We&apos;ll notify you when
+                something new arrives.
               </p>
             </div>
           )}

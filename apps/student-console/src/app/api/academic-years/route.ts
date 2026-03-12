@@ -50,7 +50,10 @@ export async function PUT(req: Request) {
     const validatedData = createAcademicYearSchema.parse(body);
     const updatedAcademicYear = await updateAcademicYear(Number(id), validatedData);
     if (!updatedAcademicYear) {
-      return NextResponse.json({ success: false, message: "Academic year not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Academic year not found" },
+        { status: 404 },
+      );
     }
     return NextResponse.json({ success: true, data: updatedAcademicYear });
   } catch (error: any) {
@@ -70,7 +73,10 @@ export async function DELETE(req: Request) {
     }
     const deleted = await deleteAcademicYear(Number(id));
     if (!deleted) {
-      return NextResponse.json({ success: false, message: "Academic year not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Academic year not found" },
+        { status: 404 },
+      );
     }
     return NextResponse.json({ success: true });
   } catch (error: any) {

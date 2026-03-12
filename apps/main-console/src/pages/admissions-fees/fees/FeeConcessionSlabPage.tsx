@@ -1,7 +1,14 @@
 import React, { useState } from "react";
 import { Percent, Edit, Trash2, Download, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,8 +43,13 @@ const FeeConcessionSlabPage: React.FC = () => {
     sequence: undefined,
   });
 
-  const { concessionSlabs, loading, addFeeConcessionSlab, updateFeeConcessionSlabById, deleteFeeConcessionSlabById } =
-    useFeeConcessionSlabs();
+  const {
+    concessionSlabs,
+    loading,
+    addFeeConcessionSlab,
+    updateFeeConcessionSlabById,
+    deleteFeeConcessionSlabById,
+  } = useFeeConcessionSlabs();
 
   // Filter concession slabs based on search text
   const filteredConcessionSlabs =
@@ -245,7 +257,9 @@ const FeeConcessionSlabPage: React.FC = () => {
               </AlertDialogTrigger>
               <AlertDialogContent className="sm:max-w-[800px]">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{editingItem ? "Edit Fee Slab" : "Add New Fee Slab"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {editingItem ? "Edit Fee Slab" : "Add New Fee Slab"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <div className="py-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -343,7 +357,11 @@ const FeeConcessionSlabPage: React.FC = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
@@ -351,7 +369,9 @@ const FeeConcessionSlabPage: React.FC = () => {
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto h-full">
               <Table className="border rounded-md" style={{ tableLayout: "fixed", width: "100%" }}>
-                <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
+                <TableHeader
+                  style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}
+                >
                   <TableRow>
                     <TableHead style={{ width: 60, whiteSpace: "nowrap" }}>Sr. No.</TableHead>
                     <TableHead style={{ width: 200 }}>Slab Name</TableHead>
@@ -378,7 +398,12 @@ const FeeConcessionSlabPage: React.FC = () => {
                         <TableCell style={{ width: 100 }}>{row.sequence ?? "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(row)}
+                              className="h-5 w-5 p-0"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
