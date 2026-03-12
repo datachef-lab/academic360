@@ -15,7 +15,7 @@ import { Server } from "socket.io";
 import { corsOptions } from "@/config/corsOptions.js";
 import { socketService } from "./services/socketService.js";
 import settingsRouter from "@/features/apps/routes/settings.route.js";
-import { logger, errorHandler } from "@/middlewares/index.js";
+import { logger, errorHandler, requestId, log } from "@/middlewares/index.js";
 import { districtModel } from "@repo/db/schemas/models/resources/district.model.js";
 import { cityModel } from "@repo/db/schemas/models/resources/city.model.js";
 import { stateModel } from "@repo/db/schemas/models/resources/state.model.js";
@@ -186,7 +186,8 @@ if (
   app.set("trust proxy", false);
 }
 
-app.use(logger);
+app.use(requestId); // ← attach UUID to every request
+app.use(logger); // ← Morgan HTTP logging
 
 app.use(cors(corsOptions));
 
@@ -245,7 +246,7 @@ app.use(
 const NOTIFICATION_SYSTEM_URL =
   process.env.NOTIFICATION_SYSTEM_URL ||
   `http://localhost:${process.env.NOTIFICATION_SYSTEM_PORT || 8080}`;
-console.log("[backend] proxy target:", NOTIFICATION_SYSTEM_URL);
+log.debug(`[proxy] target: ${NOTIFICATION_SYSTEM_URL}`);
 app.use("/internal/notifications", async (req: Request, res: Response) => {
   try {
     const upstreamPath = req.originalUrl.replace(
