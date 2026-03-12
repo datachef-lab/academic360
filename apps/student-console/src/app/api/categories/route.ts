@@ -35,7 +35,11 @@ export async function POST(req: Request) {
 
     const [newCategory] = await dbPostgres
       .insert(categories)
-      .values({ name: validatedData.name, documentRequired: validatedData.documentRequired, code: validatedData.code })
+      .values({
+        name: validatedData.name,
+        documentRequired: validatedData.documentRequired,
+        code: validatedData.code,
+      })
       .returning();
 
     return NextResponse.json({ success: true, data: newCategory });
@@ -62,7 +66,11 @@ export async function PUT(req: Request) {
 
     const [updatedCategory] = await dbPostgres
       .update(categories)
-      .set({ name: validatedData.name, documentRequired: validatedData.documentRequired, code: validatedData.code })
+      .set({
+        name: validatedData.name,
+        documentRequired: validatedData.documentRequired,
+        code: validatedData.code,
+      })
       .where(eq(categories.id, parseInt(id)))
       .returning();
 

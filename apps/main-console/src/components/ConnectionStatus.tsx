@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { socketService } from '@/services/socketService';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useEffect, useState } from "react";
+import { socketService } from "@/services/socketService";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function ConnectionStatus() {
   const [isConnected, setIsConnected] = useState(false);
@@ -43,13 +43,12 @@ export function ConnectionStatus() {
               "flex items-center gap-2 px-2 py-1 text-xs font-medium transition-colors",
               isConnected
                 ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30"
-                : "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                : "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30",
             )}
           >
-            <div className={cn(
-              "h-2 w-2 rounded-full",
-              isConnected ? "bg-green-500" : "bg-red-500"
-            )} />
+            <div
+              className={cn("h-2 w-2 rounded-full", isConnected ? "bg-green-500" : "bg-red-500")}
+            />
             {isConnected ? (
               <span className="flex items-center gap-1">
                 Connected
@@ -66,12 +65,12 @@ export function ConnectionStatus() {
         </TooltipTrigger>
         <TooltipContent>
           <p>
-            {isConnected 
-              ? `Connected to server${userName ? ` as ${userName}` : ''}`
+            {isConnected
+              ? `Connected to server${userName ? ` as ${userName}` : ""}`
               : "Disconnected from server"}
           </p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
-} 
+}

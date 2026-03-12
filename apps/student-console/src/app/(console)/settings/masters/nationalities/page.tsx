@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useState,
-  useTransition,
-  useRef,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useState, useTransition, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 // import * as XLSX from "xlsx";
 import {
@@ -33,10 +27,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { uploadNationalitiesFromFile } from "./actions"; // Keep upload for now
-import {
-  NationalityService,
-  type ApiResponse,
-} from "@/services/nationality.service";
+import { NationalityService, type ApiResponse } from "@/services/nationality.service";
 
 interface Nationality {
   id: number; // Changed to number based on schema
@@ -59,8 +50,7 @@ export default function NationalitiesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [editingNationality, setEditingNationality] =
-    useState<Nationality | null>(null);
+  const [editingNationality, setEditingNationality] = useState<Nationality | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -80,8 +70,7 @@ export default function NationalitiesPage() {
     } else {
       toast({
         title: "Error fetching nationalities",
-        description:
-          response.message || "An error occurred while fetching data.",
+        description: response.message || "An error occurred while fetching data.",
         variant: "destructive",
       });
     }
@@ -153,16 +142,12 @@ export default function NationalitiesPage() {
           }) as any[][];
           const headers = (jsonData[0] as string[]).map((h) => h.trim());
 
-          const missingHeaders = REQUIRED_HEADERS.filter(
-            (h) => !headers.includes(h)
-          );
+          const missingHeaders = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
 
           if (missingHeaders.length > 0) {
             toast({
               title: "Invalid File Format",
-              description: `Missing required headers: ${missingHeaders.join(
-                ", "
-              )}`,
+              description: `Missing required headers: ${missingHeaders.join(", ")}`,
               variant: "destructive",
             });
             resolve(false);
@@ -182,9 +167,7 @@ export default function NationalitiesPage() {
     });
   };
 
-  const handleUploadSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     console.log("Upload button clicked");
 
@@ -237,8 +220,7 @@ export default function NationalitiesPage() {
               console.error("Upload error:", error);
               toast({
                 title: "Upload Failed",
-                description:
-                  error.message || "An error occurred during upload.",
+                description: error.message || "An error occurred during upload.",
                 variant: "destructive",
               });
               return;
@@ -299,14 +281,10 @@ export default function NationalitiesPage() {
           });
         }
       } else if (!response.success) {
-        console.error(
-          "Download failed with error from service:",
-          response.error
-        );
+        console.error("Download failed with error from service:", response.error);
         toast({
           title: "Download Failed",
-          description:
-            response.message || "Failed to fetch nationalities for download.",
+          description: response.message || "Failed to fetch nationalities for download.",
           variant: "destructive",
         });
       }
@@ -350,15 +328,10 @@ export default function NationalitiesPage() {
   return (
     <div className="container mx-auto px-4">
       <div className="flex flex-col gap-4 mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Nationalities Management
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900">Nationalities Management</h1>
         <div className="flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2">
-            <form
-              onSubmit={handleUploadSubmit}
-              className="flex items-center gap-2"
-            >
+            <form onSubmit={handleUploadSubmit} className="flex items-center gap-2">
               <Label
                 htmlFor="upload-file"
                 className="cursor-pointer bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200 flex items-center gap-2"
@@ -434,9 +407,7 @@ export default function NationalitiesPage() {
                 <TableHead className="text-gray-700">Code</TableHead>
                 <TableHead className="text-gray-700">Created At</TableHead>
                 <TableHead className="text-gray-700">Updated At</TableHead>
-                <TableHead className="text-gray-700 text-right">
-                  Actions
-                </TableHead>
+                <TableHead className="text-gray-700 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -449,18 +420,10 @@ export default function NationalitiesPage() {
               ) : (
                 paginatedData.map((nationality) => (
                   <TableRow key={nationality.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium text-gray-700">
-                      {nationality.id}
-                    </TableCell>
-                    <TableCell className="text-gray-700">
-                      {nationality.name}
-                    </TableCell>
-                    <TableCell className="text-gray-700">
-                      {nationality.sequence ?? "N/A"}
-                    </TableCell>
-                    <TableCell className="text-gray-700">
-                      {nationality.code ?? "N/A"}
-                    </TableCell>
+                    <TableCell className="font-medium text-gray-700">{nationality.id}</TableCell>
+                    <TableCell className="text-gray-700">{nationality.name}</TableCell>
+                    <TableCell className="text-gray-700">{nationality.sequence ?? "N/A"}</TableCell>
+                    <TableCell className="text-gray-700">{nationality.code ?? "N/A"}</TableCell>
                     <TableCell className="text-gray-700">
                       {new Date(nationality.createdAt).toLocaleString()}
                     </TableCell>

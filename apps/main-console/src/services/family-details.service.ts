@@ -22,7 +22,9 @@ export async function getFamilyDetailById(id: number): Promise<ApiResponse<Famil
   }
 }
 
-export async function getFamilyDetailByStudentId(studentId: number): Promise<ApiResponse<Family | null>> {
+export async function getFamilyDetailByStudentId(
+  studentId: number,
+): Promise<ApiResponse<Family | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
@@ -40,7 +42,10 @@ export async function createFamilyDetail(payload: unknown): Promise<ApiResponse<
   }
 }
 
-export async function updateFamilyDetail(id: number, payload: unknown): Promise<ApiResponse<Family>> {
+export async function updateFamilyDetail(
+  id: number,
+  payload: unknown,
+): Promise<ApiResponse<Family>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data;

@@ -34,7 +34,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Form and general info are required" }, { status: 400 });
     }
 
-    const result = await createApplicationForm(form as ApplicationForm, generalInfo as AdmissionGeneralInfo);
+    const result = await createApplicationForm(
+      form as ApplicationForm,
+      generalInfo as AdmissionGeneralInfo,
+    );
 
     if (!result.applicationForm) {
       return NextResponse.json({ message: result.message }, { status: 400 });

@@ -58,7 +58,9 @@ const Header: React.FC<HeaderProps> = ({
               )}
             </div>
           </div>
-          {actions && <div className="flex flex-wrap gap-2 justify-start sm:justify-end">{actions}</div>}
+          {actions && (
+            <div className="flex flex-wrap gap-2 justify-start sm:justify-end">{actions}</div>
+          )}
         </div>
         <motion.div
           initial={{ scaleX: 0 }}

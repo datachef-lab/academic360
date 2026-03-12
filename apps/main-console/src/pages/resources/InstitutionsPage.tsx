@@ -1,9 +1,20 @@
 import { Button } from "@/components/ui/button";
-import { QueryObserverResult, RefetchOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  QueryObserverResult,
+  RefetchOptions,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { SchoolIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CustomPaginationState, fetchData, getOptionalToolsConfig, SettingsRow, toFormData } from ".";
+import {
+  CustomPaginationState,
+  fetchData,
+  getOptionalToolsConfig,
+  SettingsRow,
+  toFormData,
+} from ".";
 import { ColumnDef } from "@tanstack/react-table";
 import { getSearchedUsers } from "@/services/user";
 // import { Input } from "@/components/ui/input";
@@ -50,7 +61,10 @@ export default function InstitutionsPage() {
   }, []);
 
   const { isLoading: isFetchingDefault } = useQuery({
-    queryKey: ["board-universities", { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
+    queryKey: [
+      "board-universities",
+      { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize },
+    ],
     queryFn: async () => {
       const { data, columns: tableCol } = await fetchData(
         {
@@ -163,7 +177,7 @@ export default function InstitutionsPage() {
   };
 
   // Get dynamic optional tools configuration
-    const toolsConfig = getOptionalToolsConfig("Institutions");
+  const toolsConfig = getOptionalToolsConfig("Institutions");
 
   const optionalTools = (
     <div className="flex flex-wrap gap-3 mb-4 p-4 bg-gray-50/50 rounded-lg border mt-3 border-gray-200">
@@ -341,7 +355,10 @@ export default function InstitutionsPage() {
       action: "edit-entity",
       settingType: "Institution",
       editData: rowData,
-      editId: typeof (rowData as { id?: number }).id === "number" ? (rowData as { id?: number }).id : undefined,
+      editId:
+        typeof (rowData as { id?: number }).id === "number"
+          ? (rowData as { id?: number }).id
+          : undefined,
     });
   };
 
@@ -400,7 +417,11 @@ export default function InstitutionsPage() {
         pagination={pagination}
         setPagination={setPagination}
         setDataLength={setDataLength}
-        refetch={refetch as (options?: RefetchOptions) => Promise<QueryObserverResult<unknown[] | undefined, Error>>}
+        refetch={
+          refetch as (
+            options?: RefetchOptions,
+          ) => Promise<QueryObserverResult<unknown[] | undefined, Error>>
+        }
       />
 
       {/* Dynamic Modal */}
@@ -416,7 +437,10 @@ export default function InstitutionsPage() {
           closeModal();
           // Invalidate the main data query to refetch data
           queryClient.invalidateQueries({
-            queryKey: ["Institutions", { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
+            queryKey: [
+              "Institutions",
+              { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize },
+            ],
           });
           refetch(optionalTools);
         }}

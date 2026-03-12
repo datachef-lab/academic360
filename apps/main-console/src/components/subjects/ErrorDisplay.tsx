@@ -1,6 +1,6 @@
-import React from 'react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 interface ErrorDisplayProps {
   error: string;
@@ -28,4 +28,4 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, clearError, retry })
   );
 };
 
-export default ErrorDisplay; 
+export default ErrorDisplay;

@@ -22,7 +22,10 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1");
     const size = parseInt(searchParams.get("size") || "10");
 
-    const [admissions, stats] = await Promise.all([findAllAdmissionSummary(page, size), admissionStats()]);
+    const [admissions, stats] = await Promise.all([
+      findAllAdmissionSummary(page, size),
+      admissionStats(),
+    ]);
 
     return NextResponse.json({
       admissions,
@@ -53,14 +56,20 @@ export async function POST(request: Request) {
     }
 
     if (!result) {
-      return NextResponse.json({ error: "Admission for this year already exists" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Admission for this year already exists" },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error creating admission:", error);
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: "Invalid admission data", details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid admission data", details: error.errors },
+        { status: 400 },
+      );
     }
     return NextResponse.json({ error: "Failed to create admission" }, { status: 500 });
   }
@@ -90,7 +99,9 @@ export async function PUT(request: Request) {
           const [existing] = await tx
             .select()
             .from(admissionCourses)
-            .where(and(eq(admissionCourses.admissionId, id), eq(admissionCourses.courseId, c.courseId)));
+            .where(
+              and(eq(admissionCourses.admissionId, id), eq(admissionCourses.courseId, c.courseId)),
+            );
           const courseIsClosed = isClosed ? true : !!c.isClosed;
           if (existing) {
             await tx

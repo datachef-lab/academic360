@@ -7,7 +7,7 @@ import {
   MultipleQualificationResponse,
 } from "@/types/resources/qualification.types";
 
-const BASE_URL = '/api/qualifications';
+const BASE_URL = "/api/qualifications";
 
 export async function getAllQualifications(): Promise<Qualification[]> {
   const response = await axiosInstance.get<MultipleQualificationResponse>(BASE_URL);
@@ -19,13 +19,21 @@ export async function getQualificationById(id: number): Promise<Qualification> {
   return response.data.data;
 }
 
-export async function createQualification(payload: CreateQualificationPayload): Promise<Qualification> {
+export async function createQualification(
+  payload: CreateQualificationPayload,
+): Promise<Qualification> {
   const response = await axiosInstance.post<SingleQualificationResponse>(BASE_URL, payload);
   return response.data.data;
 }
 
-export async function updateQualification(id: number, payload: UpdateQualificationPayload): Promise<Qualification> {
-  const response = await axiosInstance.put<SingleQualificationResponse>(`${BASE_URL}/${id}`, payload);
+export async function updateQualification(
+  id: number,
+  payload: UpdateQualificationPayload,
+): Promise<Qualification> {
+  const response = await axiosInstance.put<SingleQualificationResponse>(
+    `${BASE_URL}/${id}`,
+    payload,
+  );
   return response.data.data;
 }
 
@@ -39,4 +47,4 @@ export const qualificationService = {
   createQualification,
   updateQualification,
   deleteQualification,
-}; 
+};

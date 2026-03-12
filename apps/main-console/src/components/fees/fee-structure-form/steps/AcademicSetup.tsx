@@ -1,13 +1,19 @@
-import React from 'react';
-import { Select } from 'antd';
-import { FeesStructureDto, CreateFeesStructureDto } from '@/types/fees';
-import { Course } from '@/types/course-design';
-import { AcademicYear } from '@/types/academics/academic-year';
+import React from "react";
+import { Select } from "antd";
+import { FeesStructureDto, CreateFeesStructureDto } from "@/types/fees";
+import { Course } from "@/types/course-design";
+import { AcademicYear } from "@/types/academics/academic-year";
 // import { Checkbox } from '@/components/ui/checkbox';
-import { Select as ShadcnSelect, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, ClipboardList } from 'lucide-react';
-import { Class } from '@/types/academics/class';
-import { Shift } from '@/types/academics/shift';
+import {
+  Select as ShadcnSelect,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, ClipboardList } from "lucide-react";
+import { Class } from "@/types/academics/class";
+import { Shift } from "@/types/academics/shift";
 
 interface AcademicSetupPropsAdd {
   feesStructure: CreateFeesStructureDto;
@@ -16,7 +22,7 @@ interface AcademicSetupPropsAdd {
   academicYears: AcademicYear[];
   classes: Class[];
   shifts: Shift[];
-  formType: 'ADD';
+  formType: "ADD";
 }
 
 interface AcademicSetupPropsEdit {
@@ -26,21 +32,25 @@ interface AcademicSetupPropsEdit {
   academicYears: AcademicYear[];
   classes: Class[];
   shifts: Shift[];
-  formType: 'EDIT';
+  formType: "EDIT";
 }
 
 type AcademicSetupProps = AcademicSetupPropsAdd | AcademicSetupPropsEdit;
 
 export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
-  const { courses, academicYears, formType, } = props;
+  const { courses, academicYears, formType } = props;
 
   React.useEffect(() => {
     // Set default academic year if not set
     if (academicYears.length > 0 && !props.feesStructure.academicYear) {
-      if (formType === 'ADD') {
-        (props.setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(prev => ({ ...prev, academicYear: academicYears[0] }));
+      if (formType === "ADD") {
+        (props.setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(
+          (prev) => ({ ...prev, academicYear: academicYears[0] }),
+        );
       } else {
-        (props.setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(prev => ({ ...prev, academicYear: academicYears[0] }));
+        (props.setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(
+          (prev) => ({ ...prev, academicYear: academicYears[0] }),
+        );
       }
     }
   }, [academicYears, props.feesStructure.academicYear, formType, props.setFeesStructure]);
@@ -58,16 +68,22 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
               placeholder="Select Academic Year"
               value={props.feesStructure.academicYear?.id}
               onChange={(value) => {
-                const selectedYear = academicYears.find(ay => ay.id === value);
+                const selectedYear = academicYears.find((ay) => ay.id === value);
                 if (!selectedYear) return;
-                if (formType === 'ADD') {
-                  (props.setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(prev => ({ ...prev, academicYear: selectedYear }));
+                if (formType === "ADD") {
+                  (
+                    props.setFeesStructure as React.Dispatch<
+                      React.SetStateAction<CreateFeesStructureDto>
+                    >
+                  )((prev) => ({ ...prev, academicYear: selectedYear }));
                 } else {
-                  (props.setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(prev => ({ ...prev, academicYear: selectedYear }));
+                  (
+                    props.setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>
+                  )((prev) => ({ ...prev, academicYear: selectedYear }));
                 }
               }}
             >
-              {academicYears.map(ay => (
+              {academicYears.map((ay) => (
                 <Select.Option key={ay.id} value={ay.id!}>
                   {ay.year}
                 </Select.Option>
@@ -77,14 +93,20 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
           <div className="flex-1 min-w-[120px]">
             <label className="block text-sm font-medium text-gray-700 mb-2">Class</label>
             <ShadcnSelect
-              value={props.feesStructure.class?.id ? String(props.feesStructure.class.id) : ''}
+              value={props.feesStructure.class?.id ? String(props.feesStructure.class.id) : ""}
               onValueChange={(val) => {
                 const selectedClass = props.classes.find((cls: Class) => String(cls.id) === val);
                 if (!selectedClass) return;
-                if (formType === 'ADD') {
-                  (props.setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(prev => ({ ...prev, class: selectedClass }));
+                if (formType === "ADD") {
+                  (
+                    props.setFeesStructure as React.Dispatch<
+                      React.SetStateAction<CreateFeesStructureDto>
+                    >
+                  )((prev) => ({ ...prev, class: selectedClass }));
                 } else {
-                  (props.setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(prev => ({ ...prev, class: selectedClass }));
+                  (
+                    props.setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>
+                  )((prev) => ({ ...prev, class: selectedClass }));
                 }
               }}
             >
@@ -103,14 +125,20 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
           <div className="flex-1 min-w-[120px]">
             <label className="block text-sm font-medium text-gray-700 mb-2">Shift</label>
             <ShadcnSelect
-              value={props.feesStructure.shift?.id ? String(props.feesStructure.shift.id) : ''}
+              value={props.feesStructure.shift?.id ? String(props.feesStructure.shift.id) : ""}
               onValueChange={(val) => {
                 const selectedShift = props.shifts.find((sh: Shift) => String(sh.id) === val);
                 if (!selectedShift) return;
-                if (formType === 'ADD') {
-                  (props.setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(prev => ({ ...prev, shift: selectedShift }));
+                if (formType === "ADD") {
+                  (
+                    props.setFeesStructure as React.Dispatch<
+                      React.SetStateAction<CreateFeesStructureDto>
+                    >
+                  )((prev) => ({ ...prev, shift: selectedShift }));
                 } else {
-                  (props.setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(prev => ({ ...prev, shift: selectedShift }));
+                  (
+                    props.setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>
+                  )((prev) => ({ ...prev, shift: selectedShift }));
                 }
               }}
             >
@@ -156,11 +184,13 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
         {/* Courses Dual Listbox as Compact Card Lists */}
         <div>
           {/* <label className="block text-sm font-medium text-gray-700 mb-2">Course</label> */}
-          {formType === 'ADD' ? (
+          {formType === "ADD" ? (
             <div className="flex flex-row gap-8 w-full h-[50vh]">
               {/* Selected Courses Card List */}
               <div className="flex-1 bg-white border border-gray-200 rounded-md shadow p-4 flex flex-col h-full">
-                <div className="text-base font-semibold text-purple-800 mb-3 border-l-4 border-purple-400 pl-3">Selected Courses ({props.feesStructure.courses.length})</div>
+                <div className="text-base font-semibold text-purple-800 mb-3 border-l-4 border-purple-400 pl-3">
+                  Selected Courses ({props.feesStructure.courses.length})
+                </div>
                 <div className="max-h-80 h-80 min-h-[8rem] overflow-y-auto flex flex-col gap-2">
                   {props.feesStructure.courses.length === 0 ? (
                     <div className="flex flex-1 items-center justify-center w-full h-full text-gray-400">
@@ -171,15 +201,24 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
                     </div>
                   ) : (
                     props.feesStructure.courses.map((course: Course) => (
-                      <div key={course.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md px-3 py-2 shadow-sm hover:bg-purple-50 transition">
+                      <div
+                        key={course.id}
+                        className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md px-3 py-2 shadow-sm hover:bg-purple-50 transition"
+                      >
                         <span className="font-semibold text-gray-900 text-sm">{course.name}</span>
                         <button
                           type="button"
                           className="bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-700 transition flex items-center justify-center"
                           title="Remove"
                           onClick={() => {
-                            const selected = props.feesStructure.courses.filter((c: Course) => c.id !== course.id);
-                            (props.setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(prev => ({ ...prev, courses: selected }));
+                            const selected = props.feesStructure.courses.filter(
+                              (c: Course) => c.id !== course.id,
+                            );
+                            (
+                              props.setFeesStructure as React.Dispatch<
+                                React.SetStateAction<CreateFeesStructureDto>
+                              >
+                            )((prev) => ({ ...prev, courses: selected }));
                           }}
                         >
                           <Trash2 className="w-5 h-5" />
@@ -191,9 +230,19 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
               </div>
               {/* Available Courses Card List */}
               <div className="flex-1 bg-white border border-gray-200 rounded-md shadow p-4 flex flex-col h-full">
-                <div className="text-base font-semibold text-purple-800 mb-3 border-l-4 border-purple-400 pl-3">Available Courses ({courses.filter(c => !props.feesStructure.courses.some((sc: Course) => sc.id === c.id)).length})</div>
+                <div className="text-base font-semibold text-purple-800 mb-3 border-l-4 border-purple-400 pl-3">
+                  Available Courses (
+                  {
+                    courses.filter(
+                      (c) => !props.feesStructure.courses.some((sc: Course) => sc.id === c.id),
+                    ).length
+                  }
+                  )
+                </div>
                 <div className="max-h-80 h-80 min-h-[8rem] overflow-y-auto flex flex-col gap-2">
-                  {courses.filter(c => !props.feesStructure.courses.some((sc: Course) => sc.id === c.id)).length === 0 ? (
+                  {courses.filter(
+                    (c) => !props.feesStructure.courses.some((sc: Course) => sc.id === c.id),
+                  ).length === 0 ? (
                     <div className="flex flex-1 items-center justify-center w-full h-full text-gray-400">
                       <div className="flex flex-col items-center gap-2">
                         <Plus className="w-8 h-8 mx-auto" />
@@ -201,22 +250,33 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
                       </div>
                     </div>
                   ) : (
-                    courses.filter(c => !props.feesStructure.courses.some((sc: Course) => sc.id === c.id)).map((course) => (
-                      <div key={course.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md px-3 py-2 shadow-sm hover:bg-purple-50 transition">
-                        <span className="font-semibold text-gray-900 text-sm">{course.name}</span>
-                        <button
-                          type="button"
-                          className="bg-purple-500 text-white rounded-full p-1 shadow hover:bg-purple-700 transition flex items-center justify-center"
-                          title="Add"
-                          onClick={() => {
-                            const selected = [...props.feesStructure.courses, course];
-                            (props.setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(prev => ({ ...prev, courses: selected }));
-                          }}
+                    courses
+                      .filter(
+                        (c) => !props.feesStructure.courses.some((sc: Course) => sc.id === c.id),
+                      )
+                      .map((course) => (
+                        <div
+                          key={course.id}
+                          className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md px-3 py-2 shadow-sm hover:bg-purple-50 transition"
                         >
-                          <Plus className="w-5 h-5" />
-                        </button>
-                      </div>
-                    ))
+                          <span className="font-semibold text-gray-900 text-sm">{course.name}</span>
+                          <button
+                            type="button"
+                            className="bg-purple-500 text-white rounded-full p-1 shadow hover:bg-purple-700 transition flex items-center justify-center"
+                            title="Add"
+                            onClick={() => {
+                              const selected = [...props.feesStructure.courses, course];
+                              (
+                                props.setFeesStructure as React.Dispatch<
+                                  React.SetStateAction<CreateFeesStructureDto>
+                                >
+                              )((prev) => ({ ...prev, courses: selected }));
+                            }}
+                          >
+                            <Plus className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ))
                   )}
                 </div>
               </div>

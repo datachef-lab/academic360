@@ -61,7 +61,10 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center" style={{ backgroundColor: theme.background }}>
+      <View
+        className="flex-1 items-center justify-center"
+        style={{ backgroundColor: theme.background }}
+      >
         <ActivityIndicator size="large" color={colorScheme === "dark" ? "#a5b4fc" : "#4f46e5"} />
       </View>
     );
@@ -69,8 +72,13 @@ export default function ProfileScreen() {
 
   if (error) {
     return (
-      <View className="flex-1 p-6 items-center justify-center" style={{ backgroundColor: theme.background }}>
-        <Text style={{ color: "#ef4444", fontSize: 16, fontWeight: "600" }}>Error loading profile</Text>
+      <View
+        className="flex-1 p-6 items-center justify-center"
+        style={{ backgroundColor: theme.background }}
+      >
+        <Text style={{ color: "#ef4444", fontSize: 16, fontWeight: "600" }}>
+          Error loading profile
+        </Text>
         <Text style={{ color: theme.text, opacity: 0.7, marginTop: 8 }}>{error}</Text>
       </View>
     );
@@ -78,7 +86,10 @@ export default function ProfileScreen() {
 
   if (!profileInfo) {
     return (
-      <View className="flex-1 p-6 items-center justify-center" style={{ backgroundColor: theme.background }}>
+      <View
+        className="flex-1 p-6 items-center justify-center"
+        style={{ backgroundColor: theme.background }}
+      >
         <Text style={{ color: theme.text, fontSize: 16 }}>Profile data not found</Text>
       </View>
     );
@@ -140,7 +151,10 @@ export default function ProfileScreen() {
                 </Text>
               )}
             </View>
-            <View className="absolute -top-1 -right-1 px-2 py-0.5 rounded-full" style={{ backgroundColor: "#10b981" }}>
+            <View
+              className="absolute -top-1 -right-1 px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: "#10b981" }}
+            >
               <Text className="text-white text-xs font-semibold">Student</Text>
             </View>
           </View>
@@ -151,7 +165,10 @@ export default function ProfileScreen() {
             UID: {uid || "N/A"}
           </Text>
 
-          <View className="w-full py-3 mb-4" style={{ borderTopWidth: 1, borderTopColor: theme.border }} />
+          <View
+            className="w-full py-3 mb-4"
+            style={{ borderTopWidth: 1, borderTopColor: theme.border }}
+          />
 
           <View className="w-full gap-3">
             <View className="flex-row justify-between items-center">
@@ -166,7 +183,10 @@ export default function ProfileScreen() {
               <Text style={{ color: theme.text, opacity: 0.7 }} className="text-sm">
                 Program Course
               </Text>
-              <Text style={{ color: theme.text }} className="font-semibold text-right text-xs flex-1 ml-2">
+              <Text
+                style={{ color: theme.text }}
+                className="font-semibold text-right text-xs flex-1 ml-2"
+              >
                 {student?.currentPromotion?.programCourse?.name || "N/A"}
               </Text>
             </View>
@@ -212,18 +232,54 @@ export default function ProfileScreen() {
             theme={theme}
           />
           <ProfileField label="Full Name" value={user?.name || ""} theme={theme} />
-          <ProfileField label="Date of Birth" value={formatDate(personalDetails?.dateOfBirth)} theme={theme} />
+          <ProfileField
+            label="Date of Birth"
+            value={formatDate(personalDetails?.dateOfBirth)}
+            theme={theme}
+          />
           <ProfileField label="Gender" value={personalDetails?.gender || ""} theme={theme} />
-          <ProfileField label="Nationality" value={personalDetails?.nationality?.name || ""} theme={theme} />
-          <ProfileField label="Religion" value={personalDetails?.religion?.name || ""} theme={theme} />
-          <ProfileField label="Category" value={personalDetails?.category?.name || ""} theme={theme} />
-          <ProfileField label="Blood Group" value={healthDetails?.bloodGroup?.type || ""} theme={theme} />
-          <ProfileField label="Aadhaar Card Number" value={personalDetails?.aadhaarCardNumber || ""} theme={theme} />
-          <ProfileField label="Mobile Number" value={personalDetails?.mobileNumber || ""} theme={theme} />
-          <ProfileField label="WhatsApp Number" value={personalDetails?.whatsappNumber || ""} theme={theme} />
+          <ProfileField
+            label="Nationality"
+            value={personalDetails?.nationality?.name || ""}
+            theme={theme}
+          />
+          <ProfileField
+            label="Religion"
+            value={personalDetails?.religion?.name || ""}
+            theme={theme}
+          />
+          <ProfileField
+            label="Category"
+            value={personalDetails?.category?.name || ""}
+            theme={theme}
+          />
+          <ProfileField
+            label="Blood Group"
+            value={healthDetails?.bloodGroup?.type || ""}
+            theme={theme}
+          />
+          <ProfileField
+            label="Aadhaar Card Number"
+            value={personalDetails?.aadhaarCardNumber || ""}
+            theme={theme}
+          />
+          <ProfileField
+            label="Mobile Number"
+            value={personalDetails?.mobileNumber || ""}
+            theme={theme}
+          />
+          <ProfileField
+            label="WhatsApp Number"
+            value={personalDetails?.whatsappNumber || ""}
+            theme={theme}
+          />
           <ProfileField label="Father's Name" value={father?.name || ""} theme={theme} />
           <ProfileField label="Mother's Name" value={mother?.name || ""} theme={theme} />
-          <ProfileField label="Personal Email ID" value={student?.personalEmail || ""} theme={theme} />
+          <ProfileField
+            label="Personal Email ID"
+            value={student?.personalEmail || ""}
+            theme={theme}
+          />
           <ProfileField label="Institutional Email ID" value={user?.email || ""} theme={theme} />
         </View>
       </View>

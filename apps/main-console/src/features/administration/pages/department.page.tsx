@@ -3,14 +3,26 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "@/hooks/useToast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Building2, Edit, GitBranch, PlusCircle } from "lucide-react";
 import type { Department, SubDepartment } from "@repo/db/index";
 
@@ -115,7 +127,9 @@ function DepartmentForm({ initialData, onSubmit, onCancel, isSubmitting }: Depar
         <Controller
           name="isActive"
           control={control}
-          render={({ field }) => <Checkbox id="isActive" checked={field.value} onCheckedChange={field.onChange} />}
+          render={({ field }) => (
+            <Checkbox id="isActive" checked={field.value} onCheckedChange={field.onChange} />
+          )}
         />
         <Label htmlFor="isActive">Active</Label>
       </div>
@@ -124,7 +138,11 @@ function DepartmentForm({ initialData, onSubmit, onCancel, isSubmitting }: Depar
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting} className="bg-purple-600 hover:bg-purple-700 text-white">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+        >
           {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </div>
@@ -162,7 +180,13 @@ interface SubDepartmentFormProps {
   isSubmitting: boolean;
 }
 
-function SubDepartmentForm({ initialData, departments, onSubmit, onCancel, isSubmitting }: SubDepartmentFormProps) {
+function SubDepartmentForm({
+  initialData,
+  departments,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: SubDepartmentFormProps) {
   const {
     control,
     handleSubmit,
@@ -223,7 +247,9 @@ function SubDepartmentForm({ initialData, departments, onSubmit, onCancel, isSub
             </Select>
           )}
         />
-        {errors.departmentId && <p className="text-sm text-red-600">{errors.departmentId.message}</p>}
+        {errors.departmentId && (
+          <p className="text-sm text-red-600">{errors.departmentId.message}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -248,7 +274,9 @@ function SubDepartmentForm({ initialData, departments, onSubmit, onCancel, isSub
         <Controller
           name="isActive"
           control={control}
-          render={({ field }) => <Checkbox id="sub-isActive" checked={field.value} onCheckedChange={field.onChange} />}
+          render={({ field }) => (
+            <Checkbox id="sub-isActive" checked={field.value} onCheckedChange={field.onChange} />
+          )}
         />
         <Label htmlFor="sub-isActive">Active</Label>
       </div>
@@ -257,7 +285,11 @@ function SubDepartmentForm({ initialData, departments, onSubmit, onCancel, isSub
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting} className="bg-purple-600 hover:bg-purple-700 text-white">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-purple-600 hover:bg-purple-700 text-white"
+        >
           {isSubmitting ? "Saving..." : "Save"}
         </Button>
       </div>
@@ -334,11 +366,19 @@ export default function DepartmentPage() {
     const handleRealtimeUpdate = (notification: Notification) => {
       const entity = notification.meta?.entity ?? notification.meta?.resource;
       const normalizedMessage = notification.message?.toLowerCase() ?? "";
-      if (entity === "department" || entity === "departments" || normalizedMessage.includes("department")) {
+      if (
+        entity === "department" ||
+        entity === "departments" ||
+        normalizedMessage.includes("department")
+      ) {
         void loadDepartments();
       }
 
-      if (entity === "sub-department" || entity === "sub-departments" || normalizedMessage.includes("sub-department")) {
+      if (
+        entity === "sub-department" ||
+        entity === "sub-departments" ||
+        normalizedMessage.includes("sub-department")
+      ) {
         void loadSubDepartments();
       }
     };
@@ -497,7 +537,9 @@ export default function DepartmentPage() {
                 ) : (
                   <GitBranch className="h-8 w-8 border rounded-md p-1 border-slate-400" />
                 )}
-                {activeTab === "departments" ? "Department Management" : "Sub-Department Management"}
+                {activeTab === "departments"
+                  ? "Department Management"
+                  : "Sub-Department Management"}
               </CardTitle>
               <p className="text-muted-foreground text-sm">
                 {activeTab === "departments"
@@ -535,7 +577,9 @@ export default function DepartmentPage() {
                   </DialogTrigger>
                   <DialogContent className="max-w-xl">
                     <DialogHeader>
-                      <DialogTitle>{selectedDepartment ? "Edit Department" : "Add Department"}</DialogTitle>
+                      <DialogTitle>
+                        {selectedDepartment ? "Edit Department" : "Add Department"}
+                      </DialogTitle>
                     </DialogHeader>
                     <DepartmentForm
                       initialData={selectedDepartment}
@@ -572,7 +616,9 @@ export default function DepartmentPage() {
                   </DialogTrigger>
                   <DialogContent className="max-w-xl">
                     <DialogHeader>
-                      <DialogTitle>{selectedSubDepartment ? "Edit Sub-Department" : "Add Sub-Department"}</DialogTitle>
+                      <DialogTitle>
+                        {selectedSubDepartment ? "Edit Sub-Department" : "Add Sub-Department"}
+                      </DialogTitle>
                     </DialogHeader>
                     <SubDepartmentForm
                       initialData={selectedSubDepartment}
@@ -607,7 +653,10 @@ export default function DepartmentPage() {
 
               <div className="overflow-x-auto flex-1">
                 <div className="rounded-md border border-slate-300 h-full max-h-[480px] overflow-y-auto">
-                  <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur" style={{ minWidth: "780px" }}>
+                  <div
+                    className="sticky top-0 z-10 bg-muted/70 backdrop-blur"
+                    style={{ minWidth: "780px" }}
+                  >
                     <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
                       <div
                         className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center"
@@ -639,7 +688,10 @@ export default function DepartmentPage() {
                       >
                         Status
                       </div>
-                      <div className="flex-shrink-0 px-3 py-2 flex items-center justify-center" style={{ width: "8%" }}>
+                      <div
+                        className="flex-shrink-0 px-3 py-2 flex items-center justify-center"
+                        style={{ width: "8%" }}
+                      >
                         Actions
                       </div>
                     </div>
@@ -676,7 +728,9 @@ export default function DepartmentPage() {
                               className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center"
                               style={{ width: "22%" }}
                             >
-                              <span className="font-medium text-slate-800 truncate">{department.name}</span>
+                              <span className="font-medium text-slate-800 truncate">
+                                {department.name}
+                              </span>
                             </div>
                             <div
                               className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center"
@@ -688,7 +742,10 @@ export default function DepartmentPage() {
                               className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center"
                               style={{ width: "35%" }}
                             >
-                              <span className="text-slate-600 truncate" title={department.description || undefined}>
+                              <span
+                                className="text-slate-600 truncate"
+                                title={department.description || undefined}
+                              >
                                 {department.description}
                               </span>
                             </div>
@@ -698,7 +755,9 @@ export default function DepartmentPage() {
                             >
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                  department.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                  department.isActive
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
                                 }`}
                               >
                                 {department.isActive ? "Active" : "Inactive"}
@@ -801,7 +860,10 @@ export default function DepartmentPage() {
 
               <div className="overflow-x-auto flex-1">
                 <div className="rounded-md border border-slate-300 h-full max-h-[480px] overflow-y-auto">
-                  <div className="sticky top-0 z-10 bg-muted/70 backdrop-blur" style={{ minWidth: "900px" }}>
+                  <div
+                    className="sticky top-0 z-10 bg-muted/70 backdrop-blur"
+                    style={{ minWidth: "900px" }}
+                  >
                     <div className="flex text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
                       <div
                         className="flex-shrink-0 px-3 py-2 border-r border-slate-300 flex items-center justify-center"
@@ -839,7 +901,10 @@ export default function DepartmentPage() {
                       >
                         Status
                       </div>
-                      <div className="flex-shrink-0 px-3 py-2 flex items-center justify-center" style={{ width: "8%" }}>
+                      <div
+                        className="flex-shrink-0 px-3 py-2 flex items-center justify-center"
+                        style={{ width: "8%" }}
+                      >
                         Actions
                       </div>
                     </div>
@@ -876,7 +941,9 @@ export default function DepartmentPage() {
                               className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center"
                               style={{ width: "20%" }}
                             >
-                              <span className="font-medium text-slate-800 truncate">{subDepartment.name}</span>
+                              <span className="font-medium text-slate-800 truncate">
+                                {subDepartment.name}
+                              </span>
                             </div>
                             <div
                               className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center"
@@ -896,7 +963,10 @@ export default function DepartmentPage() {
                               className="flex-shrink-0 px-3 py-3 border-r border-slate-200 flex items-center"
                               style={{ width: "25%" }}
                             >
-                              <span className="text-slate-600 truncate" title={subDepartment.description || undefined}>
+                              <span
+                                className="text-slate-600 truncate"
+                                title={subDepartment.description || undefined}
+                              >
                                 {subDepartment.description}
                               </span>
                             </div>
@@ -906,7 +976,9 @@ export default function DepartmentPage() {
                             >
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                  subDepartment.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                  subDepartment.isActive
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
                                 }`}
                               >
                                 {subDepartment.isActive ? "Active" : "Inactive"}
@@ -958,7 +1030,10 @@ export default function DepartmentPage() {
                     </Button>
                     <div className="flex items-center gap-1">
                       {Array.from({ length: Math.min(5, subTotalPages) }, (_, i) => {
-                        const startPage = Math.max(1, Math.min(subTotalPages - 4, subCurrentPage - 2));
+                        const startPage = Math.max(
+                          1,
+                          Math.min(subTotalPages - 4, subCurrentPage - 2),
+                        );
                         const pageNum = startPage + i;
                         if (pageNum > subTotalPages) return null;
                         return (

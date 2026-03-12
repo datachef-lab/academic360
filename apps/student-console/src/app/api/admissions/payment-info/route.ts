@@ -52,7 +52,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ message: "Either id or applicationFormId is required" }, { status: 400 });
+    return NextResponse.json(
+      { message: "Either id or applicationFormId is required" },
+      { status: 400 },
+    );
   } catch (error) {
     console.error("Error fetching payment:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

@@ -4,40 +4,40 @@ import { Specialization } from "../resources/specialization";
 import { Class } from "./class";
 
 export interface SubjectType {
-    readonly id?: number;
-    name: string;
-    createdAt?: Date;
-    updatedAt?: Date;
+  readonly id?: number;
+  name: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface SubjectMetadata {
-    readonly id?: number;
-    degree: Degree | null;
-    programmeType: ProgrammeType;
-    framework: Framework;
-    class: Class | null;
-    specialization: Specialization | null;
-    category: SubjectCategory;
-    subjectType: SubjectType | null;
-    irpName: string | null;
-    name: string;
-    irpCode: string | null;
-    marksheetCode: string | null;
-    isOptional: boolean;
-    credit: number;
-    theoryCredit:number;
-    fullMarksTheory: number;
-    practicalCredit:number;
-    fullMarksPractical: number;
+  readonly id?: number;
+  degree: Degree | null;
+  programmeType: ProgrammeType;
+  framework: Framework;
+  class: Class | null;
+  specialization: Specialization | null;
+  category: SubjectCategory;
+  subjectType: SubjectType | null;
+  irpName: string | null;
+  name: string;
+  irpCode: string | null;
+  marksheetCode: string | null;
+  isOptional: boolean;
+  credit: number;
+  theoryCredit: number;
+  fullMarksTheory: number;
+  practicalCredit: number;
+  fullMarksPractical: number;
 
-    internalCredit: number | null,
-    fullMarksInternal: number | null,
-    projectCredit: number | null,
-    fullMarksProject: number | null,
-    vivalCredit: number | null,
-    fullMarksViva: number | null,
-    fullMarks: number | null,
+  internalCredit: number | null;
+  fullMarksInternal: number | null;
+  projectCredit: number | null;
+  fullMarksProject: number | null;
+  vivalCredit: number | null;
+  fullMarksViva: number | null;
+  fullMarks: number | null;
 
-    createdAt?: Date;
-    updatedAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

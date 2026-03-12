@@ -1,6 +1,6 @@
 /**
  * Annual Income Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Annual Income module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Annual Income interface that mirrors the backend model
  */
 export interface AnnualIncome {
-    readonly id?: number;
+  readonly id?: number;
   range: string;
   sequence?: number | null;
   disabled: boolean;
@@ -120,15 +120,15 @@ export interface AnnualIncomeState {
  * Action types for annual income state management
  */
 export type AnnualIncomeAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_ANNUAL_INCOMES'; payload: AnnualIncome[] }
-  | { type: 'SET_CURRENT_ANNUAL_INCOME'; payload: AnnualIncome | null }
-  | { type: 'ADD_ANNUAL_INCOME'; payload: AnnualIncome }
-  | { type: 'UPDATE_ANNUAL_INCOME'; payload: AnnualIncome }
-  | { type: 'DELETE_ANNUAL_INCOME'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_ANNUAL_INCOMES"; payload: AnnualIncome[] }
+  | { type: "SET_CURRENT_ANNUAL_INCOME"; payload: AnnualIncome | null }
+  | { type: "ADD_ANNUAL_INCOME"; payload: AnnualIncome }
+  | { type: "UPDATE_ANNUAL_INCOME"; payload: AnnualIncome }
+  | { type: "DELETE_ANNUAL_INCOME"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -143,7 +143,7 @@ export interface AnnualIncomeTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -160,7 +160,7 @@ export interface AnnualIncomeFilter {
  */
 export interface AnnualIncomeSort {
   field: keyof AnnualIncome;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -195,7 +195,7 @@ export type AnnualIncomeDisabled = boolean;
  * Default values for annual income
  */
 export const DEFAULT_ANNUAL_INCOME: CreateAnnualIncomePayload = {
-  range: '',
+  range: "",
   sequence: null,
   disabled: false,
 };
@@ -204,8 +204,8 @@ export const DEFAULT_ANNUAL_INCOME: CreateAnnualIncomePayload = {
  * Default form data for annual income
  */
 export const DEFAULT_ANNUAL_INCOME_FORM: AnnualIncomeFormData = {
-  range: '',
-  sequence: '',
+  range: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -213,12 +213,12 @@ export const DEFAULT_ANNUAL_INCOME_FORM: AnnualIncomeFormData = {
  * Table columns configuration for annual income
  */
 export const ANNUAL_INCOME_TABLE_COLUMNS: AnnualIncomeTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'range', label: 'Income Range', sortable: true, filterable: true },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "range", label: "Income Range", sortable: true, filterable: true },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 // ============================================================================
@@ -231,12 +231,13 @@ export const ANNUAL_INCOME_TABLE_COLUMNS: AnnualIncomeTableColumn[] = [
 export function isAnnualIncome(obj: object): obj is AnnualIncome {
   return (
     obj &&
-    typeof (obj as AnnualIncome).id === 'number' &&
-    typeof (obj as AnnualIncome).range === 'string' &&
-    ((obj as AnnualIncome).sequence === null || typeof (obj as AnnualIncome).sequence === 'number') &&
-    typeof (obj as AnnualIncome).disabled === 'boolean' &&
-    typeof (obj as AnnualIncome).createdAt === 'string' &&
-    typeof (obj as AnnualIncome).updatedAt === 'string'
+    typeof (obj as AnnualIncome).id === "number" &&
+    typeof (obj as AnnualIncome).range === "string" &&
+    ((obj as AnnualIncome).sequence === null ||
+      typeof (obj as AnnualIncome).sequence === "number") &&
+    typeof (obj as AnnualIncome).disabled === "boolean" &&
+    typeof (obj as AnnualIncome).createdAt === "string" &&
+    typeof (obj as AnnualIncome).updatedAt === "string"
   );
 }
 
@@ -246,9 +247,12 @@ export function isAnnualIncome(obj: object): obj is AnnualIncome {
 export function isCreateAnnualIncomePayload(obj: object): obj is CreateAnnualIncomePayload {
   return (
     obj &&
-    typeof (obj as CreateAnnualIncomePayload).range === 'string' &&
-    ((obj as CreateAnnualIncomePayload).sequence === undefined || (obj as CreateAnnualIncomePayload).sequence === null || typeof (obj as CreateAnnualIncomePayload).sequence === 'number') &&
-    ((obj as CreateAnnualIncomePayload).disabled === undefined || typeof (obj as CreateAnnualIncomePayload).disabled === 'boolean')
+    typeof (obj as CreateAnnualIncomePayload).range === "string" &&
+    ((obj as CreateAnnualIncomePayload).sequence === undefined ||
+      (obj as CreateAnnualIncomePayload).sequence === null ||
+      typeof (obj as CreateAnnualIncomePayload).sequence === "number") &&
+    ((obj as CreateAnnualIncomePayload).disabled === undefined ||
+      typeof (obj as CreateAnnualIncomePayload).disabled === "boolean")
   );
 }
 
@@ -258,9 +262,13 @@ export function isCreateAnnualIncomePayload(obj: object): obj is CreateAnnualInc
 export function isUpdateAnnualIncomePayload(obj: object): obj is UpdateAnnualIncomePayload {
   return (
     obj &&
-    ((obj as UpdateAnnualIncomePayload).range === undefined || typeof (obj as UpdateAnnualIncomePayload).range === 'string') &&
-    ((obj as UpdateAnnualIncomePayload).sequence === undefined || (obj as UpdateAnnualIncomePayload).sequence === null || typeof (obj as UpdateAnnualIncomePayload).sequence === 'number') &&
-    ((obj as UpdateAnnualIncomePayload).disabled === undefined || typeof (obj as UpdateAnnualIncomePayload).disabled === 'boolean')
+    ((obj as UpdateAnnualIncomePayload).range === undefined ||
+      typeof (obj as UpdateAnnualIncomePayload).range === "string") &&
+    ((obj as UpdateAnnualIncomePayload).sequence === undefined ||
+      (obj as UpdateAnnualIncomePayload).sequence === null ||
+      typeof (obj as UpdateAnnualIncomePayload).sequence === "number") &&
+    ((obj as UpdateAnnualIncomePayload).disabled === undefined ||
+      typeof (obj as UpdateAnnualIncomePayload).disabled === "boolean")
   );
 }
 
@@ -285,7 +293,7 @@ export function formDataToPayload(formData: AnnualIncomeFormData): CreateAnnualI
 export function apiDataToFormData(annualIncome: AnnualIncome): AnnualIncomeFormData {
   return {
     range: annualIncome.range,
-    sequence: annualIncome.sequence?.toString() || '',
+    sequence: annualIncome.sequence?.toString() || "",
     disabled: annualIncome.disabled,
   };
 }
@@ -303,4 +311,4 @@ export function validateIncomeRange(range: string): boolean {
  */
 export function formatIncomeRange(range: string): string {
   return range.trim();
-} 
+}

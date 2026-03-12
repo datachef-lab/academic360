@@ -12,7 +12,10 @@ interface AddressDetailsFormProps {
   initialData?: Partial<Address>;
 }
 
-export const AddressDetailsForm: React.FC<AddressDetailsFormProps> = ({ onSubmit, initialData = {} }) => {
+export const AddressDetailsForm: React.FC<AddressDetailsFormProps> = ({
+  onSubmit,
+  initialData = {},
+}) => {
   const [formData, setFormData] = useState<Address>({
     // country: initialData.country || "",
     // state: initialData.state || "",
@@ -95,7 +98,9 @@ export const AddressDetailsForm: React.FC<AddressDetailsFormProps> = ({ onSubmit
           </Label>
           <Select
             value={formData.localityType || ""}
-            onValueChange={(value) => setFormData({ ...formData, localityType: value as "RURAL" | "URBAN" })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, localityType: value as "RURAL" | "URBAN" })
+            }
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select locality type" />

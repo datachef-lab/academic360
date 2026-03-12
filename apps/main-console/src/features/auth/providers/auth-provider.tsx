@@ -1,7 +1,20 @@
-import React, { useState, useCallback, useEffect, ReactNode, createContext, useContext } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  ReactNode,
+  createContext,
+  useContext,
+} from "react";
 import axiosInstance, { setAccessTokenForApi } from "@/utils/api";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -42,11 +55,14 @@ interface AuthState {
 // Token validation function
 const validateTokenFn = async (): Promise<AuthState | null> => {
   try {
-    const response = await axiosInstance.get<ApiResponse<{ accessToken: string; user: UserDto }>>("/auth/refresh", {
-      withCredentials: true,
-      // Mark this as a silent auth check to suppress console errors
-      _silentAuthCheck: true,
-    } as any);
+    const response = await axiosInstance.get<ApiResponse<{ accessToken: string; user: UserDto }>>(
+      "/auth/refresh",
+      {
+        withCredentials: true,
+        // Mark this as a silent auth check to suppress console errors
+        _silentAuthCheck: true,
+      } as any,
+    );
 
     const nextUser = response.data.payload.user;
     if (nextUser?.type !== "ADMIN" && nextUser?.type !== "STAFF") {
@@ -194,7 +210,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Handle auth errors (only non-401/403 errors like ACCESS_RESTRICTED)
   useEffect(() => {
     if (isAuthError && authError) {
-      const isAccessRestricted = authError instanceof Error && authError.message === "ACCESS_RESTRICTED";
+      const isAccessRestricted =
+        authError instanceof Error && authError.message === "ACCESS_RESTRICTED";
 
       // Clear auth state on error
       queryClient.setQueryData(AUTH_QUERY_KEY, null);
@@ -393,7 +410,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return (
         <AuthContext.Provider value={contextValue}>
           {children}
-          <Dialog open={authDialog.open} onOpenChange={(open) => setAuthDialog((p) => ({ ...p, open }))}>
+          <Dialog
+            open={authDialog.open}
+            onOpenChange={(open) => setAuthDialog((p) => ({ ...p, open }))}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{authDialog.title}</DialogTitle>
@@ -413,7 +433,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return (
         <AuthContext.Provider value={contextValue}>
           {children}
-          <Dialog open={authDialog.open} onOpenChange={(open) => setAuthDialog((p) => ({ ...p, open }))}>
+          <Dialog
+            open={authDialog.open}
+            onOpenChange={(open) => setAuthDialog((p) => ({ ...p, open }))}
+          >
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{authDialog.title}</DialogTitle>
@@ -432,7 +455,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
-      <Dialog open={authDialog.open} onOpenChange={(open) => setAuthDialog((p) => ({ ...p, open }))}>
+      <Dialog
+        open={authDialog.open}
+        onOpenChange={(open) => setAuthDialog((p) => ({ ...p, open }))}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{authDialog.title}</DialogTitle>

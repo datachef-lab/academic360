@@ -45,7 +45,10 @@ export default function CuRegistrationHomePage() {
   // Get academic year
   const { availableAcademicYears, loadAcademicYears } = useAcademicYear();
   const selectedAcademicYear = useMemo(
-    () => availableAcademicYears.find((year) => year.isCurrentYear) || availableAcademicYears[0] || null,
+    () =>
+      availableAcademicYears.find((year) => year.isCurrentYear) ||
+      availableAcademicYears[0] ||
+      null,
     [availableAcademicYears],
   );
   const selectedAcademicYearId = selectedAcademicYear?.id;
@@ -297,11 +300,15 @@ export default function CuRegistrationHomePage() {
         createdAt: new Date(),
       });
 
-      const subjectSelectionResult = await ExportService.exportStudentSubjectSelections(subjectSelectionMetaId);
+      const subjectSelectionResult =
+        await ExportService.exportStudentSubjectSelections(subjectSelectionMetaId);
 
       if (subjectSelectionResult.success && subjectSelectionResult.data) {
         // Trigger download for subject selection
-        ExportService.downloadFile(subjectSelectionResult.data.downloadUrl, subjectSelectionResult.data.fileName);
+        ExportService.downloadFile(
+          subjectSelectionResult.data.downloadUrl,
+          subjectSelectionResult.data.fileName,
+        );
         console.log("Subject Selection export completed and download triggered");
       } else {
         console.error("Subject Selection export failed:", subjectSelectionResult.message);
@@ -322,11 +329,15 @@ export default function CuRegistrationHomePage() {
         createdAt: new Date(),
       });
 
-      const cuRegistrationResult = await ExportService.exportCuRegistrationCorrections(selectedAcademicYearId);
+      const cuRegistrationResult =
+        await ExportService.exportCuRegistrationCorrections(selectedAcademicYearId);
 
       if (cuRegistrationResult.success && cuRegistrationResult.data) {
         // Trigger download for CU registration corrections
-        ExportService.downloadFile(cuRegistrationResult.data.downloadUrl, cuRegistrationResult.data.fileName);
+        ExportService.downloadFile(
+          cuRegistrationResult.data.downloadUrl,
+          cuRegistrationResult.data.fileName,
+        );
         console.log("CU Registration Corrections export completed and download triggered");
       } else {
         console.error("CU Registration Corrections export failed:", cuRegistrationResult.message);
@@ -369,7 +380,9 @@ export default function CuRegistrationHomePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">CU Registration Overview</h1>
-          <p className="text-slate-600 mt-2">Summary of Subject Selection and CU Registration processes</p>
+          <p className="text-slate-600 mt-2">
+            Summary of Subject Selection and CU Registration processes
+          </p>
         </div>
         <div className="flex gap-3">
           <Button
@@ -414,14 +427,20 @@ export default function CuRegistrationHomePage() {
                   <BookOpen className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-800">Phase 1: Subject Selection</h3>
-                  <p className="text-sm text-slate-600">Students select subjects post merit list rounds</p>
+                  <h3 className="text-lg font-semibold text-slate-800">
+                    Phase 1: Subject Selection
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    Students select subjects post merit list rounds
+                  </p>
                 </div>
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Completion Rate</span>
-                  <span className="text-sm font-bold text-blue-600">{subjectSelectionStats.completionRate}%</span>
+                  <span className="text-sm font-bold text-blue-600">
+                    {subjectSelectionStats.completionRate}%
+                  </span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2">
                   <div
@@ -432,11 +451,15 @@ export default function CuRegistrationHomePage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-600">Completed:</span>
-                    <span className="font-semibold text-green-600">{subjectSelectionStats.completed}</span>
+                    <span className="font-semibold text-green-600">
+                      {subjectSelectionStats.completed}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600">Pending:</span>
-                    <span className="font-semibold text-yellow-600">{subjectSelectionStats.pending}</span>
+                    <span className="font-semibold text-yellow-600">
+                      {subjectSelectionStats.pending}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -453,13 +476,17 @@ export default function CuRegistrationHomePage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-slate-800">Phase 2: CU Registration</h3>
-                  <p className="text-sm text-slate-600">Final confirmation and document submission</p>
+                  <p className="text-sm text-slate-600">
+                    Final confirmation and document submission
+                  </p>
                 </div>
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Approval Rate</span>
-                  <span className="text-sm font-bold text-purple-600">{cuRegistrationStats.approvalRate}%</span>
+                  <span className="text-sm font-bold text-purple-600">
+                    {cuRegistrationStats.approvalRate}%
+                  </span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2">
                   <div
@@ -470,11 +497,15 @@ export default function CuRegistrationHomePage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-600">Approved:</span>
-                    <span className="font-semibold text-green-600">{cuRegistrationStats.approved}</span>
+                    <span className="font-semibold text-green-600">
+                      {cuRegistrationStats.approved}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600">Submitted:</span>
-                    <span className="font-semibold text-blue-600">{cuRegistrationStats.submitted}</span>
+                    <span className="font-semibold text-blue-600">
+                      {cuRegistrationStats.submitted}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -491,7 +522,9 @@ export default function CuRegistrationHomePage() {
             <Users className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-800">{overallStats.totalStudents.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-slate-800">
+              {overallStats.totalStudents.toLocaleString()}
+            </div>
             <p className="text-xs text-slate-500">Enrolled students</p>
           </CardContent>
         </Card>
@@ -502,7 +535,9 @@ export default function CuRegistrationHomePage() {
             <BookOpen className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{overallStats.subjectSelectionCompleted}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {overallStats.subjectSelectionCompleted}
+            </div>
             <p className="text-xs text-slate-500">Completed selection</p>
           </CardContent>
         </Card>
@@ -513,7 +548,9 @@ export default function CuRegistrationHomePage() {
             <FileText className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{overallStats.cuRegistrationSubmitted}</div>
+            <div className="text-2xl font-bold text-purple-600">
+              {overallStats.cuRegistrationSubmitted}
+            </div>
             <p className="text-xs text-slate-500">Submitted applications</p>
           </CardContent>
         </Card>
@@ -524,7 +561,9 @@ export default function CuRegistrationHomePage() {
             <CheckCircle className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{overallStats.cuRegistrationApproved}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {overallStats.cuRegistrationApproved}
+            </div>
             <p className="text-xs text-slate-500">Final approvals</p>
           </CardContent>
         </Card>
@@ -535,7 +574,9 @@ export default function CuRegistrationHomePage() {
             <Edit3 className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{overallStats.correctionRequests}</div>
+            <div className="text-2xl font-bold text-orange-600">
+              {overallStats.correctionRequests}
+            </div>
             <p className="text-xs text-slate-500">Pending corrections</p>
           </CardContent>
         </Card>
@@ -589,7 +630,9 @@ export default function CuRegistrationHomePage() {
               <tbody>
                 {programStats.map((stat, index) => (
                   <tr key={index} className="hover:bg-slate-50">
-                    <td className="border border-slate-200 px-4 py-3 text-sm text-slate-800">{stat.program}</td>
+                    <td className="border border-slate-200 px-4 py-3 text-sm text-slate-800">
+                      {stat.program}
+                    </td>
                     <td className="border border-slate-200 px-4 py-3 text-center text-sm text-slate-600">
                       {stat.shift === "Afternoon" ? stat.totalStudents : "-"}
                     </td>
@@ -620,18 +663,28 @@ export default function CuRegistrationHomePage() {
                   </tr>
                 ))}
                 <tr className="bg-slate-100 font-bold">
-                  <td className="border border-slate-200 px-4 py-3 text-sm text-slate-700">Grand Total</td>
-                  <td className="border border-slate-200 px-4 py-3 text-center text-sm text-slate-700">
-                    {programStats.filter((s) => s.shift === "Afternoon").reduce((sum, s) => sum + s.totalStudents, 0)}
+                  <td className="border border-slate-200 px-4 py-3 text-sm text-slate-700">
+                    Grand Total
                   </td>
                   <td className="border border-slate-200 px-4 py-3 text-center text-sm text-slate-700">
-                    {programStats.filter((s) => s.shift === "Day").reduce((sum, s) => sum + s.totalStudents, 0)}
+                    {programStats
+                      .filter((s) => s.shift === "Afternoon")
+                      .reduce((sum, s) => sum + s.totalStudents, 0)}
                   </td>
                   <td className="border border-slate-200 px-4 py-3 text-center text-sm text-slate-700">
-                    {programStats.filter((s) => s.shift === "Evening").reduce((sum, s) => sum + s.totalStudents, 0)}
+                    {programStats
+                      .filter((s) => s.shift === "Day")
+                      .reduce((sum, s) => sum + s.totalStudents, 0)}
                   </td>
                   <td className="border border-slate-200 px-4 py-3 text-center text-sm text-slate-700">
-                    {programStats.filter((s) => s.shift === "Morning").reduce((sum, s) => sum + s.totalStudents, 0)}
+                    {programStats
+                      .filter((s) => s.shift === "Evening")
+                      .reduce((sum, s) => sum + s.totalStudents, 0)}
+                  </td>
+                  <td className="border border-slate-200 px-4 py-3 text-center text-sm text-slate-700">
+                    {programStats
+                      .filter((s) => s.shift === "Morning")
+                      .reduce((sum, s) => sum + s.totalStudents, 0)}
                   </td>
                   <td className="border border-slate-200 px-4 py-3 text-center text-sm text-slate-700">
                     {programStats.reduce((sum, s) => sum + s.subjectSelectionCompleted, 0)}
@@ -671,21 +724,27 @@ export default function CuRegistrationHomePage() {
                   <Edit3 className="h-5 w-5 text-orange-600" />
                   <span className="font-medium">Corrections Required</span>
                 </div>
-                <Badge className="bg-orange-100 text-orange-800">{overallStats.pendingCorrections}</Badge>
+                <Badge className="bg-orange-100 text-orange-800">
+                  {overallStats.pendingCorrections}
+                </Badge>
               </div>
               <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <Clock className="h-5 w-5 text-yellow-600" />
                   <span className="font-medium">Pending Review</span>
                 </div>
-                <Badge className="bg-yellow-100 text-yellow-800">{cuRegistrationStats.pendingReview}</Badge>
+                <Badge className="bg-yellow-100 text-yellow-800">
+                  {cuRegistrationStats.pendingReview}
+                </Badge>
               </div>
               <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <AlertCircle className="h-5 w-5 text-red-600" />
                   <span className="font-medium">Rejected Applications</span>
                 </div>
-                <Badge className="bg-red-100 text-red-800">{overallStats.rejectedApplications}</Badge>
+                <Badge className="bg-red-100 text-red-800">
+                  {overallStats.rejectedApplications}
+                </Badge>
               </div>
             </div>
           </CardContent>

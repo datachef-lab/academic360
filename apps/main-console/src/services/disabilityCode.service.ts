@@ -13,7 +13,9 @@ export async function getAllDisabilityCodes(): Promise<ApiResponse<DisabilityCod
   }
 }
 
-export async function getDisabilityCodeById(id: number): Promise<ApiResponse<DisabilityCode | null>> {
+export async function getDisabilityCodeById(
+  id: number,
+): Promise<ApiResponse<DisabilityCode | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -22,7 +24,9 @@ export async function getDisabilityCodeById(id: number): Promise<ApiResponse<Dis
   }
 }
 
-export async function createDisabilityCode(payload: Partial<DisabilityCode>): Promise<ApiResponse<DisabilityCode>> {
+export async function createDisabilityCode(
+  payload: Partial<DisabilityCode>,
+): Promise<ApiResponse<DisabilityCode>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;

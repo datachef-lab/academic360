@@ -9,18 +9,13 @@ type TodayContentProps = {
   currentOrNextClass: UpcomingClass | undefined;
 };
 
-export default function TodayContent({
-  mockData,
-  currentOrNextClass,
-}: TodayContentProps) {
+export default function TodayContent({ mockData, currentOrNextClass }: TodayContentProps) {
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Current/Next Class */}
-          {currentOrNextClass && (
-            <CurrentNextClassCard currentOrNextClass={currentOrNextClass} />
-          )}
+          {currentOrNextClass && <CurrentNextClassCard currentOrNextClass={currentOrNextClass} />}
 
           {/* Today's Schedule */}
           <TodaySchedule />

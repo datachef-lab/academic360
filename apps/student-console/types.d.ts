@@ -8,14 +8,9 @@
 //     };
 // }
 
-
-
-
-
-
 declare global {
-    // eslint-disable-next-line no-var
-    var mysql: DatabaseConnection | undefined;
+  // eslint-disable-next-line no-var
+  var mysql: DatabaseConnection | undefined;
 }
 
-export { };
+export {};

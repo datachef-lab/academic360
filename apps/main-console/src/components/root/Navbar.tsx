@@ -36,7 +36,9 @@ export const Navbar: React.FC = () => {
               className="h-8"
               alt="Logo"
             />
-            <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">academic360</span>
+            <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">
+              academic360
+            </span>
           </Link>
 
           {/* Desktop Menu */}

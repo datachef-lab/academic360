@@ -13,7 +13,9 @@ export async function getAllAccommodations(): Promise<ApiResponse<AccommodationD
   }
 }
 
-export async function getAccommodationById(id: number): Promise<ApiResponse<AccommodationDto | null>> {
+export async function getAccommodationById(
+  id: number,
+): Promise<ApiResponse<AccommodationDto | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -22,7 +24,9 @@ export async function getAccommodationById(id: number): Promise<ApiResponse<Acco
   }
 }
 
-export async function getAccommodationByStudentId(studentId: number): Promise<ApiResponse<AccommodationDto | null>> {
+export async function getAccommodationByStudentId(
+  studentId: number,
+): Promise<ApiResponse<AccommodationDto | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
@@ -34,7 +38,9 @@ export async function getAccommodationByStudentId(studentId: number): Promise<Ap
   }
 }
 
-export async function createAccommodation(payload: Partial<AccommodationDto>): Promise<ApiResponse<AccommodationDto>> {
+export async function createAccommodation(
+  payload: Partial<AccommodationDto>,
+): Promise<ApiResponse<AccommodationDto>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
@@ -64,7 +70,9 @@ export async function deleteAccommodation(id: number): Promise<ApiResponse<null>
   }
 }
 
-export async function deleteAccommodationByStudentId(studentId: number): Promise<ApiResponse<null>> {
+export async function deleteAccommodationByStudentId(
+  studentId: number,
+): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
     return response.data;

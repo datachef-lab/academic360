@@ -3,17 +3,25 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CheckCircle2, School, Calendar, Award, Edit3 } from "lucide-react";
 import { AcademicHistory } from "@/types/user/academic-history";
-
 
 interface AcademicHistoryFormProps {
   onSubmit: (data: AcademicHistory) => void;
   initialData?: Partial<AcademicHistory>;
 }
 
-export default function AcademicHistoryForm({ onSubmit, initialData = {} }: AcademicHistoryFormProps) {
+export default function AcademicHistoryForm({
+  onSubmit,
+  initialData = {},
+}: AcademicHistoryFormProps) {
   const [formData, setFormData] = useState<Partial<AcademicHistory>>({
     studentId: initialData.studentId || 0,
     lastInstitution: initialData.lastInstitution || null,
@@ -29,13 +37,15 @@ export default function AcademicHistoryForm({ onSubmit, initialData = {} }: Acad
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-    ...prev,
-    [name]: ["studiedUpToClass", "passedYear"].includes(name)
-    ? value === "" ? "" : Number(value)
-    : value,
+    setFormData((prev) => ({
+      ...prev,
+      [name]: ["studiedUpToClass", "passedYear"].includes(name)
+        ? value === ""
+          ? ""
+          : Number(value)
+        : value,
     }));
-    };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,7 +133,11 @@ export default function AcademicHistoryForm({ onSubmit, initialData = {} }: Acad
           </Label>
           <Select
             // value={formData.lastResult || ""}
-            onValueChange={(value) => handleChange({ target: { name: "lastResult", value } } as React.ChangeEvent<HTMLInputElement>)}
+            onValueChange={(value) =>
+              handleChange({
+                target: { name: "lastResult", value },
+              } as React.ChangeEvent<HTMLInputElement>)
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select result status" />

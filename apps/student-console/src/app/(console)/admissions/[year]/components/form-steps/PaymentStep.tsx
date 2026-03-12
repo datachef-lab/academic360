@@ -5,12 +5,22 @@ import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 
 // Work around strict shadcn typings with proper type extensions
 const LabelFixed = Label as React.ComponentType<
-  React.ComponentProps<typeof Label> & { children?: React.ReactNode; className?: string; htmlFor?: string }
+  React.ComponentProps<typeof Label> & {
+    children?: React.ReactNode;
+    className?: string;
+    htmlFor?: string;
+  }
 >;
 const SelectTriggerFixed = SelectTrigger as React.ComponentType<
   React.ComponentProps<typeof SelectTrigger> & { children?: React.ReactNode; className?: string }
@@ -125,7 +135,10 @@ export default function PaymentStep({
           <Select
             value={paymentInfo.paymentMode}
             onValueChange={(value) =>
-              setPaymentInfo({ ...paymentInfo, paymentMode: value as (typeof paymentMode.enumValues)[number] })
+              setPaymentInfo({
+                ...paymentInfo,
+                paymentMode: value as (typeof paymentMode.enumValues)[number],
+              })
             }
           >
             <SelectTriggerFixed>

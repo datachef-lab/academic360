@@ -6,12 +6,16 @@ export type Framework = "CCF" | "CBCS" | null;
 
 export type Shift = "MORNING" | "AFTERNOON" | "EVENING";
 
-
 export type Gender = "MALE" | "FEMALE" | "TRANSGENDER";
 
-export type Disability = "VISUAL" | "HEARING_IMPAIRMENT" | "VISUAL_IMPAIRMENT" | "ORTHOPEDIC" | "OTHER"
+export type Disability =
+  | "VISUAL"
+  | "HEARING_IMPAIRMENT"
+  | "VISUAL_IMPAIRMENT"
+  | "ORTHOPEDIC"
+  | "OTHER";
 
-export type StudentStatus = "DROPPED_OUT" | "ALUMNI" | "ACTIVE" | "PENDING_CLEARANCE"
+export type StudentStatus = "DROPPED_OUT" | "ALUMNI" | "ACTIVE" | "PENDING_CLEARANCE";
 
 export type SubjectCategory = "SPECIAL" | "COMMON" | "HONOURS" | "GENERAL" | "ELECTIVE";
 
@@ -19,20 +23,11 @@ export type ParentType = "BOTH" | "FATHER_ONLY" | "MOTHER_ONLY";
 
 export type ResultStatus = "FAIL" | "PASS";
 
-export type PlaceOfStay = "OWN" |
-    "HOSTEL" |
-    "FAMILY_FRIENDS" |
-    "PAYING_GUEST" |
-    "RELATIVES";
+export type PlaceOfStay = "OWN" | "HOSTEL" | "FAMILY_FRIENDS" | "PAYING_GUEST" | "RELATIVES";
 
-export type ProgrammeType =  "HONOURS" | "GENERAL" | null;
+export type ProgrammeType = "HONOURS" | "GENERAL" | null;
 
-export type PlaceOfStayType = "OWN" | "HOSTEL" | "FAMILY_FRIENDS" |"PAYING_GUEST" |"RELATIVES";
-
-
-
-
-
+export type PlaceOfStayType = "OWN" | "HOSTEL" | "FAMILY_FRIENDS" | "PAYING_GUEST" | "RELATIVES";
 
 export type LocalityType = "RURAL" | "URBAN";
 
@@ -42,13 +37,7 @@ export type MarksheetSource = "FILE_UPLOAD" | "ADDED";
 
 export type ClassType = "YEAR" | "SEMESTER";
 
-export type PaperModeType =
-  | "THEORETICAL"
-  | "PRACTICAL"
-  | "VIVA"
-  | "ASSIGNMENT"
-  | "PROJECT"
-  | "MCQ";
+export type PaperModeType = "THEORETICAL" | "PRACTICAL" | "VIVA" | "ASSIGNMENT" | "PROJECT" | "MCQ";
 
 export type PaymentStatus =
   | "PENDING"
@@ -97,25 +86,11 @@ export type AdmissionStep =
   | "REVIEW"
   | "SUBMITTED";
 
-export type PersonTitleType =
-  | "MR"
-  | "MRS"
-  | "MS"
-  | "DR"
-  | "PROF"
-  | "REV"
-  | "OTHER";
+export type PersonTitleType = "MR" | "MRS" | "MS" | "DR" | "PROF" | "REV" | "OTHER";
 
-export type BoardResultStatusType =
-  | "PASS"
-  | "FAIL"
-  | "COMPARTMENTAL";
+export type BoardResultStatusType = "PASS" | "FAIL" | "COMPARTMENTAL";
 
-export type SubjectResultStatusType =
-  | "PASS"
-  | "FAIL IN THEORY"
-  | "FAIL IN PRACTICAL"
-  | "FAIL";
+export type SubjectResultStatusType = "PASS" | "FAIL IN THEORY" | "FAIL IN PRACTICAL" | "FAIL";
 
 export type SportsLevel = "NATIONAL" | "STATE" | "DISTRICT" | "OTHERS";
 

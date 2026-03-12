@@ -69,6 +69,8 @@ export interface BoardSubjectName {
 }
 
 export async function getActiveBoardSubjectNames(): Promise<BoardSubjectName[]> {
-  const res = await axiosInstance.get<ApiResponse<BoardSubjectName[]>>("/api/admissions/board-subject-names/active");
+  const res = await axiosInstance.get<ApiResponse<BoardSubjectName[]>>(
+    "/api/admissions/board-subject-names/active",
+  );
   return res.data.payload;
 }

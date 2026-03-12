@@ -16,7 +16,13 @@ interface SelectProps {
   disabled?: boolean;
 }
 
-export function Select({ options, value, onChange, placeholder = "Select...", disabled = false }: SelectProps) {
+export function Select({
+  options,
+  value,
+  onChange,
+  placeholder = "Select...",
+  disabled = false,
+}: SelectProps) {
   const { theme, colorScheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -46,7 +52,11 @@ export function Select({ options, value, onChange, placeholder = "Select...", di
         className="flex-row items-center justify-between px-3 py-2.5 rounded-lg border min-h-[44px]"
         style={{
           borderColor: theme.border,
-          backgroundColor: disabled ? (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)") : theme.background,
+          backgroundColor: disabled
+            ? isDark
+              ? "rgba(255,255,255,0.05)"
+              : "rgba(0,0,0,0.03)"
+            : theme.background,
         }}
       >
         <Text

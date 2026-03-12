@@ -6,8 +6,20 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 // import { PaperEditModal } from "./paper-edit-modal";
 // import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -1209,7 +1221,9 @@ const ExamsPage = () => {
               <FileText className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
               <span className="truncate">Exams</span>
             </CardTitle>
-            <div className="text-xs sm:text-sm text-muted-foreground mt-1">List of exams got scheduled.</div>
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1">
+              List of exams got scheduled.
+            </div>
           </div>
           {/* <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -1730,7 +1744,8 @@ const ExamsPage = () => {
                   <Button variant="outline" size="sm" className="gap-2">
                     <Filter className="h-4 w-4" />
                     Filters
-                    {Object.values(filters).filter((v) => v !== null && v !== undefined).length > 0 && (
+                    {Object.values(filters).filter((v) => v !== null && v !== undefined).length >
+                      0 && (
                       <Badge
                         variant="secondary"
                         className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
@@ -1753,7 +1768,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.academicYearId?.toString() || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, academicYearId: value === "all" ? null : Number(value) })
+                            setFilters({
+                              ...filters,
+                              academicYearId: value === "all" ? null : Number(value),
+                            })
                           }
                         >
                           <SelectTrigger id="academic-year">
@@ -1776,7 +1794,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.examTypeId?.toString() || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, examTypeId: value === "all" ? null : Number(value) })
+                            setFilters({
+                              ...filters,
+                              examTypeId: value === "all" ? null : Number(value),
+                            })
                           }
                         >
                           <SelectTrigger id="exam-type">
@@ -1799,7 +1820,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.classId?.toString() || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, classId: value === "all" ? null : Number(value) })
+                            setFilters({
+                              ...filters,
+                              classId: value === "all" ? null : Number(value),
+                            })
                           }
                         >
                           <SelectTrigger id="semester">
@@ -1824,7 +1848,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.affiliationId?.toString() || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, affiliationId: value === "all" ? null : Number(value) })
+                            setFilters({
+                              ...filters,
+                              affiliationId: value === "all" ? null : Number(value),
+                            })
                           }
                         >
                           <SelectTrigger id="affiliation">
@@ -1847,7 +1874,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.regulationTypeId?.toString() || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, regulationTypeId: value === "all" ? null : Number(value) })
+                            setFilters({
+                              ...filters,
+                              regulationTypeId: value === "all" ? null : Number(value),
+                            })
                           }
                         >
                           <SelectTrigger id="regulation">
@@ -1870,7 +1900,10 @@ const ExamsPage = () => {
                         <Select
                           value={filters.status || "all"}
                           onValueChange={(value) =>
-                            setFilters({ ...filters, status: value === "all" ? null : (value as any) })
+                            setFilters({
+                              ...filters,
+                              status: value === "all" ? null : (value as any),
+                            })
                           }
                         >
                           <SelectTrigger id="status">
@@ -1898,7 +1931,9 @@ const ExamsPage = () => {
                             id="date-from"
                             type="date"
                             value={filters.dateFrom || ""}
-                            onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value || null })}
+                            onChange={(e) =>
+                              setFilters({ ...filters, dateFrom: e.target.value || null })
+                            }
                           />
                         </div>
                         <div>
@@ -1909,7 +1944,9 @@ const ExamsPage = () => {
                             id="date-to"
                             type="date"
                             value={filters.dateTo || ""}
-                            onChange={(e) => setFilters({ ...filters, dateTo: e.target.value || null })}
+                            onChange={(e) =>
+                              setFilters({ ...filters, dateTo: e.target.value || null })
+                            }
                           />
                         </div>
                       </div>
@@ -1955,7 +1992,8 @@ const ExamsPage = () => {
                     variant="outline"
                     className="text-xs border-slate-300 text-slate-700 bg-slate-50 flex items-center gap-1"
                   >
-                    {availableAcademicYears.find((y) => y.id === filters.academicYearId)?.year || "Academic Year"}
+                    {availableAcademicYears.find((y) => y.id === filters.academicYearId)?.year ||
+                      "Academic Year"}
                     <button
                       aria-label="Clear academic year filter"
                       className="ml-1 hover:text-slate-900"
@@ -2009,7 +2047,8 @@ const ExamsPage = () => {
                     variant="outline"
                     className="text-xs border-purple-300 text-purple-700 bg-purple-50 flex items-center gap-1"
                   >
-                    {affiliations.find((a) => a.id === filters.affiliationId)?.name || "Affiliation"}
+                    {affiliations.find((a) => a.id === filters.affiliationId)?.name ||
+                      "Affiliation"}
                     <button
                       aria-label="Clear affiliation filter"
                       className="ml-1 hover:text-purple-900"
@@ -2027,7 +2066,8 @@ const ExamsPage = () => {
                     variant="outline"
                     className="text-xs border-teal-300 text-teal-700 bg-teal-50 flex items-center gap-1"
                   >
-                    {regulationTypes.find((r) => r.id === filters.regulationTypeId)?.name || "Regulation"}
+                    {regulationTypes.find((r) => r.id === filters.regulationTypeId)?.name ||
+                      "Regulation"}
                     <button
                       aria-label="Clear regulation filter"
                       className="ml-1 hover:text-teal-900"
@@ -2111,22 +2151,38 @@ const ExamsPage = () => {
           </div>
           <div className="overflow-x-auto flex-1" style={{ minHeight: "480px" }}>
             <div className="rounded-md border border-slate-300 h-full max-h-[520px] overflow-y-auto min-w-full">
-              <table className="w-full min-w-[900px] border-collapse text-[14px]" style={{ tableLayout: "fixed" }}>
+              <table
+                className="w-full min-w-[900px] border-collapse text-[14px]"
+                style={{ tableLayout: "fixed" }}
+              >
                 <thead className="sticky top-0 z-[50] bg-slate-100 border-b border-slate-300 shadow-sm">
                   <tr className="text-xs font-semibold uppercase text-slate-700 border-b border-slate-300">
                     <th className="w-[6%] px-3 py-3 border-r border-slate-300 text-center">#</th>
-                    <th className="w-[20%] px-3 py-3 border-r border-slate-300 text-center">Exam Group Name</th>
-                    <th className="w-[18%] px-3 py-3 border-r border-slate-300 text-center">Program Courses</th>
-                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">Subjects</th>
-                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">Shift(s)</th>
-                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">Subject Category</th>
+                    <th className="w-[20%] px-3 py-3 border-r border-slate-300 text-center">
+                      Exam Group Name
+                    </th>
+                    <th className="w-[18%] px-3 py-3 border-r border-slate-300 text-center">
+                      Program Courses
+                    </th>
+                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
+                      Subjects
+                    </th>
+                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
+                      Shift(s)
+                    </th>
+                    <th className="w-[14%] px-3 py-3 border-r border-slate-300 text-center">
+                      Subject Category
+                    </th>
                     <th className="w-[8%] px-3 py-3 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
+                      <td
+                        colSpan={7}
+                        className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200"
+                      >
                         <div className="flex items-center justify-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Loading exams...
@@ -2135,7 +2191,10 @@ const ExamsPage = () => {
                     </tr>
                   ) : examGroups.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
+                      <td
+                        colSpan={7}
+                        className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200"
+                      >
                         No exams found.
                       </td>
                     </tr>
@@ -2300,8 +2359,8 @@ const ExamsPage = () => {
         <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-2 sm:px-0">
           <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
             <span className="hidden sm:inline">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
-              {totalItems} results
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+              {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} results
             </span>
             <span className="sm:hidden">
               Page {currentPage} of {totalPages} ({totalItems} total)

@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Loader2 } from "lucide-react";
@@ -27,7 +27,14 @@ interface DegreeDialogProps {
   setOpen?: (open: boolean) => void;
 }
 
-export function DegreeDialog({ mode, degree, onSuccess, trigger, open, setOpen }: DegreeDialogProps) {
+export function DegreeDialog({
+  mode,
+  degree,
+  onSuccess,
+  trigger,
+  open,
+  setOpen,
+}: DegreeDialogProps) {
   const [isOpen, setIsOpenLocal] = useState(false);
   const [name, setName] = useState("");
   const [level, setLevel] = useState("");
@@ -64,7 +71,9 @@ export function DegreeDialog({ mode, degree, onSuccess, trigger, open, setOpen }
     if (result && result.success) {
       toast({
         title: "Success",
-        description: result.message || (mode === "edit" ? "Degree updated successfully" : "Degree added successfully"),
+        description:
+          result.message ||
+          (mode === "edit" ? "Degree updated successfully" : "Degree added successfully"),
       });
       if (setOpen) setOpen(false);
       setIsOpenLocal(false);
@@ -90,7 +99,11 @@ export function DegreeDialog({ mode, degree, onSuccess, trigger, open, setOpen }
       <DialogTrigger asChild>
         {trigger || (
           <Button>
-            {mode === "add" ? <Plus className="mr-2 h-4 w-4" /> : <Pencil className="mr-2 h-4 w-4" />}
+            {mode === "add" ? (
+              <Plus className="mr-2 h-4 w-4" />
+            ) : (
+              <Pencil className="mr-2 h-4 w-4" />
+            )}
             {mode === "add" ? "Add Degree" : "Edit Degree"}
           </Button>
         )}
@@ -99,50 +112,58 @@ export function DegreeDialog({ mode, degree, onSuccess, trigger, open, setOpen }
         <DialogHeader>
           <DialogTitle>{mode === "edit" ? "Edit Degree" : "Add New Degree"}</DialogTitle>
           <DialogDescription>
-            {mode === "edit" ? "Edit the details for the degree." : "Enter the details for the new degree."}
+            {mode === "edit"
+              ? "Edit the details for the degree."
+              : "Enter the details for the new degree."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">Name</Label>
-              <Input 
-                id="name" 
-                name="name" 
-                className="col-span-3" 
-                required 
-                value={name} 
-                onChange={e => setName(e.target.value)}
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="name"
+                name="name"
+                className="col-span-3"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Enter degree name"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="level" className="text-right">Level</Label>
-              <select 
-                id="level" 
-                name="level" 
-                className="col-span-3 border rounded px-2 py-1" 
-                required 
-                value={level} 
-                onChange={e => setLevel(e.target.value)}
+              <Label htmlFor="level" className="text-right">
+                Level
+              </Label>
+              <select
+                id="level"
+                name="level"
+                className="col-span-3 border rounded px-2 py-1"
+                required
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
               >
                 <option value="">Select Degree Level</option>
-                {degreeLevelType.enumValues.map(degreeLevel => (
+                {degreeLevelType.enumValues.map((degreeLevel) => (
                   <option key={degreeLevel} value={degreeLevel}>
-                    {degreeLevel.replace(/_/g, ' ')}
+                    {degreeLevel.replace(/_/g, " ")}
                   </option>
                 ))}
               </select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="sequence" className="text-right">Sequence</Label>
-              <Input 
-                id="sequence" 
-                name="sequence" 
-                type="number" 
-                className="col-span-3" 
-                value={sequence} 
-                onChange={e => setSequence(e.target.value)}
+              <Label htmlFor="sequence" className="text-right">
+                Sequence
+              </Label>
+              <Input
+                id="sequence"
+                name="sequence"
+                type="number"
+                className="col-span-3"
+                value={sequence}
+                onChange={(e) => setSequence(e.target.value)}
                 placeholder="Enter sequence number"
               />
             </div>
@@ -154,8 +175,10 @@ export function DegreeDialog({ mode, degree, onSuccess, trigger, open, setOpen }
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {mode === "edit" ? "Updating..." : "Adding..."}
                 </>
+              ) : mode === "edit" ? (
+                "Update Degree"
               ) : (
-                mode === "edit" ? "Update Degree" : "Add Degree"
+                "Add Degree"
               )}
             </Button>
           </DialogFooter>
@@ -163,4 +186,4 @@ export function DegreeDialog({ mode, degree, onSuccess, trigger, open, setOpen }
       </DialogContent>
     </Dialog>
   );
-} 
+}

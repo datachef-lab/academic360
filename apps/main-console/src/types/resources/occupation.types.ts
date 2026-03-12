@@ -1,6 +1,6 @@
 /**
  * Occupation Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Occupation module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Occupation interface that mirrors the backend model
  */
 export interface Occupation {
-    readonly id?: number;
+  readonly id?: number;
   name: string;
   sequence?: number | null;
   disabled: boolean;
@@ -120,15 +120,15 @@ export interface OccupationState {
  * Action types for occupation state management
  */
 export type OccupationAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_OCCUPATIONS'; payload: Occupation[] }
-  | { type: 'SET_CURRENT_OCCUPATION'; payload: Occupation | null }
-  | { type: 'ADD_OCCUPATION'; payload: Occupation }
-  | { type: 'UPDATE_OCCUPATION'; payload: Occupation }
-  | { type: 'DELETE_OCCUPATION'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_OCCUPATIONS"; payload: Occupation[] }
+  | { type: "SET_CURRENT_OCCUPATION"; payload: Occupation | null }
+  | { type: "ADD_OCCUPATION"; payload: Occupation }
+  | { type: "UPDATE_OCCUPATION"; payload: Occupation }
+  | { type: "DELETE_OCCUPATION"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -143,7 +143,7 @@ export interface OccupationTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -160,7 +160,7 @@ export interface OccupationFilter {
  */
 export interface OccupationSort {
   field: keyof Occupation;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -195,7 +195,7 @@ export type OccupationDisabled = boolean;
  * Default values for occupation
  */
 export const DEFAULT_OCCUPATION: CreateOccupationPayload = {
-  name: '',
+  name: "",
   sequence: null,
   disabled: false,
 };
@@ -204,8 +204,8 @@ export const DEFAULT_OCCUPATION: CreateOccupationPayload = {
  * Default form data for occupation
  */
 export const DEFAULT_OCCUPATION_FORM: OccupationFormData = {
-  name: '',
-  sequence: '',
+  name: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -213,29 +213,45 @@ export const DEFAULT_OCCUPATION_FORM: OccupationFormData = {
  * Table columns configuration for occupation
  */
 export const OCCUPATION_TABLE_COLUMNS: OccupationTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Occupation', sortable: true, filterable: true },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Occupation", sortable: true, filterable: true },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Common occupations for reference
  */
 export const COMMON_OCCUPATIONS = [
-  'Student', 'Teacher', 'Engineer', 'Doctor', 'Lawyer', 'Accountant',
-  'Business Owner', 'Manager', 'Administrator', 'Sales Representative',
-  'Marketing Specialist', 'IT Professional', 'Designer', 'Writer',
-  'Consultant', 'Entrepreneur', 'Government Employee', 'Retired',
-  'Homemaker', 'Unemployed', 'Other'
+  "Student",
+  "Teacher",
+  "Engineer",
+  "Doctor",
+  "Lawyer",
+  "Accountant",
+  "Business Owner",
+  "Manager",
+  "Administrator",
+  "Sales Representative",
+  "Marketing Specialist",
+  "IT Professional",
+  "Designer",
+  "Writer",
+  "Consultant",
+  "Entrepreneur",
+  "Government Employee",
+  "Retired",
+  "Homemaker",
+  "Unemployed",
+  "Other",
 ] as const;
 
 /**
  * Type for common occupation values
  */
-export type CommonOccupation = typeof COMMON_OCCUPATIONS[number];
+export type CommonOccupation = (typeof COMMON_OCCUPATIONS)[number];
 
 // ============================================================================
 // TYPE GUARDS
@@ -247,12 +263,12 @@ export type CommonOccupation = typeof COMMON_OCCUPATIONS[number];
 export function isOccupation(obj: object): obj is Occupation {
   return (
     obj &&
-    typeof (obj as Occupation).id === 'number' &&
-    typeof (obj as Occupation).name === 'string' &&
-    ((obj as Occupation).sequence === null || typeof (obj as Occupation).sequence === 'number') &&
-    typeof (obj as Occupation).disabled === 'boolean' &&
-    typeof (obj as Occupation).createdAt === 'string' &&
-    typeof (obj as Occupation).updatedAt === 'string'
+    typeof (obj as Occupation).id === "number" &&
+    typeof (obj as Occupation).name === "string" &&
+    ((obj as Occupation).sequence === null || typeof (obj as Occupation).sequence === "number") &&
+    typeof (obj as Occupation).disabled === "boolean" &&
+    typeof (obj as Occupation).createdAt === "string" &&
+    typeof (obj as Occupation).updatedAt === "string"
   );
 }
 
@@ -262,9 +278,12 @@ export function isOccupation(obj: object): obj is Occupation {
 export function isCreateOccupationPayload(obj: object): obj is CreateOccupationPayload {
   return (
     obj &&
-    typeof (obj as CreateOccupationPayload).name === 'string' &&
-    ((obj as CreateOccupationPayload).sequence === undefined || (obj as CreateOccupationPayload).sequence === null || typeof (obj as CreateOccupationPayload).sequence === 'number') &&
-    ((obj as CreateOccupationPayload).disabled === undefined || typeof (obj as CreateOccupationPayload).disabled === 'boolean')
+    typeof (obj as CreateOccupationPayload).name === "string" &&
+    ((obj as CreateOccupationPayload).sequence === undefined ||
+      (obj as CreateOccupationPayload).sequence === null ||
+      typeof (obj as CreateOccupationPayload).sequence === "number") &&
+    ((obj as CreateOccupationPayload).disabled === undefined ||
+      typeof (obj as CreateOccupationPayload).disabled === "boolean")
   );
 }
 
@@ -274,9 +293,13 @@ export function isCreateOccupationPayload(obj: object): obj is CreateOccupationP
 export function isUpdateOccupationPayload(obj: object): obj is UpdateOccupationPayload {
   return (
     obj &&
-    ((obj as UpdateOccupationPayload).name === undefined || typeof (obj as UpdateOccupationPayload).name === 'string') &&
-    ((obj as UpdateOccupationPayload).sequence === undefined || (obj as UpdateOccupationPayload).sequence === null || typeof (obj as UpdateOccupationPayload).sequence === 'number') &&
-    ((obj as UpdateOccupationPayload).disabled === undefined || typeof (obj as UpdateOccupationPayload).disabled === 'boolean')
+    ((obj as UpdateOccupationPayload).name === undefined ||
+      typeof (obj as UpdateOccupationPayload).name === "string") &&
+    ((obj as UpdateOccupationPayload).sequence === undefined ||
+      (obj as UpdateOccupationPayload).sequence === null ||
+      typeof (obj as UpdateOccupationPayload).sequence === "number") &&
+    ((obj as UpdateOccupationPayload).disabled === undefined ||
+      typeof (obj as UpdateOccupationPayload).disabled === "boolean")
   );
 }
 
@@ -308,7 +331,7 @@ export function formDataToPayload(formData: OccupationFormData): CreateOccupatio
 export function apiDataToFormData(occupation: Occupation): OccupationFormData {
   return {
     name: occupation.name,
-    sequence: occupation.sequence?.toString() || '',
+    sequence: occupation.sequence?.toString() || "",
     disabled: occupation.disabled,
   };
 }
@@ -331,14 +354,14 @@ export function formatOccupationName(name: string): string {
  * Get occupation status text
  */
 export function getOccupationStatusText(disabled: boolean): string {
-  return disabled ? 'Inactive' : 'Active';
+  return disabled ? "Inactive" : "Active";
 }
 
 /**
  * Get occupation status color
  */
 export function getOccupationStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
+  return disabled ? "text-red-600" : "text-green-600";
 }
 
 /**
@@ -346,30 +369,30 @@ export function getOccupationStatusColor(disabled: boolean): string {
  */
 export function getOccupationCategory(occupationName: string): string {
   const categoryMap: Record<string, string> = {
-    'Student': 'Education',
-    'Teacher': 'Education',
-    'Engineer': 'Technology',
-    'Doctor': 'Healthcare',
-    'Lawyer': 'Legal',
-    'Accountant': 'Finance',
-    'Business Owner': 'Business',
-    'Manager': 'Management',
-    'Administrator': 'Administration',
-    'Sales Representative': 'Sales',
-    'Marketing Specialist': 'Marketing',
-    'IT Professional': 'Technology',
-    'Designer': 'Creative',
-    'Writer': 'Creative',
-    'Consultant': 'Professional Services',
-    'Entrepreneur': 'Business',
-    'Government Employee': 'Government',
-    'Retired': 'Retirement',
-    'Homemaker': 'Home',
-    'Unemployed': 'Employment Status',
-    'Other': 'Other',
+    Student: "Education",
+    Teacher: "Education",
+    Engineer: "Technology",
+    Doctor: "Healthcare",
+    Lawyer: "Legal",
+    Accountant: "Finance",
+    "Business Owner": "Business",
+    Manager: "Management",
+    Administrator: "Administration",
+    "Sales Representative": "Sales",
+    "Marketing Specialist": "Marketing",
+    "IT Professional": "Technology",
+    Designer: "Creative",
+    Writer: "Creative",
+    Consultant: "Professional Services",
+    Entrepreneur: "Business",
+    "Government Employee": "Government",
+    Retired: "Retirement",
+    Homemaker: "Home",
+    Unemployed: "Employment Status",
+    Other: "Other",
   };
-  
-  return categoryMap[occupationName] || 'Other';
+
+  return categoryMap[occupationName] || "Other";
 }
 
 /**
@@ -377,24 +400,24 @@ export function getOccupationCategory(occupationName: string): string {
  */
 export function getOccupationCategoryColor(category: string): string {
   const colorMap: Record<string, string> = {
-    'Education': 'text-blue-600',
-    'Technology': 'text-purple-600',
-    'Healthcare': 'text-red-600',
-    'Legal': 'text-gray-600',
-    'Finance': 'text-green-600',
-    'Business': 'text-orange-600',
-    'Management': 'text-indigo-600',
-    'Administration': 'text-pink-600',
-    'Sales': 'text-yellow-600',
-    'Marketing': 'text-teal-600',
-    'Creative': 'text-rose-600',
-    'Professional Services': 'text-cyan-600',
-    'Government': 'text-slate-600',
-    'Retirement': 'text-amber-600',
-    'Home': 'text-emerald-600',
-    'Employment Status': 'text-neutral-600',
-    'Other': 'text-gray-500',
+    Education: "text-blue-600",
+    Technology: "text-purple-600",
+    Healthcare: "text-red-600",
+    Legal: "text-gray-600",
+    Finance: "text-green-600",
+    Business: "text-orange-600",
+    Management: "text-indigo-600",
+    Administration: "text-pink-600",
+    Sales: "text-yellow-600",
+    Marketing: "text-teal-600",
+    Creative: "text-rose-600",
+    "Professional Services": "text-cyan-600",
+    Government: "text-slate-600",
+    Retirement: "text-amber-600",
+    Home: "text-emerald-600",
+    "Employment Status": "text-neutral-600",
+    Other: "text-gray-500",
   };
-  
-  return colorMap[category] || 'text-gray-500';
-} 
+
+  return colorMap[category] || "text-gray-500";
+}

@@ -1,17 +1,16 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { getAllMarksheet } from '@/services/student-apis';
-import useDebounce from '../Hooks/useDebounce';
-import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { DataTable } from '../reports/DataTable';
-import { MarksheetColumns } from '../reports/marksheetColumns';
-import { useMarksheetStore } from '@/components/globals/useMarksheetStore';
-import CommonFilterAndExport from '../common/CommonFilterAndExport';
-import { MarksheetTableType } from '@/types/tableTypes/MarksheetTableType';
-
+import React, { useRef, useState, useEffect } from "react";
+import { getAllMarksheet } from "@/services/student-apis";
+import useDebounce from "../Hooks/useDebounce";
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { DataTable } from "../reports/DataTable";
+import { MarksheetColumns } from "../reports/marksheetColumns";
+import { useMarksheetStore } from "@/components/globals/useMarksheetStore";
+import CommonFilterAndExport from "../common/CommonFilterAndExport";
+import { MarksheetTableType } from "@/types/tableTypes/MarksheetTableType";
 
 const MarksheetDownloads: React.FC = () => {
-  const {filters,filteredData,setFilteredData}=useMarksheetStore()
+  const { filters, filteredData, setFilteredData } = useMarksheetStore();
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
@@ -19,13 +18,13 @@ const MarksheetDownloads: React.FC = () => {
   const debouncePagination = useDebounce(pagination, 400);
   const lastPageCountRef = useRef(0);
 
-  const { data:marksheetData, isLoading } = useQuery({
+  const { data: marksheetData, isLoading } = useQuery({
     queryKey: ["marksheet", filters, debouncePagination],
     queryFn: () =>
       getAllMarksheet({
         stream: filters.stream ?? undefined,
         year: filters.year ?? undefined,
-        
+
         semester: filters.semester ?? undefined,
         page: debouncePagination.pageIndex + 1,
         pageSize: debouncePagination.pageSize,
@@ -37,7 +36,7 @@ const MarksheetDownloads: React.FC = () => {
   useEffect(() => {
     if (marksheetData) {
       // console.log("marksheetData",marksheetData.data);
-      setFilteredData( marksheetData.data);
+      setFilteredData(marksheetData.data);
       lastPageCountRef.current = marksheetData.totalPages;
     }
   }, [marksheetData, setFilteredData]);
@@ -57,7 +56,6 @@ const MarksheetDownloads: React.FC = () => {
           className="w-full"
         >
           <CommonFilterAndExport></CommonFilterAndExport>
-          
         </motion.div>
 
         <motion.div
@@ -69,7 +67,7 @@ const MarksheetDownloads: React.FC = () => {
           <DataTable<MarksheetTableType, unknown>
             isLoading={isLoading}
             columns={MarksheetColumns}
-            data={filteredData|| []}
+            data={filteredData || []}
             pageCount={lastPageCountRef.current}
             pagination={pagination}
             onPaginationChange={setPagination}

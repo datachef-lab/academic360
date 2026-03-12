@@ -13,12 +13,12 @@ import {
 
 /**
  * City Service
- * 
+ *
  * This service handles all CRUD operations for the City module.
  * It provides type-safe API communication with the backend.
  */
 
-const BASE_URL = '/api/cities';
+const BASE_URL = "/api/cities";
 
 // ============================================================================
 // GET OPERATIONS
@@ -33,7 +33,7 @@ export async function getAllCities(): Promise<City[]> {
     const response = await axiosInstance.get<MultipleCityResponse>(BASE_URL);
     return response.data.payload || [];
   } catch (error) {
-    console.error('Error fetching cities:', error);
+    console.error("Error fetching cities:", error);
     throw error;
   }
 }
@@ -46,7 +46,7 @@ export async function getAllCities(): Promise<City[]> {
 export async function getCityById(id: number): Promise<City> {
   try {
     if (!id) {
-      throw new Error('City ID is required');
+      throw new Error("City ID is required");
     }
 
     const response = await axiosInstance.get<SingleCityResponse>(`${BASE_URL}/${id}`);
@@ -66,7 +66,7 @@ export async function getActiveCities(): Promise<City[]> {
     const response = await axiosInstance.get<MultipleCityResponse>(`${BASE_URL}?disabled=false`);
     return response.data.payload || [];
   } catch (error) {
-    console.error('Error fetching active cities:', error);
+    console.error("Error fetching active cities:", error);
     throw error;
   }
 }
@@ -79,10 +79,12 @@ export async function getActiveCities(): Promise<City[]> {
 export async function getCitiesByState(stateId: number): Promise<City[]> {
   try {
     if (!stateId) {
-      throw new Error('State ID is required');
+      throw new Error("State ID is required");
     }
 
-    const response = await axiosInstance.get<MultipleCityResponse>(`${BASE_URL}?stateId=${stateId}`);
+    const response = await axiosInstance.get<MultipleCityResponse>(
+      `${BASE_URL}?stateId=${stateId}`,
+    );
     return response.data.payload || [];
   } catch (error) {
     console.error(`Error fetching cities for state ID ${stateId}:`, error);
@@ -102,17 +104,17 @@ export async function getCitiesByState(stateId: number): Promise<City[]> {
 export async function createCity(payload: CreateCityPayload): Promise<City> {
   try {
     if (!payload.name || payload.name.trim().length === 0) {
-      throw new Error('City name is required');
+      throw new Error("City name is required");
     }
 
     if (!payload.stateId) {
-      throw new Error('State ID is required');
+      throw new Error("State ID is required");
     }
 
     const response = await axiosInstance.post<SingleCityResponse>(BASE_URL, payload);
     return response.data.data;
   } catch (error) {
-    console.error('Error creating city:', error);
+    console.error("Error creating city:", error);
     throw error;
   }
 }
@@ -130,11 +132,11 @@ export async function createCity(payload: CreateCityPayload): Promise<City> {
 export async function updateCity(id: number, payload: UpdateCityPayload): Promise<City> {
   try {
     if (!id) {
-      throw new Error('City ID is required');
+      throw new Error("City ID is required");
     }
 
     if (payload.name !== undefined && payload.name.trim().length === 0) {
-      throw new Error('City name cannot be empty');
+      throw new Error("City name cannot be empty");
     }
 
     const response = await axiosInstance.put<SingleCityResponse>(`${BASE_URL}/${id}`, payload);
@@ -157,7 +159,7 @@ export async function updateCity(id: number, payload: UpdateCityPayload): Promis
 export async function deleteCity(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('City ID is required');
+      throw new Error("City ID is required");
     }
 
     await axiosInstance.delete(`${BASE_URL}/${id}`);
@@ -183,11 +185,11 @@ export async function searchCities(searchTerm: string): Promise<City[]> {
     }
 
     const response = await axiosInstance.get<MultipleCityResponse>(
-      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
+      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
     return response.data.payload || [];
   } catch (error) {
-    console.error('Error searching cities:', error);
+    console.error("Error searching cities:", error);
     throw error;
   }
 }
@@ -208,11 +210,11 @@ export async function checkCityExists(name: string): Promise<boolean> {
     }
 
     const response = await axiosInstance.get<MultipleCityResponse>(
-      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
+      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`,
     );
     return (response.data.payload || []).length > 0;
   } catch (error) {
-    console.error('Error checking city existence:', error);
+    console.error("Error checking city existence:", error);
     return false;
   }
 }
@@ -227,19 +229,19 @@ export const cityService = {
   getCityById,
   getActiveCities,
   getCitiesByState,
-  
+
   // Create operations
   createCity,
-  
+
   // Update operations
   updateCity,
-  
+
   // Delete operations
   deleteCity,
-  
+
   // Search and filter operations
   searchCities,
-  
+
   // Utility functions
   checkCityExists,
-}; 
+};

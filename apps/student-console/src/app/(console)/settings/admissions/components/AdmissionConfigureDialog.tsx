@@ -1,6 +1,12 @@
 // @ts-nocheck
 import React, { useEffect, useState, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -248,7 +254,9 @@ export default function AdmissionConfigureDialog({
       if (!prev) return prev;
       return {
         ...prev,
-        courses: prev.courses.map((item) => (item.id === id ? { ...item, [field]: !item[field] } : item)),
+        courses: prev.courses.map((item) =>
+          item.id === id ? { ...item, [field]: !item[field] } : item,
+        ),
       };
     });
   };
@@ -288,7 +296,9 @@ export default function AdmissionConfigureDialog({
       if (!prev) return prev;
       return {
         ...prev,
-        courses: prev.courses.filter((item) => !(item.id === undefined && item.courseId === courseId)),
+        courses: prev.courses.filter(
+          (item) => !(item.id === undefined && item.courseId === courseId),
+        ),
       };
     });
   };
@@ -339,7 +349,9 @@ export default function AdmissionConfigureDialog({
                   <select
                     value={localAdmission?.academicYearId || ""}
                     onChange={(e) =>
-                      setLocalAdmission((prev) => (prev ? { ...prev, academicYearId: Number(e.target.value) } : null))
+                      setLocalAdmission((prev) =>
+                        prev ? { ...prev, academicYearId: Number(e.target.value) } : null,
+                      )
                     }
                     className="w-full border rounded px-3 py-2 bg-transparent"
                   >
@@ -452,7 +464,9 @@ export default function AdmissionConfigureDialog({
               </Button>
               <Button
                 variant={localAdmission.isClosed ? "default" : "destructive"}
-                style={localAdmission.isClosed ? { backgroundColor: "#22c55e", color: "white" } : {}}
+                style={
+                  localAdmission.isClosed ? { backgroundColor: "#22c55e", color: "white" } : {}
+                }
                 onClick={handleToggleAdmissionClosed}
                 disabled={saving || closing}
               >

@@ -1,5 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Filter } from "lucide-react";
 import { MisFilters } from "../types/mis-types";
@@ -90,7 +96,9 @@ export function MisFiltersComponent({
                 {classes.map((classItem) => (
                   <SelectItem key={classItem.id} value={classItem.id?.toString() || ""}>
                     {classItem.name}
-                    {classItem.shortName && <span className="text-gray-500 ml-1">({classItem.shortName})</span>}
+                    {classItem.shortName && (
+                      <span className="text-gray-500 ml-1">({classItem.shortName})</span>
+                    )}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -1,6 +1,6 @@
 /**
  * Language Medium Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Language Medium module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Language Medium interface that mirrors the backend model
  */
 export interface LanguageMedium {
-    readonly id?: number;
+  readonly id?: number;
   name: string;
   sequence?: number | null;
   disabled: boolean;
@@ -120,15 +120,15 @@ export interface LanguageMediumState {
  * Action types for language medium state management
  */
 export type LanguageMediumAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_LANGUAGE_MEDIUMS'; payload: LanguageMedium[] }
-  | { type: 'SET_CURRENT_LANGUAGE_MEDIUM'; payload: LanguageMedium | null }
-  | { type: 'ADD_LANGUAGE_MEDIUM'; payload: LanguageMedium }
-  | { type: 'UPDATE_LANGUAGE_MEDIUM'; payload: LanguageMedium }
-  | { type: 'DELETE_LANGUAGE_MEDIUM'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_LANGUAGE_MEDIUMS"; payload: LanguageMedium[] }
+  | { type: "SET_CURRENT_LANGUAGE_MEDIUM"; payload: LanguageMedium | null }
+  | { type: "ADD_LANGUAGE_MEDIUM"; payload: LanguageMedium }
+  | { type: "UPDATE_LANGUAGE_MEDIUM"; payload: LanguageMedium }
+  | { type: "DELETE_LANGUAGE_MEDIUM"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -143,7 +143,7 @@ export interface LanguageMediumTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -160,7 +160,7 @@ export interface LanguageMediumFilter {
  */
 export interface LanguageMediumSort {
   field: keyof LanguageMedium;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -195,7 +195,7 @@ export type LanguageMediumDisabled = boolean;
  * Default values for language medium
  */
 export const DEFAULT_LANGUAGE_MEDIUM: CreateLanguageMediumPayload = {
-  name: '',
+  name: "",
   sequence: null,
   disabled: false,
 };
@@ -204,8 +204,8 @@ export const DEFAULT_LANGUAGE_MEDIUM: CreateLanguageMediumPayload = {
  * Default form data for language medium
  */
 export const DEFAULT_LANGUAGE_MEDIUM_FORM: LanguageMediumFormData = {
-  name: '',
-  sequence: '',
+  name: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -213,26 +213,37 @@ export const DEFAULT_LANGUAGE_MEDIUM_FORM: LanguageMediumFormData = {
  * Table columns configuration for language medium
  */
 export const LANGUAGE_MEDIUM_TABLE_COLUMNS: LanguageMediumTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Language Medium', sortable: true, filterable: true },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Language Medium", sortable: true, filterable: true },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Common language mediums for reference
  */
 export const COMMON_LANGUAGE_MEDIUMS = [
-  'English', 'Hindi', 'Bengali', 'Telugu', 'Marathi', 'Tamil', 'Gujarati',
-  'Kannada', 'Odia', 'Malayalam', 'Punjabi', 'Assamese', 'Sanskrit'
+  "English",
+  "Hindi",
+  "Bengali",
+  "Telugu",
+  "Marathi",
+  "Tamil",
+  "Gujarati",
+  "Kannada",
+  "Odia",
+  "Malayalam",
+  "Punjabi",
+  "Assamese",
+  "Sanskrit",
 ] as const;
 
 /**
  * Type for common language medium values
  */
-export type CommonLanguageMedium = typeof COMMON_LANGUAGE_MEDIUMS[number];
+export type CommonLanguageMedium = (typeof COMMON_LANGUAGE_MEDIUMS)[number];
 
 // ============================================================================
 // TYPE GUARDS
@@ -244,12 +255,13 @@ export type CommonLanguageMedium = typeof COMMON_LANGUAGE_MEDIUMS[number];
 export function isLanguageMedium(obj: object): obj is LanguageMedium {
   return (
     obj &&
-    typeof (obj as LanguageMedium).id === 'number' &&
-    typeof (obj as LanguageMedium).name === 'string' &&
-    ((obj as LanguageMedium).sequence === null || typeof (obj as LanguageMedium).sequence === 'number') &&
-    typeof (obj as LanguageMedium).disabled === 'boolean' &&
-    typeof (obj as LanguageMedium).createdAt === 'string' &&
-    typeof (obj as LanguageMedium).updatedAt === 'string'
+    typeof (obj as LanguageMedium).id === "number" &&
+    typeof (obj as LanguageMedium).name === "string" &&
+    ((obj as LanguageMedium).sequence === null ||
+      typeof (obj as LanguageMedium).sequence === "number") &&
+    typeof (obj as LanguageMedium).disabled === "boolean" &&
+    typeof (obj as LanguageMedium).createdAt === "string" &&
+    typeof (obj as LanguageMedium).updatedAt === "string"
   );
 }
 
@@ -259,9 +271,12 @@ export function isLanguageMedium(obj: object): obj is LanguageMedium {
 export function isCreateLanguageMediumPayload(obj: object): obj is CreateLanguageMediumPayload {
   return (
     obj &&
-    typeof (obj as CreateLanguageMediumPayload).name === 'string' &&
-    ((obj as CreateLanguageMediumPayload).sequence === undefined || (obj as CreateLanguageMediumPayload).sequence === null || typeof (obj as CreateLanguageMediumPayload).sequence === 'number') &&
-    ((obj as CreateLanguageMediumPayload).disabled === undefined || typeof (obj as CreateLanguageMediumPayload).disabled === 'boolean')
+    typeof (obj as CreateLanguageMediumPayload).name === "string" &&
+    ((obj as CreateLanguageMediumPayload).sequence === undefined ||
+      (obj as CreateLanguageMediumPayload).sequence === null ||
+      typeof (obj as CreateLanguageMediumPayload).sequence === "number") &&
+    ((obj as CreateLanguageMediumPayload).disabled === undefined ||
+      typeof (obj as CreateLanguageMediumPayload).disabled === "boolean")
   );
 }
 
@@ -271,9 +286,13 @@ export function isCreateLanguageMediumPayload(obj: object): obj is CreateLanguag
 export function isUpdateLanguageMediumPayload(obj: object): obj is UpdateLanguageMediumPayload {
   return (
     obj &&
-    ((obj as UpdateLanguageMediumPayload).name === undefined || typeof (obj as UpdateLanguageMediumPayload).name === 'string') &&
-    ((obj as UpdateLanguageMediumPayload).sequence === undefined || (obj as UpdateLanguageMediumPayload).sequence === null || typeof (obj as UpdateLanguageMediumPayload).sequence === 'number') &&
-    ((obj as UpdateLanguageMediumPayload).disabled === undefined || typeof (obj as UpdateLanguageMediumPayload).disabled === 'boolean')
+    ((obj as UpdateLanguageMediumPayload).name === undefined ||
+      typeof (obj as UpdateLanguageMediumPayload).name === "string") &&
+    ((obj as UpdateLanguageMediumPayload).sequence === undefined ||
+      (obj as UpdateLanguageMediumPayload).sequence === null ||
+      typeof (obj as UpdateLanguageMediumPayload).sequence === "number") &&
+    ((obj as UpdateLanguageMediumPayload).disabled === undefined ||
+      typeof (obj as UpdateLanguageMediumPayload).disabled === "boolean")
   );
 }
 
@@ -305,7 +324,7 @@ export function formDataToPayload(formData: LanguageMediumFormData): CreateLangu
 export function apiDataToFormData(languageMedium: LanguageMedium): LanguageMediumFormData {
   return {
     name: languageMedium.name,
-    sequence: languageMedium.sequence?.toString() || '',
+    sequence: languageMedium.sequence?.toString() || "",
     disabled: languageMedium.disabled,
   };
 }
@@ -328,14 +347,14 @@ export function formatLanguageMediumName(name: string): string {
  * Get language medium status text
  */
 export function getLanguageMediumStatusText(disabled: boolean): string {
-  return disabled ? 'Inactive' : 'Active';
+  return disabled ? "Inactive" : "Active";
 }
 
 /**
  * Get language medium status color
  */
 export function getLanguageMediumStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
+  return disabled ? "text-red-600" : "text-green-600";
 }
 
 /**
@@ -343,22 +362,22 @@ export function getLanguageMediumStatusColor(disabled: boolean): string {
  */
 export function getLanguageFlag(languageName: string): string {
   const flagMap: Record<string, string> = {
-    'English': '🇺🇸',
-    'Hindi': '🇮🇳',
-    'Bengali': '🇧🇩',
-    'Telugu': '🇮🇳',
-    'Marathi': '🇮🇳',
-    'Tamil': '🇮🇳',
-    'Gujarati': '🇮🇳',
-    'Kannada': '🇮🇳',
-    'Odia': '🇮🇳',
-    'Malayalam': '🇮🇳',
-    'Punjabi': '🇮🇳',
-    'Assamese': '🇮🇳',
-    'Sanskrit': '🇮🇳',
+    English: "🇺🇸",
+    Hindi: "🇮🇳",
+    Bengali: "🇧🇩",
+    Telugu: "🇮🇳",
+    Marathi: "🇮🇳",
+    Tamil: "🇮🇳",
+    Gujarati: "🇮🇳",
+    Kannada: "🇮🇳",
+    Odia: "🇮🇳",
+    Malayalam: "🇮🇳",
+    Punjabi: "🇮🇳",
+    Assamese: "🇮🇳",
+    Sanskrit: "🇮🇳",
   };
-  
-  return flagMap[languageName] || '🌐';
+
+  return flagMap[languageName] || "🌐";
 }
 
 /**
@@ -367,4 +386,4 @@ export function getLanguageFlag(languageName: string): string {
 export function getLanguageMediumDisplayName(languageName: string): string {
   const flag = getLanguageFlag(languageName);
   return `${flag} ${languageName}`;
-} 
+}

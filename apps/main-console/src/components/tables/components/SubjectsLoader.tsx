@@ -1,6 +1,6 @@
-import React from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { TableCell, TableRow } from '@/components/ui/table';
+import React from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TableCell, TableRow } from "@/components/ui/table";
 
 interface SubjectsLoaderProps {
   rowCount: number;
@@ -27,4 +27,4 @@ const SubjectsLoader: React.FC<SubjectsLoaderProps> = ({ rowCount, columnCount }
   );
 };
 
-export default SubjectsLoader; 
+export default SubjectsLoader;

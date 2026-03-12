@@ -6,6 +6,5 @@ export const metadata = {
 };
 
 export default async function ProfilePage() {
-
   return <ProfileContent />;
 }

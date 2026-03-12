@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   Search,
   Plus,
@@ -7,22 +7,48 @@ import {
   Trash2,
   Download,
   Upload,
-//   Users,
-//   UserCheck,
-//   FileText,
+  //   Users,
+  //   UserCheck,
+  //   FileText,
   MoreHorizontal,
   Eye,
   Copy,
-//   Building,
-} from 'lucide-react';
+  //   Building,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,7 +81,7 @@ const dummyStaffAssignments: StaffAssignment[] = [
     notes: "Highly efficient in document processing",
     createdAt: "2024-05-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "SA002",
@@ -69,7 +95,7 @@ const dummyStaffAssignments: StaffAssignment[] = [
     notes: "Good at handling payment queries",
     createdAt: "2024-05-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "SA003",
@@ -83,7 +109,7 @@ const dummyStaffAssignments: StaffAssignment[] = [
     notes: "Responsive to technical issues",
     createdAt: "2024-05-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "SA004",
@@ -97,7 +123,7 @@ const dummyStaffAssignments: StaffAssignment[] = [
     notes: "Excellent analytical skills",
     createdAt: "2024-05-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "SA005",
@@ -111,7 +137,7 @@ const dummyStaffAssignments: StaffAssignment[] = [
     notes: "Detail-oriented in document verification",
     createdAt: "2024-05-15T10:30:00",
     updatedAt: "2024-07-10T14:20:00",
-    createdBy: "Admin User"
+    createdBy: "Admin User",
   },
   {
     id: "SA006",
@@ -125,88 +151,98 @@ const dummyStaffAssignments: StaffAssignment[] = [
     notes: "New assignment, needs training",
     createdAt: "2024-07-15T09:00:00",
     updatedAt: "2024-07-15T09:00:00",
-    createdBy: "Admin User"
-  }
+    createdBy: "Admin User",
+  },
 ];
-
-
 
 export default function StaffAssignmentPage() {
   const { year } = useParams<{ year: string }>();
-  const [staffAssignments, setStaffAssignments] = useState<StaffAssignment[]>(dummyStaffAssignments);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
-//   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [workflowFilter, setWorkflowFilter] = useState<string>('all');
+  const [staffAssignments, setStaffAssignments] =
+    useState<StaffAssignment[]>(dummyStaffAssignments);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  //   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [workflowFilter, setWorkflowFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<StaffAssignment | null>(null);
 
-  const departments = Array.from(new Set(staffAssignments.map(s => s.department)));
-  const workflows = Array.from(new Set(staffAssignments.map(s => s.assignedWorkflow)));
+  const departments = Array.from(new Set(staffAssignments.map((s) => s.department)));
+  const workflows = Array.from(new Set(staffAssignments.map((s) => s.assignedWorkflow)));
 
-  const filteredAssignments = staffAssignments.filter(assignment => {
-    const matchesSearch = assignment.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.role.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = departmentFilter === 'all' || assignment.department === departmentFilter;
-    const matchesWorkflow = workflowFilter === 'all' || assignment.assignedWorkflow === workflowFilter;
-    
+  const filteredAssignments = staffAssignments.filter((assignment) => {
+    const matchesSearch =
+      assignment.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.role.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDepartment =
+      departmentFilter === "all" || assignment.department === departmentFilter;
+    const matchesWorkflow =
+      workflowFilter === "all" || assignment.assignedWorkflow === workflowFilter;
+
     return matchesSearch && matchesDepartment && matchesWorkflow;
   });
 
-//   const stats = [
-//     {
-//       title: "Total Assignments",
-//       value: staffAssignments.length,
-//       icon: Users,
-//       color: "text-blue-500"
-//     },
-//     {
-//       title: "Departments",
-//       value: departments.length,
-//       icon: Building,
-//       color: "text-teal-500"
-//     },
-//     {
-//       title: "Workflows",
-//       value: workflows.length,
-//       icon: FileText,
-//       color: "text-purple-500"
-//     }
-//   ];
+  //   const stats = [
+  //     {
+  //       title: "Total Assignments",
+  //       value: staffAssignments.length,
+  //       icon: Users,
+  //       color: "text-blue-500"
+  //     },
+  //     {
+  //       title: "Departments",
+  //       value: departments.length,
+  //       icon: Building,
+  //       color: "text-teal-500"
+  //     },
+  //     {
+  //       title: "Workflows",
+  //       value: workflows.length,
+  //       icon: FileText,
+  //       color: "text-purple-500"
+  //     }
+  //   ];
 
-  const handleAddAssignment = (newAssignment: Omit<StaffAssignment, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => {
+  const handleAddAssignment = (
+    newAssignment: Omit<StaffAssignment, "id" | "createdAt" | "updatedAt" | "createdBy">,
+  ) => {
     const assignment: StaffAssignment = {
       ...newAssignment,
-      id: `SA${String(staffAssignments.length + 1).padStart(3, '0')}`,
+      id: `SA${String(staffAssignments.length + 1).padStart(3, "0")}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      createdBy: "Admin User"
+      createdBy: "Admin User",
     };
-    setStaffAssignments(prev => [...prev, assignment]);
+    setStaffAssignments((prev) => [...prev, assignment]);
     setIsAddDialogOpen(false);
   };
 
   const handleEditAssignment = (updatedAssignment: StaffAssignment) => {
-    setStaffAssignments(prev => prev.map(s => s.id === updatedAssignment.id ? { ...updatedAssignment, updatedAt: new Date().toISOString() } : s));
+    setStaffAssignments((prev) =>
+      prev.map((s) =>
+        s.id === updatedAssignment.id
+          ? { ...updatedAssignment, updatedAt: new Date().toISOString() }
+          : s,
+      ),
+    );
     setIsEditDialogOpen(false);
     setSelectedAssignment(null);
   };
 
   const handleDeleteAssignment = (id: string) => {
-    if (confirm('Are you sure you want to delete this staff assignment?')) {
-      setStaffAssignments(prev => prev.filter(s => s.id !== id));
+    if (confirm("Are you sure you want to delete this staff assignment?")) {
+      setStaffAssignments((prev) => prev.filter((s) => s.id !== id));
     }
   };
 
-//   const formatDate = (dateString: string) => {
-//     return new Date(dateString).toLocaleDateString('en-IN', {
-//       day: '2-digit',
-//       month: 'short',
-//       year: 'numeric'
-//     });
-//   };
+  //   const formatDate = (dateString: string) => {
+  //     return new Date(dateString).toLocaleDateString('en-IN', {
+  //       day: '2-digit',
+  //       month: 'short',
+  //       year: 'numeric'
+  //     });
+  //   };
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -214,7 +250,9 @@ export default function StaffAssignmentPage() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Staff Assignment - {year}</h1>
-          <p className="text-gray-600">Manage staff roles and responsibilities for admission workflow</p>
+          <p className="text-gray-600">
+            Manage staff roles and responsibilities for admission workflow
+          </p>
         </div>
 
         {/* Filters and Actions */}
@@ -244,8 +282,10 @@ export default function StaffAssignmentPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  {departments.map(dept => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -257,13 +297,13 @@ export default function StaffAssignmentPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Workflows</SelectItem>
-                  {workflows.map(workflow => (
-                    <SelectItem key={workflow} value={workflow}>{workflow}</SelectItem>
+                  {workflows.map((workflow) => (
+                    <SelectItem key={workflow} value={workflow}>
+                      {workflow}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-
-
 
               {/* Actions */}
               <div className="flex gap-2">
@@ -277,7 +317,9 @@ export default function StaffAssignmentPage() {
                   <DialogContent className="sm:max-w-2xl min-w-[80vw] h-[80vh] overflow-y-auto flex flex-col">
                     <DialogHeader className="flex-shrink-0 border-b pb-2">
                       <DialogTitle>Assign Staff Member</DialogTitle>
-                      <DialogDescription>Create new staff assignment for admission workflow.</DialogDescription>
+                      <DialogDescription>
+                        Create new staff assignment for admission workflow.
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto">
                       <AddEditAssignmentForm onSubmit={handleAddAssignment} />
@@ -359,10 +401,12 @@ export default function StaffAssignmentPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedAssignment(assignment);
-                              setIsEditDialogOpen(true);
-                            }}>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedAssignment(assignment);
+                                setIsEditDialogOpen(true);
+                              }}
+                            >
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
@@ -398,8 +442,8 @@ export default function StaffAssignmentPage() {
             </DialogHeader>
             <div className="flex-1 overflow-y-auto">
               {selectedAssignment && (
-                <AddEditAssignmentForm 
-                  onSubmit={handleEditAssignment} 
+                <AddEditAssignmentForm
+                  onSubmit={handleEditAssignment}
                   initialData={selectedAssignment}
                   isEdit={true}
                 />
@@ -418,26 +462,57 @@ interface AddEditAssignmentFormProps {
   isEdit?: boolean;
 }
 
-function AddEditAssignmentForm({ onSubmit, initialData, isEdit = false }: AddEditAssignmentFormProps) {
+function AddEditAssignmentForm({
+  onSubmit,
+  initialData,
+  isEdit = false,
+}: AddEditAssignmentFormProps) {
   const [formData, setFormData] = useState({
-    staffName: initialData?.staffName || '',
-    email: initialData?.email || '',
-    phone: initialData?.phone || '',
-    department: initialData?.department || '',
-    role: initialData?.role || '',
-    assignedWorkflow: initialData?.assignedWorkflow || '',
+    staffName: initialData?.staffName || "",
+    email: initialData?.email || "",
+    phone: initialData?.phone || "",
+    department: initialData?.department || "",
+    role: initialData?.role || "",
+    assignedWorkflow: initialData?.assignedWorkflow || "",
     responsibilities: initialData?.responsibilities || [],
-    notes: initialData?.notes || ''
+    notes: initialData?.notes || "",
   });
 
-  const availableDepartments = ["Admissions", "Finance", "IT", "Academics", "Student Services", "HR"];
-  const availableWorkflows = ["Application Processing", "Fee Collection", "Technical Support", "Merit List Generation", "Document Verification", "Pre-Admission Queries"];
+  const availableDepartments = [
+    "Admissions",
+    "Finance",
+    "IT",
+    "Academics",
+    "Student Services",
+    "HR",
+  ];
+  const availableWorkflows = [
+    "Application Processing",
+    "Fee Collection",
+    "Technical Support",
+    "Merit List Generation",
+    "Document Verification",
+    "Pre-Admission Queries",
+  ];
   const availableResponsibilities = [
-    "Document Verification", "Eligibility Check", "Interview Coordination", "Payment Processing", 
-    "Fee Slab Management", "Payment Gateway Integration", "System Maintenance", "User Support", 
-    "Data Backup", "Merit Calculation", "List Publication", "Student Communication", 
-    "Document Collection", "Verification Process", "ID Card Generation", "Query Management", 
-    "Student Support", "SMS Coordination"
+    "Document Verification",
+    "Eligibility Check",
+    "Interview Coordination",
+    "Payment Processing",
+    "Fee Slab Management",
+    "Payment Gateway Integration",
+    "System Maintenance",
+    "User Support",
+    "Data Backup",
+    "Merit Calculation",
+    "List Publication",
+    "Student Communication",
+    "Document Collection",
+    "Verification Process",
+    "ID Card Generation",
+    "Query Management",
+    "Student Support",
+    "SMS Coordination",
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -446,11 +521,11 @@ function AddEditAssignmentForm({ onSubmit, initialData, isEdit = false }: AddEdi
   };
 
   const handleResponsibilityToggle = (responsibility: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       responsibilities: prev.responsibilities.includes(responsibility)
-        ? prev.responsibilities.filter(r => r !== responsibility)
-        : [...prev.responsibilities, responsibility]
+        ? prev.responsibilities.filter((r) => r !== responsibility)
+        : [...prev.responsibilities, responsibility],
     }));
   };
 
@@ -463,7 +538,7 @@ function AddEditAssignmentForm({ onSubmit, initialData, isEdit = false }: AddEdi
             <Input
               id="staffName"
               value={formData.staffName}
-              onChange={(e) => setFormData(prev => ({ ...prev, staffName: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, staffName: e.target.value }))}
               placeholder="e.g., Dr. Priya Sharma"
               required
             />
@@ -475,7 +550,7 @@ function AddEditAssignmentForm({ onSubmit, initialData, isEdit = false }: AddEdi
               id="email"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               placeholder="staff@university.edu"
               required
             />
@@ -485,20 +560,25 @@ function AddEditAssignmentForm({ onSubmit, initialData, isEdit = false }: AddEdi
             <Input
               id="phone"
               value={formData.phone}
-              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
               placeholder="+91-9876543210"
               required
             />
           </div>
           <div>
             <Label htmlFor="department">Department</Label>
-            <Select value={formData.department} onValueChange={(value) => setFormData(prev => ({ ...prev, department: value }))}>
+            <Select
+              value={formData.department}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, department: value }))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select department" />
               </SelectTrigger>
               <SelectContent>
-                {availableDepartments.map(dept => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                {availableDepartments.map((dept) => (
+                  <SelectItem key={dept} value={dept}>
+                    {dept}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -508,38 +588,46 @@ function AddEditAssignmentForm({ onSubmit, initialData, isEdit = false }: AddEdi
             <Input
               id="role"
               value={formData.role}
-              onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value }))}
               placeholder="e.g., Admission Officer"
               required
             />
           </div>
           <div>
             <Label htmlFor="assignedWorkflow">Assigned Workflow</Label>
-            <Select value={formData.assignedWorkflow} onValueChange={(value) => setFormData(prev => ({ ...prev, assignedWorkflow: value }))}>
+            <Select
+              value={formData.assignedWorkflow}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, assignedWorkflow: value }))
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select workflow" />
               </SelectTrigger>
               <SelectContent>
-                {availableWorkflows.map(workflow => (
-                  <SelectItem key={workflow} value={workflow}>{workflow}</SelectItem>
+                {availableWorkflows.map((workflow) => (
+                  <SelectItem key={workflow} value={workflow}>
+                    {workflow}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
         </div>
 
         <div>
           <Label>Responsibilities</Label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-            {availableResponsibilities.map(responsibility => (
+            {availableResponsibilities.map((responsibility) => (
               <div key={responsibility} className="flex items-center space-x-2">
                 <Checkbox
                   id={responsibility}
                   checked={formData.responsibilities.includes(responsibility)}
                   onCheckedChange={() => handleResponsibilityToggle(responsibility)}
                 />
-                <Label htmlFor={responsibility} className="text-sm">{responsibility}</Label>
+                <Label htmlFor={responsibility} className="text-sm">
+                  {responsibility}
+                </Label>
               </div>
             ))}
           </div>
@@ -550,16 +638,14 @@ function AddEditAssignmentForm({ onSubmit, initialData, isEdit = false }: AddEdi
           <Textarea
             id="notes"
             value={formData.notes}
-            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+            onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
             placeholder="Additional notes about the assignment..."
             rows={3}
           />
         </div>
       </div>
       <DialogFooter className="flex-shrink-0 mt-6">
-        <Button type="submit">
-          {isEdit ? 'Update Assignment' : 'Create Assignment'}
-        </Button>
+        <Button type="submit">{isEdit ? "Update Assignment" : "Create Assignment"}</Button>
       </DialogFooter>
     </form>
   );

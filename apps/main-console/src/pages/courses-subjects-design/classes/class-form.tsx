@@ -94,7 +94,9 @@ export function ClassForm({ initialData, onSubmit, onCancel, isSubmitting }: Cla
         <Controller
           name="disabled"
           control={control}
-          render={({ field }) => <Checkbox id="disabled" checked={field.value} onCheckedChange={field.onChange} />}
+          render={({ field }) => (
+            <Checkbox id="disabled" checked={field.value} onCheckedChange={field.onChange} />
+          )}
         />
         <Label htmlFor="disabled">Disabled</Label>
       </div>

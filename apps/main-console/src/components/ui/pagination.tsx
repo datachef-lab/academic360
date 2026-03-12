@@ -1,5 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PaginationProps {
@@ -44,7 +50,10 @@ export function Pagination({
               ? "Showing 0 to 0 of 0 entries"
               : `Showing ${startIndex + 1} to ${Math.min(endIndex, totalItems)} of ${totalItems} entries`}
           </span>
-          <Select value={itemsPerPage.toString()} onValueChange={(value) => onItemsPerPageChange(Number(value))}>
+          <Select
+            value={itemsPerPage.toString()}
+            onValueChange={(value) => onItemsPerPageChange(Number(value))}
+          >
             <SelectTrigger className="w-20 text-gray-700">
               <SelectValue />
             </SelectTrigger>
@@ -90,7 +99,9 @@ export function Pagination({
                     size="sm"
                     onClick={() => onPageChange(pageNum)}
                     className={`w-8 h-8 p-0 text-gray-700 ${
-                      displayCurrentPage === pageNum ? "bg-gray-200 border-gray-400 hover:bg-gray-300" : ""
+                      displayCurrentPage === pageNum
+                        ? "bg-gray-200 border-gray-400 hover:bg-gray-300"
+                        : ""
                     }`}
                   >
                     {pageNum}
@@ -106,7 +117,9 @@ export function Pagination({
                   size="sm"
                   onClick={() => onPageChange(displayTotalPages)}
                   className={`w-8 h-8 p-0 text-gray-700 ${
-                    displayCurrentPage === displayTotalPages ? "bg-gray-200 border-gray-400 hover:bg-gray-300" : ""
+                    displayCurrentPage === displayTotalPages
+                      ? "bg-gray-200 border-gray-400 hover:bg-gray-300"
+                      : ""
                   }`}
                 >
                   {displayTotalPages}

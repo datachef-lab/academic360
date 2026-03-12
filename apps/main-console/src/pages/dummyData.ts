@@ -5,7 +5,7 @@ export const dummyUsers = [
     position: "Teacher",
     email: "manager@edu.in",
     contact: "Theory of Computation",
-    avatarColor: "#FFB74D"
+    avatarColor: "#FFB74D",
   },
   {
     id: 2,
@@ -13,7 +13,7 @@ export const dummyUsers = [
     position: "Teacher",
     email: "krish@ak.edu.in",
     contact: "Design of Digital Systems",
-    avatarColor: "#4CAF50"
+    avatarColor: "#4CAF50",
   },
   {
     id: 3,
@@ -21,7 +21,7 @@ export const dummyUsers = [
     position: "Student",
     email: "ritcha.23cs@students.edu.in",
     contact: "23CS103",
-    avatarColor: "#00BCD4"
+    avatarColor: "#00BCD4",
   },
   {
     id: 4,
@@ -29,7 +29,7 @@ export const dummyUsers = [
     position: "Student",
     email: "prabha.23cs@students.edu.in",
     contact: "23CS102",
-    avatarColor: "#E040FB"
+    avatarColor: "#E040FB",
   },
   {
     id: 5,
@@ -37,7 +37,7 @@ export const dummyUsers = [
     position: "Student",
     email: "vinod@example.23cs@students.edu.in",
     contact: "23CS112",
-    avatarColor: "#FFD700"
+    avatarColor: "#FFD700",
   },
   {
     id: 6,
@@ -45,7 +45,7 @@ export const dummyUsers = [
     position: "Student",
     email: "shashwath.raja.23cs@students.edu.in",
     contact: "23CS119",
-    avatarColor: "#7B68EE"
+    avatarColor: "#7B68EE",
   },
   {
     id: 7,
@@ -53,6 +53,6 @@ export const dummyUsers = [
     position: "Student",
     email: "aarav.23cs@students.edu.in",
     contact: "Mtech(Networked[1])",
-    avatarColor: "#FF4444"
-  }
+    avatarColor: "#FF4444",
+  },
 ];

@@ -4,7 +4,11 @@ import { AuthUser } from "@/types/Auth/authUser";
 import { getColorFromName, getInitials } from "@/utils/avatar";
 import { cn } from "@/lib/utils";
 
-type MinimalUser = Pick<AuthUser, "name" | "image"> | { name?: string; image?: string } | null | undefined;
+type MinimalUser =
+  | Pick<AuthUser, "name" | "image">
+  | { name?: string; image?: string }
+  | null
+  | undefined;
 
 interface UserAvatarProps extends React.ComponentPropsWithoutRef<typeof Avatar> {
   user?: MinimalUser;
@@ -23,12 +27,19 @@ export const UserAvatar = React.forwardRef<React.ElementRef<typeof Avatar>, User
     const bgColor = getColorFromName(user?.name);
 
     return (
-      <Avatar ref={ref} className={cn(sizeClasses[size], "drop-shadow-xl overflow-hidden", className)} {...props}>
+      <Avatar
+        ref={ref}
+        className={cn(sizeClasses[size], "drop-shadow-xl overflow-hidden", className)}
+        {...props}
+      >
         {user?.image ? (
           <AvatarImage src={user.image} alt={user.name || "User avatar"} className="object-cover" />
         ) : (
           <AvatarFallback
-            className={cn("text-white font-semibold flex items-center justify-center uppercase", bgColor)}
+            className={cn(
+              "text-white font-semibold flex items-center justify-center uppercase",
+              bgColor,
+            )}
           >
             {getInitials(user?.name)}
           </AvatarFallback>

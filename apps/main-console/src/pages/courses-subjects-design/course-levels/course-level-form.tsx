@@ -32,7 +32,7 @@ export function CourseLevelForm({
   isSubmitting,
 }: CourseLevelFormProps) {
   const isEdit = !!initialData?.id;
-  
+
   const defaultValues: CourseLevelFormValues = {
     name: initialData?.name || "",
     shortName: initialData?.shortName || "",
@@ -56,7 +56,6 @@ export function CourseLevelForm({
       shortName: data.shortName || null,
       sequence: data.sequence || null,
       disabled: data.disabled,
-      
     };
     await onSubmit(courseLevelData);
   };
@@ -69,11 +68,9 @@ export function CourseLevelForm({
           id="name"
           placeholder="Enter course level name"
           {...register("name")}
-          className={errors.name ? 'border-red-500' : ''}
+          className={errors.name ? "border-red-500" : ""}
         />
-        {errors.name && (
-          <p className="text-sm text-red-500">{errors.name.message}</p>
-        )}
+        {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -82,11 +79,9 @@ export function CourseLevelForm({
           id="shortName"
           placeholder="Enter short name (optional)"
           {...register("shortName")}
-          className={errors.shortName ? 'border-red-500' : ''}
+          className={errors.shortName ? "border-red-500" : ""}
         />
-        {errors.shortName && (
-          <p className="text-sm text-red-500">{errors.shortName.message}</p>
-        )}
+        {errors.shortName && <p className="text-sm text-red-500">{errors.shortName.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -96,11 +91,9 @@ export function CourseLevelForm({
           type="number"
           placeholder="Enter sequence number"
           {...register("sequence", { valueAsNumber: true })}
-          className={errors.sequence ? 'border-red-500' : ''}
+          className={errors.sequence ? "border-red-500" : ""}
         />
-        {errors.sequence && (
-          <p className="text-sm text-red-500">{errors.sequence.message}</p>
-        )}
+        {errors.sequence && <p className="text-sm text-red-500">{errors.sequence.message}</p>}
       </div>
 
       <div className="flex items-center space-x-2">
@@ -108,23 +101,14 @@ export function CourseLevelForm({
           name="disabled"
           control={control}
           render={({ field }) => (
-            <Checkbox
-              id="disabled"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
+            <Checkbox id="disabled" checked={field.value} onCheckedChange={field.onChange} />
           )}
         />
         <Label htmlFor="disabled">Disabled</Label>
       </div>
 
       <div className="flex justify-end space-x-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isSubmitting}
-        >
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting}>

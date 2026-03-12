@@ -1,9 +1,15 @@
-import React from 'react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Check, Filter, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Check, Filter, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface SubjectFiltersProps {
   searchQuery: string;
@@ -65,11 +71,13 @@ const SubjectFilters: React.FC<SubjectFiltersProps> = ({
             </SelectTrigger>
             <SelectContent className="bg-white border-purple-300">
               <SelectItem value="all">All Semesters</SelectItem>
-              {uniqueSemesters.filter((semester) => semester !== undefined && semester !== null).map((semester) => (
-                <SelectItem key={semester} value={semester.toString()}>
-                  Semester {semester}
-                </SelectItem>
-              ))}
+              {uniqueSemesters
+                .filter((semester) => semester !== undefined && semester !== null)
+                .map((semester) => (
+                  <SelectItem key={semester} value={semester.toString()}>
+                    Semester {semester}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -128,31 +136,46 @@ const SubjectFilters: React.FC<SubjectFiltersProps> = ({
           <Filter className="h-4 w-4 text-purple-700" />
           <span className="text-sm font-medium text-purple-900">Filters Applied</span>
           {currentSemester !== "all" && (
-            <Badge variant="outline" className="gap-1 text-xs bg-purple-100 text-purple-800 border-purple-300">
+            <Badge
+              variant="outline"
+              className="gap-1 text-xs bg-purple-100 text-purple-800 border-purple-300"
+            >
               Semester {currentSemester}
               <Check className="h-3 w-3 text-purple-700" />
             </Badge>
           )}
           {degreeFilter !== "all" && (
-            <Badge variant="outline" className="gap-1 text-xs bg-purple-100 text-purple-800 border-purple-300">
+            <Badge
+              variant="outline"
+              className="gap-1 text-xs bg-purple-100 text-purple-800 border-purple-300"
+            >
               {degreeFilter}
               <Check className="h-3 w-3 text-purple-700" />
             </Badge>
           )}
           {subjectType !== "all" && (
-            <Badge variant="outline" className="gap-1 text-xs bg-purple-100 text-purple-800 border-purple-300">
+            <Badge
+              variant="outline"
+              className="gap-1 text-xs bg-purple-100 text-purple-800 border-purple-300"
+            >
               {subjectType}
               <Check className="h-3 w-3 text-purple-700" />
             </Badge>
           )}
           {isOptionalFilter !== "all" && (
-            <Badge variant="outline" className="gap-1 text-xs bg-purple-100 text-purple-800 border-purple-300">
+            <Badge
+              variant="outline"
+              className="gap-1 text-xs bg-purple-100 text-purple-800 border-purple-300"
+            >
               {isOptionalFilter === "true" ? "Optional" : "Required"}
               <Check className="h-3 w-3 text-purple-700" />
             </Badge>
           )}
           {searchQuery && (
-            <Badge variant="outline" className="gap-1 text-xs bg-purple-100 text-purple-800 border-purple-300">
+            <Badge
+              variant="outline"
+              className="gap-1 text-xs bg-purple-100 text-purple-800 border-purple-300"
+            >
               Search: {searchQuery}
               <Check className="h-3 w-3 text-purple-700" />
             </Badge>
@@ -160,9 +183,9 @@ const SubjectFilters: React.FC<SubjectFiltersProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={resetFilters}
             className="border-purple-300 text-purple-800 hover:bg-purple-100 hover:text-purple-900"
           >
@@ -177,4 +200,4 @@ const SubjectFilters: React.FC<SubjectFiltersProps> = ({
   );
 };
 
-export default SubjectFilters; 
+export default SubjectFilters;

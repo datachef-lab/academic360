@@ -86,7 +86,10 @@ export async function PUT(req: Request) {
       .returning();
 
     if (!updatedNationality) {
-      return NextResponse.json({ success: false, message: "Nationality not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Nationality not found" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({ success: true, data: updatedNationality });
@@ -114,7 +117,10 @@ export async function DELETE(req: Request) {
       .returning();
 
     if (!deletedNationality) {
-      return NextResponse.json({ success: false, message: "Nationality not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Nationality not found" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({ success: true, data: deletedNationality });

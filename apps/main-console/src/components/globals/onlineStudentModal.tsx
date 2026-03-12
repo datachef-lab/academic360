@@ -1,6 +1,13 @@
 import { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { StudentDto } from "@repo/db/dtos/user";
 import { Circle, User } from "lucide-react";
 
@@ -28,7 +35,13 @@ interface OnlineStudentsModalProps {
   isError: boolean;
 }
 
-export function OnlineStudentsModal({ open, onOpenChange, students, loading, isError }: OnlineStudentsModalProps) {
+export function OnlineStudentsModal({
+  open,
+  onOpenChange,
+  students,
+  loading,
+  isError,
+}: OnlineStudentsModalProps) {
   useEffect(() => {
     if (students.length > 0) {
       console.log("📘 Online Students Data:", JSON.stringify(students, null, 2));
@@ -102,7 +115,10 @@ export function OnlineStudentsModal({ open, onOpenChange, students, loading, isE
                 {/* 🚫 Empty state */}
                 {!loading && !isError && students.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-10 text-sm text-muted-foreground">
+                    <TableCell
+                      colSpan={9}
+                      className="text-center py-10 text-sm text-muted-foreground"
+                    >
                       No students online
                     </TableCell>
                   </TableRow>

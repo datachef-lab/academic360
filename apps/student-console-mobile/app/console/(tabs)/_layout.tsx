@@ -1,6 +1,13 @@
 import { useTheme } from "@/hooks/use-theme";
 import { Tabs } from "expo-router";
-import { ClipboardCheck, FileTextIcon, HouseIcon, IndianRupeeIcon, LibraryIcon, LucideIcon } from "lucide-react-native";
+import {
+  ClipboardCheck,
+  FileTextIcon,
+  HouseIcon,
+  IndianRupeeIcon,
+  LibraryIcon,
+  LucideIcon,
+} from "lucide-react-native";
 import React from "react";
 import { Text, View } from "react-native";
 

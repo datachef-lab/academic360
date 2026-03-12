@@ -11,7 +11,13 @@ export interface ProgressUpdate {
   createdAt: Date;
   meta?: Record<string, unknown>;
   // Additional fields for download progress
-  stage?: "listing" | "downloading_pdfs" | "downloading_documents" | "creating_zips" | "completed" | "error";
+  stage?:
+    | "listing"
+    | "downloading_pdfs"
+    | "downloading_documents"
+    | "creating_zips"
+    | "completed"
+    | "error";
   pdfCount?: number;
   pdfTotal?: number; // Total PDFs that will be downloaded
   documentsCount?: number;

@@ -7,7 +7,7 @@ import {
   MultipleTransportResponse,
 } from "@/types/resources/transport.types";
 
-const BASE_URL = '/api/transports';
+const BASE_URL = "/api/transports";
 
 export async function getAllTransports(): Promise<Transport[]> {
   const response = await axiosInstance.get<MultipleTransportResponse>(BASE_URL);
@@ -29,7 +29,10 @@ export async function createTransport(payload: CreateTransportPayload): Promise<
   return response.data.data;
 }
 
-export async function updateTransport(id: number, payload: UpdateTransportPayload): Promise<Transport> {
+export async function updateTransport(
+  id: number,
+  payload: UpdateTransportPayload,
+): Promise<Transport> {
   const response = await axiosInstance.put<SingleTransportResponse>(`${BASE_URL}/${id}`, payload);
   return response.data.data;
 }
@@ -45,4 +48,4 @@ export const transportService = {
   createTransport,
   updateTransport,
   deleteTransport,
-}; 
+};

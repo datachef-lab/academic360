@@ -13,12 +13,12 @@ import {
 
 /**
  * Language Medium Service
- * 
+ *
  * This service handles all CRUD operations for the Language Medium module.
  * It provides type-safe API communication with the backend.
  */
 
-const BASE_URL = '/api/languages';
+const BASE_URL = "/api/languages";
 
 // ============================================================================
 // GET OPERATIONS
@@ -33,7 +33,7 @@ export async function getAllLanguageMediums(): Promise<LanguageMedium[]> {
     const response = await axiosInstance.get<MultipleLanguageMediumResponse>(BASE_URL);
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching language mediums:', error);
+    console.error("Error fetching language mediums:", error);
     throw error;
   }
 }
@@ -46,7 +46,7 @@ export async function getAllLanguageMediums(): Promise<LanguageMedium[]> {
 export async function getLanguageMediumById(id: number): Promise<LanguageMedium> {
   try {
     if (!id) {
-      throw new Error('Language medium ID is required');
+      throw new Error("Language medium ID is required");
     }
 
     const response = await axiosInstance.get<SingleLanguageMediumResponse>(`${BASE_URL}/${id}`);
@@ -63,10 +63,12 @@ export async function getLanguageMediumById(id: number): Promise<LanguageMedium>
  */
 export async function getActiveLanguageMediums(): Promise<LanguageMedium[]> {
   try {
-    const response = await axiosInstance.get<MultipleLanguageMediumResponse>(`${BASE_URL}?disabled=false`);
+    const response = await axiosInstance.get<MultipleLanguageMediumResponse>(
+      `${BASE_URL}?disabled=false`,
+    );
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching active language mediums:', error);
+    console.error("Error fetching active language mediums:", error);
     throw error;
   }
 }
@@ -80,16 +82,18 @@ export async function getActiveLanguageMediums(): Promise<LanguageMedium[]> {
  * @param payload - Language medium creation data
  * @returns Promise<LanguageMedium> - Created language medium data
  */
-export async function createLanguageMedium(payload: CreateLanguageMediumPayload): Promise<LanguageMedium> {
+export async function createLanguageMedium(
+  payload: CreateLanguageMediumPayload,
+): Promise<LanguageMedium> {
   try {
     if (!payload.name || payload.name.trim().length === 0) {
-      throw new Error('Language medium name is required');
+      throw new Error("Language medium name is required");
     }
 
     const response = await axiosInstance.post<SingleLanguageMediumResponse>(BASE_URL, payload);
     return response.data.data;
   } catch (error) {
-    console.error('Error creating language medium:', error);
+    console.error("Error creating language medium:", error);
     throw error;
   }
 }
@@ -104,17 +108,23 @@ export async function createLanguageMedium(payload: CreateLanguageMediumPayload)
  * @param payload - Language medium update data
  * @returns Promise<LanguageMedium> - Updated language medium data
  */
-export async function updateLanguageMedium(id: number, payload: UpdateLanguageMediumPayload): Promise<LanguageMedium> {
+export async function updateLanguageMedium(
+  id: number,
+  payload: UpdateLanguageMediumPayload,
+): Promise<LanguageMedium> {
   try {
     if (!id) {
-      throw new Error('Language medium ID is required');
+      throw new Error("Language medium ID is required");
     }
 
     if (payload.name !== undefined && payload.name.trim().length === 0) {
-      throw new Error('Language medium name cannot be empty');
+      throw new Error("Language medium name cannot be empty");
     }
 
-    const response = await axiosInstance.put<SingleLanguageMediumResponse>(`${BASE_URL}/${id}`, payload);
+    const response = await axiosInstance.put<SingleLanguageMediumResponse>(
+      `${BASE_URL}/${id}`,
+      payload,
+    );
     return response.data.data;
   } catch (error) {
     console.error(`Error updating language medium with ID ${id}:`, error);
@@ -134,7 +144,7 @@ export async function updateLanguageMedium(id: number, payload: UpdateLanguageMe
 export async function deleteLanguageMedium(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('Language medium ID is required');
+      throw new Error("Language medium ID is required");
     }
 
     await axiosInstance.delete(`${BASE_URL}/${id}`);
@@ -160,11 +170,11 @@ export async function searchLanguageMediums(searchTerm: string): Promise<Languag
     }
 
     const response = await axiosInstance.get<MultipleLanguageMediumResponse>(
-      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
+      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
     return response.data.data;
   } catch (error) {
-    console.error('Error searching language mediums:', error);
+    console.error("Error searching language mediums:", error);
     throw error;
   }
 }
@@ -185,11 +195,11 @@ export async function checkLanguageMediumExists(name: string): Promise<boolean> 
     }
 
     const response = await axiosInstance.get<MultipleLanguageMediumResponse>(
-      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
+      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`,
     );
     return response.data.data.length > 0;
   } catch (error) {
-    console.error('Error checking language medium existence:', error);
+    console.error("Error checking language medium existence:", error);
     return false;
   }
 }
@@ -203,19 +213,19 @@ export const languageMediumService = {
   getAllLanguageMediums,
   getLanguageMediumById,
   getActiveLanguageMediums,
-  
+
   // Create operations
   createLanguageMedium,
-  
+
   // Update operations
   updateLanguageMedium,
-  
+
   // Delete operations
   deleteLanguageMedium,
-  
+
   // Search and filter operations
   searchLanguageMediums,
-  
+
   // Utility functions
   checkLanguageMediumExists,
-}; 
+};

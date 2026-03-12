@@ -3,10 +3,6 @@ import { Framework } from "@/types/enums";
 import { Student } from "@/types/user/student";
 import { create } from "zustand";
 
-
-
-
-
 type uiFilters = {
   selectedStream: { name: string } | null;
   selectedYear: string | null;
@@ -29,11 +25,11 @@ interface StudentDownloadStore {
   filters: StudentFilters;
   uiFilters: uiFilters;
   filteredData: Student[];
-  
+
   setFilters: (filters: StudentFilters) => void;
   setFilteredData: (data: Student[]) => void;
   StudentData: Student[];
-  setStudentData:(data:Student[])=>void;
+  setStudentData: (data: Student[]) => void;
   setUiFilters: (uiFilters: Partial<uiFilters>) => void;
 }
 
@@ -54,7 +50,7 @@ export const useStudentDownloadStore = create<StudentDownloadStore>((set) => ({
     selectedFramework: null,
   },
   StudentData: [],
-  
+
   filteredData: [],
   setFilters: (filters) => {
     set({ filters });
@@ -62,8 +58,8 @@ export const useStudentDownloadStore = create<StudentDownloadStore>((set) => ({
   setUiFilters: (uiFilters) => {
     set((state) => ({ uiFilters: { ...state.uiFilters, ...uiFilters } }));
   },
-  setStudentData:(StudentData)=>{
-    set({StudentData});
+  setStudentData: (StudentData) => {
+    set({ StudentData });
   },
   setFilteredData: (filteredData) => {
     set({ filteredData });

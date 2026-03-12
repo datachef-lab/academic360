@@ -310,7 +310,9 @@ export async function doLogin(
 
 export async function sendOtpRequest(
   email: string,
-): Promise<ApiResponse<{ message: string; expiresIn: string; sentTo: { email: boolean; whatsapp: boolean } }>> {
+): Promise<
+  ApiResponse<{ message: string; expiresIn: string; sentTo: { email: boolean; whatsapp: boolean } }>
+> {
   const response = await axiosInstance.post("/auth/otp/send-email", { email });
   return response.data;
 }
@@ -345,7 +347,9 @@ export async function lookupUser(
 export async function lookupUsersByPrefix(
   prefix: string,
 ): Promise<ApiResponse<{ users: { id: number; name: string; email: string }[] }>> {
-  const response = await axiosInstance.get(`/auth/otp/lookup-prefix?prefix=${encodeURIComponent(prefix)}`);
+  const response = await axiosInstance.get(
+    `/auth/otp/lookup-prefix?prefix=${encodeURIComponent(prefix)}`,
+  );
   return response.data;
 }
 

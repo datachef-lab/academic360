@@ -1,6 +1,13 @@
 // @ts-nocheck
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,7 +22,11 @@ import "react-datepicker/dist/react-datepicker.css";
 
 // Work around strict shadcn typings with proper type extensions
 const LabelFixed = Label as React.ComponentType<
-  React.ComponentProps<typeof Label> & { children?: React.ReactNode; className?: string; htmlFor?: string }
+  React.ComponentProps<typeof Label> & {
+    children?: React.ReactNode;
+    className?: string;
+    htmlFor?: string;
+  }
 >;
 
 type CreateAdmissionDialogProps = {
@@ -85,13 +96,18 @@ export default function CreateAdmissionDialog({
   const fetchCourses = async () => {
     try {
       setIsLoading(true);
-      const { courses: tmpCourses, totalCount } = (await getCourses()) as { courses: Course[]; totalCount: number };
+      const { courses: tmpCourses, totalCount } = (await getCourses()) as {
+        courses: Course[];
+        totalCount: number;
+      };
       console.log(tmpCourses);
       // Filter out disabled courses
       const activeCourses = tmpCourses.filter((course: Course) => !course.disabled);
       setCourses(activeCourses);
       // Select all courses by default
-      const allCourseIds = activeCourses.map((course) => course.id!).filter((id) => id !== undefined);
+      const allCourseIds = activeCourses
+        .map((course) => course.id!)
+        .filter((id) => id !== undefined);
       setSelectedCourses(allCourseIds);
     } catch (error) {
       console.error("Error fetching courses:", error);
@@ -130,7 +146,11 @@ export default function CreateAdmissionDialog({
     }
     try {
       setIsCreating(true);
-      await onCreate(selectedCourses, format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"));
+      await onCreate(
+        selectedCourses,
+        format(startDate, "yyyy-MM-dd"),
+        format(endDate, "yyyy-MM-dd"),
+      );
       setSelectedCourses([]);
       setStartDate(null);
       setEndDate(null);
@@ -229,7 +249,9 @@ export default function CreateAdmissionDialog({
                 </div>
               )}
             </div>
-            <div className={`text-sm text-gray-600 ${selectedCourses.length == 0 ? "invisible" : "visible"}`}>
+            <div
+              className={`text-sm text-gray-600 ${selectedCourses.length == 0 ? "invisible" : "visible"}`}
+            >
               Selected: {selectedCourses.length} course{selectedCourses.length !== 1 ? "s" : ""}
             </div>
           </div>

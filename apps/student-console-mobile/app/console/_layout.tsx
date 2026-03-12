@@ -8,7 +8,9 @@ import { Platform, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 function WebStatusBar({ theme }: { theme: { background: string; text: string } }) {
-  const [time, setTime] = useState(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
+  const [time, setTime] = useState(
+    new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+  );
   useEffect(() => {
     const id = setInterval(
       () => setTime(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })),
@@ -44,7 +46,11 @@ export default function ConsoleLayout() {
 
   return (
     <ExamSocketProvider>
-      <SafeAreaView edges={["top"]} style={{ backgroundColor: theme.background }} className="h-full flex-1">
+      <SafeAreaView
+        edges={["top"]}
+        style={{ backgroundColor: theme.background }}
+        className="h-full flex-1"
+      >
         <WebStatusBar theme={theme} />
         <Header />
         <Breadcrumb />

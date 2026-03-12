@@ -1,5 +1,20 @@
 import { FC } from "react";
-import { Book, University, Building2, Tag, Award, Globe, FileText, Droplet, Briefcase, GraduationCap, Flag, Map, MapPin, DollarSign } from "lucide-react";
+import {
+  Book,
+  University,
+  Building2,
+  Tag,
+  Award,
+  Globe,
+  FileText,
+  Droplet,
+  Briefcase,
+  GraduationCap,
+  Flag,
+  Map,
+  MapPin,
+  DollarSign,
+} from "lucide-react";
 
 const resourceSections = [
   { label: "Board Universities", icon: University },
@@ -36,9 +51,10 @@ const ResourceSidebar: FC<Props> = ({ activeSection, onSectionChange }) => (
           <li key={label}>
             <button
               className={`flex items-center w-full px-3 py-2 rounded-lg transition
-                ${activeSection === label
-                  ? "bg-purple-100 border-l-4 border-purple-600 text-purple-800 font-semibold"
-                  : "hover:bg-gray-100 text-gray-700"
+                ${
+                  activeSection === label
+                    ? "bg-purple-100 border-l-4 border-purple-600 text-purple-800 font-semibold"
+                    : "hover:bg-gray-100 text-gray-700"
                 }`}
               onClick={() => onSectionChange(label)}
             >
@@ -52,4 +68,4 @@ const ResourceSidebar: FC<Props> = ({ activeSection, onSectionChange }) => (
   </aside>
 );
 
-export default ResourceSidebar; 
+export default ResourceSidebar;

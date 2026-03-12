@@ -37,12 +37,33 @@ const workflowLinks: LinkType[] = [
     status: "completed",
     completedAt: "2024-07-09T13:45:00",
   },
-  { icon: Users, title: "Applications", url: "applications", status: "completed", completedAt: "2024-07-09T14:10:00" },
+  {
+    icon: Users,
+    title: "Applications",
+    url: "applications",
+    status: "completed",
+    completedAt: "2024-07-09T14:10:00",
+  },
   { icon: BookOpen, title: "Generate Merit", url: "generate-merit", status: "in_progress" },
-  { icon: CreditCard, title: "Fee Payment Review", url: "fee-payment-review", status: "not_started" },
-  { icon: FileCog, title: "Document Verification", url: "document-verification", status: "not_started" },
+  {
+    icon: CreditCard,
+    title: "Fee Payment Review",
+    url: "fee-payment-review",
+    status: "not_started",
+  },
+  {
+    icon: FileCog,
+    title: "Document Verification",
+    url: "document-verification",
+    status: "not_started",
+  },
   { icon: IdCard, title: "ID Card Generator", url: "id-card-generator", status: "not_started" },
-  { icon: CheckCircle, title: "Final Admission Push", url: "final-admission-push", status: "not_started" },
+  {
+    icon: CheckCircle,
+    title: "Final Admission Push",
+    url: "final-admission-push",
+    status: "not_started",
+  },
 ];
 
 function formatDateTime(dateString?: string) {
@@ -62,7 +83,11 @@ const content = (
     <div className="">
       <ul className="bg-white rounded-lg px-3 flex flex-col shadow-sm">
         {defaultLinks.map((link) => (
-          <NavItem key={link.title} href={link.url} icon={<link.icon className="h-5 w-5 text-[12px]" />}>
+          <NavItem
+            key={link.title}
+            href={link.url}
+            icon={<link.icon className="h-5 w-5 text-[12px]" />}
+          >
             {link.title}
           </NavItem>
         ))}
@@ -102,7 +127,9 @@ const content = (
                 {link.title}
               </span>
               {link.status === "completed" && link.completedAt && (
-                <p className="text-xs text-right w-full text-gray-500 ml-2">{formatDateTime(link.completedAt)}</p>
+                <p className="text-xs text-right w-full text-gray-500 ml-2">
+                  {formatDateTime(link.completedAt)}
+                </p>
               )}
             </div>
           </NavItem>
@@ -116,7 +143,11 @@ const content = (
       </div>
       <ul className="bg-white rounded-lg px-3 flex flex-col shadow-sm space-y-1">
         {configurationLinks.map((link) => (
-          <NavItem key={link.title} href={link.url} icon={<link.icon className="h-5 w-5 text-[12px]" />}>
+          <NavItem
+            key={link.title}
+            href={link.url}
+            icon={<link.icon className="h-5 w-5 text-[12px]" />}
+          >
             {link.title}
           </NavItem>
         ))}
@@ -347,14 +378,29 @@ export default function AdmissionDetailsPage() {
                         { course: "B.Sc (Chemistry)", applicants: 25, paid: 15, approved: 18 },
                         { course: "B.Sc (Mathematics)", applicants: 20, paid: 12, approved: 15 },
                         { course: "B.A. History", applicants: 18, paid: 10, approved: 12 },
-                        { course: "B.A. Political Science", applicants: 22, paid: 14, approved: 16 },
+                        {
+                          course: "B.A. Political Science",
+                          applicants: 22,
+                          paid: 14,
+                          approved: 16,
+                        },
                         { course: "B.Sc (Biology)", applicants: 28, paid: 18, approved: 20 },
                         { course: "B.A. Economics", applicants: 32, paid: 20, approved: 25 },
-                        { course: "B.Sc (Computer Science)", applicants: 45, paid: 30, approved: 35 },
+                        {
+                          course: "B.Sc (Computer Science)",
+                          applicants: 45,
+                          paid: 30,
+                          approved: 35,
+                        },
                         { course: "B.A. Sociology", applicants: 15, paid: 8, approved: 10 },
                         { course: "B.Sc (Statistics)", applicants: 12, paid: 6, approved: 8 },
                         { course: "B.A. Geography", applicants: 10, paid: 5, approved: 7 },
-                        { course: "B.Sc (Environmental Science)", applicants: 18, paid: 10, approved: 12 },
+                        {
+                          course: "B.Sc (Environmental Science)",
+                          applicants: 18,
+                          paid: 10,
+                          approved: 12,
+                        },
                         { course: "B.A. Psychology", applicants: 25, paid: 15, approved: 18 },
                         { course: "B.Sc (Microbiology)", applicants: 20, paid: 12, approved: 15 },
                         { course: "B.A. Philosophy", applicants: 8, paid: 4, approved: 6 },
@@ -362,9 +408,24 @@ export default function AdmissionDetailsPage() {
                         { course: "B.A. Literature", applicants: 16, paid: 9, approved: 11 },
                         { course: "B.Sc (Physics Honours)", applicants: 12, paid: 7, approved: 9 },
                         { course: "B.A. Journalism", applicants: 14, paid: 8, approved: 10 },
-                        { course: "B.Sc (Chemistry Honours)", applicants: 15, paid: 9, approved: 11 },
-                        { course: "B.A. Mass Communication", applicants: 18, paid: 10, approved: 12 },
-                        { course: "B.Sc (Mathematics Honours)", applicants: 10, paid: 5, approved: 7 },
+                        {
+                          course: "B.Sc (Chemistry Honours)",
+                          applicants: 15,
+                          paid: 9,
+                          approved: 11,
+                        },
+                        {
+                          course: "B.A. Mass Communication",
+                          applicants: 18,
+                          paid: 10,
+                          approved: 12,
+                        },
+                        {
+                          course: "B.Sc (Mathematics Honours)",
+                          applicants: 10,
+                          paid: 5,
+                          approved: 7,
+                        },
                         { course: "B.A. Fine Arts", applicants: 12, paid: 6, approved: 8 },
                         { course: "B.Sc (Botany)", applicants: 16, paid: 9, approved: 11 },
                         { course: "B.A. Music", applicants: 8, paid: 4, approved: 6 },
@@ -378,11 +439,26 @@ export default function AdmissionDetailsPage() {
                         { course: "B.A. Media Studies", applicants: 16, paid: 9, approved: 11 },
                         { course: "B.Sc (Astronomy)", applicants: 4, paid: 2, approved: 3 },
                         { course: "B.A. Creative Writing", applicants: 12, paid: 6, approved: 8 },
-                        { course: "B.Sc (Forensic Science)", applicants: 20, paid: 12, approved: 15 },
+                        {
+                          course: "B.Sc (Forensic Science)",
+                          applicants: 20,
+                          paid: 12,
+                          approved: 15,
+                        },
                         { course: "B.A. Translation Studies", applicants: 8, paid: 4, approved: 6 },
-                        { course: "B.Sc (Food Technology)", applicants: 18, paid: 10, approved: 12 },
+                        {
+                          course: "B.Sc (Food Technology)",
+                          applicants: 18,
+                          paid: 10,
+                          approved: 12,
+                        },
                         { course: "B.A. Linguistics", applicants: 10, paid: 5, approved: 7 },
-                        { course: "B.Sc (Nutrition Science)", applicants: 16, paid: 9, approved: 11 },
+                        {
+                          course: "B.Sc (Nutrition Science)",
+                          applicants: 16,
+                          paid: 9,
+                          approved: 11,
+                        },
                         { course: "B.A. Archaeology", applicants: 6, paid: 3, approved: 4 },
                         { course: "B.Sc (Sports Science)", applicants: 14, paid: 8, approved: 10 },
                         { course: "B.A. Heritage Studies", applicants: 8, paid: 4, approved: 6 },
@@ -393,7 +469,9 @@ export default function AdmissionDetailsPage() {
                           <td className="text-center py-2">{row.paid}</td>
                           <td className="text-center py-2">{row.approved}</td>
                           <td className="text-center py-2">
-                            <button className="text-blue-600 underline hover:text-blue-800">Download</button>
+                            <button className="text-blue-600 underline hover:text-blue-800">
+                              Download
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -434,7 +512,10 @@ export default function AdmissionDetailsPage() {
                 </div>
               </div>
               {/* Staff Assignment */}
-              <Link to={`staff-assignment`} className="bg-white rounded-xl border p-4 flex items-center gap-3">
+              <Link
+                to={`staff-assignment`}
+                className="bg-white rounded-xl border p-4 flex items-center gap-3"
+              >
                 <Users className="w-6 h-6 text-gray-500" />
                 <span className="font-semibold">Staff Assignment</span>
               </Link>
@@ -463,7 +544,9 @@ const StatCard = ({
   bgColor?: string;
   textColor?: string;
 }) => (
-  <div className={`${bgColor} p-5 rounded-lg shadow border border-gray-200 flex items-center justify-between`}>
+  <div
+    className={`${bgColor} p-5 rounded-lg shadow border border-gray-200 flex items-center justify-between`}
+  >
     <div>
       <div className={`text-sm font-medium ${textColor} mb-2`}>{label}</div>
       <div className={`text-3xl font-bold ${textColor}`}>{value.toLocaleString()}</div>
@@ -489,7 +572,12 @@ export function NavItem({ href, icon, children, isActive }: NavItemProps) {
           isActive ? "bg-purple-100 text-purple-700 shadow-sm" : "text-gray-700 hover:bg-gray-100",
         )}
       >
-        <span className={cn("h-5 w-5 flex-shrink-0 text-[12px]", isActive ? "text-purple-600" : "text-gray-500")}>
+        <span
+          className={cn(
+            "h-5 w-5 flex-shrink-0 text-[12px]",
+            isActive ? "text-purple-600" : "text-gray-500",
+          )}
+        >
           {icon}
         </span>
         <div className="flex-1 min-w-0 text-[12px]">{children}</div>

@@ -1,7 +1,17 @@
 "use client";
 
 // import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Bar, BarChart, Line, LineChart } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Bar,
+  BarChart,
+  Line,
+  LineChart,
+} from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartConfig,
@@ -130,8 +140,20 @@ export function AttendanceLineChart() {
             <XAxis dataKey="week" tickLine={false} axisLine={false} />
             <YAxis hide />
             <ChartTooltip content={<ChartTooltipContent />} />
-            <Line dataKey="present" type="monotone" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
-            <Line dataKey="absent" type="monotone" stroke="var(--chart-2)" strokeWidth={2} dot={false} />
+            <Line
+              dataKey="present"
+              type="monotone"
+              stroke="var(--chart-1)"
+              strokeWidth={2}
+              dot={false}
+            />
+            <Line
+              dataKey="absent"
+              type="monotone"
+              stroke="var(--chart-2)"
+              strokeWidth={2}
+              dot={false}
+            />
           </LineChart>
         </ChartContainer>
       </CardContent>

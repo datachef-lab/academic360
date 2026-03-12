@@ -110,7 +110,9 @@ export default function ManageMarksheetWrapper() {
             </motion.div>
             <div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Add Marksheet</h2>
-              <p className="text-sm text-purple-600 font-medium">Upload and manage your marksheets</p>
+              <p className="text-sm text-purple-600 font-medium">
+                Upload and manage your marksheets
+              </p>
             </div>
           </div>
 

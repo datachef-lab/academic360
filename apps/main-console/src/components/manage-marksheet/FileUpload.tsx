@@ -175,7 +175,13 @@ import { Button } from "@/components/ui/button";
 import { io, Socket } from "socket.io-client";
 import { Input } from "../ui/input";
 import { uploadFile } from "@/services/marksheet-apis";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
 import * as XLSX from "xlsx";
 
 const socket: Socket = io(import.meta.env.VITE_APP_BACKEND_URL as string, {
@@ -316,7 +322,10 @@ export default function FileUpload() {
 
   return (
     <>
-      <form onSubmit={handleUpload} className="bg-transparent flex gap-3 border-none shadow-none max-w-none p-0 ">
+      <form
+        onSubmit={handleUpload}
+        className="bg-transparent flex gap-3 border-none shadow-none max-w-none p-0 "
+      >
         <div className="flex">
           <Input type="file" onChange={handleFileChange} />
         </div>

@@ -9,7 +9,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export default function NotificationPanel() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotifications } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotifications } =
+    useNotifications();
   const [isOpen, setIsOpen] = useState(false);
 
   // When panel opens, mark all as read
@@ -56,7 +57,12 @@ export default function NotificationPanel() {
         <SheetHeader className="flex flex-row items-center justify-between">
           <SheetTitle>Notifications</SheetTitle>
           {notifications.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearNotifications} className="flex gap-1 items-center text-xs">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearNotifications}
+              className="flex gap-1 items-center text-xs"
+            >
               <Trash2 className="h-3 w-3" /> Clear All
             </Button>
           )}
@@ -64,12 +70,17 @@ export default function NotificationPanel() {
 
         <div className="space-y-4 mt-4 max-h-[80vh] overflow-y-auto">
           {notifications.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No notifications to display</div>
+            <div className="text-center py-8 text-muted-foreground">
+              No notifications to display
+            </div>
           ) : (
             notifications.map((notification) => (
               <Card
                 key={notification.id}
-                className={cn("transition-colors", notification.read ? "bg-background" : "bg-muted/20")}
+                className={cn(
+                  "transition-colors",
+                  notification.read ? "bg-background" : "bg-muted/20",
+                )}
               >
                 <CardHeader className="p-3 pb-1">
                   <div className="flex justify-between items-center">
@@ -80,7 +91,10 @@ export default function NotificationPanel() {
                       </CardTitle>
                     </div>
                     {!notification.read && (
-                      <Badge variant="outline" className="text-xs bg-blue-500 hover:bg-blue-600 text-white">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-blue-500 hover:bg-blue-600 text-white"
+                      >
                         New
                       </Badge>
                     )}
@@ -88,7 +102,9 @@ export default function NotificationPanel() {
                 </CardHeader>
                 <CardContent className="p-3 pt-0">
                   <p className="text-sm">{notification.message}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{formatTimestamp(notification.createdAt)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatTimestamp(notification.createdAt)}
+                  </p>
                 </CardContent>
                 {!notification.read && (
                   <CardFooter className="p-3 pt-0">

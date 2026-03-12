@@ -1,13 +1,27 @@
 import React, { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectItem, SelectTrigger, SelectContent, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectItem,
+  SelectTrigger,
+  SelectContent,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Paperclip, Image as ImageIcon, Link as LinkIcon, Megaphone, Bookmark, CalendarDays, Star } from "lucide-react";
+import {
+  Paperclip,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  Megaphone,
+  Bookmark,
+  CalendarDays,
+  Star,
+} from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { QueryObserverResult } from "@tanstack/react-query";
@@ -146,7 +160,11 @@ export default function NoticeMaster() {
     pinned: false,
     attachments: [] as NoticeAttachment[],
   });
-  const [attachmentInput, setAttachmentInput] = useState({ type: "file" as AttachmentType, url: "", name: "" });
+  const [attachmentInput, setAttachmentInput] = useState({
+    type: "file" as AttachmentType,
+    url: "",
+    name: "",
+  });
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: PAGE_SIZE,
@@ -165,7 +183,8 @@ export default function NoticeMaster() {
           n.description.toLowerCase().includes(search.toLowerCase());
         const matchesType = typeFilter === "all" ? true : n.type === typeFilter;
         const matchesStatus = statusFilter === "all" ? true : getStatus(n) === statusFilter;
-        const matchesYear = academicYearFilter === "all" ? true : n.academicYear === academicYearFilter;
+        const matchesYear =
+          academicYearFilter === "all" ? true : n.academicYear === academicYearFilter;
         return matchesTab && matchesSearch && matchesType && matchesStatus && matchesYear;
       }),
     [notices, tab, search, typeFilter, statusFilter, academicYearFilter],
@@ -173,7 +192,11 @@ export default function NoticeMaster() {
 
   // Pagination logic
   const paged = useMemo(
-    () => filtered.slice(pagination.pageIndex * pagination.pageSize, (pagination.pageIndex + 1) * pagination.pageSize),
+    () =>
+      filtered.slice(
+        pagination.pageIndex * pagination.pageSize,
+        (pagination.pageIndex + 1) * pagination.pageSize,
+      ),
     [filtered, pagination],
   );
 
@@ -228,7 +251,9 @@ export default function NoticeMaster() {
         cell: (info) => (
           <div>
             <div className="font-semibold text-base text-gray-900">{info.row.original.title}</div>
-            <div className="text-xs text-gray-500 whitespace-pre-line">{info.row.original.description}</div>
+            <div className="text-xs text-gray-500 whitespace-pre-line">
+              {info.row.original.description}
+            </div>
           </div>
         ),
         size: 220,
@@ -237,7 +262,9 @@ export default function NoticeMaster() {
         accessorKey: "type",
         header: () => <span className="font-semibold text-purple-700">Type</span>,
         cell: (info) => (
-          <Badge className={typeColors[info.getValue() as NoticeType]}>{info.getValue() as string}</Badge>
+          <Badge className={typeColors[info.getValue() as NoticeType]}>
+            {info.getValue() as string}
+          </Badge>
         ),
         size: 80,
       },
@@ -282,10 +309,16 @@ export default function NoticeMaster() {
             variant={row.original.pinned ? "secondary" : "ghost"}
             size="icon"
             onClick={() =>
-              setNotices((ns) => ns.map((x) => (x.id === row.original.id ? { ...x, pinned: !x.pinned } : x)))
+              setNotices((ns) =>
+                ns.map((x) => (x.id === row.original.id ? { ...x, pinned: !x.pinned } : x)),
+              )
             }
           >
-            {row.original.pinned ? <Bookmark className="text-yellow-500" /> : <Bookmark className="opacity-30" />}
+            {row.original.pinned ? (
+              <Bookmark className="text-yellow-500" />
+            ) : (
+              <Bookmark className="opacity-30" />
+            )}
           </Button>
         ),
         size: 60,
@@ -402,7 +435,9 @@ export default function NoticeMaster() {
               </span>
               <span className="text-base font-semibold">Pinned</span>
             </div>
-            <div className="text-3xl font-bold pl-2 z-10">{notices.filter((n) => n.pinned).length}</div>
+            <div className="text-3xl font-bold pl-2 z-10">
+              {notices.filter((n) => n.pinned).length}
+            </div>
             <div className="absolute right-3 bottom-2 opacity-10 text-white text-7xl pointer-events-none select-none">
               P
             </div>
@@ -438,7 +473,10 @@ export default function NoticeMaster() {
               className="w-[240px] bg-white shadow-sm ml-auto"
             />
             <div className="flex flex-wrap gap-2 items-center justify-end">
-              <Button className="bg-purple-700 hover:bg-purple-800" onClick={() => setShowDialog(true)}>
+              <Button
+                className="bg-purple-700 hover:bg-purple-800"
+                onClick={() => setShowDialog(true)}
+              >
                 Add Notice
               </Button>
             </div>
@@ -457,7 +495,9 @@ export default function NoticeMaster() {
             searchText={search}
             setSearchText={setSearch}
             setDataLength={setDataLength}
-            refetch={async () => Promise.resolve({} as QueryObserverResult<Notice[] | undefined, Error>)}
+            refetch={async () =>
+              Promise.resolve({} as QueryObserverResult<Notice[] | undefined, Error>)
+            }
             viewDataToolbar={false}
           />
         </div>
@@ -501,7 +541,10 @@ export default function NoticeMaster() {
                 <form className="flex flex-col gap-6 p-6 h-[500px] overflow-auto bg-white rounded-2xl shadow border">
                   {/* Description */}
                   <div className="flex flex-col gap-1">
-                    <label htmlFor="notice-description" className="text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="notice-description"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Description
                     </label>
                     <Textarea
@@ -533,7 +576,10 @@ export default function NoticeMaster() {
                       </Select>
                     </div>
                     <div className="flex-1 flex flex-col gap-1">
-                      <label htmlFor="notice-start-date" className="text-sm font-medium text-gray-700">
+                      <label
+                        htmlFor="notice-start-date"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Start Date
                       </label>
                       <Input
@@ -544,7 +590,10 @@ export default function NoticeMaster() {
                       />
                     </div>
                     <div className="flex-1 flex flex-col gap-1">
-                      <label htmlFor="notice-end-date" className="text-sm font-medium text-gray-700">
+                      <label
+                        htmlFor="notice-end-date"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         End Date
                       </label>
                       <Input
@@ -593,12 +642,17 @@ export default function NoticeMaster() {
                   {/* Attachments */}
                   <div className="border-t pt-2 mt-2">
                     <div className="font-semibold text-sm mb-1">
-                      Attachments <span className="text-xs text-gray-500">(Add multiple files, images, or links)</span>
+                      Attachments{" "}
+                      <span className="text-xs text-gray-500">
+                        (Add multiple files, images, or links)
+                      </span>
                     </div>
                     <div className="flex gap-2 mb-2 flex-wrap">
                       <Select
                         value={attachmentInput.type}
-                        onValueChange={(v) => setAttachmentInput((a) => ({ ...a, type: v as AttachmentType }))}
+                        onValueChange={(v) =>
+                          setAttachmentInput((a) => ({ ...a, type: v as AttachmentType }))
+                        }
                       >
                         <SelectTrigger className="w-[100px]">
                           <SelectValue />
@@ -617,7 +671,9 @@ export default function NoticeMaster() {
                       <Input
                         placeholder="Name (optional)"
                         value={attachmentInput.name}
-                        onChange={(e) => setAttachmentInput((a) => ({ ...a, name: e.target.value }))}
+                        onChange={(e) =>
+                          setAttachmentInput((a) => ({ ...a, name: e.target.value }))
+                        }
                       />
                       <Button type="button" onClick={handleAddAttachment}>
                         Add

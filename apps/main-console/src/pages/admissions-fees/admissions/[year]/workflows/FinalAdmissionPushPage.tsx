@@ -2,8 +2,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 
 const dummyStudents = [
   {
@@ -33,7 +46,9 @@ export default function FinalAdmissionPushPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Final Admission Push</CardTitle>
-            <p className="text-gray-500 text-sm mt-1">Review validated students and push their records to the IRP system.</p>
+            <p className="text-gray-500 text-sm mt-1">
+              Review validated students and push their records to the IRP system.
+            </p>
           </div>
           <Button variant="outline">Push All</Button>
         </CardHeader>
@@ -70,13 +85,23 @@ export default function FinalAdmissionPushPage() {
                     <TableCell>{student.appNo}</TableCell>
                     <TableCell>{student.course}</TableCell>
                     <TableCell>
-                      <span className={student.status === "Validated" ? "text-green-600 font-medium" : "text-yellow-600 font-medium"}>
+                      <span
+                        className={
+                          student.status === "Validated"
+                            ? "text-green-600 font-medium"
+                            : "text-yellow-600 font-medium"
+                        }
+                      >
                         {student.status}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button size="sm" variant="outline">View</Button>
-                      <Button size="sm" className="ml-2">Push</Button>
+                      <Button size="sm" variant="outline">
+                        View
+                      </Button>
+                      <Button size="sm" className="ml-2">
+                        Push
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

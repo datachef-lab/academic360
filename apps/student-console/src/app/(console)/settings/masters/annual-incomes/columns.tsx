@@ -33,7 +33,10 @@ type TableRow = {
 
 // Work around strict shadcn typings with proper type extensions
 const AlertDialogTriggerFixed = AlertDialogTrigger as React.ComponentType<
-  React.ComponentProps<typeof AlertDialogTrigger> & { children?: React.ReactNode; asChild?: boolean }
+  React.ComponentProps<typeof AlertDialogTrigger> & {
+    children?: React.ReactNode;
+    asChild?: boolean;
+  }
 >;
 const AlertDialogTitleFixed = AlertDialogTitle as React.ComponentType<
   React.ComponentProps<typeof AlertDialogTitle> & { children?: React.ReactNode }
@@ -45,7 +48,10 @@ const AlertDialogCancelFixed = AlertDialogCancel as React.ComponentType<
   React.ComponentProps<typeof AlertDialogCancel> & { children?: React.ReactNode }
 >;
 const AlertDialogActionFixed = AlertDialogAction as React.ComponentType<
-  React.ComponentProps<typeof AlertDialogAction> & { children?: React.ReactNode; onClick?: () => void }
+  React.ComponentProps<typeof AlertDialogAction> & {
+    children?: React.ReactNode;
+    onClick?: () => void;
+  }
 >;
 
 export const columns: ColumnDef<AnnualIncome>[] = [
@@ -93,7 +99,8 @@ export const columns: ColumnDef<AnnualIncome>[] = [
               <AlertDialogHeader>
                 <AlertDialogTitleFixed>Are you absolutely sure?</AlertDialogTitleFixed>
                 <AlertDialogDescriptionFixed>
-                  This action cannot be undone. This will permanently delete the annual income range:
+                  This action cannot be undone. This will permanently delete the annual income
+                  range:
                   <span className="font-medium"> {annualIncome.range}</span>.
                 </AlertDialogDescriptionFixed>
               </AlertDialogHeader>

@@ -29,7 +29,12 @@ interface StreamFormProps {
   isLoading?: boolean;
 }
 
-export function StreamForm({ initialData, onSubmit, onCancel, isLoading = false }: StreamFormProps) {
+export function StreamForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+}: StreamFormProps) {
   const isEdit = !!initialData;
 
   const {

@@ -7,22 +7,22 @@ import {
   MultipleReligionResponse,
 } from "@/types/resources/religion.types";
 
-const BASE_URL = '/api/religions';
+const BASE_URL = "/api/religions";
 
 export async function getAllReligions(): Promise<Religion[]> {
   const response = await axiosInstance.get<MultipleReligionResponse>(BASE_URL);
   const responseData = response.data;
-  
+
   // Check if response has payload property (like personal details API)
-  if ('payload' in responseData && Array.isArray(responseData.payload)) {
+  if ("payload" in responseData && Array.isArray(responseData.payload)) {
     return responseData.payload;
   }
-  
+
   // Fallback to data property (original expected structure)
-  if ('data' in responseData && Array.isArray(responseData.data)) {
+  if ("data" in responseData && Array.isArray(responseData.data)) {
     return responseData.data;
   }
-  
+
   // Return empty array if neither structure matches
   return [];
 }
@@ -37,7 +37,10 @@ export async function createReligion(payload: CreateReligionPayload): Promise<Re
   return response.data.data;
 }
 
-export async function updateReligion(id: number, payload: UpdateReligionPayload): Promise<Religion> {
+export async function updateReligion(
+  id: number,
+  payload: UpdateReligionPayload,
+): Promise<Religion> {
   const response = await axiosInstance.put<SingleReligionResponse>(`${BASE_URL}/${id}`, payload);
   return response.data.data;
 }
@@ -52,4 +55,4 @@ export const religionService = {
   createReligion,
   updateReligion,
   deleteReligion,
-}; 
+};

@@ -31,4 +31,4 @@ export function calculateCreditPoints(marksObtained: number, credit: number): nu
 
 export function formatNumber(num: number): string {
   return num.toFixed(2);
-} 
+}

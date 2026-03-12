@@ -26,7 +26,13 @@ function getAvatarColorForChar(char: string): string {
   return AVATAR_COLORS[code % AVATAR_COLORS.length];
 }
 
-export default function SidebarItem({ item, props }: { item: SidebarItemsType; props: DrawerContentComponentProps }) {
+export default function SidebarItem({
+  item,
+  props,
+}: {
+  item: SidebarItemsType;
+  props: DrawerContentComponentProps;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const { theme, colorScheme } = useTheme();
@@ -89,11 +95,16 @@ export default function SidebarItem({ item, props }: { item: SidebarItemsType; p
                   justifyContent: "center",
                 }}
               >
-                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>{initial.toUpperCase()}</Text>
+                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>
+                  {initial.toUpperCase()}
+                </Text>
               </View>
             )
           ) : (
-            <item.icon size={20} color={isActive ? (colorScheme === "dark" ? "#a5b4fc" : "#4f46e5") : theme.text} />
+            <item.icon
+              size={20}
+              color={isActive ? (colorScheme === "dark" ? "#a5b4fc" : "#4f46e5") : theme.text}
+            />
           )}
 
           <View className="gap-1">
@@ -120,7 +131,10 @@ export default function SidebarItem({ item, props }: { item: SidebarItemsType; p
         </View>
 
         {/* Right arrow */}
-        <ChevronRightIcon size={20} color={isActive ? (colorScheme === "dark" ? "#a5b4fc" : "#4f46e5") : theme.text} />
+        <ChevronRightIcon
+          size={20}
+          color={isActive ? (colorScheme === "dark" ? "#a5b4fc" : "#4f46e5") : theme.text}
+        />
       </View>
     </Pressable>
   );

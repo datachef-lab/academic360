@@ -6,7 +6,14 @@ import { ExamCandidateDto, ExamDto, ExamGroupDto } from "@/dtos";
 import { fetchExamCandidates, downloadAdmitCard } from "@/services/exam-api.service";
 import { format } from "date-fns";
 import { Loader2, Download } from "lucide-react";
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +38,13 @@ interface PaperDetails {
   seatNumber: string;
 }
 
-export function ExamPapersModal({ open, onOpenChange, exam, studentId, examGroup }: ExamPapersModalProps) {
+export function ExamPapersModal({
+  open,
+  onOpenChange,
+  exam,
+  studentId,
+  examGroup,
+}: ExamPapersModalProps) {
   const [candidates, setCandidates] = useState<ExamCandidateDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -58,7 +71,8 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId, examGroup
       if (isNaN(studentIdNum) || studentIdNum <= 0) {
         toast({
           title: "Invalid student",
-          description: "Student information is missing or invalid. Please sign in again or contact support.",
+          description:
+            "Student information is missing or invalid. Please sign in again or contact support.",
           variant: "destructive",
         });
         setCandidates([]);
@@ -77,7 +91,8 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId, examGroup
           }
         })
         .catch((err) => {
-          const errorMessage = err?.response?.data?.message || err?.message || "Failed to load exam papers";
+          const errorMessage =
+            err?.response?.data?.message || err?.message || "Failed to load exam papers";
           toast({
             title: "Could not load exam schedule",
             description:
@@ -255,7 +270,8 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId, examGroup
                     : null;
 
                   // Show button only if within download window
-                  const isWithinWindow = startDate && nowTime >= startDate && (!endDate || nowTime <= endDate);
+                  const isWithinWindow =
+                    startDate && nowTime >= startDate && (!endDate || nowTime <= endDate);
 
                   if (!isWithinWindow) {
                     return null; // Hide button if outside download window
@@ -320,7 +336,8 @@ export function ExamPapersModal({ open, onOpenChange, exam, studentId, examGroup
                               {format(detail.startTime, "dd/MM/yyyy")}
                             </div>
                             <div className="text-muted-gray-800 text-[10px] sm:text-xs font-mono">
-                              {format(detail.startTime, "hh:mm a")} – {format(detail.endTime, "hh:mm a")}
+                              {format(detail.startTime, "hh:mm a")} –{" "}
+                              {format(detail.endTime, "hh:mm a")}
                             </div>
                           </div>
                         </TableCell>

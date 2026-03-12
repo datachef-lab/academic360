@@ -1,4 +1,11 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Users, CheckCircle, Globe, Building } from "lucide-react";
 import { MisTableData } from "../types/mis-types";
 
@@ -70,7 +77,9 @@ export function MisTable({ data, isLoading }: MisTableProps) {
                   <TableRow
                     key={index}
                     className={`border-b border-gray-300 hover:bg-gray-100 transition-colors duration-200 ${
-                      isTotal ? "bg-gradient-to-r from-blue-100 to-indigo-100 font-bold border-t-4 border-blue-400" : ""
+                      isTotal
+                        ? "bg-gradient-to-r from-blue-100 to-indigo-100 font-bold border-t-4 border-blue-400"
+                        : ""
                     }`}
                   >
                     <TableCell
@@ -85,7 +94,9 @@ export function MisTable({ data, isLoading }: MisTableProps) {
                         isTotal ? "bg-blue-100" : "bg-blue-50"
                       }`}
                     >
-                      <span className="text-sm font-bold text-blue-800">{row.admitted.toLocaleString()}</span>
+                      <span className="text-sm font-bold text-blue-800">
+                        {row.admitted.toLocaleString()}
+                      </span>
                     </TableCell>
                     <TableCell
                       className={`text-center py-3 px-4 border-r-2 border-green-200 ${
@@ -101,10 +112,16 @@ export function MisTable({ data, isLoading }: MisTableProps) {
                         isTotal ? "bg-blue-100" : "bg-purple-50"
                       }`}
                     >
-                      <span className="text-sm font-bold text-purple-800">{row.onlineRegDone.toLocaleString()}</span>
+                      <span className="text-sm font-bold text-purple-800">
+                        {row.onlineRegDone.toLocaleString()}
+                      </span>
                     </TableCell>
-                    <TableCell className={`text-center py-3 px-6 ${isTotal ? "bg-blue-100" : "bg-orange-50"}`}>
-                      <span className="text-sm font-bold text-orange-800">{row.physicalRegDone.toLocaleString()}</span>
+                    <TableCell
+                      className={`text-center py-3 px-6 ${isTotal ? "bg-blue-100" : "bg-orange-50"}`}
+                    >
+                      <span className="text-sm font-bold text-orange-800">
+                        {row.physicalRegDone.toLocaleString()}
+                      </span>
                     </TableCell>
                   </TableRow>
                 );

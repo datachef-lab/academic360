@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 // import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Loader2 } from "lucide-react";
-import { Course } from '@/types/course-design';
+import { Course } from "@/types/course-design";
 import DatePicker from "react-datepicker";
 // import { format } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
 import { fetchAcademicYears, fetchAdmissionSummaries } from "@/services/admissions.service";
-import { getAllCourses } from '@/services/course-api';
+import { getAllCourses } from "@/services/course-api";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Admission } from "@/types/admissions";
 
@@ -54,7 +61,7 @@ export default function CreateAdmissionDialog({
     if (open) {
       fetchCourses();
       fetchAcademicYears().then((data) => {
-        setAcademicYears(Array.isArray(data) ? data : data?.payload ?? []);
+        setAcademicYears(Array.isArray(data) ? data : (data?.payload ?? []));
       });
       fetchAdmissionSummaries().then(setAdmissions);
     }
@@ -113,7 +120,7 @@ export default function CreateAdmissionDialog({
         academicYear: newAdmission.academicYear,
         startDate: newAdmission.startDate.toISOString(),
         lastDate: newAdmission.lastDate.toISOString(),
-        courses: selectedCourses.map(courseId => ({
+        courses: selectedCourses.map((courseId) => ({
           admissionId: 0,
           courseId,
           disabled: false,
@@ -146,8 +153,12 @@ export default function CreateAdmissionDialog({
     setOpen(false);
   };
 
-  const usedAcademicYearIds = new Set((admissions ?? []).map(a => a.academicYear?.id).filter(id => id !== undefined));
-  const availableAcademicYears = (academicYears ?? []).filter(y => !usedAcademicYearIds.has(y.id!));
+  const usedAcademicYearIds = new Set(
+    (admissions ?? []).map((a) => a.academicYear?.id).filter((id) => id !== undefined),
+  );
+  const availableAcademicYears = (academicYears ?? []).filter(
+    (y) => !usedAcademicYearIds.has(y.id!),
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -167,15 +178,21 @@ export default function CreateAdmissionDialog({
             <select
               id="year"
               value={newAdmission.academicYear?.id ?? ""}
-              onChange={e => setNewAdmission(prev => ({
-                ...prev,
-                academicYear: Number(e.target.value) ? academicYears.find(y => y.id === Number(e.target.value)) || null : null
-              }))}
+              onChange={(e) =>
+                setNewAdmission((prev) => ({
+                  ...prev,
+                  academicYear: Number(e.target.value)
+                    ? academicYears.find((y) => y.id === Number(e.target.value)) || null
+                    : null,
+                }))
+              }
               className="w-full border rounded px-3 py-2"
             >
               <option value="">Select Academic Year</option>
               {(availableAcademicYears ?? []).map((y) => (
-                <option key={y.id} value={y.id}>{y.year}</option>
+                <option key={y.id} value={y.id}>
+                  {y.year}
+                </option>
               ))}
             </select>
           </div>
@@ -184,10 +201,12 @@ export default function CreateAdmissionDialog({
               <Label htmlFor="start-date">Start Date</Label>
               <DatePicker
                 selected={newAdmission.startDate}
-                onChange={(date) => setNewAdmission(prev => ({
-                  ...prev,
-                  startDate: date
-                }))}
+                onChange={(date) =>
+                  setNewAdmission((prev) => ({
+                    ...prev,
+                    startDate: date,
+                  }))
+                }
                 dateFormat="dd/MM/yyyy"
                 placeholderText="dd/mm/yyyy"
                 minDate={new Date()}
@@ -198,10 +217,12 @@ export default function CreateAdmissionDialog({
               <Label htmlFor="end-date">End Date</Label>
               <DatePicker
                 selected={newAdmission.lastDate}
-                onChange={(date) => setNewAdmission(prev => ({
-                  ...prev,
-                  lastDate: date
-                }))}
+                onChange={(date) =>
+                  setNewAdmission((prev) => ({
+                    ...prev,
+                    lastDate: date,
+                  }))
+                }
                 dateFormat="dd/MM/yyyy"
                 placeholderText="dd/mm/yyyy"
                 minDate={new Date()}
@@ -238,7 +259,9 @@ export default function CreateAdmissionDialog({
                 </div>
               )}
             </div>
-            <div className={`text-sm text-gray-600 ${selectedCourses.length == 0 ? "invisible" : "visible"}`}>
+            <div
+              className={`text-sm text-gray-600 ${selectedCourses.length == 0 ? "invisible" : "visible"}`}
+            >
               Selected: {selectedCourses.length} course{selectedCourses.length !== 1 ? "s" : ""}
             </div>
           </div>

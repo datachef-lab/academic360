@@ -1,9 +1,21 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 
 const dummyDocs = [
   {
@@ -36,7 +48,9 @@ export default function DocumentVerificationPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Document Verification</CardTitle>
-            <p className="text-gray-500 text-sm mt-1">View, filter, and verify submitted student documents.</p>
+            <p className="text-gray-500 text-sm mt-1">
+              View, filter, and verify submitted student documents.
+            </p>
           </div>
           <Button variant="outline">Bulk Verify</Button>
         </CardHeader>
@@ -75,20 +89,28 @@ export default function DocumentVerificationPage() {
                     <TableCell>{doc.course}</TableCell>
                     <TableCell>{doc.docType}</TableCell>
                     <TableCell>
-                      <span className={
-                        doc.status === "Verified"
-                          ? "text-green-600 font-medium"
-                          : doc.status === "Pending"
-                          ? "text-yellow-600 font-medium"
-                          : "text-red-600 font-medium"
-                      }>
+                      <span
+                        className={
+                          doc.status === "Verified"
+                            ? "text-green-600 font-medium"
+                            : doc.status === "Pending"
+                              ? "text-yellow-600 font-medium"
+                              : "text-red-600 font-medium"
+                        }
+                      >
                         {doc.status}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button size="sm" variant="outline">View</Button>
-                      <Button size="sm" className="ml-2">Verify</Button>
-                      <Button size="sm" className="ml-2" variant="destructive">Reject</Button>
+                      <Button size="sm" variant="outline">
+                        View
+                      </Button>
+                      <Button size="sm" className="ml-2">
+                        Verify
+                      </Button>
+                      <Button size="sm" className="ml-2" variant="destructive">
+                        Reject
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

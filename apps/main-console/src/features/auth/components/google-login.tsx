@@ -1,8 +1,12 @@
 import React from "react";
-import { GoogleOAuthProvider, GoogleLogin as GoogleLoginButton, CredentialResponse } from "@react-oauth/google";
+import {
+  GoogleOAuthProvider,
+  GoogleLogin as GoogleLoginButton,
+  CredentialResponse,
+} from "@react-oauth/google";
 import { jwtDecode, JwtPayload } from "jwt-decode";
 import axios, { AxiosError } from "axios";
-import Cookies from 'js-cookie';
+import Cookies from "js-cookie";
 
 type UserData = {
   name: string;
@@ -10,19 +14,18 @@ type UserData = {
   pitcher: string;
 };
 
-
-
 const GoogleLogin: React.FC = () => {
-    const googleClientId: string = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
+  const googleClientId: string = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
 
-  console.log("cliend id ***",googleClientId)
+  console.log("cliend id ***", googleClientId);
   const handleSuccess = async (credentialResponse: CredentialResponse) => {
     try {
       if (!credentialResponse.credential) {
         throw new Error("Credential is undefined");
       }
-      const decodeToken = jwtDecode<JwtPayload & { name: string; email: string; pitcher: string }>
-      (credentialResponse.credential);
+      const decodeToken = jwtDecode<JwtPayload & { name: string; email: string; pitcher: string }>(
+        credentialResponse.credential,
+      );
       console.log("google user info", decodeToken);
 
       const userData: UserData = {
@@ -35,29 +38,27 @@ const GoogleLogin: React.FC = () => {
       if (res.data && res.data.token) {
         const { token } = res.data;
 
-       
-        Cookies.set('token', token, { expires: 7, secure: true, sameSite: 'Strict' }); 
+        Cookies.set("token", token, { expires: 7, secure: true, sameSite: "Strict" });
 
         // Redirect to dashboard or another page
         // window.location.href = "/dashboard";
       }
     } catch (error) {
-        const axiosError =error as AxiosError
-        console.error("error***",axiosError);
-        console.log("error2***",axiosError.response);
-        alert('An error occurred during login. Please try again.');
-
+      const axiosError = error as AxiosError;
+      console.error("error***", axiosError);
+      console.log("error2***", axiosError.response);
+      alert("An error occurred during login. Please try again.");
     }
   };
   const handleError = () => {
-    console.error('Google Login Failed');
-    alert('Unable to login with Google. Please try again.');
+    console.error("Google Login Failed");
+    alert("Unable to login with Google. Please try again.");
   };
-const config = {
-  text: "signin_with",
-  shape: "circle",
-  theme: "filled_black",
-} as const;
+  const config = {
+    text: "signin_with",
+    shape: "circle",
+    theme: "filled_black",
+  } as const;
 
   return (
     <GoogleOAuthProvider clientId={googleClientId}>

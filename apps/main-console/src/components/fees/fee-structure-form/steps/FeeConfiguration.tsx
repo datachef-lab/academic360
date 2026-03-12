@@ -1,6 +1,12 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { FeesStructureDto, FeesComponent, FeesHead, FeesReceiptType, CreateFeesStructureDto } from "@/types/fees";
+import {
+  FeesStructureDto,
+  FeesComponent,
+  FeesHead,
+  FeesReceiptType,
+  CreateFeesStructureDto,
+} from "@/types/fees";
 import { Select } from "antd";
 // import dayjs from "dayjs";
 import { Course } from "@/types/course-design";
@@ -47,10 +53,12 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
   //   (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({ ...prev, [field]: value }));
   // };
   const handleInputChangeEdit = (field: keyof FeesStructureDto, value: unknown) => {
-    (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({
-      ...prev,
-      [field]: value,
-    }));
+    (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(
+      (prev: FeesStructureDto) => ({
+        ...prev,
+        [field]: value,
+      }),
+    );
   };
 
   useEffect(() => {
@@ -66,13 +74,18 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
       }));
       if (isAdd) {
         (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(
-          (prev: CreateFeesStructureDto) => ({ ...prev, components: defaultComponents as FeesComponent[] }),
+          (prev: CreateFeesStructureDto) => ({
+            ...prev,
+            components: defaultComponents as FeesComponent[],
+          }),
         );
       } else {
-        (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({
-          ...prev,
-          components: defaultComponents as FeesComponent[],
-        }));
+        (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(
+          (prev: FeesStructureDto) => ({
+            ...prev,
+            components: defaultComponents as FeesComponent[],
+          }),
+        );
       }
     }
   }, []);
@@ -150,10 +163,12 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
       feesStructureId: feesStructure.id || 0,
     };
     if (isAdd) {
-      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev) => ({
-        ...prev,
-        components: [...prev.components, newComponent],
-      }));
+      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(
+        (prev) => ({
+          ...prev,
+          components: [...prev.components, newComponent],
+        }),
+      );
     } else {
       (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev) => ({
         ...prev,
@@ -172,10 +187,12 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
         }),
       );
     } else {
-      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({
-        ...prev,
-        components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
-      }));
+      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(
+        (prev: FeesStructureDto) => ({
+          ...prev,
+          components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
+        }),
+      );
     }
   };
 
@@ -192,15 +209,20 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
         (prev: CreateFeesStructureDto) => ({ ...prev, components: newComponents }),
       );
     } else {
-      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({
-        ...prev,
-        components: newComponents,
-      }));
+      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(
+        (prev: FeesStructureDto) => ({
+          ...prev,
+          components: newComponents,
+        }),
+      );
     }
   };
 
   const MIN_ROWS = 8;
-  const totalAmount = feesStructure.components.reduce((sum, component) => sum + (component.baseAmount || 0), 0);
+  const totalAmount = feesStructure.components.reduce(
+    (sum, component) => sum + (component.baseAmount || 0),
+    0,
+  );
 
   useEffect(() => {
     const tableBody = document.querySelector(".table-body-fee-config");
@@ -292,7 +314,9 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
           {/* <h4 className="font-medium text-gray-900">Fee Components</h4> */}
           <div className="flex items-center gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fees Receipt Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fees Receipt Type
+              </label>
               <Select
                 className="w-48"
                 placeholder="Select"
@@ -363,7 +387,9 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
                         .filter(
                           (head) =>
                             // Show this head if it's not selected in any other component, or if it's the current value for this row
-                            !feesStructure.components.some((c, i) => i !== index && c.feesHeadId === head.id),
+                            !feesStructure.components.some(
+                              (c, i) => i !== index && c.feesHeadId === head.id,
+                            ),
                         )
                         .map((head) => (
                           <Select.Option key={head.id} value={head.id!}>
@@ -376,7 +402,9 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
                     <input
                       type="number"
                       value={component.sequence}
-                      onChange={(e) => handleComponentChange(index, "sequence", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleComponentChange(index, "sequence", Number(e.target.value))
+                      }
                       className="w-20 text-center bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black"
                     />
                   </td>
@@ -384,7 +412,9 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
                     <input
                       type="checkbox"
                       checked={component.isConcessionApplicable}
-                      onChange={(e) => handleComponentChange(index, "isConcessionApplicable", e.target.checked)}
+                      onChange={(e) =>
+                        handleComponentChange(index, "isConcessionApplicable", e.target.checked)
+                      }
                       className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                     />
                   </td>
@@ -393,27 +423,34 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
                     <input
                       type="number"
                       value={component.baseAmount}
-                      onChange={(e) => handleComponentChange(index, "baseAmount", Number(e.target.value))}
+                      onChange={(e) =>
+                        handleComponentChange(index, "baseAmount", Number(e.target.value))
+                      }
                       className="w-24 ml-1 bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black"
                     />
                   </td>
                   <td className="w-20 px-4 py-2 text-center border-gray-400 flex items-center justify-center">
-                    <button onClick={() => handleRemoveComponent(index)} className="text-red-600 hover:text-red-900">
+                    <button
+                      onClick={() => handleRemoveComponent(index)}
+                      className="text-red-600 hover:text-red-900"
+                    >
                       <Trash2 className="h-5 w-5" />
                     </button>
                   </td>
                 </tr>
               ))}
-              {Array.from({ length: Math.max(0, MIN_ROWS - feesStructure.components.length) }).map((_, index) => (
-                <tr key={`empty-${index}`} className="flex h-[53px]">
-                  <td className="w-16 border-r border-gray-400"></td>
-                  <td className="flex-1 border-r border-gray-400"></td>
-                  <td className="w-24 border-r border-gray-400"></td>
-                  <td className="w-28 border-r border-gray-400"></td>
-                  <td className="w-32 border-r border-gray-400"></td>
-                  <td className="w-20"></td>
-                </tr>
-              ))}
+              {Array.from({ length: Math.max(0, MIN_ROWS - feesStructure.components.length) }).map(
+                (_, index) => (
+                  <tr key={`empty-${index}`} className="flex h-[53px]">
+                    <td className="w-16 border-r border-gray-400"></td>
+                    <td className="flex-1 border-r border-gray-400"></td>
+                    <td className="w-24 border-r border-gray-400"></td>
+                    <td className="w-28 border-r border-gray-400"></td>
+                    <td className="w-32 border-r border-gray-400"></td>
+                    <td className="w-20"></td>
+                  </tr>
+                ),
+              )}
             </tbody>
             <tfoot className="flex-shrink-0">
               <tr className="flex bg-gray-50">

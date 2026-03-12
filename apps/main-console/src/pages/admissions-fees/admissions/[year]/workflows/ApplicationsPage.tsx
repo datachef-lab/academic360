@@ -13,7 +13,14 @@ import {
   IndianRupee,
   SlidersHorizontal,
 } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -27,7 +34,13 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ApplicationFormProvider } from "../../components/ApplicationFormProvider";
 import type { Admission, ApplicationFormDto } from "@/types/admissions";
 import AdmissionForm from "../../components/AdmissionForm";
@@ -435,7 +448,9 @@ export default function ApplicationsPage() {
 
   const handleRowSelect = (id: number | undefined) => {
     if (typeof id !== "number") return;
-    setSelectedRows((prev) => (prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]));
+    setSelectedRows((prev) =>
+      prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id],
+    );
   };
 
   const handleSelectAll = () => {
@@ -443,7 +458,9 @@ export default function ApplicationsPage() {
       setSelectedRows([]);
     } else {
       setSelectedRows(
-        applications.map((app) => (app as ApplicationFormDto).id).filter((id): id is number => typeof id === "number"),
+        applications
+          .map((app) => (app as ApplicationFormDto).id)
+          .filter((id): id is number => typeof id === "number"),
       );
     }
     setSelectAll(!selectAll);
@@ -465,7 +482,14 @@ export default function ApplicationsPage() {
     return Object.values(filters).filter((value) => value !== "" && value !== "all").length;
   };
 
-  const formStatusOptions = ["DRAFT", "PAYMENT_DUE", "PAYMENT_SUCCESS", "SUBMITTED", "APPROVED", "REJECTED"];
+  const formStatusOptions = [
+    "DRAFT",
+    "PAYMENT_DUE",
+    "PAYMENT_SUCCESS",
+    "SUBMITTED",
+    "APPROVED",
+    "REJECTED",
+  ];
   const genderOptions = ["MALE", "FEMALE", "TRANSGENDER"];
   const categoryOptions = ["General", "OBC", "SC", "ST"];
   const religionOptions = ["Hinduism", "Muslim", "Christian", "Sikh"];
@@ -620,7 +644,9 @@ export default function ApplicationsPage() {
                 <DialogContent className="sm:max-w-2xl p-6">
                   <DialogHeader>
                     <DialogTitle>Filter Applications</DialogTitle>
-                    <DialogDescription>Apply filters to narrow down the application forms.</DialogDescription>
+                    <DialogDescription>
+                      Apply filters to narrow down the application forms.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-4">
                     <FilterSelect
@@ -766,7 +792,9 @@ export default function ApplicationsPage() {
                     const category = app.generalInfo?.categoryId ?? "-";
                     const religion = app.generalInfo?.religionId ?? "-";
                     const isGujarati = app.generalInfo?.isGujarati ? "Yes" : "No";
-                    const submittedAt = app.createdAt ? new Date(app.createdAt).toLocaleDateString() : "-";
+                    const submittedAt = app.createdAt
+                      ? new Date(app.createdAt).toLocaleDateString()
+                      : "-";
                     return (
                       <TableRow
                         key={appId}
@@ -783,7 +811,9 @@ export default function ApplicationsPage() {
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                           {typeof appId === "number" ? appId : ""}
                         </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{name}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {name}
+                        </TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${app.formStatus === "SUBMITTED" || app.formStatus === "APPROVED" || app.formStatus === "PAYMENT_SUCCESS" ? "bg-green-100 text-green-800" : app.formStatus === "REJECTED" || app.formStatus === "PAYMENT_FAILED" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
@@ -794,15 +824,27 @@ export default function ApplicationsPage() {
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                           {submittedAt}
                         </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{category}</TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{religion}</TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{gender}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {category}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {religion}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          -
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {gender}
+                        </TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                           {isGujarati}
                         </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          -
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          -
+                        </TableCell>
                       </TableRow>
                     );
                   })
@@ -839,9 +881,12 @@ export default function ApplicationsPage() {
                 <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm text-gray-700">
-                      Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
-                      <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{" "}
-                      <span className="font-medium">{totalItems}</span> results
+                      Showing{" "}
+                      <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
+                      <span className="font-medium">
+                        {Math.min(currentPage * itemsPerPage, totalItems)}
+                      </span>{" "}
+                      of <span className="font-medium">{totalItems}</span> results
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -921,7 +966,9 @@ const StatCard = ({
   bgColor?: string;
   textColor?: string;
 }) => (
-  <div className={`${bgColor} p-5 rounded-lg shadow border border-gray-200 flex items-center justify-between`}>
+  <div
+    className={`${bgColor} p-5 rounded-lg shadow border border-gray-200 flex items-center justify-between`}
+  >
     <div>
       <div className={`text-sm font-medium ${textColor} mb-2`}>{label}</div>
       <div className={`text-3xl font-bold ${textColor}`}>{value.toLocaleString()}</div>
@@ -953,7 +1000,13 @@ const FilterSelect = ({
           <SelectItem value="all">All</SelectItem>
           {options.map((option) => (
             <SelectItem key={option} value={option}>
-              {label === "Is Gujarati" ? (option === "true" ? "Yes" : option === "false" ? "No" : "All") : option}
+              {label === "Is Gujarati"
+                ? option === "true"
+                  ? "Yes"
+                  : option === "false"
+                    ? "No"
+                    : "All"
+                : option}
             </SelectItem>
           ))}
         </SelectContent>

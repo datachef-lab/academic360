@@ -207,7 +207,12 @@ export default function AddPaperModal({
 
       const components = paper.components
         .map((comp: PaperComponentDto) => {
-          if (comp.fullMarks !== null || comp.fullMarks != 0 || comp.credit !== null || comp.credit != 0) {
+          if (
+            comp.fullMarks !== null ||
+            comp.fullMarks != 0 ||
+            comp.credit !== null ||
+            comp.credit != 0
+          ) {
             return comp;
           }
           return undefined;
@@ -393,33 +398,43 @@ export default function AddPaperModal({
               {[
                 {
                   label: "Subject Category",
-                  className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  className:
+                    "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Applicable Program Course",
-                  className: "w-48 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  className:
+                    "w-48 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Semester",
-                  className: "w-24 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  className:
+                    "w-24 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Paper Name",
-                  className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  className:
+                    "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Paper Code",
-                  className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  className:
+                    "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Is Elective",
-                  className: "w-20 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  className:
+                    "w-20 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Paper Component & Marks",
-                  className: "flex-1 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
+                  className:
+                    "flex-1 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
-                { label: "Actions", className: "w-20 p-2 font-medium flex items-center justify-center text-sm" },
+                {
+                  label: "Actions",
+                  className: "w-20 p-2 font-medium flex items-center justify-center text-sm",
+                },
               ].map((header) => (
                 <div key={header.label} className={`${header.className}`}>
                   {header.label}
@@ -629,7 +644,12 @@ export default function AddPaperModal({
                         if (value === "" || /^\d+$/.test(value)) {
                           const numericValue = Number(value) || 0;
                           if (component?.fullMarks !== numericValue) {
-                            updatePaperComponent(paperIndex, componentIndex, "fullMarks", numericValue);
+                            updatePaperComponent(
+                              paperIndex,
+                              componentIndex,
+                              "fullMarks",
+                              numericValue,
+                            );
                           }
                         }
                       };
@@ -639,7 +659,12 @@ export default function AddPaperModal({
                         if (value === "" || /^\d+$/.test(value)) {
                           const numericValue = Number(value) || 0;
                           if (component?.credit !== numericValue) {
-                            updatePaperComponent(paperIndex, componentIndex, "credit", numericValue);
+                            updatePaperComponent(
+                              paperIndex,
+                              componentIndex,
+                              "credit",
+                              numericValue,
+                            );
                           }
                         }
                       };
@@ -708,7 +733,9 @@ export default function AddPaperModal({
       {/* Selected Items Display */}
       {selectedRowIndex !== null && inputPaper[selectedRowIndex] && (
         <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Selected Items for Row {selectedRowIndex + 1}:</h3>
+          <h3 className="text-sm font-medium text-gray-700 mb-2">
+            Selected Items for Row {selectedRowIndex + 1}:
+          </h3>
 
           <div className="flex gap-6">
             {/* Program Courses */}
@@ -759,7 +786,12 @@ export default function AddPaperModal({
 
       <div className="flex justify-between pt-4">
         <div className="flex space-x-2">
-          <Button type="button" variant="outline" onClick={handleSave} disabled={isLoading || inputPaper.length === 0}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSave}
+            disabled={isLoading || inputPaper.length === 0}
+          >
             Save
           </Button>
         </div>

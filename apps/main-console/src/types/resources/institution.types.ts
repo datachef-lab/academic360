@@ -1,6 +1,6 @@
 /**
  * Institution Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Institution module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Institution interface that mirrors the backend model
  */
 export interface Institution {
-    readonly id?: number;
+  readonly id?: number;
   name: string;
   degreeId: number;
   addressId?: number | null;
@@ -146,15 +146,15 @@ export interface InstitutionState {
  * Action types for institution state management
  */
 export type InstitutionAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_INSTITUTIONS'; payload: Institution[] }
-  | { type: 'SET_CURRENT_INSTITUTION'; payload: Institution | null }
-  | { type: 'ADD_INSTITUTION'; payload: Institution }
-  | { type: 'UPDATE_INSTITUTION'; payload: Institution }
-  | { type: 'DELETE_INSTITUTION'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_INSTITUTIONS"; payload: Institution[] }
+  | { type: "SET_CURRENT_INSTITUTION"; payload: Institution | null }
+  | { type: "ADD_INSTITUTION"; payload: Institution }
+  | { type: "UPDATE_INSTITUTION"; payload: Institution }
+  | { type: "DELETE_INSTITUTION"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -169,7 +169,7 @@ export interface InstitutionTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -188,7 +188,7 @@ export interface InstitutionFilter {
  */
 export interface InstitutionSort {
   field: keyof Institution;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -233,7 +233,7 @@ export type InstitutionDisabled = boolean;
  * Default values for institution
  */
 export const DEFAULT_INSTITUTION: CreateInstitutionPayload = {
-  name: '',
+  name: "",
   degreeId: 0,
   addressId: null,
   sequence: null,
@@ -244,10 +244,10 @@ export const DEFAULT_INSTITUTION: CreateInstitutionPayload = {
  * Default form data for institution
  */
 export const DEFAULT_INSTITUTION_FORM: InstitutionFormData = {
-  name: '',
-  degreeId: '',
-  addressId: '',
-  sequence: '',
+  name: "",
+  degreeId: "",
+  addressId: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -255,14 +255,14 @@ export const DEFAULT_INSTITUTION_FORM: InstitutionFormData = {
  * Table columns configuration for institution
  */
 export const INSTITUTION_TABLE_COLUMNS: InstitutionTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Institution Name', sortable: true, filterable: true },
-  { key: 'degreeId', label: 'Degree', sortable: true, filterable: true, width: '100px' },
-  { key: 'addressId', label: 'Address', sortable: true, filterable: true, width: '100px' },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Institution Name", sortable: true, filterable: true },
+  { key: "degreeId", label: "Degree", sortable: true, filterable: true, width: "100px" },
+  { key: "addressId", label: "Address", sortable: true, filterable: true, width: "100px" },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 // ============================================================================
@@ -275,14 +275,15 @@ export const INSTITUTION_TABLE_COLUMNS: InstitutionTableColumn[] = [
 export function isInstitution(obj: object): obj is Institution {
   return (
     obj &&
-    typeof (obj as Institution).id === 'number' &&
-    typeof (obj as Institution).name === 'string' &&
-    typeof (obj as Institution).degreeId === 'number' &&
-    ((obj as Institution).addressId === null || typeof (obj as Institution).addressId === 'number') &&
-    ((obj as Institution).sequence === null || typeof (obj as Institution).sequence === 'number') &&
-    typeof (obj as Institution).disabled === 'boolean' &&
-    typeof (obj as Institution).createdAt === 'string' &&
-    typeof (obj as Institution).updatedAt === 'string'
+    typeof (obj as Institution).id === "number" &&
+    typeof (obj as Institution).name === "string" &&
+    typeof (obj as Institution).degreeId === "number" &&
+    ((obj as Institution).addressId === null ||
+      typeof (obj as Institution).addressId === "number") &&
+    ((obj as Institution).sequence === null || typeof (obj as Institution).sequence === "number") &&
+    typeof (obj as Institution).disabled === "boolean" &&
+    typeof (obj as Institution).createdAt === "string" &&
+    typeof (obj as Institution).updatedAt === "string"
   );
 }
 
@@ -292,11 +293,16 @@ export function isInstitution(obj: object): obj is Institution {
 export function isCreateInstitutionPayload(obj: object): obj is CreateInstitutionPayload {
   return (
     obj &&
-    typeof (obj as CreateInstitutionPayload).name === 'string' &&
-    typeof (obj as CreateInstitutionPayload).degreeId === 'number' &&
-    ((obj as CreateInstitutionPayload).addressId === undefined || (obj as CreateInstitutionPayload).addressId === null || typeof (obj as CreateInstitutionPayload).addressId === 'number') &&
-    ((obj as CreateInstitutionPayload).sequence === undefined || (obj as CreateInstitutionPayload).sequence === null || typeof (obj as CreateInstitutionPayload).sequence === 'number') &&
-    ((obj as CreateInstitutionPayload).disabled === undefined || typeof (obj as CreateInstitutionPayload).disabled === 'boolean')
+    typeof (obj as CreateInstitutionPayload).name === "string" &&
+    typeof (obj as CreateInstitutionPayload).degreeId === "number" &&
+    ((obj as CreateInstitutionPayload).addressId === undefined ||
+      (obj as CreateInstitutionPayload).addressId === null ||
+      typeof (obj as CreateInstitutionPayload).addressId === "number") &&
+    ((obj as CreateInstitutionPayload).sequence === undefined ||
+      (obj as CreateInstitutionPayload).sequence === null ||
+      typeof (obj as CreateInstitutionPayload).sequence === "number") &&
+    ((obj as CreateInstitutionPayload).disabled === undefined ||
+      typeof (obj as CreateInstitutionPayload).disabled === "boolean")
   );
 }
 
@@ -306,11 +312,18 @@ export function isCreateInstitutionPayload(obj: object): obj is CreateInstitutio
 export function isUpdateInstitutionPayload(obj: object): obj is UpdateInstitutionPayload {
   return (
     obj &&
-    ((obj as UpdateInstitutionPayload).name === undefined || typeof (obj as UpdateInstitutionPayload).name === 'string') &&
-    ((obj as UpdateInstitutionPayload).degreeId === undefined || typeof (obj as UpdateInstitutionPayload).degreeId === 'number') &&
-    ((obj as UpdateInstitutionPayload).addressId === undefined || (obj as UpdateInstitutionPayload).addressId === null || typeof (obj as UpdateInstitutionPayload).addressId === 'number') &&
-    ((obj as UpdateInstitutionPayload).sequence === undefined || (obj as UpdateInstitutionPayload).sequence === null || typeof (obj as UpdateInstitutionPayload).sequence === 'number') &&
-    ((obj as UpdateInstitutionPayload).disabled === undefined || typeof (obj as UpdateInstitutionPayload).disabled === 'boolean')
+    ((obj as UpdateInstitutionPayload).name === undefined ||
+      typeof (obj as UpdateInstitutionPayload).name === "string") &&
+    ((obj as UpdateInstitutionPayload).degreeId === undefined ||
+      typeof (obj as UpdateInstitutionPayload).degreeId === "number") &&
+    ((obj as UpdateInstitutionPayload).addressId === undefined ||
+      (obj as UpdateInstitutionPayload).addressId === null ||
+      typeof (obj as UpdateInstitutionPayload).addressId === "number") &&
+    ((obj as UpdateInstitutionPayload).sequence === undefined ||
+      (obj as UpdateInstitutionPayload).sequence === null ||
+      typeof (obj as UpdateInstitutionPayload).sequence === "number") &&
+    ((obj as UpdateInstitutionPayload).disabled === undefined ||
+      typeof (obj as UpdateInstitutionPayload).disabled === "boolean")
   );
 }
 
@@ -318,10 +331,16 @@ export function isUpdateInstitutionPayload(obj: object): obj is UpdateInstitutio
  * Type guard to check if an object is an InstitutionWithRelations
  */
 export function isInstitutionWithRelations(obj: object): obj is InstitutionWithRelations {
-  return isInstitution(obj) && (
-    'degree' in obj && ((obj as InstitutionWithRelations).degree === undefined || (obj as InstitutionWithRelations).degree === null || typeof (obj as InstitutionWithRelations).degree === 'object')
-  ) && (
-    'address' in obj && ((obj as InstitutionWithRelations).address === undefined || (obj as InstitutionWithRelations).address === null || typeof (obj as InstitutionWithRelations).address === 'object')
+  return (
+    isInstitution(obj) &&
+    "degree" in obj &&
+    ((obj as InstitutionWithRelations).degree === undefined ||
+      (obj as InstitutionWithRelations).degree === null ||
+      typeof (obj as InstitutionWithRelations).degree === "object") &&
+    "address" in obj &&
+    ((obj as InstitutionWithRelations).address === undefined ||
+      (obj as InstitutionWithRelations).address === null ||
+      typeof (obj as InstitutionWithRelations).address === "object")
   );
 }
 
@@ -349,8 +368,8 @@ export function apiDataToFormData(institution: Institution): InstitutionFormData
   return {
     name: institution.name,
     degreeId: institution.degreeId.toString(),
-    addressId: institution.addressId?.toString() || '',
-    sequence: institution.sequence?.toString() || '',
+    addressId: institution.addressId?.toString() || "",
+    sequence: institution.sequence?.toString() || "",
     disabled: institution.disabled,
   };
 }
@@ -380,41 +399,41 @@ export function formatInstitutionName(name: string): string {
  * Get institution status text
  */
 export function getInstitutionStatusText(disabled: boolean): string {
-  return disabled ? 'Inactive' : 'Active';
+  return disabled ? "Inactive" : "Active";
 }
 
 /**
  * Get institution status color
  */
 export function getInstitutionStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
+  return disabled ? "text-red-600" : "text-green-600";
 }
 
 /**
  * Get degree name from institution with relations
  */
 export function getDegreeName(institution: InstitutionWithRelations): string {
-  return institution.degree?.name || 'N/A';
+  return institution.degree?.name || "N/A";
 }
 
 /**
  * Get degree level from institution with relations
  */
 export function getDegreeLevel(institution: InstitutionWithRelations): string {
-  return institution.degree?.level || 'N/A';
+  return institution.degree?.level || "N/A";
 }
 
 /**
  * Get address info from institution with relations
  */
 export function getAddressInfo(institution: InstitutionWithRelations): string {
-  return institution.address ? 'Address Available' : 'No Address';
+  return institution.address ? "Address Available" : "No Address";
 }
 
 /**
  * Get full institution info (Name - Degree)
  */
 export function getFullInstitutionInfo(institution: InstitutionWithRelations): string {
-  const degreeName = institution.degree?.name || 'Unknown Degree';
+  const degreeName = institution.degree?.name || "Unknown Degree";
   return `${institution.name} - ${degreeName}`;
-} 
+}

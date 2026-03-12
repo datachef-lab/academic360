@@ -28,19 +28,17 @@ export default function MaterialsSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [selectedSemester, setSelectedSemester] =
-    useState<AcademicClass | null>(null);
+  const [selectedSemester, setSelectedSemester] = useState<AcademicClass | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentMaterialLink, setCurrentMaterialLink] =
-    useState<DbCourseMaterial>({
-      id: 0,
-      subject_id_fk: 0,
-      title: "",
-      url: "",
-      type: "link",
-      file_path: null,
-    });
+  const [currentMaterialLink, setCurrentMaterialLink] = useState<DbCourseMaterial>({
+    id: 0,
+    subject_id_fk: 0,
+    title: "",
+    url: "",
+    type: "link",
+    file_path: null,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,11 +83,7 @@ export default function MaterialsSettingsPage() {
         if (validCourses.length > 0 && validClasses.length > 0) {
           const firstCourse = validCourses[0];
           const firstClass = validClasses[0];
-          console.log(
-            "Setting initial course and class:",
-            firstCourse,
-            firstClass
-          );
+          console.log("Setting initial course and class:", firstCourse, firstClass);
           setSelectedCourse(firstCourse);
           setSelectedSemester(firstClass);
         }
@@ -111,9 +105,7 @@ export default function MaterialsSettingsPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       if (!selectedCourse?.id || !selectedSemester?.id || !accessToken) {
-        console.log(
-          "Course, semester not selected or no token, skipping subjects fetch"
-        );
+        console.log("Course, semester not selected or no token, skipping subjects fetch");
         return;
       }
 
@@ -122,7 +114,7 @@ export default function MaterialsSettingsPage() {
           "Starting to fetch subjects for course:",
           selectedCourse.id,
           "class:",
-          selectedSemester.id
+          selectedSemester.id,
         );
 
         const headers: HeadersInit = {};
@@ -132,7 +124,7 @@ export default function MaterialsSettingsPage() {
 
         const response = await fetch(
           `/api/subjects?courseId=${selectedCourse.id}&classId=${selectedSemester.id}`,
-          { headers }
+          { headers },
         );
 
         if (!response.ok) {
@@ -194,10 +186,7 @@ export default function MaterialsSettingsPage() {
         headers["Authorization"] = `Bearer ${accessToken}`;
       }
 
-      const response = await fetch(
-        `/api/course-materials?subjectId=${subjectId}`,
-        { headers }
-      );
+      const response = await fetch(`/api/course-materials?subjectId=${subjectId}`, { headers });
 
       if (!response.ok) {
         console.log("Materials API response status:", response.status);
@@ -206,23 +195,16 @@ export default function MaterialsSettingsPage() {
 
       const materials = await response.json();
 
-      console.log(
-        `Fetched ${materials.length} materials for subject ${subjectId}`
-      );
+      console.log(`Fetched ${materials.length} materials for subject ${subjectId}`);
 
       // Also force the UI to update by changing the subject reference
       setSubjects(
         subjects.map((subject) =>
-          subject.subjectId === subjectId
-            ? { ...subject, _refreshTimestamp: Date.now() }
-            : subject
-        )
+          subject.subjectId === subjectId ? { ...subject, _refreshTimestamp: Date.now() } : subject,
+        ),
       );
     } catch (error) {
-      console.error(
-        `Error refreshing materials for subject ${subjectId}:`,
-        error
-      );
+      console.error(`Error refreshing materials for subject ${subjectId}:`, error);
     }
   };
 
@@ -257,25 +239,17 @@ export default function MaterialsSettingsPage() {
 
     try {
       const formData = new FormData();
-      formData.append(
-        "subjectId",
-        currentMaterialLink.subject_id_fk.toString()
-      );
+      formData.append("subjectId", currentMaterialLink.subject_id_fk.toString());
       formData.append("title", currentMaterialLink.title);
       formData.append("type", currentMaterialLink.type);
       formData.append("url", currentMaterialLink.url || "");
 
       // If it's a file type and we have a file, append it
-      if (
-        currentMaterialLink.type === "file" &&
-        currentMaterialLink.file_path
-      ) {
+      if (currentMaterialLink.type === "file" && currentMaterialLink.file_path) {
         // Check if file_path is a Blob URL or actual file data
         if (currentMaterialLink.file_path.startsWith("blob:")) {
           // Get the file from the fileInput element
-          const fileInput = document.getElementById(
-            "fileUpload"
-          ) as HTMLInputElement;
+          const fileInput = document.getElementById("fileUpload") as HTMLInputElement;
           if (fileInput && fileInput.files && fileInput.files.length > 0) {
             formData.append("file", fileInput.files[0]);
             console.log("File appended to FormData:", fileInput.files[0]);
@@ -341,11 +315,7 @@ export default function MaterialsSettingsPage() {
       if (!response.ok) {
         console.log("Delete material API response status:", response.status);
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          `Failed to delete material: ${
-            errorData.message || response.statusText
-          }`
-        );
+        throw new Error(`Failed to delete material: ${errorData.message || response.statusText}`);
       }
 
       const result = await response.json().catch(() => ({}));
@@ -410,21 +380,13 @@ export default function MaterialsSettingsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b bg-muted/30 hover:bg-muted/30">
-                      {[
-                        "Sr. No",
-                        "Subject",
-                        "Type",
-                        "Paper",
-                        "Materials",
-                        "Actions",
-                      ].map((header) => (
-                        <TableHead
-                          key={header}
-                          className="font-medium py-2.5 text-center"
-                        >
-                          {header}
-                        </TableHead>
-                      ))}
+                      {["Sr. No", "Subject", "Type", "Paper", "Materials", "Actions"].map(
+                        (header) => (
+                          <TableHead key={header} className="font-medium py-2.5 text-center">
+                            {header}
+                          </TableHead>
+                        ),
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -446,8 +408,7 @@ export default function MaterialsSettingsPage() {
                           <div className="flex flex-col items-center gap-2">
                             <FileText className="h-8 w-8 text-muted-foreground opacity-40" />
                             <p className="text-sm text-muted-foreground">
-                              {selectedCourse === null ||
-                              selectedSemester === null
+                              {selectedCourse === null || selectedSemester === null
                                 ? "Please select a course and semester to view subjects"
                                 : "No subjects found for the selected course and semester"}
                             </p>

@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Edit, ReceiptIndianRupee, Trash2, Download, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,26 +47,43 @@ const FeesReceiptTypePage: React.FC = () => {
   const [searchText, setSearchText] = useState("");
   const [form, setForm] = useState<ReceiptTypeForm>(EMPTY_FORM);
 
-  const { feesReceiptTypes, loading, addFeesReceiptType, updateFeesReceiptTypeById, deleteFeesReceiptTypeById } =
-    useFeesReceiptTypes();
+  const {
+    feesReceiptTypes,
+    loading,
+    addFeesReceiptType,
+    updateFeesReceiptTypeById,
+    deleteFeesReceiptTypeById,
+  } = useFeesReceiptTypes();
 
   // Listen for receipt type socket events (only for staff/admin)
   useEffect(() => {
     if (!socket || !isConnected || (user?.type !== "ADMIN" && user?.type !== "STAFF")) return;
 
-    const handleReceiptTypeCreated = (data: { receiptTypeId: number; type: string; message: string }) => {
+    const handleReceiptTypeCreated = (data: {
+      receiptTypeId: number;
+      type: string;
+      message: string;
+    }) => {
       console.log("[Fees Receipt Type Page] Receipt type created:", data);
       // Silently refresh UI without showing toast
       window.location.reload(); // Refetch data
     };
 
-    const handleReceiptTypeUpdated = (data: { receiptTypeId: number; type: string; message: string }) => {
+    const handleReceiptTypeUpdated = (data: {
+      receiptTypeId: number;
+      type: string;
+      message: string;
+    }) => {
       console.log("[Fees Receipt Type Page] Receipt type updated:", data);
       // Silently refresh UI without showing toast
       window.location.reload(); // Refetch data
     };
 
-    const handleReceiptTypeDeleted = (data: { receiptTypeId: number; type: string; message: string }) => {
+    const handleReceiptTypeDeleted = (data: {
+      receiptTypeId: number;
+      type: string;
+      message: string;
+    }) => {
       console.log("[Fees Receipt Type Page] Receipt type deleted:", data);
       // Silently refresh UI without showing toast
       window.location.reload(); // Refetch data
@@ -125,7 +149,9 @@ const FeesReceiptTypePage: React.FC = () => {
         await addFeesReceiptType(receiptTypeData);
       }
       handleClose();
-      toast.success(editingItem ? "Receipt type updated successfully" : "Receipt type created successfully");
+      toast.success(
+        editingItem ? "Receipt type updated successfully" : "Receipt type created successfully",
+      );
     } catch (err) {
       console.error("Save error:", err);
       toast.error("Failed to save receipt type");
@@ -186,7 +212,9 @@ const FeesReceiptTypePage: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-center h-64 text-lg">Loading receipt types...</div>
+            <div className="flex items-center justify-center h-64 text-lg">
+              Loading receipt types...
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -218,7 +246,9 @@ const FeesReceiptTypePage: React.FC = () => {
               </AlertDialogTrigger>
               <AlertDialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{editingItem ? "Edit Receipt Type" : "Add Receipt Type"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {editingItem ? "Edit Receipt Type" : "Add Receipt Type"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <div className="py-4">
                   <div className="flex flex-col gap-2">
@@ -255,7 +285,11 @@ const FeesReceiptTypePage: React.FC = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
@@ -263,7 +297,9 @@ const FeesReceiptTypePage: React.FC = () => {
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto h-full">
               <Table className="border rounded-md" style={{ tableLayout: "fixed", width: "100%" }}>
-                <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
+                <TableHeader
+                  style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}
+                >
                   <TableRow>
                     <TableHead style={{ width: 60, whiteSpace: "nowrap" }}>Sr. No.</TableHead>
                     <TableHead style={{ width: 400 }}>Name</TableHead>
@@ -284,7 +320,12 @@ const FeesReceiptTypePage: React.FC = () => {
                         <TableCell style={{ width: 400 }}>{row.name}</TableCell>
                         <TableCell style={{ width: 140 }}>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(row)}
+                              className="h-5 w-5 p-0"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button

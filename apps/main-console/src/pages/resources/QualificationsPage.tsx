@@ -40,5 +40,5 @@ export default function QualificationsPage() {
         />
       </motion.div>
     </div>
-  )
+  );
 }

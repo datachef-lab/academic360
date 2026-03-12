@@ -18,7 +18,11 @@ interface DeleteCourseDialogProps {
   isNewCourse: boolean;
 }
 
-export const DeleteCourseDialog = ({ courseName, onDelete, isNewCourse }: DeleteCourseDialogProps) => {
+export const DeleteCourseDialog = ({
+  courseName,
+  onDelete,
+  isNewCourse,
+}: DeleteCourseDialogProps) => {
   if (!isNewCourse) {
     return null;
   }
@@ -26,11 +30,7 @@ export const DeleteCourseDialog = ({ courseName, onDelete, isNewCourse }: Delete
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-red-500 hover:text-red-700 h-7 w-7 p-0"
-        >
+        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 h-7 w-7 p-0">
           <Trash2 size={14} />
         </Button>
       </AlertDialogTrigger>
@@ -38,8 +38,7 @@ export const DeleteCourseDialog = ({ courseName, onDelete, isNewCourse }: Delete
         <AlertDialogHeader>
           <AlertDialogTitle>Delete course</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete "{courseName}"? 
-            This action cannot be undone.
+            Are you sure you want to delete "{courseName}"? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

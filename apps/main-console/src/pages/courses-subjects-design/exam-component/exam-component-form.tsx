@@ -26,7 +26,12 @@ const formSchema = z.object({
 
 type ExamComponentFormValues = z.infer<typeof formSchema>;
 
-export function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmitting }: ExamComponentFormProps) {
+export function ExamComponentForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: ExamComponentFormProps) {
   const defaultValues: ExamComponentFormValues = {
     name: initialData?.name || "",
     code: initialData?.code || "",
@@ -107,7 +112,9 @@ export function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmittin
         <Controller
           name="isActive"
           control={control}
-          render={({ field }) => <Checkbox id="isActive" checked={field.value} onCheckedChange={field.onChange} />}
+          render={({ field }) => (
+            <Checkbox id="isActive" checked={field.value} onCheckedChange={field.onChange} />
+          )}
         />
         <Label htmlFor="isActive">Active</Label>
       </div>

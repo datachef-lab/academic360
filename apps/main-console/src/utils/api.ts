@@ -74,7 +74,8 @@ export const setupAxiosInterceptors = (
     // If an error occurs in the API request
     (error) => {
       // Check if error logging should be suppressed
-      const shouldSuppressLog = (error as any)?._suppressLog || (error.config as any)?._silentAuthCheck;
+      const shouldSuppressLog =
+        (error as any)?._suppressLog || (error.config as any)?._silentAuthCheck;
       const isAuthError = error.response?.status === 401 || error.response?.status === 403;
 
       // Skip logging for silent auth checks

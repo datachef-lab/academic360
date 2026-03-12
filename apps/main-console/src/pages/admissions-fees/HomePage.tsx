@@ -1,8 +1,21 @@
 "use client";
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { GraduationCap, IndianRupee, Clock, Ban } from "lucide-react";
 import {
@@ -12,7 +25,18 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart, Pie, PieChart, Cell } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  Cell,
+} from "recharts";
 
 // Stat cards data
 const statCards: (
@@ -47,7 +71,12 @@ const statCards: (
     icon: <Clock className="text-yellow-600 w-7 h-7" />,
     bg: "bg-yellow-100/60",
   },
-  { label: "Unpaid Fees", value: "₹ 0", icon: <Ban className="text-red-600 w-7 h-7" />, bg: "bg-red-100/60" },
+  {
+    label: "Unpaid Fees",
+    value: "₹ 0",
+    icon: <Ban className="text-red-600 w-7 h-7" />,
+    bg: "bg-red-100/60",
+  },
 ];
 
 const recentActivities: {
@@ -167,7 +196,11 @@ function PieChartSection() {
           ))}
         </Pie>
         <ChartLegend
-          content={<ChartLegendContent payload={pieChartData.map((d) => ({ value: d.name, color: d.color }))} />}
+          content={
+            <ChartLegendContent
+              payload={pieChartData.map((d) => ({ value: d.name, color: d.color }))}
+            />
+          }
         />
         <ChartTooltip content={<ChartTooltipContent />} />
       </PieChart>
@@ -193,7 +226,9 @@ export default function HomePage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-1">Admissions & Fees Dashboard</h1>
-            <p className="text-muted-foreground text-base">Metrics and trends for the selected academic year.</p>
+            <p className="text-muted-foreground text-base">
+              Metrics and trends for the selected academic year.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm text-muted-foreground mr-2">Academic Year:</span>
@@ -220,7 +255,10 @@ export default function HomePage() {
         {/* Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {statCards.map((card) => (
-            <Card key={card.label} className={`shadow-none border-0 ${card.bg} flex flex-row items-center gap-4 p-5`}>
+            <Card
+              key={card.label}
+              className={`shadow-none border-0 ${card.bg} flex flex-row items-center gap-4 p-5`}
+            >
               <div className="flex items-center justify-center rounded-full w-14 h-14 bg-white shadow-sm">
                 {card.icon}
               </div>

@@ -10,7 +10,9 @@ export interface PaginatedResponse<T> {
   totalElements: number;
 }
 
-export async function fetchExamsByStudentId(studentId: number): Promise<ApiResponse<PaginatedResponse<ExamDto>>> {
+export async function fetchExamsByStudentId(
+  studentId: number,
+): Promise<ApiResponse<PaginatedResponse<ExamDto>>> {
   const response = await axiosInstance.get<ApiResponse<PaginatedResponse<ExamDto>>>(
     `/api/exams/schedule/student/${studentId}/exams`,
   );
@@ -22,7 +24,10 @@ export async function fetchExamById(id: number): Promise<ApiResponse<ExamDto>> {
   return response.data;
 }
 
-export async function fetchExamCandidates(examId: number, studentId: number): Promise<ApiResponse<ExamCandidateDto[]>> {
+export async function fetchExamCandidates(
+  examId: number,
+  studentId: number,
+): Promise<ApiResponse<ExamCandidateDto[]>> {
   const response = await axiosInstance.get<ApiResponse<ExamCandidateDto[]>>(
     `/api/exams/schedule/candidates?examId=${examId}&studentId=${studentId}`,
   );

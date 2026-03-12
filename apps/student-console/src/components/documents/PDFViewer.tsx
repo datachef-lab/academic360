@@ -2,13 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
-  Download,
-  ExternalLink,
-} from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, Download, ExternalLink } from "lucide-react";
 
 interface PDFViewerProps {
   url: string;
@@ -24,7 +18,7 @@ export default function PDFViewer({ url, onDownload }: PDFViewerProps) {
 
   // Create Google Docs Viewer URL
   const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(
-    url
+    url,
   )}&embedded=true`;
 
   // Handle zoom in
@@ -88,9 +82,7 @@ export default function PDFViewer({ url, onDownload }: PDFViewerProps) {
               >
                 <ZoomOut className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-medium px-2 text-gray-700">
-                {zoom}%
-              </span>
+              <span className="text-sm font-medium px-2 text-gray-700">{zoom}%</span>
               <Button
                 variant="outline"
                 size="sm"
@@ -118,9 +110,7 @@ export default function PDFViewer({ url, onDownload }: PDFViewerProps) {
             className="bg-white border-gray-200"
           >
             <ExternalLink className="h-4 w-4 mr-1" />
-            {viewerMode === "native"
-              ? "Use Google Viewer"
-              : "Use Browser Viewer"}
+            {viewerMode === "native" ? "Use Google Viewer" : "Use Browser Viewer"}
           </Button>
         </div>
 
@@ -164,8 +154,7 @@ export default function PDFViewer({ url, onDownload }: PDFViewerProps) {
             >
               <div className="w-full h-full flex flex-col items-center justify-center bg-white p-6">
                 <p className="text-gray-700 mb-4 text-center">
-                  Unable to display PDF directly. Your browser may be blocking
-                  embedded PDFs.
+                  Unable to display PDF directly. Your browser may be blocking embedded PDFs.
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -176,10 +165,7 @@ export default function PDFViewer({ url, onDownload }: PDFViewerProps) {
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Use Google Viewer
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => window.open(url, "_blank")}
-                  >
+                  <Button variant="outline" onClick={() => window.open(url, "_blank")}>
                     <Download className="h-4 w-4 mr-2" />
                     Open in New Tab
                   </Button>

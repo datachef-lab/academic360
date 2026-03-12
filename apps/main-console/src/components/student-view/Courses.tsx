@@ -49,11 +49,10 @@ const Courses: React.FC = () => {
 
   return (
     <div className="p-4 flex flex-col items-center justify-center space-y-4 sm:space-y-6">
-   
-    <div className="w-full max-w-screen-lg">
-      <CourseCard courses={sampleCourses} showAllDays={false} />
+      <div className="w-full max-w-screen-lg">
+        <CourseCard courses={sampleCourses} showAllDays={false} />
+      </div>
     </div>
-  </div>
   );
 };
 export default Courses;

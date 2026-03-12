@@ -8,7 +8,8 @@ export interface SettingDto {
   updatedAt?: string;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 console.log("[settings.service] BASE_URL:", BASE_URL);
 

@@ -1,7 +1,4 @@
 import HomePage from "./HomePage";
 import MarksheetMaster from "./MarksheetMaster";
 
-export {
-    MarksheetMaster,
-    HomePage,
-}
+export { MarksheetMaster, HomePage };

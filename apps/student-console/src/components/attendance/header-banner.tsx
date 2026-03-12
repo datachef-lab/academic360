@@ -1,14 +1,7 @@
 import { ListChecks } from "lucide-react";
 import React from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { MockData } from "./data";
-
 
 type HeaderBannerProps = {
   selectedSemester: string;
@@ -19,7 +12,7 @@ type HeaderBannerProps = {
 export default function HeaderBanner({
   selectedSemester,
   setSelectedSemester,
-  mockData
+  mockData,
 }: HeaderBannerProps) {
   return (
     <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-800 text-white py-10 px-6 mb-8 rounded-b-3xl shadow-lg relative overflow-hidden">
@@ -40,16 +33,12 @@ export default function HeaderBanner({
                 Attendance Tracker
               </h1>
               <p className="text-blue-50 text-lg drop-shadow max-w-2xl">
-                Monitor your class attendance and stay on top of your academic
-                requirements
+                Monitor your class attendance and stay on top of your academic requirements
               </p>
             </div>
           </div>
           <div className="hidden md:block">
-            <Select
-              value={selectedSemester}
-              onValueChange={setSelectedSemester}
-            >
+            <Select value={selectedSemester} onValueChange={setSelectedSemester}>
               <SelectTrigger className="w-[180px] border-white/20 bg-white/10 text-white backdrop-blur-sm">
                 <SelectValue placeholder="Select semester" />
               </SelectTrigger>

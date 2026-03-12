@@ -39,17 +39,15 @@
 // // // //       }
 // // // //       return count < 3;
 // // // //     },
-    
+
 // // // //     });
-
-
 
 // // // //   useEffect(() => {
 // // // //    if (data) {
 // // // //       console.log("Data fetched:", data);
 // // // //       setIsNew(false);
 // // // //       setResourceData(data as unknown as CreateDto);
-      
+
 // // // //     }
 // // // //     else if(isError && axios.isAxiosError(error) && error.response?.status === 404) {
 // // // //       setIsNew(true);
@@ -93,7 +91,7 @@
 // // // //     resourceData,
 // // // //     setResourceData,
 // // // //     isNewResource: isNew,
-   
+
 // // // //     fetchError: error,
 // // // //     isFetchError: isError,
 // // // //     isFetching: isLoading,
@@ -212,10 +210,6 @@
 // import { useLocation } from "react-router-dom";
 // import { useRef } from "react";
 
-
-
-
-
 // interface FormManagerOptions<TData, TError = AxiosError> {
 //   queryKey: string[];
 //   queryFn: (id: number) => Promise<TData>;
@@ -260,17 +254,17 @@
 //     queryFn: () => queryFn(id),
 //     enabled: enabled && !!id,
 //     retry: false,
-   
+
 //   });
 
 //   // Handle 404 → New form
 //   useEffect(() => {
 //     effectRunCount.current += 1;
 //   console.log(`[FormManager] useEffect run count: ${effectRunCount.current}`);
-  
+
 //     if (isError && axios.isAxiosError(error)) {
 //       console.log("Axios error detected, status:", error.response?.status);
-      
+
 //       if (error.response?.status === 404) {
 //         console.log("404 detected - treating as new record");
 //         setIsNew(true);
@@ -281,7 +275,7 @@
 //     } else if (data) {
 //       console.log("Data received - updating form state");
 //       console.log("Payload data:", data);
-//       setFormData(data); 
+//       setFormData(data);
 //       setIsNew(false);
 //     }
 
@@ -292,21 +286,21 @@
 //     mutationFn: async (data) => {
 //       console.group("[FormManager] Mutation execution");
 //       console.log("Is new record:", isNew);
-     
+
 //       if(isNew){
-       
+
 //         console.log("Data being submitted:", data);
 
 //       }else{
-       
+
 //         console.log("Data being submitted:", data,"with updated ID",id);
 //       }
-      
+
 //       try {
-//         const result = isNew && createFn 
+//         const result = isNew && createFn
 //           ? await createFn(data)
 //           : await mutationFn(data, id);
-        
+
 //         console.log("Mutation successful, result:", result);
 //         return result;
 //       } catch (err) {
@@ -341,7 +335,7 @@
 //   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 //     const { name, value, type, checked } = e.target;
 //     const newValue = type === "checkbox" ? checked : type === "number" ? Number(value) : value;
-    
+
 //     console.log("[FormManager] Field change:", {
 //       field: name,
 //       value,
@@ -469,7 +463,7 @@
 
 // //   const mutation = useMutation<TData | ApiResponse<TData>, TError, TData>({
 // //     mutationFn: async (data) => {
-// //       return isNew && createFn 
+// //       return isNew && createFn
 // //         ? await createFn(data)
 // //         : await mutationFn(data, updateId);
 // //     },
@@ -484,13 +478,12 @@
 // //     ...mutationOptions,
 // //   });
 
-  
 // //   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
 // //     const { name, value, type } = e.target;
 // //     const target = e.target as HTMLInputElement; // For checkbox/radio specific properties
-  
+
 // //     let newValue: string | number | boolean | null;
-  
+
 // //     switch (type) {
 // //       case 'checkbox':
 // //         newValue = target.checked;
@@ -504,7 +497,7 @@
 // //       default:
 // //         newValue = value;
 // //     }
-  
+
 // //     setFormData(prev => {
 // //       if (!prev) return prev; // Guard against undefined
 // //       return {
@@ -515,14 +508,12 @@
 // //   };
 
 // //   const handleSelect = <K extends keyof TData>(name: K, value: TData[K]) => {
-  
-    
+
 // //         setFormData(prev => ({
 // //           ...(prev as TData),
 // //           [name]: value,
 // //         }));
-     
- 
+
 // //   };
 
 // //   const handleSubmit = (e: React.FormEvent) => {
@@ -592,7 +583,7 @@ export const useFormManager = <TData, TError = Error>({
   });
 
   const handleChange = <K extends keyof TData>(name: K, value: TData[K]) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -600,10 +591,10 @@ export const useFormManager = <TData, TError = Error>({
 
   const handleSubmit = () => {
     if (isNew) {
-      console.log("formData",formData);
+      console.log("formData", formData);
       createMutation.mutate(formData);
     } else {
-    console.log("formData**",formData);
+      console.log("formData**", formData);
       updateMutation.mutate(formData);
     }
   };

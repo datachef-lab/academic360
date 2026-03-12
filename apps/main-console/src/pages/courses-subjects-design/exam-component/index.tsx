@@ -1,5 +1,11 @@
 import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,7 +16,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Download, Edit, Library, PlusCircle, Upload, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -32,7 +45,9 @@ const ExamComponentesPage = () => {
   const [error, setError] = React.useState<string | null>(null);
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedExamComponent, setSelectedExamComponent] = React.useState<ExamComponent | null>(null);
+  const [selectedExamComponent, setSelectedExamComponent] = React.useState<ExamComponent | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
@@ -82,7 +97,9 @@ const ExamComponentesPage = () => {
   };
 
   const handleDownloadTemplate = () => {
-    const worksheet = XLSX.utils.json_to_sheet([{ name: "Exam Name", shortName: "Short", type: "Type" }]);
+    const worksheet = XLSX.utils.json_to_sheet([
+      { name: "Exam Name", shortName: "Short", type: "Type" },
+    ]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
     XLSX.writeFile(workbook, "exam_components_template.xlsx");
@@ -114,7 +131,9 @@ const ExamComponentesPage = () => {
       if (result.success) {
         toast.success(result.message || "Exam component deleted successfully");
         const refreshed = await getAllExamComponent();
-        setExamComponents(Array.isArray(refreshed.payload) ? (refreshed.payload as ExamComponent[]) : []);
+        setExamComponents(
+          Array.isArray(refreshed.payload) ? (refreshed.payload as ExamComponent[]) : [],
+        );
       } else {
         const details = (result.records || [])
           .filter((r) => r.count > 0)
@@ -220,7 +239,11 @@ const ExamComponentesPage = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2 flex-shrink-0" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 flex-shrink-0"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" /> <span className="hidden sm:inline">Download</span>
             </Button>
           </div>
@@ -228,14 +251,28 @@ const ExamComponentesPage = () => {
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
               <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
-                <TableHeader style={{ position: "sticky", top: 0, zIndex: 30, background: "#f3f4f6" }}>
+                <TableHeader
+                  style={{ position: "sticky", top: 0, zIndex: 30, background: "#f3f4f6" }}
+                >
                   <TableRow>
-                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
-                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
-                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>Code</TableHead>
-                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
-                    <TableHead style={{ width: 100, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
-                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>
+                      ID
+                    </TableHead>
+                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>
+                      Name
+                    </TableHead>
+                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>
+                      Code
+                    </TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>
+                      Short Name
+                    </TableHead>
+                    <TableHead style={{ width: 100, background: "#f3f4f6", color: "#374151" }}>
+                      Status
+                    </TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -268,7 +305,9 @@ const ExamComponentesPage = () => {
                           {!comp.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">
+                              Active
+                            </Badge>
                           )}
                         </TableCell>
                         <TableCell style={{ width: 120 }}>

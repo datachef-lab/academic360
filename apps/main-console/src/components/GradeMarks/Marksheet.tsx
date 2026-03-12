@@ -3,7 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import { findMarksheetsByStudentId } from "@/services/marksheet-apis";
 import { Button } from "@/components/ui/button";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { Pencil, Eye } from "lucide-react";
 import { useMarksheetSkeleton } from "./useMarksheetSkeleton";
 
@@ -73,13 +80,17 @@ const Marksheet = () => {
   const isLoading = marksheetsQuery.isLoading;
   const isError = marksheetsQuery.isError;
   if (isLoading) {
-    return <MarksheetSkeleton yearCount={years.length || 3} semesterCount={semesters.length || 3} />;
+    return (
+      <MarksheetSkeleton yearCount={years.length || 3} semesterCount={semesters.length || 3} />
+    );
   }
   if (isError) {
     return <div className="p-8 text-center text-red-500">Failed to load marksheets.</div>;
   }
   if (marksheets.length === 0) {
-    return <div className="p-8 text-center text-gray-500">No marksheets found for this student.</div>;
+    return (
+      <div className="p-8 text-center text-gray-500">No marksheets found for this student.</div>
+    );
   }
 
   const handleEdit = (marksheet: MarksheetRow) => {
@@ -121,8 +132,13 @@ const Marksheet = () => {
             </TableHeader>
             <TableBody>
               {years.map((year, rowIdx) => (
-                <TableRow key={String(year)} className={`${rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
-                  <TableCell className="border-r text-center font-medium text-gray-700 py-3 sm:py-5">{year}</TableCell>
+                <TableRow
+                  key={String(year)}
+                  className={`${rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                >
+                  <TableCell className="border-r text-center font-medium text-gray-700 py-3 sm:py-5">
+                    {year}
+                  </TableCell>
                   {semesters.map((sem, index) => {
                     const m = marksheetMap[`${year}-${sem}`];
                     return (

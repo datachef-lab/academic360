@@ -1,5 +1,5 @@
 // stores/filterStore.ts
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface FilterState {
   semester: number | null;

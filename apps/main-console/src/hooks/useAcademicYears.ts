@@ -30,7 +30,11 @@ export const useCreateAcademicYear = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ academicYear }: { academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt"> }) => {
+    mutationFn: async ({
+      academicYear,
+    }: {
+      academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">;
+    }) => {
       const response = await createAcademicYear(academicYear);
       return response.payload;
     },
@@ -50,7 +54,13 @@ export const useUpdateAcademicYear = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, academicYear }: { id: number; academicYear: Partial<AcademicYear> }) => {
+    mutationFn: async ({
+      id,
+      academicYear,
+    }: {
+      id: number;
+      academicYear: Partial<AcademicYear>;
+    }) => {
       const response = await updateAcademicYearById(id, academicYear);
       return response.payload;
     },

@@ -14,9 +14,7 @@ export default function ErrorCard({ error, refetch }: ErrorCardProps) {
         <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
           <X className="h-10 w-10 text-red-500" />
         </div>
-        <h3 className="text-xl font-semibold text-gray-900">
-          Something went wrong
-        </h3>
+        <h3 className="text-xl font-semibold text-gray-900">Something went wrong</h3>
         <p className="text-gray-600">{error}</p>
         <Button
           className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"

@@ -14,8 +14,8 @@ export default function Contact() {
             <div className="grid md:grid-cols-2">
               <div className="h-full pr-6">
                 <p className="mt-3 mb-12 text-lg text-gray-600 dark:text-slate-400">
-                  Get in touch with us for any queries or assistance related to
-                  our Student Management System.
+                  Get in touch with us for any queries or assistance related to our Student
+                  Management System.
                 </p>
 
                 <ul className="mb-6 md:mb-0">
@@ -44,9 +44,7 @@ export default function Contact() {
                       <p className="text-gray-600 dark:text-slate-400">
                         1230 Maecenas Street Donec Road
                       </p>
-                      <p className="text-gray-600 dark:text-slate-400">
-                        New York, EEUU
-                      </p>
+                      <p className="text-gray-600 dark:text-slate-400">New York, EEUU</p>
                     </div>
                   </li>
                   <li className="flex">
@@ -72,20 +70,14 @@ export default function Contact() {
                       <h3 className="mb-2 text-lg font-medium leading-6 text-gray-900 dark:text-white">
                         Contact
                       </h3>
-                      <p className="text-gray-600 dark:text-slate-400">
-                        Mobile: +1 (123) 456-7890
-                      </p>
-                      <p className="text-gray-600 dark:text-slate-400">
-                        Mail: tailnext@gmail.com
-                      </p>
+                      <p className="text-gray-600 dark:text-slate-400">Mobile: +1 (123) 456-7890</p>
+                      <p className="text-gray-600 dark:text-slate-400">Mail: tailnext@gmail.com</p>
                     </div>
                   </li>
                 </ul>
               </div>
               <div className="card h-fit max-w-6xl p-5 md:p-12" id="form">
-                <h2 className="mb-4 text-2xl font-bold dark:text-white">
-                  Ready to Get Started?
-                </h2>
+                <h2 className="mb-4 text-2xl font-bold dark:text-white">Ready to Get Started?</h2>
                 <form id="contactForm">
                   <div className="mb-6">
                     <div className="mx-0 mb-1 sm:mb-4">

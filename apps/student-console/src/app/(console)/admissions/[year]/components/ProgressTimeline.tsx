@@ -23,7 +23,9 @@ export default function ProgressTimeline({ currentStep, steps }: ProgressTimelin
           />
         </div>
         <div className="flex flex-col justify-center">
-          <span className="text-lg font-extrabold text-white tracking-tight leading-tight">BESC Admissions</span>
+          <span className="text-lg font-extrabold text-white tracking-tight leading-tight">
+            BESC Admissions
+          </span>
           <span className="text-xs text-white/60 font-medium mt-0.5">Student Console</span>
         </div>
       </div>
@@ -42,15 +44,11 @@ export default function ProgressTimeline({ currentStep, steps }: ProgressTimelin
                       currentStep > step.number
                         ? "bg-gradient-to-br from-green-400 to-green-600 text-white transform scale-105"
                         : currentStep === step.number
-                        ? "bg-white text-purple-600 transform scale-110 ring-4 ring-white/30"
-                        : "bg-white/10 text-white border-2 border-white/30 group-hover:border-white/50"
+                          ? "bg-white text-purple-600 transform scale-110 ring-4 ring-white/30"
+                          : "bg-white/10 text-white border-2 border-white/30 group-hover:border-white/50"
                     }`}
                   >
-                    {currentStep > step.number ? (
-                      <Check className="w-3.5 h-3.5" />
-                    ) : (
-                      step.number
-                    )}
+                    {currentStep > step.number ? <Check className="w-3.5 h-3.5" /> : step.number}
                   </div>
 
                   {/* Pulse animation for current step */}
@@ -66,10 +64,10 @@ export default function ProgressTimeline({ currentStep, steps }: ProgressTimelin
                       currentStep >= step.number ? "text-white" : "text-white/70"
                     }`}
                   >
-                    {step.title.split(' ').map((word, i) => (
+                    {step.title.split(" ").map((word, i) => (
                       <span key={i} className="inline-block">
                         {word}
-                        {i < step.title.split(' ').length - 1 ? ' ' : ''}
+                        {i < step.title.split(" ").length - 1 ? " " : ""}
                       </span>
                     ))}
                   </h3>
@@ -124,15 +122,11 @@ export default function ProgressTimeline({ currentStep, steps }: ProgressTimelin
                     currentStep > step.number
                       ? "bg-gradient-to-br from-green-400 to-green-600 text-white transform scale-105"
                       : currentStep === step.number
-                      ? "bg-white text-purple-600 transform scale-110 ring-4 ring-white/30"
-                      : "bg-white/10 text-white border-2 border-white/30 group-hover:border-white/50"
+                        ? "bg-white text-purple-600 transform scale-110 ring-4 ring-white/30"
+                        : "bg-white/10 text-white border-2 border-white/30 group-hover:border-white/50"
                   }`}
                 >
-                  {currentStep > step.number ? (
-                    <Check className="w-5 h-5" />
-                  ) : (
-                    step.number
-                  )}
+                  {currentStep > step.number ? <Check className="w-5 h-5" /> : step.number}
                 </div>
 
                 {/* Pulse animation for current step */}

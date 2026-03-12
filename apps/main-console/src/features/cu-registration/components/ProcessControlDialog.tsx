@@ -12,7 +12,13 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Play, Pause, Square, Settings, BookOpen, FileText, CheckCircle } from "lucide-react";
 
 interface ProgramCourse {
@@ -36,12 +42,18 @@ interface ProcessControlUpdate {
   status: "ACTIVE" | "INACTIVE";
 }
 
-export default function ProcessControlDialog({ open, onOpenChange, onProcessUpdate }: ProcessControlDialogProps) {
+export default function ProcessControlDialog({
+  open,
+  onOpenChange,
+  onProcessUpdate,
+}: ProcessControlDialogProps) {
   const [programCourses, setProgramCourses] = useState<ProgramCourse[]>([]);
   const [selectedPrograms, setSelectedPrograms] = useState<Set<number>>(new Set());
   const [selectedSemesters, setSelectedSemesters] = useState<Map<number, Set<number>>>(new Map()); // programId -> Set of semesters
   const [selectedShifts, setSelectedShifts] = useState<Set<string>>(new Set());
-  const [processType, setProcessType] = useState<"SUBJECT_SELECTION" | "CU_REGISTRATION">("SUBJECT_SELECTION");
+  const [processType, setProcessType] = useState<"SUBJECT_SELECTION" | "CU_REGISTRATION">(
+    "SUBJECT_SELECTION",
+  );
   const [action, setAction] = useState<"ACTIVATE" | "DEACTIVATE">("ACTIVATE");
   const [loading, setLoading] = useState(false);
 
@@ -220,9 +232,12 @@ export default function ProcessControlDialog({ open, onOpenChange, onProcessUpda
     (total, semesters) => total + semesters.size,
     0,
   );
-  const totalUpdates = Array.from(selectedSemesters.entries()).reduce((total, [programId, semesters]) => {
-    return selectedPrograms.has(programId) ? total + semesters.size : total;
-  }, 0);
+  const totalUpdates = Array.from(selectedSemesters.entries()).reduce(
+    (total, [programId, semesters]) => {
+      return selectedPrograms.has(programId) ? total + semesters.size : total;
+    },
+    0,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -342,20 +357,25 @@ export default function ProcessControlDialog({ open, onOpenChange, onProcessUpda
                     </p>
                     <div className="space-y-1">
                       <p>
-                        <strong>{selectedProgramsCount}</strong> program{selectedProgramsCount !== 1 ? "s" : ""}
+                        <strong>{selectedProgramsCount}</strong> program
+                        {selectedProgramsCount !== 1 ? "s" : ""}
                       </p>
                       <p>
-                        <strong>{selectedSemestersCount}</strong> semester{selectedSemestersCount !== 1 ? "s" : ""}
+                        <strong>{selectedSemestersCount}</strong> semester
+                        {selectedSemestersCount !== 1 ? "s" : ""}
                       </p>
                       <p className="font-semibold text-emerald-900">
-                        <strong>{totalUpdates}</strong> total process{totalUpdates !== 1 ? "es" : ""}
+                        <strong>{totalUpdates}</strong> total process
+                        {totalUpdates !== 1 ? "es" : ""}
                       </p>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                  <div className="text-sm text-slate-600 text-center">Select programs and semesters to see summary</div>
+                  <div className="text-sm text-slate-600 text-center">
+                    Select programs and semesters to see summary
+                  </div>
                 </div>
               )}
             </div>
@@ -402,7 +422,9 @@ export default function ProcessControlDialog({ open, onOpenChange, onProcessUpda
                       <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 w-1/2">
                         Program Courses
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 w-1/2">Semesters</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 w-1/2">
+                        Semesters
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -414,7 +436,9 @@ export default function ProcessControlDialog({ open, onOpenChange, onProcessUpda
                             <Checkbox
                               id={`program-${program.id}`}
                               checked={selectedPrograms.has(program.id)}
-                              onCheckedChange={(checked) => handleProgramToggle(program.id, checked as boolean)}
+                              onCheckedChange={(checked) =>
+                                handleProgramToggle(program.id, checked as boolean)
+                              }
                               className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
                             />
                             <div className="flex-1">
@@ -435,7 +459,8 @@ export default function ProcessControlDialog({ open, onOpenChange, onProcessUpda
                           <div className="flex flex-wrap gap-2">
                             {Array.from({ length: 8 }, (_, i) => i + 1).map((semester) => {
                               const isRelevant = semester <= program.totalSemesters;
-                              const programSemesters = selectedSemesters.get(program.id) || new Set<number>();
+                              const programSemesters =
+                                selectedSemesters.get(program.id) || new Set<number>();
                               const isSelected = programSemesters.has(semester);
                               return (
                                 <div
@@ -447,12 +472,19 @@ export default function ProcessControlDialog({ open, onOpenChange, onProcessUpda
                                         : "bg-white border-slate-300 text-slate-700 hover:bg-emerald-50 hover:border-emerald-400 cursor-pointer"
                                       : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
                                   }`}
-                                  onClick={() => isRelevant && handleSemesterToggle(program.id, semester, !isSelected)}
+                                  onClick={() =>
+                                    isRelevant &&
+                                    handleSemesterToggle(program.id, semester, !isSelected)
+                                  }
                                 >
                                   <span className="text-sm font-semibold">{semester}</span>
                                   {isSelected && (
                                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
-                                      <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <svg
+                                        className="w-2.5 h-2.5 text-white"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                      >
                                         <path
                                           fillRule="evenodd"
                                           d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"

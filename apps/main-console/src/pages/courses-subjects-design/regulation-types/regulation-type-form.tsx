@@ -8,7 +8,14 @@ import { Input } from "@/components/ui/input";
 // import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 // import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 // Form schema and types
 const regulationTypeSchema = z.object({
@@ -27,7 +34,12 @@ interface RegulationTypeFormProps {
   isLoading?: boolean;
 }
 
-export function RegulationTypeForm({ initialData, onSubmit, onCancel, isLoading = false }: RegulationTypeFormProps) {
+export function RegulationTypeForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+}: RegulationTypeFormProps) {
   const isEdit = !!initialData;
 
   const form = useForm<RegulationTypeFormValues>({
@@ -93,7 +105,12 @@ export function RegulationTypeForm({ initialData, onSubmit, onCancel, isLoading 
             <FormItem>
               <FormLabel>Short Name</FormLabel>
               <FormControl>
-                <Input placeholder="Enter short name" {...field} value={field.value ?? ""} disabled={isLoading} />
+                <Input
+                  placeholder="Enter short name"
+                  {...field}
+                  value={field.value ?? ""}
+                  disabled={isLoading}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

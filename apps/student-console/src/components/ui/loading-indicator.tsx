@@ -17,11 +17,7 @@ export function LoadingIndicator({
     return (
       <div className="flex items-center justify-center p-4">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-        {message && (
-          <span className="ml-3 text-sm font-medium text-indigo-700">
-            {message}
-          </span>
-        )}
+        {message && <span className="ml-3 text-sm font-medium text-indigo-700">{message}</span>}
       </div>
     );
   }
@@ -55,14 +51,8 @@ export function LoadingIndicator({
         <div className="animate-pulse w-24 h-24 rounded-full bg-purple-100 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600"></div>
         </div>
-        <p className="text-purple-800 font-medium animate-pulse text-xl">
-          {message}
-        </p>
-        {subMessage && (
-          <p className="text-gray-500 text-sm text-center max-w-md">
-            {subMessage}
-          </p>
-        )}
+        <p className="text-purple-800 font-medium animate-pulse text-xl">{message}</p>
+        {subMessage && <p className="text-gray-500 text-sm text-center max-w-md">{subMessage}</p>}
       </div>
     </div>
   );

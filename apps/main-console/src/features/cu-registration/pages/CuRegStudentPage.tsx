@@ -188,7 +188,10 @@ export default function CuRegStudentPage() {
               {userFlags?.isActive === false && <div>User status: Inactive</div>}
               {userFlags?.isSuspended && (
                 <div>
-                  Suspended{userFlags?.suspendedTillDate ? ` till ${formatDateTime(userFlags.suspendedTillDate)}` : ""}
+                  Suspended
+                  {userFlags?.suspendedTillDate
+                    ? ` till ${formatDateTime(userFlags.suspendedTillDate)}`
+                    : ""}
                   {userFlags?.suspendedReason ? ` — ${userFlags.suspendedReason}` : ""}
                 </div>
               )}
@@ -246,7 +249,9 @@ export default function CuRegStudentPage() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600 mx-auto mb-4"></div>
                   <p className="text-slate-600">Loading CU registration data...</p>
                   <p className="text-slate-500 text-sm mt-2">
-                    {isSearching ? "Searching for student..." : "Loading form data and documents..."}
+                    {isSearching
+                      ? "Searching for student..."
+                      : "Loading form data and documents..."}
                   </p>
                 </div>
               </div>

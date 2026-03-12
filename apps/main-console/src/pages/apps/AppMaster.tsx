@@ -1,5 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { Settings, ExternalLink } from "lucide-react";
@@ -67,8 +74,12 @@ export default function AppMaster() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 p-0">
       <div className="flex flex-col items-center py-8">
-        <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 mb-2 drop-shadow-lg">Connected Apps</h1>
-        <p className="text-lg text-purple-500 mb-8">Manage your integrations and access all modules from one place.</p>
+        <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 mb-2 drop-shadow-lg">
+          Connected Apps
+        </h1>
+        <p className="text-lg text-purple-500 mb-8">
+          Manage your integrations and access all modules from one place.
+        </p>
         <div className="w-full max-w-5xl bg-white/80 rounded-2xl shadow-xl p-6 border border-purple-100">
           <Table>
             <TableHeader>
@@ -82,17 +93,27 @@ export default function AppMaster() {
             </TableHeader>
             <TableBody>
               {apps.map((app, idx) => (
-                <TableRow key={app.name} className={app.enabled ? "bg-white" : "bg-gray-50 opacity-70"}>
+                <TableRow
+                  key={app.name}
+                  className={app.enabled ? "bg-white" : "bg-gray-50 opacity-70"}
+                >
                   <TableCell>
                     <div className="h-10 w-10 bg-gradient-to-br from-purple-200 via-pink-200 to-blue-200 rounded-full flex items-center justify-center text-lg font-bold text-purple-700 shadow">
                       {/* Placeholder logo: first letter */}
                       {app.name[0]}
                     </div>
                   </TableCell>
-                  <TableCell className="font-semibold text-purple-700 text-base">{app.name}</TableCell>
+                  <TableCell className="font-semibold text-purple-700 text-base">
+                    {app.name}
+                  </TableCell>
                   <TableCell>
                     <Button asChild variant="outline" size="sm" disabled={false}>
-                      <a href={"#"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                      <a
+                        href={"#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1"
+                      >
                         <ExternalLink className="h-4 w-4" /> Visit
                       </a>
                     </Button>

@@ -1,30 +1,30 @@
 "use server";
 
 import { query } from "@/db";
-import Batch, { BatchCustom, } from "@/types/academics/batch";
+import Batch, { BatchCustom } from "@/types/academics/batch";
 import { RowDataPacket } from "mysql2";
 
 export async function findAllBatches(page: number = 1, pageSize: number = 10) {
-    const offset = (page - 1) * pageSize; // Starting point for pagination
+  const offset = (page - 1) * pageSize; // Starting point for pagination
 
-    const [rows] = await query<RowDataPacket[]>(
-        `SELECT * 
+  const [rows] = await query<RowDataPacket[]>(
+    `SELECT * 
         FROM studentpaperlinkingmain 
         ORDER BY id DESC 
         LIMIT ? 
         OFFSET ?`,
-        [pageSize, offset]
-    );
+    [pageSize, offset],
+  );
 
-    return rows; // Return the paginated batch data in descending order
+  return rows; // Return the paginated batch data in descending order
 }
 
 export async function findBatchesByStudentUid(uid: string): Promise<BatchCustom[]> {
-    console.log("in findBatchesByStudentId(), uid:", uid);
+  console.log("in findBatchesByStudentId(), uid:", uid);
 
-    // Step 1: Fetch the batches and subjects
-    console.log("Fetching batches for student with UID:", uid);
-    const sqlQuery = `
+  // Step 1: Fetch the batches and subjects
+  console.log("Fetching batches for student with UID:", uid);
+  const sqlQuery = `
         (
             SELECT
                 co.coursename,
@@ -123,66 +123,75 @@ export async function findBatchesByStudentUid(uid: string): Promise<BatchCustom[
             ) 
         ORDER BY coursename, codenumber, subjectTypeName
     `;
-    console.log("SQL Query:", sqlQuery);
+  console.log("SQL Query:", sqlQuery);
 
-    try {
-        const results = await query<RowDataPacket[]>(sqlQuery);
-        console.log("Result length:", results.length);
-        console.log("First result:", results[0]);
+  try {
+    const results = await query<RowDataPacket[]>(sqlQuery);
+    console.log("Result length:", results.length);
+    console.log("First result:", results[0]);
 
-        // Step 3: Format the result
-        if (!results || results.length === 0) {
-            console.log("No batches found for the student.");
-            return []; // Return an empty array if no batches are found
-        }
-
-        // Group the results by batch (unique combination of course, class, section, session, shift)
-        const batchMap = new Map();
-
-        // Create a unique key for each batch
-        for (const row of results) {
-            const { coursename, classname, sectionName, sessionName, shiftName,
-                subjectname, subjecttypename, paperName, subjectId } = row;
-
-            const batchKey = `${coursename}|${classname}|${sectionName}|${sessionName}|${shiftName}`;
-
-            if (!batchMap.has(batchKey)) {
-                // Create a new batch
-                batchMap.set(batchKey, {
-                    coursename,
-                    classname,
-                    sectionName,
-                    sessionName,
-                    shiftName,
-                    papers: []
-                });
-            }
-
-            // Add the paper to the batch
-            const batch = batchMap.get(batchKey);
-            batch.papers.push({
-                subjectId,
-                subjectname,
-                subjecttypename,
-                paperName
-            });
-        }
-
-        // Convert the map values to an array
-        const formattedBatches = Array.from(batchMap.values());
-        console.log("Formatted batches length:", formattedBatches.length);
-
-        return formattedBatches;
-    } catch (error) {
-        console.error("Error fetching batches:", error);
-        return [];
+    // Step 3: Format the result
+    if (!results || results.length === 0) {
+      console.log("No batches found for the student.");
+      return []; // Return an empty array if no batches are found
     }
+
+    // Group the results by batch (unique combination of course, class, section, session, shift)
+    const batchMap = new Map();
+
+    // Create a unique key for each batch
+    for (const row of results) {
+      const {
+        coursename,
+        classname,
+        sectionName,
+        sessionName,
+        shiftName,
+        subjectname,
+        subjecttypename,
+        paperName,
+        subjectId,
+      } = row;
+
+      const batchKey = `${coursename}|${classname}|${sectionName}|${sessionName}|${shiftName}`;
+
+      if (!batchMap.has(batchKey)) {
+        // Create a new batch
+        batchMap.set(batchKey, {
+          coursename,
+          classname,
+          sectionName,
+          sessionName,
+          shiftName,
+          papers: [],
+        });
+      }
+
+      // Add the paper to the batch
+      const batch = batchMap.get(batchKey);
+      batch.papers.push({
+        subjectId,
+        subjectname,
+        subjecttypename,
+        paperName,
+      });
+    }
+
+    // Convert the map values to an array
+    const formattedBatches = Array.from(batchMap.values());
+    console.log("Formatted batches length:", formattedBatches.length);
+
+    return formattedBatches;
+  } catch (error) {
+    console.error("Error fetching batches:", error);
+    return [];
+  }
 }
 
 export async function findBatchesMetadataByCourseId(courseId: number) {
-    const batches: Batch[] = [];
+  const batches: Batch[] = [];
 
-    const sqlQuery = `
+  const sqlQuery = `
         SELECT 
             batch.*,
             crs.coursename,
@@ -208,10 +217,10 @@ export async function findBatchesMetadataByCourseId(courseId: number) {
             batch.sessionId DESC
     ;`;
 
-    const result = await query<RowDataPacket[]>(sqlQuery) as Batch[];
+  const result = (await query<RowDataPacket[]>(sqlQuery)) as Batch[];
 
-    for (const tmpBatch of result) {
-        const sqlQuery = `
+  for (const tmpBatch of result) {
+    const sqlQuery = `
         SELECT
             COUNT(st.id) AS totalCount
         FROM 
@@ -229,17 +238,14 @@ export async function findBatchesMetadataByCourseId(courseId: number) {
             AND sl.studentId = st.id
     `;
 
-        const { totalCount } = (await query<RowDataPacket[]>(sqlQuery) as { totalCount: number }[])[0];
+    const { totalCount } = (
+      (await query<RowDataPacket[]>(sqlQuery)) as { totalCount: number }[]
+    )[0];
 
-        if (totalCount > 0) {
-            batches.push(tmpBatch);
-        }
-
-
+    if (totalCount > 0) {
+      batches.push(tmpBatch);
     }
+  }
 
-
-
-
-    return batches;
+  return batches;
 }

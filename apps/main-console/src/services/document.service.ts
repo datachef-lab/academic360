@@ -7,12 +7,12 @@ import { Document } from "@/types/resources/document";
 
 /**
  * Document Service
- * 
+ *
  * This service handles all CRUD operations for the Document module.
  * It provides type-safe API communication with the backend.
  */
 
-const BASE_URL = '/api/documents';
+const BASE_URL = "/api/documents";
 
 // ============================================================================
 // GET OPERATIONS
@@ -27,7 +27,7 @@ export async function getAllDocuments(): Promise<Document[]> {
     const response = await axiosInstance.get(BASE_URL);
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching documents:', error);
+    console.error("Error fetching documents:", error);
     throw error;
   }
 }
@@ -40,7 +40,7 @@ export async function getAllDocuments(): Promise<Document[]> {
 export async function getDocumentById(id: number): Promise<Document> {
   try {
     if (!id) {
-      throw new Error('Document ID is required');
+      throw new Error("Document ID is required");
     }
 
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
@@ -60,7 +60,7 @@ export async function getActiveDocuments(): Promise<Document[]> {
     const response = await axiosInstance.get(`${BASE_URL}?disabled=false`);
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching active documents:', error);
+    console.error("Error fetching active documents:", error);
     throw error;
   }
 }
@@ -82,13 +82,13 @@ export async function createDocument(payload: {
 }): Promise<Document> {
   try {
     if (!payload.name || payload.name.trim().length === 0) {
-      throw new Error('Document name is required');
+      throw new Error("Document name is required");
     }
 
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data.data;
   } catch (error) {
-    console.error('Error creating document:', error);
+    console.error("Error creating document:", error);
     throw error;
   }
 }
@@ -104,21 +104,21 @@ export async function createDocument(payload: {
  * @returns Promise<Document> - Updated document data
  */
 export async function updateDocument(
-  id: number, 
+  id: number,
   payload: {
     name?: string;
     description?: string | null;
     sequence?: number | null;
     disabled?: boolean;
-  }
+  },
 ): Promise<Document> {
   try {
     if (!id) {
-      throw new Error('Document ID is required');
+      throw new Error("Document ID is required");
     }
 
     if (payload.name !== undefined && payload.name.trim().length === 0) {
-      throw new Error('Document name cannot be empty');
+      throw new Error("Document name cannot be empty");
     }
 
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
@@ -141,7 +141,7 @@ export async function updateDocument(
 export async function deleteDocument(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('Document ID is required');
+      throw new Error("Document ID is required");
     }
 
     await axiosInstance.delete(`${BASE_URL}/${id}`);
@@ -167,11 +167,11 @@ export async function searchDocuments(searchTerm: string): Promise<Document[]> {
     }
 
     const response = await axiosInstance.get(
-      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
+      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
     return response.data.data;
   } catch (error) {
-    console.error('Error searching documents:', error);
+    console.error("Error searching documents:", error);
     throw error;
   }
 }
@@ -191,12 +191,10 @@ export async function checkDocumentExists(name: string): Promise<boolean> {
       return false;
     }
 
-    const response = await axiosInstance.get(
-      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
-    );
+    const response = await axiosInstance.get(`${BASE_URL}?name=${encodeURIComponent(name.trim())}`);
     return response.data.data.length > 0;
   } catch (error) {
-    console.error('Error checking document existence:', error);
+    console.error("Error checking document existence:", error);
     return false;
   }
-} 
+}

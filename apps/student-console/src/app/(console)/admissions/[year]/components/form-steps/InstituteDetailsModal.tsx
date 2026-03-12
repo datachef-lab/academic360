@@ -2,16 +2,33 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { AdmissionAcademicInfo, BoardUniversity, Course, LanguageMedium, streamType, Institution } from "@/db/schema"; // Import necessary types
+import {
+  AdmissionAcademicInfo,
+  BoardUniversity,
+  Course,
+  LanguageMedium,
+  streamType,
+  Institution,
+} from "@/db/schema"; // Import necessary types
 import { Combobox } from "@/components/ui/combobox";
 // import { Combobox } from "@/components/ui/combobox";
 
 // Work around strict shadcn typings with proper type extensions
 const LabelFixed = Label as React.ComponentType<
-  React.ComponentProps<typeof Label> & { children?: React.ReactNode; className?: string; htmlFor?: string }
+  React.ComponentProps<typeof Label> & {
+    children?: React.ReactNode;
+    className?: string;
+    htmlFor?: string;
+  }
 >;
 const SelectTriggerFixed = SelectTrigger as React.ComponentType<
   React.ComponentProps<typeof SelectTrigger> & { children?: React.ReactNode; className?: string }
@@ -81,12 +98,13 @@ export default function InstituteDetailsModal({
           <p className="font-semibold mb-2">Please Note:</p>
           <ol className="list-decimal list-inside space-y-1">
             <li>
-              Please select your Class 12 school name under the "Select Institute" option in serial no. b(i). In case
-              your school's name is not enlisted in the dropdown list, select "Other Institute" from the list and enter
-              the name of your school in serial no. b(ii).
+              Please select your Class 12 school name under the "Select Institute" option in serial
+              no. b(i). In case your school's name is not enlisted in the dropdown list, select
+              "Other Institute" from the list and enter the name of your school in serial no. b(ii).
             </li>
             <li>
-              Sr. No f(i) is applicable for students who have cleared Class XII board exam in or before year 2024.
+              Sr. No f(i) is applicable for students who have cleared Class XII board exam in or
+              before year 2024.
             </li>
             <li>Red dot indicates mandatory field.</li>
           </ol>
@@ -173,7 +191,9 @@ export default function InstituteDetailsModal({
             </div>
             {academicInfo.instituteId === null && (
               <div>
-                <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">b(ii). Other Institute</LabelFixed>
+                <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                  b(ii). Other Institute
+                </LabelFixed>
                 <Input
                   value={academicInfo.otherInstitute || ""}
                   onChange={(e) => onChange("otherInstitute", e.target.value)}
@@ -188,7 +208,11 @@ export default function InstituteDetailsModal({
                 Select Medium <span className="text-red-600">*</span>
               </LabelFixed>
               <Select
-                value={academicInfo.languageMediumId === 0 ? "0" : academicInfo.languageMediumId?.toString() || ""}
+                value={
+                  academicInfo.languageMediumId === 0
+                    ? "0"
+                    : academicInfo.languageMediumId?.toString() || ""
+                }
                 onValueChange={(val) => onChange("languageMediumId", parseInt(val))}
               >
                 <SelectTriggerFixed className="w-full h-8 text-xs sm:text-sm">
@@ -199,7 +223,11 @@ export default function InstituteDetailsModal({
                   {languageMediums.map(
                     (medium) =>
                       medium.id && (
-                        <SelectItemFixed key={medium.id} value={medium.id.toString()} className="text-xs sm:text-sm">
+                        <SelectItemFixed
+                          key={medium.id}
+                          value={medium.id.toString()}
+                          className="text-xs sm:text-sm"
+                        >
                           {medium.name}
                         </SelectItemFixed>
                       ),
@@ -213,7 +241,9 @@ export default function InstituteDetailsModal({
               </LabelFixed>
               <Select
                 value={academicInfo.yearOfPassing ? academicInfo.yearOfPassing.toString() : ""}
-                onValueChange={(val) => onChange("yearOfPassing", val === "0" ? null : parseInt(val))}
+                onValueChange={(val) =>
+                  onChange("yearOfPassing", val === "0" ? null : parseInt(val))
+                }
               >
                 <SelectTriggerFixed className="w-full h-8 text-xs sm:text-sm">
                   <SelectValue placeholder="Select Year Of Passing" />
@@ -221,7 +251,11 @@ export default function InstituteDetailsModal({
                 <SelectContentFixed>
                   <SelectItemFixed value="0">Select Year Of Passing</SelectItemFixed>
                   {yearOptions.map((year) => (
-                    <SelectItemFixed key={year} value={year.toString()} className="text-xs sm:text-sm">
+                    <SelectItemFixed
+                      key={year}
+                      value={year.toString()}
+                      className="text-xs sm:text-sm"
+                    >
                       {year}
                     </SelectItemFixed>
                   ))}
@@ -235,7 +269,9 @@ export default function InstituteDetailsModal({
             </LabelFixed>
             <Select
               value={academicInfo.streamType || "null"}
-              onValueChange={(val) => onChange("streamType", val as "COMMERCE" | "SCIENCE" | "HUMANITIES")}
+              onValueChange={(val) =>
+                onChange("streamType", val as "COMMERCE" | "SCIENCE" | "HUMANITIES")
+              }
             >
               <SelectTriggerFixed className="w-full h-8 text-xs sm:text-sm">
                 <SelectValue placeholder="Select Stream" />
@@ -252,8 +288,8 @@ export default function InstituteDetailsModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
-                f. Have you ever been registered for any undergraduate courses under Calcutta University?{" "}
-                <span className="text-red-600">*</span>
+                f. Have you ever been registered for any undergraduate courses under Calcutta
+                University? <span className="text-red-600">*</span>
               </LabelFixed>
               <Select
                 value={
@@ -264,7 +300,10 @@ export default function InstituteDetailsModal({
                       : "null"
                 }
                 onValueChange={(val) =>
-                  onChange("isRegisteredForUgInCu", val === "Yes" ? true : val === "No" ? false : null)
+                  onChange(
+                    "isRegisteredForUgInCu",
+                    val === "Yes" ? true : val === "No" ? false : null,
+                  )
                 }
                 disabled={academicInfo.yearOfPassing === admissionYear}
               >
@@ -334,7 +373,9 @@ export default function InstituteDetailsModal({
             </div>
             {academicInfo.previouslyRegisteredCourseId === null && (
               <div>
-                <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">h(ii). Other Course</LabelFixed>
+                <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                  h(ii). Other Course
+                </LabelFixed>
                 <Input
                   value={academicInfo.otherPreviouslyRegisteredCourse || ""}
                   onChange={(e) => onChange("otherPreviouslyRegisteredCourse", e.target.value)}
@@ -346,7 +387,9 @@ export default function InstituteDetailsModal({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">i. Previous College</LabelFixed>
+              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                i. Previous College
+              </LabelFixed>
               <Combobox
                 dataArr={[
                   ...colleges
@@ -379,7 +422,9 @@ export default function InstituteDetailsModal({
             </div>
             {academicInfo.previousCollegeId === null && (
               <div>
-                <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">j. Other college</LabelFixed>
+                <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                  j. Other college
+                </LabelFixed>
                 <Input
                   value={academicInfo.otherCollege || ""}
                   onChange={(e) => onChange("otherCollege", e.target.value)}

@@ -1,13 +1,25 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
-import { CardHeader } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Course } from '@/types/course-design';
-import { Degree } from '@/types/resources/degree.types';
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { CardHeader } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Course } from "@/types/course-design";
+import { Degree } from "@/types/resources/degree.types";
 
 // Define ProgrammeOption locally
 type ProgrammeOption = { id: number; degreeProgramme: string; degreeId: number };
@@ -50,7 +62,7 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
     <CardHeader className="bg-white border-b border-purple-100">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-purple-900">Courses</h2>
-        <Button 
+        <Button
           onClick={() => setIsAddDialogOpen(true)}
           className="bg-purple-700 text-white hover:bg-purple-800"
         >
@@ -64,7 +76,7 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-purple-900">
-              {isEditMode ? 'Edit Course' : 'Add New Course'}
+              {isEditMode ? "Edit Course" : "Add New Course"}
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -90,7 +102,7 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
                 name="shortName"
                 placeholder="Enter short name"
                 className="col-span-3"
-                value={newCourse.shortName || ''}
+                value={newCourse.shortName || ""}
                 onChange={handleInputChange}
               />
             </div>
@@ -123,9 +135,11 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
               <Label htmlFor="degree" className="text-right">
                 Degree*
               </Label>
-              <Select 
-                onValueChange={(value) => handleSelectChange('degree', value)}
-                value={newCourse.degree && newCourse.degree.id ? newCourse.degree.id.toString() : ''}
+              <Select
+                onValueChange={(value) => handleSelectChange("degree", value)}
+                value={
+                  newCourse.degree && newCourse.degree.id ? newCourse.degree.id.toString() : ""
+                }
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select degree" />
@@ -143,12 +157,16 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
               <Label htmlFor="programme" className="text-right">
                 Programme*
               </Label>
-              <Select 
-                onValueChange={(value) => handleSelectChange('programmeType', value)}
+              <Select
+                onValueChange={(value) => handleSelectChange("programmeType", value)}
                 // value={newCourse. || ''}
               >
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder={selectedDegreeId === 0 ? "Select degree first" : "Select programme"} />
+                  <SelectValue
+                    placeholder={
+                      selectedDegreeId === 0 ? "Select degree first" : "Select programme"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {["HONOURS", "GENERAL"].map((programme) => (
@@ -161,27 +179,25 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
             </div>
           </div>
           <DialogFooter className="flex justify-between">
-            <Button 
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              className="mr-2"
-            >
+            <Button type="button" variant="outline" onClick={onCancel} className="mr-2">
               Cancel
             </Button>
-            <Button 
+            <Button
               type="button"
-              onClick={() => { 
-                console.log('handleAddCourse called from dialog');
+              onClick={() => {
+                console.log("handleAddCourse called from dialog");
                 handleAddCourse();
               }}
               disabled={isSubmitting}
               className="bg-purple-700 text-white hover:bg-purple-800"
             >
-              {isSubmitting 
-                ? (isEditMode ? 'Updating...' : 'Adding...') 
-                : (isEditMode ? 'Update Course' : 'Add Course')
-              }
+              {isSubmitting
+                ? isEditMode
+                  ? "Updating..."
+                  : "Adding..."
+                : isEditMode
+                  ? "Update Course"
+                  : "Add Course"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -190,4 +206,4 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
   );
 };
 
-export default CourseHeader; 
+export default CourseHeader;

@@ -7,7 +7,11 @@ export interface IdNameDto {
   stateId?: number;
 }
 
-export async function fetchPoliceStations(params?: { stateId?: number; stateName?: string; search?: string }) {
+export async function fetchPoliceStations(params?: {
+  stateId?: number;
+  stateName?: string;
+  search?: string;
+}) {
   const res = await api.get("/api/police-stations", {
     params: { stateId: params?.stateId, stateName: params?.stateName, search: params?.search },
   });
@@ -16,7 +20,11 @@ export async function fetchPoliceStations(params?: { stateId?: number; stateName
   return arr || [];
 }
 
-export async function fetchPostOffices(params?: { stateId?: number; stateName?: string; search?: string }) {
+export async function fetchPostOffices(params?: {
+  stateId?: number;
+  stateName?: string;
+  search?: string;
+}) {
   const res = await api.get("/api/post-offices", {
     params: { stateId: params?.stateId, stateName: params?.stateName, search: params?.search },
   });

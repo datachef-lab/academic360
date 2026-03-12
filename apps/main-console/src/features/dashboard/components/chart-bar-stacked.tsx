@@ -2,11 +2,7 @@
 
 import { TrendingUp } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
   ChartConfig,
   ChartContainer,
@@ -17,16 +13,16 @@ import {
 } from "@/components/ui/chart";
 
 const chartData: {
-    month: string;
-    desktop: number;
-    mobile: number;
+  month: string;
+  desktop: number;
+  mobile: number;
 }[] = [
-//   { month: "January", desktop: 0, mobile: 80 },
-//   { month: "February", desktop: 305, mobile: 200 },
-//   { month: "March", desktop: 237, mobile: 120 },
-//   { month: "April", desktop: 73, mobile: 190 },
-//   { month: "May", desktop: 209, mobile: 130 },
-//   { month: "June", desktop: 214, mobile: 140 },
+  //   { month: "January", desktop: 0, mobile: 80 },
+  //   { month: "February", desktop: 305, mobile: 200 },
+  //   { month: "March", desktop: 237, mobile: 120 },
+  //   { month: "April", desktop: 73, mobile: 190 },
+  //   { month: "May", desktop: 209, mobile: 130 },
+  //   { month: "June", desktop: 214, mobile: 140 },
 ];
 
 const chartConfig = {
@@ -56,18 +52,8 @@ export function ChartBarStacked() {
             />
             <ChartTooltip content={<ChartTooltipContent hideLabel />} />
             <ChartLegend content={<ChartLegendContent />} />
-            <Bar
-              dataKey="desktop"
-              stackId="a"
-              fill="var(--color-desktop)"
-              radius={[0, 0, 4, 4]}
-            />
-            <Bar
-              dataKey="mobile"
-              stackId="a"
-              fill="var(--color-mobile)"
-              radius={[4, 4, 0, 0]}
-            />
+            <Bar dataKey="desktop" stackId="a" fill="var(--color-desktop)" radius={[0, 0, 4, 4]} />
+            <Bar dataKey="mobile" stackId="a" fill="var(--color-mobile)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ChartContainer>
       </CardContent>
@@ -81,4 +67,4 @@ export function ChartBarStacked() {
       </CardFooter>
     </Card>
   );
-} 
+}

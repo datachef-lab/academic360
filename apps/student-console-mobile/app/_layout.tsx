@@ -47,7 +47,12 @@ function CustomDrawerNavigation() {
 
   return (
     <>
-      <StatusBar key={statusBarStyle} style={statusBarStyle} backgroundColor={theme.background} translucent={false} />
+      <StatusBar
+        key={statusBarStyle}
+        style={statusBarStyle}
+        backgroundColor={theme.background}
+        translucent={false}
+      />
       <GestureHandlerRootView className="flex-1">
         <Drawer
           screenOptions={{
