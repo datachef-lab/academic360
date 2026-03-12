@@ -5,39 +5,40 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { createDefaultExamComponents } from "@/features/course-design/services/exam-component.service.js";
 import { initializeClasses } from "@/features/academics/services/class.service.js";
 import { loadDefaultSettings } from "@/features/apps/service/settings.service.js";
-import { loadDegree } from "@/features/resources/services/degree.service.js";
-import { loadCategory } from "@/features/resources/services/category.service.js";
-import { loadReligions } from "@/features/resources/services/religion.service.js";
-import { loadLanguages } from "@/features/resources/services/languageMedium.service.js";
-import { loadBloodGroups } from "@/features/resources/services/bloodGroup.service.js";
-import { loadOccupations } from "@/features/resources/services/occupation.service.js";
-import { loadQualifications } from "@/features/resources/services/qualification.service.js";
-import { loadNationalities } from "@/features/resources/services/nationality.service.js";
-import { loadShifts } from "@/features/academics/services/shift.service.js";
+// import { loadDegree } from "@/features/resources/services/degree.service.js";
+// import { loadCategory } from "@/features/resources/services/category.service.js";
+// import { loadReligions } from "@/features/resources/services/religion.service.js";
+// import { loadLanguages } from "@/features/resources/services/languageMedium.service.js";
+// import { loadBloodGroups } from "@/features/resources/services/bloodGroup.service.js";
+// import { loadOccupations } from "@/features/resources/services/occupation.service.js";
+// import { loadQualifications } from "@/features/resources/services/qualification.service.js";
+// import { loadNationalities } from "@/features/resources/services/nationality.service.js";
+// import { loadShifts } from "@/features/academics/services/shift.service.js";
 import { loadAffiliation } from "@/features/course-design/services/affiliation.service";
 import { loadCourseLevel } from "@/features/course-design/services/course-level.service";
 import { loadCourseType } from "@/features/course-design/services/course-type.service";
 import { loadRegulationType } from "@/features/course-design/services/regulation-type.service";
 // import { loadOldSubjects } from "@/features/course-design/services/subject.service";
-import { loadOldCourses } from "@/features/course-design/services/course.service";
-import { loadOldSubjectTypes } from "@/features/course-design/services/subject-type.service";
+// import { loadOldCourses } from "@/features/course-design/services/course.service";
+// import { loadOldSubjectTypes } from "@/features/course-design/services/subject-type.service";
 import { loadDefaultSubjectSelectionMetas } from "@/features/subject-selection/services/subject-selection-meta.service";
 import { loadDefaultDocuments } from "@/features/academics/services/document.service";
-import {
-  loadAllCity,
-  loadAllCountry,
-  loadAllPoliceStation,
-  loadAllPostOffice,
-  loadAllState,
-} from "@/features/user/services/old-student.service";
+// import {
+//   loadAllCity,
+//   loadAllCountry,
+//   loadAllPoliceStation,
+//   loadAllPostOffice,
+//   loadAllState,
+// } from "@/features/user/services/old-student.service";
 import { loadDefaultOtpNotificationMasters } from "@/features/auth/services/otp.service";
 // import { loadDefaultOtpNotificationMaster } from "@/features/auth/services/otp.service";
-import { CuRegistrationExcelService } from "@/services/cu-registration-excel.service.js";
-import { sendAdmRegFormToNotSendStudents } from "@/features/admissions/services/cu-registration-correction-request.service";
-import { exportStaffDataToExcel } from "@/features/user/services/tmp-service";
-import { loadAllStaff } from "@/features/user/services/staff.service";
-import { getIrpNotFoundCourseDesigns } from "@/features/exams/services/exam-schedule.service";
-
+// import { CuRegistrationExcelService } from "@/services/cu-registration-excel.service.js";
+// import { sendAdmRegFormToNotSendStudents } from "@/features/admissions/services/cu-registration-correction-request.service";
+// import { exportStaffDataToExcel } from "@/features/user/services/tmp-service";
+// import { loadAllStaff } from "@/features/user/services/staff.service";
+// import { getIrpNotFoundCourseDesigns } from "@/features/exams/services/exam-schedule.service";
+import { createLogger } from "@/config/logger.js";
+const log = createLogger("db");
 // Create a connection pool
 export const pool = new pg.Pool({
   options: "-c timezone=Asia/Kolkata",
@@ -49,7 +50,7 @@ export const db = drizzle(pool, { casing: "snake_case" });
 
 pool.on("connect", async (client) => {
   await client.query(`SET TIME ZONE 'Asia/Kolkata'`);
-  console.log("[backend] - Set time zone to Asia/Kolkata");
+  log.debug("Timezone set to Asia/Kolkata");
 });
 
 // Test the connection 🔌
@@ -57,7 +58,7 @@ export const connectToDatabase = async () => {
   try {
     const client: PoolClient = await pool.connect(); // Test the connection ✔
     // console.log(process.env.DATABASE_URL);
-    console.log("[backend] - Connected to the database successfully. 🎉");
+    log.info("Connected to the database successfully 🎉");
     client.release(); // Release the connection back to the pool
 
     createDefaultExamComponents();
@@ -102,11 +103,11 @@ export const connectToDatabase = async () => {
       //   const result = await CuRegistrationExcelService.syncAllToDatabase();
       //   console.log("[backend] - CU Physical Reg Excel sync:", result);
     } catch (e) {
-      console.warn("[backend] - CU Physical Reg Excel sync failed", e);
+      log.warn("CU Physical Reg Excel sync failed", { error: e });
     }
   } catch (error) {
-    console.log(process.env.DATABASE_URL);
-    console.error("[backend] - Failed to connect to the database: ⚠", error);
+    log.debug(process.env.DATABASE_URL ?? "DATABASE_URL not set");
+    log.error("Failed to connect to the database ⚠", { error });
     process.exit(1); // Exit the application if the database connection fails
   }
 };
@@ -146,6 +147,7 @@ export const connectToDatabase = async () => {
 //     process.env.OLD_DB_PASSWORD!,
 //     process.env.OLD_DB_NAME!
 // )
+createLogger("mysql");
 export const mysqlConnection: MySqlPool = createPool({
   host: process.env.OLD_DB_HOST!,
   port: parseInt(process.env.OLD_DB_PORT!, 10),
@@ -163,7 +165,7 @@ export const mysqlConnection: MySqlPool = createPool({
 const MYSQL_KEEPALIVE_MS = Number(process.env.OLD_DB_KEEPALIVE_MS || 10000);
 setInterval(() => {
   mysqlConnection.query("SELECT 1").catch((err) => {
-    console.warn("[MySQL] Keepalive ping failed:", err?.message || err);
+    log.warn("keepalive ping failed", { message: err?.message || err });
   });
 }, MYSQL_KEEPALIVE_MS).unref?.();
 
@@ -173,12 +175,12 @@ export const connectToMySQL = async () => {
     const [rows] = await mysqlConnection.query(
       "SELECT COUNT(*) AS totalRows FROM community",
     ); // Simple query to test the connection
-    console.log(rows);
+    // console.log(rows);
     // exportStaffDataToExcel();
-    console.log("[MySQL] - Connected successfully. 🎉");
+    log.info("Connected to MySQL successfully 🎉");
     // getIrpNotFoundCourseDesigns();
   } catch (error) {
-    console.error("[MySQL] - Connection failed: ⚠", error);
+    log.error("Connection failed ⚠", { error });
     // process.exit(1); // Exit the application if the database connection fails
   }
 };

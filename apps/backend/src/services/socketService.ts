@@ -2,6 +2,8 @@ import { Server, Socket } from "socket.io";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
 import * as userService from "@/features/user/services/user.service";
 
+import { createLogger } from "@/config/logger.js";
+const log = createLogger("socket");
 // Define notification types
 export interface Notification {
   id: string;
@@ -77,21 +79,21 @@ class SocketService {
     try {
       this.io = ioServer;
       this.setupListeners();
-      console.log("[SocketService] Initialized");
+      log.info("Initialized");
     } catch (error) {
-      console.error("[SocketService] Error initializing:", error);
+      log.error("Error initializing", { error });
     }
   }
 
   // Set up connection listeners
   private setupListeners() {
     if (!this.io) {
-      console.error("[SocketService] Cannot setup listeners: io is null");
+      log.error("Cannot setup listeners: io is null");
       return;
     }
 
     this.io.on("connection", (socket: Socket) => {
-      console.log(`[SocketService] Client connected: ${socket.id}`);
+      log.debug(`Client connected: ${socket.id}`);
       // Default: assume tab is active until we hear otherwise
       this.socketTabActive.set(socket.id, true);
 
@@ -100,16 +102,11 @@ class SocketService {
         try {
           await this.registerUser(userId, socket.id);
           socket.join(`user:${userId}`); // Join a room specific to this user
-          console.log(
-            `[SocketService] User ${userId} authenticated with socket ${socket.id}`,
-          );
+          log.info(`User ${userId} authenticated with socket ${socket.id}`);
           // Emit active users update after registration
           this.broadcastActiveUsers();
         } catch (error) {
-          console.error(
-            `[SocketService] Error authenticating user ${userId}:`,
-            error,
-          );
+          log.error(`Error authenticating user ${userId}`, { error });
         }
       });
 
@@ -150,14 +147,9 @@ class SocketService {
           try {
             const roomName = this.getMisRoomName(filters);
             socket.join(roomName);
-            console.log(
-              `[SocketService] Socket ${socket.id} joined MIS room: ${roomName}`,
-            );
+            log.debug(`Socket ${socket.id} joined MIS room: ${roomName}`);
           } catch (error) {
-            console.error(
-              `[SocketService] Error subscribing to MIS dashboard:`,
-              error,
-            );
+            log.error("Error subscribing to MIS dashboard", { error });
           }
         },
       );
@@ -169,14 +161,9 @@ class SocketService {
           try {
             const roomName = this.getMisRoomName(filters);
             socket.leave(roomName);
-            console.log(
-              `[SocketService] Socket ${socket.id} left MIS room: ${roomName}`,
-            );
+            log.debug(`Socket ${socket.id} left MIS room: ${roomName}`);
           } catch (error) {
-            console.error(
-              `[SocketService] Error unsubscribing from MIS dashboard:`,
-              error,
-            );
+            log.error("Error unsubscribing from MIS dashboard", { error });
           }
         },
       );
@@ -185,14 +172,11 @@ class SocketService {
       socket.on("disconnect", () => {
         try {
           this.removeSocket(socket.id);
-          console.log(`[SocketService] Client disconnected: ${socket.id}`);
+          log.debug(`Client disconnected: ${socket.id}`);
           // Emit active users update after removal
           this.broadcastActiveUsers();
         } catch (error) {
-          console.error(
-            `[SocketService] Error handling disconnect for ${socket.id}:`,
-            error,
-          );
+          log.error(`Error handling disconnect for ${socket.id}`, { error });
         }
       });
     });
@@ -230,10 +214,7 @@ class SocketService {
           }
         }
       } catch (error) {
-        console.error(
-          `[SocketService] Error fetching user info for ${userId}:`,
-          error,
-        );
+        log.error(`Error fetching user info for ${userId}`, { error });
       }
     }
 
@@ -342,31 +323,24 @@ class SocketService {
       const activeUsers = this.getActiveAdminStaffUsers();
       this.io.emit("active_users_update", activeUsers);
       this.io.emit("students_online_count", this.getOnlineStudentsCount());
-      console.log(
-        `[SocketService] Broadcasted active users update: ${activeUsers.length} users`,
-      );
+      log.debug(`Active users broadcast: ${activeUsers.length} users`);
     } catch (error) {
-      console.error("[SocketService] Error broadcasting active users:", error);
+      log.error("Error broadcasting active users", { error });
     }
   }
 
   // Send notification to all connected clients
   sendNotificationToAll(notification: Notification) {
     if (!this.io) {
-      console.error("[SocketService] Cannot send notification: io is null");
+      log.error("Cannot send notification: io is null");
       return;
     }
 
     try {
       this.io.emit("notification", notification);
-      console.log(
-        `[SocketService] Broadcast notification: ${notification.message}`,
-      );
+      log.debug(`Broadcast notification: ${notification.message}`);
     } catch (error) {
-      console.error(
-        "[SocketService] Error sending notification to all:",
-        error,
-      );
+      log.error("Error sending notification to all", { error });
     }
   }
 
@@ -397,10 +371,7 @@ class SocketService {
         this.sendNotificationToUser(userId, notification);
       });
     } catch (error) {
-      console.error(
-        "[SocketService] Error sending notification to multiple users:",
-        error,
-      );
+      log.error("Error sending notification to multiple users", { error });
     }
   }
 
@@ -446,20 +417,17 @@ class SocketService {
   // Send progress update to a specific user
   sendProgressUpdate(userId: string, progressUpdate: ProgressUpdate) {
     if (!this.io) {
-      console.error("[SocketService] Cannot send progress update: io is null");
+      log.error("Cannot send progress update: io is null");
       return;
     }
 
     try {
       this.io.to(`user:${userId}`).emit("progress_update", progressUpdate);
-      console.log(
-        `[SocketService] Sent progress update to user ${userId}: ${progressUpdate.message} (${progressUpdate.progress}%)`,
+      log.debug(
+        `Progress → user ${userId}: ${progressUpdate.message} (${progressUpdate.progress}%)`,
       );
     } catch (error) {
-      console.error(
-        `[SocketService] Error sending progress update to user ${userId}:`,
-        error,
-      );
+      log.error(`Error sending progress update to user ${userId}`, { error });
     }
   }
 
@@ -515,7 +483,7 @@ class SocketService {
     meta?: Record<string, unknown>,
   ) {
     if (!this.io) {
-      console.error("[SocketService] Cannot send MIS table update: io is null");
+      log.error("Cannot send MIS table update: io is null");
       return;
     }
 
@@ -532,11 +500,9 @@ class SocketService {
       };
 
       this.io.to(roomName).emit("mis_table_update", update);
-      console.log(
-        `[SocketService] Sent MIS table update to room ${roomName} with ${data.length} records`,
-      );
+      log.debug(`MIS update → room ${roomName} (${data.length} records)`);
     } catch (error) {
-      console.error("[SocketService] Error sending MIS table update:", error);
+      log.error("Error sending MIS table update", { error });
     }
   }
 
@@ -551,9 +517,7 @@ class SocketService {
     meta?: Record<string, unknown>,
   ) {
     if (!this.io) {
-      console.error(
-        "[SocketService] Cannot send MIS table update to all: io is null",
-      );
+      log.error("Cannot send MIS table update to all: io is null");
       return;
     }
 
@@ -568,14 +532,9 @@ class SocketService {
 
       // Send to all MIS dashboard rooms
       this.io.emit("mis_table_update", update);
-      console.log(
-        `[SocketService] Sent MIS table update to all MIS dashboard clients with ${data.length} records`,
-      );
+      log.debug(`MIS update → all clients (${data.length} records)`);
     } catch (error) {
-      console.error(
-        "[SocketService] Error sending MIS table update to all:",
-        error,
-      );
+      log.error("Error sending MIS table update to all", { error });
     }
   }
 }

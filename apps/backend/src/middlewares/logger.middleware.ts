@@ -58,38 +58,49 @@
 // };
 
 import morgan from "morgan";
-import { v4 as uuid } from "uuid";
 import { Request, Response, NextFunction } from "express";
 import { winstonLogger, httpLogger } from "@/config/logger.js";
 
-// ─── Attach request ID to every request (like Spring's MDC) ──────────────────
-export const requestId = (req: Request, res: Response, next: NextFunction) => {
-  const id = uuid();
-  req.headers["x-request-id"] = id;
-  res.setHeader("X-Request-Id", id);
-  next();
-};
-
-// ─── Morgan HTTP request logger ───────────────────────────────────────────────
-// Format: METHOD /path STATUS response-time ms - bytes  [origin]
-morgan.token("origin", (req: Request) => req.headers.origin || "—");
+// ─── Morgan tokens ────────────────────────────────────────────────────────────
 morgan.token(
-  "request-id",
-  (req: Request) => req.headers["x-request-id"] as string,
+  "client-ip",
+  (req: Request) =>
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() ||
+    req.socket.remoteAddress
+      ?.replace("::ffff:", "")
+      .replace("::1", "localhost") ||
+    "—",
+);
+morgan.token("origin", (req: Request) => req.headers.origin || "—");
+morgan.token("service", (_req: Request, res: Response) => {
+  const svc = (res.locals.service as string) || "core";
+  return svc.padEnd(16); // pads to 16 chars — adjust to your longest service name
+});
+morgan.token("bytes", (_req: Request, res: Response) => {
+  const len = res.getHeader("content-length");
+  return len ? `${len}b` : "—";
+});
+morgan.token(
+  "padded-method",
+  (req: Request) => req.method.padEnd(6), // GET   POST  PATCH DELETE
+);
+morgan.token("padded-status", (_req: Request, res: Response) =>
+  String(res.statusCode).padEnd(3),
 );
 
+// ─── Format ───────────────────────────────────────────────────────────────────
+// METHOD  /route                          STATUS  time       bytes   svc          [ip]             [origin]
 const morganFormat =
-  ":request-id  :method :url  :status  :response-time ms  :res[content-length] bytes  [:origin]";
+  ":padded-method  :url  :padded-status  :response-time ms  :bytes  :origin  :client-ip";
 
 export const logger = morgan(morganFormat, {
   stream: {
-    write: (message: string) => {
-      httpLogger.http(message.trim());
-    },
+    write: (message: string) =>
+      httpLogger.http(message.replace(/\n$/, ""), { service: "core" }),
   },
-  // Skip health check endpoints to reduce noise
   skip: (req: Request) => req.url === "/health" || req.url === "/favicon.ico",
 });
 
-// ─── Re-export winstonLogger as the app-wide logger ──────────────────────────
+export const requestId = (_req: Request, _res: Response, next: NextFunction) =>
+  next();
 export { winstonLogger as log };

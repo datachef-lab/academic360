@@ -6,6 +6,8 @@ import { db } from "@/db/index.js";
 import { userModel } from "@repo/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import { handleError } from "@/utils/handleError.js";
+import { createLogger } from "@/config/logger";
+const log = createLogger("auth");
 
 export const verifyJWT = async (
   req: Request,
@@ -15,7 +17,7 @@ export const verifyJWT = async (
   try {
     const authHeader =
       req.headers.authorization || (req.headers.Authorization as string);
-    console.log(authHeader);
+    log.debug(authHeader);
     if (!authHeader?.startsWith("Bearer ")) {
       throw new ApiError(401, "Unauthorized");
     }
@@ -31,19 +33,23 @@ export const verifyJWT = async (
       .from(userModel)
       .where(eq(userModel.id, decoded.id));
 
-    console.log("JWT Verification - User ID:", decoded.id);
-    console.log("JWT Verification - Decoded Type:", decoded.type);
-    console.log("JWT Verification - Found User:", foundUser);
-    console.log("JWT Verification - Found User Type:", foundUser?.type);
-    console.log("JWT Verification - User Active:", foundUser?.isActive);
+    log.debug("JWT Verification - User ID:", { userId: decoded.id });
+    log.debug("JWT Verification - Decoded Type:", decoded.type);
+    log.debug("JWT Verification - Found User:", foundUser);
+    log.debug("JWT Verification - Found User Type:", {
+      userType: foundUser?.type,
+    });
+    log.debug("JWT Verification - User Active:", {
+      isActive: foundUser?.isActive,
+    });
 
     if (!foundUser) {
-      console.log("JWT Verification - User not found in database");
+      log.error("JWT Verification - User not found in database");
       throw new ApiError(401, "User not found");
     }
 
     if (!foundUser.isActive) {
-      console.log("JWT Verification - User is inactive");
+      log.error("JWT Verification - User is inactive");
       throw new ApiError(401, "User account is inactive");
     }
 

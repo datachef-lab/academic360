@@ -163,6 +163,7 @@ import {
 } from "@/features/subject-selection/routes/index.js";
 
 import { examGroupRouter } from "./features/exams/routes/index.js";
+import { createLogger } from "./config/logger.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 

@@ -1,4 +1,6 @@
 import { SendMailClient } from "zeptomail";
+import { createLogger } from "@/config/logger.js";
+const log = createLogger("zepto");
 
 const ZEPTO_URL = process.env.ZEPTO_URL!;
 const ZEPTO_FROM = process.env.ZEPTO_FROM!;
@@ -6,9 +8,9 @@ const ZEPTO_TOKEN = process.env.ZEPTO_TOKEN!;
 const NODE_ENV = process.env.NODE_ENV ?? "development";
 const DEVELOPER_EMAIL = process.env.DEVELOPER_EMAIL!;
 
-console.log("ZeptoMail URL:", ZEPTO_URL);
-console.log("ZeptoMail FROM:", ZEPTO_FROM);
-console.log(`Zoho-enczapikey ${ZEPTO_TOKEN!}`);
+log.debug(`URL : ${ZEPTO_URL}`);
+log.debug(`FROM: ${ZEPTO_FROM}`);
+log.debug(`Zoho-enczapikey ${ZEPTO_TOKEN!}`);
 
 const client = new SendMailClient({
   url: process.env.ZEPTO_URL!,
@@ -25,10 +27,10 @@ export async function sendZeptoMail(
     // Use developer email in development mode
     const recipientEmail = NODE_ENV === "development" ? DEVELOPER_EMAIL! : to;
 
-    console.log("sending email to:", recipientEmail);
-    console.log("email subject:", subject);
-    console.log("email body:", htmlBody);
-    console.log("email name:", name);
+    log.info(`Sending email → ${recipientEmail}`, { subject, name });
+    // console.log("email subject:", subject);
+    // console.log("email body:", htmlBody);
+    // console.log("email name:", name);
     const response = await client.sendMail({
       from: {
         address: process.env.ZEPTO_FROM!,
@@ -46,10 +48,10 @@ export async function sendZeptoMail(
       htmlbody: htmlBody,
     });
 
-    console.log("✅ Email sent via ZeptoMail:", response);
+    log.info(`Email sent ✅`, { to: recipientEmail, subject });
     return response;
   } catch (error) {
-    console.error("❌ ZeptoMail send error:", error);
+    log.error("❌ ZeptoMail send error:", { error });
     throw error;
   }
 }

@@ -16,9 +16,10 @@ import { loginLimiter } from "@/middlewares/loginLimiter.middleware.js";
 import { validateData } from "@/middlewares/validation.middleware.js";
 import { createUserSchema } from "@repo/db/schemas/models/user";
 import passport from "passport";
+import { setService } from "@/utils/setService.js";
 
 const router = express.Router();
-
+router.use(setService("auth"));
 router.post("/", createUser);
 
 router.post("/login", loginLimiter, login);

@@ -1,4 +1,4 @@
-import { academic360ApplicationDomainEnum } from "@/schemas/enums";
+import { academic360ApplicationDomainEnum } from "../../../schemas/enums";
 import { integer, pgTable, serial, timestamp, unique } from "drizzle-orm/pg-core";
 import { userGroupModel } from "./user-group.model";
 import { createInsertSchema } from "drizzle-zod";
