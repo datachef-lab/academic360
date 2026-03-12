@@ -16,41 +16,8 @@ export default function BulkUploadMasterLayout() {
   const location = useLocation();
   const currentPath = location.pathname;
 
-  const rightBarContent = (
-    <div className="flex flex-col h-full py-3">
-      <ul className="mt-2">
-        {topLinks.map((link) => (
-          <NavItem
-            key={link.title}
-            icon={<link.icon className="h-5 w-5" />}
-            href={link.url}
-            isActive={currentPath === link.url}
-          >
-            {link.title}
-          </NavItem>
-        ))}
-      </ul>
-
-      <div className="mt-auto">
-        <h3 className="text-lg mx-4 mb-1 font-bold border-b">Tools</h3>
-        <ul>
-          {toolsLinks.map((link) => (
-            <NavItem
-              key={link.title}
-              icon={<link.icon className="h-5 w-5" />}
-              href={link.url}
-              isActive={currentPath === link.url || currentPath.startsWith(link.url)}
-            >
-              {link.title}
-            </NavItem>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-
   return (
-    <MasterLayout rightBarContent={rightBarContent}>
+    <MasterLayout>
       <Outlet />
     </MasterLayout>
   );
