@@ -266,6 +266,7 @@ export async function listAdmitCardDistributions(examGroupId?: number): Promise<
     programCourse: string | null;
     semester: string | null;
     shift: string | null;
+    appearType: string | null;
     collectionDate: string;
     savedByName: string | null;
   }>
@@ -349,6 +350,7 @@ export async function listAdmitCardDistributions(examGroupId?: number): Promise<
       programCourse: row.programCourse,
       semester: row.semester,
       shift: row.shift,
+      appearType: "REGULAR",
       collectionDate: row.collectionDate?.toISOString() ?? "",
       savedByName: row.savedByName ?? null,
     };

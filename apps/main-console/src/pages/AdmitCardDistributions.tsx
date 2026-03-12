@@ -88,7 +88,12 @@ const AdmitCardDistributions: React.FC = () => {
           <CardContent className="pt-8 pb-8">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
-                <svg className="w-8 h-8 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-8 h-8 text-amber-600 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -100,7 +105,8 @@ const AdmitCardDistributions: React.FC = () => {
               <div>
                 <p className="text-lg font-bold text-amber-900">No Candidate Found</p>
                 <p className="text-amber-800 mt-2">
-                  No candidate matches your search criteria. Please verify the exam group or search term and try again.
+                  No candidate matches your search criteria. Please verify the exam group or search
+                  term and try again.
                 </p>
               </div>
             </div>
@@ -131,14 +137,37 @@ const AdmitCardDistributions: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+    <div className="min-h-screen py-4 sm:py-8">
       <div className="max-w-6xl mx-auto px-3 sm:px-4">
-        {/* Header Section - match Physical Marking style */}
-        <div className="mb-4 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admit Card Distributions</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-2">
-            Search students and save admit card distribution status
-          </p>
+        {/* Header Section - title, subtitle, and download action */}
+        <div className="mb-4 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              Admit Card Distributions
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-2">
+              Search students and save admit card distribution status
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleDownloadCsv}
+            disabled={isDownloadingList}
+            className="w-full sm:w-auto flex items-center justify-center"
+          >
+            {isDownloadingList ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Downloading...
+              </>
+            ) : (
+              <>
+                <List className="w-4 h-4 mr-2" />
+                Download Collection Report
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Search Card - match layout and spacing */}
@@ -192,25 +221,6 @@ const AdmitCardDistributions: React.FC = () => {
                     <>
                       <Search className="w-4 h-4 mr-2" />
                       Search
-                    </>
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleDownloadCsv}
-                  disabled={isDownloadingList}
-                  className="w-full sm:w-auto"
-                >
-                  {isDownloadingList ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <List className="w-4 h-4 mr-2" />
-                      Download CSV File
                     </>
                   )}
                 </Button>

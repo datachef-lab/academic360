@@ -131,6 +131,7 @@ export async function downloadAdmitCardDistributions(
       "Program Course",
       "Semester",
       "Shift",
+      "Appear type",
       "Date of Collection",
       "Admit Card Saved By",
     ];
@@ -162,6 +163,7 @@ export async function downloadAdmitCardDistributions(
           row.programCourse ?? "",
           row.semester ?? "",
           row.shift ?? "",
+          row.appearType ?? "",
           dateStr,
           row.savedByName ?? "",
         ]

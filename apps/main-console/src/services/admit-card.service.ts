@@ -10,18 +10,28 @@ export async function searchCandidate(params: {
   searchTerm: string;
   examGroupId?: number | null;
 }): Promise<AdmitCardSearchResponse> {
-  const response = await axiosInstance.get<AdmitCardSearchResponse | ApiResponse<AdmitCardSearchResponse>>(
-    "/api/admit-card/search",
-    {
+  try {
+    const response = await axiosInstance.get<
+      AdmitCardSearchResponse | ApiResponse<AdmitCardSearchResponse>
+    >("/api/admit-card/search", {
       params: {
         search_term: params.searchTerm,
         ...(params.examGroupId ? { exam_group_id: params.examGroupId } : {}),
       },
-    },
-  );
+      // 404 here is an expected "no candidate" case; UI handles it.
+      _skipGlobalErrorHandler: true,
+    } as any);
 
-  const data = response.data as any;
-  return "payload" in data ? data.payload : data;
+    const data = response.data as any;
+    return "payload" in data ? data.payload : data;
+  } catch (err: any) {
+    const status = err?.response?.status;
+    const message = err?.response?.data?.message;
+    if (status === 404 && message === "No candidate found for this exam") {
+      throw new Error("NO_CANDIDATE");
+    }
+    throw err;
+  }
 }
 
 export async function distributeAdmitCard(
@@ -34,7 +44,10 @@ export async function distributeAdmitCard(
   return response.data;
 }
 
-export async function downloadAdmitCard(params: { examId: number; studentId: number }): Promise<Blob> {
+export async function downloadAdmitCard(params: {
+  examId: number;
+  studentId: number;
+}): Promise<Blob> {
   const response = await axiosInstance.get<Blob>("/api/exams/schedule/admit-card/download/single", {
     params: {
       examId: params.examId,
@@ -48,18 +61,19 @@ export async function downloadAdmitCard(params: { examId: number; studentId: num
 export async function fetchAdmitCardDistributions(params?: {
   examGroupId?: number | null;
 }): Promise<AdmitCardDistributionRow[]> {
-  const response = await axiosInstance.get<AdmitCardDistributionRow[] | ApiResponse<AdmitCardDistributionRow[]>>(
-    "/api/admit-card/distributions",
-    {
-      params: params?.examGroupId ? { exam_group_id: params.examGroupId } : undefined,
-    },
-  );
+  const response = await axiosInstance.get<
+    AdmitCardDistributionRow[] | ApiResponse<AdmitCardDistributionRow[]>
+  >("/api/admit-card/distributions", {
+    params: params?.examGroupId ? { exam_group_id: params.examGroupId } : undefined,
+  });
 
   const data = response.data as any;
   return "payload" in data ? data.payload : data;
 }
 
-export async function downloadAdmitCardDistributionsCsv(params?: { examGroupId?: number | null }): Promise<Blob> {
+export async function downloadAdmitCardDistributionsCsv(params?: {
+  examGroupId?: number | null;
+}): Promise<Blob> {
   const response = await axiosInstance.get("/api/admit-card/distributions/download", {
     params: params?.examGroupId ? { exam_group_id: params.examGroupId } : undefined,
     responseType: "blob",

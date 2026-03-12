@@ -9,6 +9,12 @@ export const useSearchCandidate = (searchTerm: string) => {
   return useQuery<AdmitCardSearchResponse>({
     queryKey: ["admit-card-search", searchTerm],
     enabled: false,
+    retry: (failureCount, error: any) => {
+      // "No candidate" is an expected state; don't retry it.
+      if (error instanceof Error && error.message === "NO_CANDIDATE") return false;
+      // Avoid noisy retries for other errors too.
+      return failureCount < 1;
+    },
     queryFn: () =>
       searchCandidateApi({
         searchTerm,

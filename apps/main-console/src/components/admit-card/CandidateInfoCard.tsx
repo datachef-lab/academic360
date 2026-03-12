@@ -70,14 +70,16 @@ export const CandidateInfoCard: React.FC<Props> = ({
             {/* Name and Exam */}
             <div>
               <CardTitle className="text-2xl font-bold text-slate-900">{candidate.name}</CardTitle>
-              {candidate.examName && <p className="text-sm text-slate-600 mt-1">{candidate.examName}</p>}
+              {candidate.examName && (
+                <p className="text-sm text-slate-600 mt-1">{candidate.examName}</p>
+              )}
               {(roomName || seatNumber) && (
                 <p className="text-xs text-slate-600 mt-1 font-bold">
                   <span className="text-slate-700 font-bold">Venue of Examination</span>{" "}
                   <span className="text-slate-600 font-bold">:-</span>{" "}
                   <span className="text-slate-700">
-                    Room Number: {roomName || "—"} <span className="text-slate-400">&bull;</span> Seat Number:{" "}
-                    {seatNumber || "—"}
+                    Room Number: {roomName || "—"} <span className="text-slate-400">&bull;</span>{" "}
+                    Seat Number: {seatNumber || "—"}
                   </span>
                 </p>
               )}
@@ -113,7 +115,9 @@ export const CandidateInfoCard: React.FC<Props> = ({
           {/* 2. UID */}
           {candidate.uid && (
             <div className="flex-shrink-0 min-w-[120px] border-l-4 border-l-blue-500 bg-blue-50 p-4 rounded-r-lg">
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">UID</p>
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                UID
+              </p>
               <p className="text-base font-mono font-bold text-slate-900">{candidate.uid}</p>
             </div>
           )}
@@ -121,7 +125,9 @@ export const CandidateInfoCard: React.FC<Props> = ({
           {/* 3. Roll Number */}
           {candidate.rollNumber && (
             <div className="flex-shrink-0 min-w-[120px] border-l-4 border-l-indigo-500 bg-indigo-50 p-4 rounded-r-lg">
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Roll Number</p>
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                Roll Number
+              </p>
               <p className="text-base font-bold text-slate-900">{candidate.rollNumber}</p>
             </div>
           )}
@@ -136,15 +142,24 @@ export const CandidateInfoCard: React.FC<Props> = ({
 
           {/* 4. Registration Number */}
           <div className="flex-shrink-0 min-w-[120px] border-l-4 border-l-cyan-500 bg-cyan-50 p-4 rounded-r-lg">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Registration No</p>
-            <p className="text-base font-mono font-bold text-slate-900">{candidate.registrationNumber ?? "N/A"}</p>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+              Registration No
+            </p>
+            <p className="text-base font-mono font-bold text-slate-900">
+              {candidate.registrationNumber ?? "N/A"}
+            </p>
           </div>
 
           {/* 5. Program */}
           {candidate.programCourse && (
             <div className="flex-shrink-0 min-w-[120px] border-l-4 border-l-emerald-500 bg-emerald-50 p-4 rounded-r-lg">
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Program</p>
-              <p className="text-base font-bold text-slate-900 truncate" title={candidate.programCourse}>
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                Program
+              </p>
+              <p
+                className="text-base font-bold text-slate-900 truncate"
+                title={candidate.programCourse}
+              >
                 {candidate.programCourse}
               </p>
             </div>
@@ -153,7 +168,9 @@ export const CandidateInfoCard: React.FC<Props> = ({
           {/* 6. Semester */}
           {candidate.semester && (
             <div className="flex-shrink-0 min-w-[120px] border-l-4 border-l-orange-500 bg-orange-50 p-4 rounded-r-lg">
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Semester</p>
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                Semester
+              </p>
               <p className="text-base font-bold text-slate-900">{candidate.semester}</p>
             </div>
           )}
@@ -161,10 +178,20 @@ export const CandidateInfoCard: React.FC<Props> = ({
           {/* 7. Shift */}
           {candidate.shift && (
             <div className="flex-shrink-0 min-w-[120px] border-l-4 border-l-orange-500 bg-orange-50 p-4 rounded-r-lg">
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Shift</p>
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                Shift
+              </p>
               <p className="text-base font-bold text-slate-900">{candidate.shift}</p>
             </div>
           )}
+
+          {/* 8. Appear type */}
+          <div className="flex-shrink-0 min-w-[140px] border-l-4 border-l-orange-500 bg-orange-50 p-4 rounded-r-lg">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+              Appear type
+            </p>
+            <p className="text-base font-bold text-slate-900">Regular</p>
+          </div>
 
           {/* 7. Exam
           {candidate.examName && (
@@ -180,7 +207,10 @@ export const CandidateInfoCard: React.FC<Props> = ({
           <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-4">
             {distributedByUserImage != null || distributedByName ? (
               <Avatar className="h-10 w-10 border-2 border-amber-300 flex-shrink-0">
-                <AvatarImage src={distributedByUserImage ?? undefined} alt={distributedByName ?? "User"} />
+                <AvatarImage
+                  src={distributedByUserImage ?? undefined}
+                  alt={distributedByName ?? "User"}
+                />
                 <AvatarFallback className="bg-amber-200 text-amber-900 text-sm font-semibold">
                   {distributedByName
                     ? distributedByName
@@ -197,7 +227,9 @@ export const CandidateInfoCard: React.FC<Props> = ({
               {collectionDate && (
                 <>
                   <p className="text-sm font-semibold text-amber-900">Date of Collection</p>
-                  <p className="text-base font-medium text-amber-900 mt-1">{formatCollectionDate(collectionDate)}</p>
+                  <p className="text-base font-medium text-amber-900 mt-1">
+                    {formatCollectionDate(collectionDate)}
+                  </p>
                 </>
               )}
               {distributedByName && (
@@ -233,7 +265,12 @@ export const CandidateInfoCard: React.FC<Props> = ({
             ) : isDownloadingOrDistributing ? (
               <>
                 <div className="animate-spin mr-2">
-                  <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg
+                    className="w-4 h-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
                     <circle
                       className="opacity-25"
                       cx="12"
