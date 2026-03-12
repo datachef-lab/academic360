@@ -16,11 +16,9 @@ export async function searchCandidate(req: Request, res: Response) {
     const examGroupIdRaw = req.query.exam_group_id as string | undefined;
     const examGroupId = examGroupIdRaw ? Number(examGroupIdRaw) : undefined;
     if (examGroupIdRaw && !Number.isFinite(examGroupId)) {
-      return res
-        .status(400)
-        .json({
-          message: "exam_group_id must be a valid number when provided.",
-        });
+      return res.status(400).json({
+        message: "exam_group_id must be a valid number when provided.",
+      });
     }
 
     const result = await searchCandidateService(examGroupId, searchTerm.trim());
@@ -93,11 +91,9 @@ export async function getAdmitCardDistributions(req: Request, res: Response) {
     const examGroupIdRaw = req.query.exam_group_id as string | undefined;
     const examGroupId = examGroupIdRaw ? Number(examGroupIdRaw) : undefined;
     if (examGroupIdRaw && !Number.isFinite(examGroupId)) {
-      return res
-        .status(400)
-        .json({
-          message: "exam_group_id must be a valid number when provided.",
-        });
+      return res.status(400).json({
+        message: "exam_group_id must be a valid number when provided.",
+      });
     }
 
     const rows = await listAdmitCardDistributions(examGroupId);
@@ -105,12 +101,10 @@ export async function getAdmitCardDistributions(req: Request, res: Response) {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error("[AdmitCard] getAdmitCardDistributions error:", error);
-    return res
-      .status(500)
-      .json({
-        message: "Failed to fetch admit card distributions",
-        error: String(error),
-      });
+    return res.status(500).json({
+      message: "Failed to fetch admit card distributions",
+      error: String(error),
+    });
   }
 }
 
@@ -122,11 +116,9 @@ export async function downloadAdmitCardDistributions(
     const examGroupIdRaw = req.query.exam_group_id as string | undefined;
     const examGroupId = examGroupIdRaw ? Number(examGroupIdRaw) : undefined;
     if (examGroupIdRaw && !Number.isFinite(examGroupId)) {
-      return res
-        .status(400)
-        .json({
-          message: "exam_group_id must be a valid number when provided.",
-        });
+      return res.status(400).json({
+        message: "exam_group_id must be a valid number when provided.",
+      });
     }
 
     const rows = await listAdmitCardDistributions(examGroupId);
@@ -189,11 +181,9 @@ export async function downloadAdmitCardDistributions(
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error("[AdmitCard] downloadAdmitCardDistributions error:", error);
-    return res
-      .status(500)
-      .json({
-        message: "Failed to download admit card distributions",
-        error: String(error),
-      });
+    return res.status(500).json({
+      message: "Failed to download admit card distributions",
+      error: String(error),
+    });
   }
 }
