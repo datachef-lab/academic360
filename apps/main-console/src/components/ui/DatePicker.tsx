@@ -1,4 +1,3 @@
-
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ export function DatePicker({ value, onSelect, className }: DatePickerProps) {
           className={cn(
             "w-full justify-start text-left font-normal",
             !value && "text-muted-foreground",
-            className
+            className,
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -29,12 +28,7 @@ export function DatePicker({ value, onSelect, className }: DatePickerProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={value}
-          onSelect={onSelect}
-          initialFocus
-        />
+        <Calendar mode="single" selected={value} onSelect={onSelect} initialFocus />
       </PopoverContent>
     </Popover>
   );

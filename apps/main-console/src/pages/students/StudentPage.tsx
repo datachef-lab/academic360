@@ -1,4 +1,14 @@
-import { User, Home, Heart, Phone, IdCard, Users, FilePenIcon, BookOpen, UserCircle } from "lucide-react";
+import {
+  User,
+  Home,
+  Heart,
+  Phone,
+  IdCard,
+  Users,
+  FilePenIcon,
+  BookOpen,
+  UserCircle,
+} from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "react-router-dom";
 import { getStudentById, fetchStudentByUid } from "@/services/student";
@@ -12,7 +22,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 // import { motion } from "framer-motion";
@@ -71,7 +87,9 @@ export default function StudentPage() {
     queryKey: ["user-meta", data?.userId],
     enabled: Boolean(data?.userId),
     queryFn: async () => {
-      const res = await axiosInstance.get("/api/users/query", { params: { id: String(data?.userId) } });
+      const res = await axiosInstance.get("/api/users/query", {
+        params: { id: String(data?.userId) },
+      });
       return res.data.payload as {
         id: number;
         isActive: boolean;
@@ -205,7 +223,13 @@ export default function StudentPage() {
     const newStatus = getInitialStatus();
     setStatusOption(newStatus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userData?.isSuspended, data?.active, data?.hasCancelledAdmission, data?.takenTransferCertificate, data?.alumni]);
+  }, [
+    userData?.isSuspended,
+    data?.active,
+    data?.hasCancelledAdmission,
+    data?.takenTransferCertificate,
+    data?.alumni,
+  ]);
 
   // Show/hide fields based on initial status on load
   useEffect(() => {
@@ -297,7 +321,12 @@ export default function StudentPage() {
             <div>{data?.personalEmail || "-"}</div>
             <div className="font-semibold text-gray-500">RFID :</div>
             <div>
-              <input type="text" value={rfid} onChange={handleRfidChange} className="rounded-sm border w-full p-2" />
+              <input
+                type="text"
+                value={rfid}
+                onChange={handleRfidChange}
+                className="rounded-sm border w-full p-2"
+              />
             </div>
           </div>
           {/* User status controls */}
@@ -315,16 +344,27 @@ export default function StudentPage() {
                   const cancelBox = document.getElementById("cancel-extra");
                   const leavingBox = document.getElementById("leaving-extra");
                   const suspendBox = document.getElementById("suspend-extra");
-                  const leavingDateInput = document.getElementById("leavingDate") as HTMLInputElement;
+                  const leavingDateInput = document.getElementById(
+                    "leavingDate",
+                  ) as HTMLInputElement;
                   const cancelAtInput = document.getElementById("cancelAt") as HTMLInputElement;
-                  const suspendedTillInput = document.getElementById("suspendedTill") as HTMLInputElement;
-                  const leavingReasonEl = document.getElementById("leavingReason") as HTMLTextAreaElement;
-                  const cancelReasonEl = document.getElementById("cancelReason") as HTMLTextAreaElement;
+                  const suspendedTillInput = document.getElementById(
+                    "suspendedTill",
+                  ) as HTMLInputElement;
+                  const leavingReasonEl = document.getElementById(
+                    "leavingReason",
+                  ) as HTMLTextAreaElement;
+                  const cancelReasonEl = document.getElementById(
+                    "cancelReason",
+                  ) as HTMLTextAreaElement;
                   const tcReasonEl = document.getElementById("tcReason") as HTMLTextAreaElement;
-                  const suspendedReasonEl = document.getElementById("suspendedReason") as HTMLTextAreaElement;
+                  const suspendedReasonEl = document.getElementById(
+                    "suspendedReason",
+                  ) as HTMLTextAreaElement;
 
                   if (tcBox) tcBox.classList.toggle("hidden", val !== "TC");
-                  if (cancelBox) cancelBox.classList.toggle("hidden", val !== "CANCELLED_ADMISSION");
+                  if (cancelBox)
+                    cancelBox.classList.toggle("hidden", val !== "CANCELLED_ADMISSION");
                   if (suspendBox) suspendBox.classList.toggle("hidden", val !== "SUSPENDED");
 
                   // Handle leaving date fields
@@ -370,7 +410,9 @@ export default function StudentPage() {
                   // Default reasons if empty when section becomes visible
                   if (showLeaving && leavingReasonEl && !leavingReasonEl.value) {
                     leavingReasonEl.value =
-                      val === "DROPPED_OUT" ? "Left without completing the course" : "Completed program and left";
+                      val === "DROPPED_OUT"
+                        ? "Left without completing the course"
+                        : "Completed program and left";
                   }
                   if (val === "CANCELLED_ADMISSION" && cancelReasonEl && !cancelReasonEl.value) {
                     cancelReasonEl.value = "Admission cancelled by administration";
@@ -391,14 +433,19 @@ export default function StudentPage() {
                   <SelectItem value="SUSPENDED">Suspended</SelectItem>
                   <SelectItem value="DROPPED_OUT">Dropped Out (Left without completing)</SelectItem>
                   <SelectItem value="COMPLETED_LEFT">Completed & Left (Fully Graduated)</SelectItem>
-                  <SelectItem value="GRADUATED_WITH_SUPP">Graduated but has supplementary papers</SelectItem>
+                  <SelectItem value="GRADUATED_WITH_SUPP">
+                    Graduated but has supplementary papers
+                  </SelectItem>
                   <SelectItem value="TC">Taken Transfer Certificate (TC)</SelectItem>
                   <SelectItem value="CANCELLED_ADMISSION">Cancelled Admission</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {/* Suspended fields (shown when Suspended is selected in dropdown) */}
-            <div id="suspend-extra" className={`space-y-2 ${userData?.isSuspended ? "" : "hidden"}`}>
+            <div
+              id="suspend-extra"
+              className={`space-y-2 ${userData?.isSuspended ? "" : "hidden"}`}
+            >
               <div className="space-y-1">
                 <Label htmlFor="suspendedReason" className="text-xs sm:text-sm">
                   Suspended Reason
@@ -444,7 +491,11 @@ export default function StudentPage() {
                 <Label htmlFor="leavingReason" className="text-xs sm:text-sm">
                   Leaving Reason
                 </Label>
-                <Textarea id="leavingReason" defaultValue={data?.leavingReason ?? ""} className="text-xs sm:text-sm" />
+                <Textarea
+                  id="leavingReason"
+                  defaultValue={data?.leavingReason ?? ""}
+                  className="text-xs sm:text-sm"
+                />
               </div>
             </div>
 
@@ -464,7 +515,10 @@ export default function StudentPage() {
             </div>
 
             {/* Cancelled Admission fields */}
-            <div id="cancel-extra" className={`space-y-2 ${statusOption === "CANCELLED_ADMISSION" ? "" : "hidden"}`}>
+            <div
+              id="cancel-extra"
+              className={`space-y-2 ${statusOption === "CANCELLED_ADMISSION" ? "" : "hidden"}`}
+            >
               <div className="space-y-1">
                 <Label htmlFor="cancelReason" className="text-xs sm:text-sm">
                   Cancelled Admission Reason
@@ -500,12 +554,18 @@ export default function StudentPage() {
               onClick={async () => {
                 const userId = Number(data?.userId);
                 const studentId = Number(data?.id);
-                const suspendedReason = (document.getElementById("suspendedReason") as HTMLInputElement)?.value || null;
-                const suspendedTillRaw = (document.getElementById("suspendedTill") as HTMLInputElement)?.value || "";
-                const leavingDateRaw = (document.getElementById("leavingDate") as HTMLInputElement)?.value || "";
-                const leavingReason = (document.getElementById("leavingReason") as HTMLInputElement)?.value || null;
-                const cancelReason = (document.getElementById("cancelReason") as HTMLInputElement)?.value || null;
-                const cancelAtRaw = (document.getElementById("cancelAt") as HTMLInputElement)?.value || "";
+                const suspendedReason =
+                  (document.getElementById("suspendedReason") as HTMLInputElement)?.value || null;
+                const suspendedTillRaw =
+                  (document.getElementById("suspendedTill") as HTMLInputElement)?.value || "";
+                const leavingDateRaw =
+                  (document.getElementById("leavingDate") as HTMLInputElement)?.value || "";
+                const leavingReason =
+                  (document.getElementById("leavingReason") as HTMLInputElement)?.value || null;
+                const cancelReason =
+                  (document.getElementById("cancelReason") as HTMLInputElement)?.value || null;
+                const cancelAtRaw =
+                  (document.getElementById("cancelAt") as HTMLInputElement)?.value || "";
 
                 // Helper function to convert datetime-local to timestamp string for Asia/Kolkata storage
                 // This sends the timestamp as-is (treating it as IST) so DB stores it without UTC conversion
@@ -572,7 +632,9 @@ export default function StudentPage() {
                     isSuspended,
                     suspendedReason: isSuspended ? suspendedReason : null,
                     suspendedTillDate:
-                      isSuspended && suspendedTillRaw ? convertDatetimeLocalToIST(suspendedTillRaw) : null,
+                      isSuspended && suspendedTillRaw
+                        ? convertDatetimeLocalToIST(suspendedTillRaw)
+                        : null,
                   });
 
                   // Update student table with status
@@ -583,7 +645,9 @@ export default function StudentPage() {
 
                   // Set fields based on status, and explicitly clear fields not used by this status
                   if (statusOption === "DROPPED_OUT" || statusOption === "COMPLETED_LEFT") {
-                    studentPayload.leavingDate = leavingDateRaw ? convertDatetimeLocalToIST(leavingDateRaw) : null;
+                    studentPayload.leavingDate = leavingDateRaw
+                      ? convertDatetimeLocalToIST(leavingDateRaw)
+                      : null;
                     studentPayload.leavingReason = leavingReason;
                     // Clear other status-specific fields
                     studentPayload.takenTransferCertificate = false;
@@ -691,7 +755,11 @@ export default function StudentPage() {
       <div className="w-full flex flex-col lg:flex-row min-h-screen lg:h-full lg:overflow-hidden">
         <Tabs defaultValue={activeTab?.label ?? ""} className="w-full lg:w-[80%] flex flex-col">
           <div className="flex-shrink-0 px-2 sm:px-4 pt-2 sm:pt-4">
-            <StudentPanel studentTabs={studentTabs} activeTab={activeTab!} setActiveTab={setActiveTab} />
+            <StudentPanel
+              studentTabs={studentTabs}
+              activeTab={activeTab!}
+              setActiveTab={setActiveTab}
+            />
           </div>
 
           <div className="flex-1 lg:col-span-9 min-h-0 lg:h-[calc(100vh-2rem)] px-2 sm:px-4 overflow-y-auto">

@@ -1,7 +1,13 @@
 "use client";
 // @ts-nocheck
 import React, { useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Type assertion to fix TypeScript issues with Select components
 const SelectTriggerFixed = SelectTrigger as React.ComponentType<any>;
@@ -17,7 +23,11 @@ export default function AttendancePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-indigo-50/20 to-purple-50/20">
       {/* Header Banner */}
-      <HeaderBanner mockData={mockData} selectedSemester={selectedSemester} setSelectedSemester={setSelectedSemester} />
+      <HeaderBanner
+        mockData={mockData}
+        selectedSemester={selectedSemester}
+        setSelectedSemester={setSelectedSemester}
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 pb-12">

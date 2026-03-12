@@ -13,7 +13,9 @@ export async function getAllAcademicIdentifiers(): Promise<ApiResponse<AcademicI
   }
 }
 
-export async function getAcademicIdentifierById(id: number): Promise<ApiResponse<AcademicIdentifier | null>> {
+export async function getAcademicIdentifierById(
+  id: number,
+): Promise<ApiResponse<AcademicIdentifier | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data.payload;
@@ -22,7 +24,9 @@ export async function getAcademicIdentifierById(id: number): Promise<ApiResponse
   }
 }
 
-export async function getAcademicIdentifierByStudentId(studentId: number): Promise<AcademicIdentifier | null> {
+export async function getAcademicIdentifierByStudentId(
+  studentId: number,
+): Promise<AcademicIdentifier | null> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data.payload;
@@ -63,7 +67,9 @@ export async function deleteAcademicIdentifier(id: number): Promise<ApiResponse<
   }
 }
 
-export async function deleteAcademicIdentifierByStudentId(studentId: number): Promise<ApiResponse<null>> {
+export async function deleteAcademicIdentifierByStudentId(
+  studentId: number,
+): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
     return response.data.payload;

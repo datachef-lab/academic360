@@ -2,7 +2,7 @@ import { query } from "@/db";
 import { Exam } from "@/types/exams/exam";
 
 export async function findExamsByStudentId(studentId: number) {
-    const sqlQuery = `
+  const sqlQuery = `
         SELECT
             em.id,
             em.testid,
@@ -42,8 +42,8 @@ export async function findExamsByStudentId(studentId: number) {
             AND sess.id = em.sessid
         ORDER BY em.entrydate desc
         ;`;
-    const exams = await query(sqlQuery) as Exam[];
-    console.log("exams", exams);
+  const exams = (await query(sqlQuery)) as Exam[];
+  console.log("exams", exams);
 
-    return exams;
+  return exams;
 }

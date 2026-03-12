@@ -7,7 +7,18 @@ import {
   ChartLegendContent,
   ChartConfig,
 } from "@/components/ui/chart";
-import { BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
 import {
   Calendar,
   Users,
@@ -114,18 +125,76 @@ const upcomingExamsData = [
 
 // Room utilization with usage frequency
 const roomUtilizationData = [
-  { room: "LH-101", capacity: 60, assigned: 58, utilization: 97, usageCount: 42, floor: "Ground Floor" },
-  { room: "LH-102", capacity: 60, assigned: 45, utilization: 75, usageCount: 38, floor: "Ground Floor" },
-  { room: "LAB-A", capacity: 40, assigned: 38, utilization: 95, usageCount: 35, floor: "1st Floor" },
-  { room: "LAB-B", capacity: 40, assigned: 32, utilization: 80, usageCount: 28, floor: "1st Floor" },
-  { room: "SR-201", capacity: 30, assigned: 28, utilization: 93, usageCount: 32, floor: "2nd Floor" },
-  { room: "SR-202", capacity: 30, assigned: 25, utilization: 83, usageCount: 25, floor: "2nd Floor" },
-  { room: "LH-201", capacity: 60, assigned: 55, utilization: 92, usageCount: 40, floor: "1st Floor" },
-  { room: "AUD-301", capacity: 150, assigned: 145, utilization: 97, usageCount: 45, floor: "Ground Floor" },
+  {
+    room: "LH-101",
+    capacity: 60,
+    assigned: 58,
+    utilization: 97,
+    usageCount: 42,
+    floor: "Ground Floor",
+  },
+  {
+    room: "LH-102",
+    capacity: 60,
+    assigned: 45,
+    utilization: 75,
+    usageCount: 38,
+    floor: "Ground Floor",
+  },
+  {
+    room: "LAB-A",
+    capacity: 40,
+    assigned: 38,
+    utilization: 95,
+    usageCount: 35,
+    floor: "1st Floor",
+  },
+  {
+    room: "LAB-B",
+    capacity: 40,
+    assigned: 32,
+    utilization: 80,
+    usageCount: 28,
+    floor: "1st Floor",
+  },
+  {
+    room: "SR-201",
+    capacity: 30,
+    assigned: 28,
+    utilization: 93,
+    usageCount: 32,
+    floor: "2nd Floor",
+  },
+  {
+    room: "SR-202",
+    capacity: 30,
+    assigned: 25,
+    utilization: 83,
+    usageCount: 25,
+    floor: "2nd Floor",
+  },
+  {
+    room: "LH-201",
+    capacity: 60,
+    assigned: 55,
+    utilization: 92,
+    usageCount: 40,
+    floor: "1st Floor",
+  },
+  {
+    room: "AUD-301",
+    capacity: 150,
+    assigned: 145,
+    utilization: 97,
+    usageCount: 45,
+    floor: "Ground Floor",
+  },
 ];
 
 // Find most used rooms (top 3)
-const mostUsedRooms = [...roomUtilizationData].sort((a, b) => b.usageCount - a.usageCount).slice(0, 3);
+const mostUsedRooms = [...roomUtilizationData]
+  .sort((a, b) => b.usageCount - a.usageCount)
+  .slice(0, 3);
 
 const roomUtilizationConfig = {
   capacity: { label: "Capacity", color: "hsl(var(--chart-1))" },
@@ -158,7 +227,9 @@ function StatCard({
         <div className="text-2xl font-bold">{value}</div>
         {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
         {trend && (
-          <div className={`flex items-center text-xs mt-2 ${trend.isPositive ? "text-green-600" : "text-red-600"}`}>
+          <div
+            className={`flex items-center text-xs mt-2 ${trend.isPositive ? "text-green-600" : "text-red-600"}`}
+          >
             <TrendingUp className={`h-3 w-3 mr-1 ${!trend.isPositive && "rotate-180"}`} />
             {Math.abs(trend.value)}% from last month
           </div>
@@ -175,7 +246,9 @@ export default function HomePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Exam Management Dashboard</h1>
-          <p className="text-muted-foreground">Overview of exam schedules, students, and resources</p>
+          <p className="text-muted-foreground">
+            Overview of exam schedules, students, and resources
+          </p>
         </div>
       </div>
 
@@ -300,7 +373,13 @@ export default function HomePage() {
               <BarChart data={studentsPerExamData} layout="vertical">
                 <CartesianGrid horizontal={false} strokeDasharray="3 3" />
                 <XAxis type="number" tickLine={false} axisLine={false} />
-                <YAxis dataKey="exam" type="category" width={120} tickLine={false} axisLine={false} />
+                <YAxis
+                  dataKey="exam"
+                  type="category"
+                  width={120}
+                  tickLine={false}
+                  axisLine={false}
+                />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="students" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -432,7 +511,11 @@ export default function HomePage() {
                 <YAxis hide />
                 <ChartTooltip
                   content={<ChartTooltipContent />}
-                  formatter={(value: number | string, name: string, props: { payload?: { usageCount?: number } }) => {
+                  formatter={(
+                    value: number | string,
+                    name: string,
+                    props: { payload?: { usageCount?: number } },
+                  ) => {
                     if (name === "assigned" && props.payload?.usageCount !== undefined) {
                       return [`${value} (Used ${props.payload.usageCount} times)`, "Assigned"];
                     }
@@ -443,7 +526,11 @@ export default function HomePage() {
                   {roomUtilizationData.map((entry, index) => (
                     <Cell
                       key={`cell-capacity-${index}`}
-                      fill={mostUsedRooms.some((r) => r.room === entry.room) ? "#fbbf24" : "hsl(var(--chart-1))"}
+                      fill={
+                        mostUsedRooms.some((r) => r.room === entry.room)
+                          ? "#fbbf24"
+                          : "hsl(var(--chart-1))"
+                      }
                     />
                   ))}
                 </Bar>
@@ -451,7 +538,11 @@ export default function HomePage() {
                   {roomUtilizationData.map((entry, index) => (
                     <Cell
                       key={`cell-assigned-${index}`}
-                      fill={mostUsedRooms.some((r) => r.room === entry.room) ? "#f59e0b" : "hsl(var(--chart-2))"}
+                      fill={
+                        mostUsedRooms.some((r) => r.room === entry.room)
+                          ? "#f59e0b"
+                          : "hsl(var(--chart-2))"
+                      }
                     />
                   ))}
                 </Bar>
@@ -508,7 +599,10 @@ export default function HomePage() {
                   <tr key={index} className="border-b hover:bg-muted/50">
                     <td className="p-3 text-sm">
                       <div className="font-medium">
-                        {new Date(exam.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {new Date(exam.date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {new Date(exam.date).toLocaleDateString("en-US", { weekday: "short" })}
@@ -521,12 +615,18 @@ export default function HomePage() {
                       </Badge>
                     </td>
                     <td className="p-3 text-sm text-center">
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <Badge
+                        variant="outline"
+                        className="bg-green-50 text-green-700 border-green-200"
+                      >
                         {exam.rooms}
                       </Badge>
                     </td>
                     <td className="p-3 text-center">
-                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                      <Badge
+                        variant="outline"
+                        className="bg-orange-50 text-orange-700 border-orange-200"
+                      >
                         Scheduled
                       </Badge>
                     </td>
@@ -574,20 +674,27 @@ export default function HomePage() {
                   <div
                     key={index}
                     className={`flex items-center justify-between p-2 rounded-md ${
-                      floor.floor === mostUsedFloor.floor ? "bg-yellow-50 border border-yellow-200" : ""
+                      floor.floor === mostUsedFloor.floor
+                        ? "bg-yellow-50 border border-yellow-200"
+                        : ""
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       {floor.floor === mostUsedFloor.floor && (
                         <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
                       )}
-                      <span className={`text-sm ${floor.floor === mostUsedFloor.floor ? "font-semibold" : ""}`}>
+                      <span
+                        className={`text-sm ${floor.floor === mostUsedFloor.floor ? "font-semibold" : ""}`}
+                      >
                         {floor.floor}
                       </span>
                     </div>
                     <div className="flex gap-2">
                       {floor.floor === mostUsedFloor.floor && (
-                        <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300">
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300"
+                        >
                           Most Used
                         </Badge>
                       )}
@@ -597,7 +704,10 @@ export default function HomePage() {
                       <Badge variant="outline" className="text-xs bg-muted">
                         {floor.capacity} seats
                       </Badge>
-                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                      >
                         {floor.usageCount}x
                       </Badge>
                     </div>
@@ -656,7 +766,9 @@ export default function HomePage() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       {index === 0 && <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />}
-                      <span className={`font-semibold ${index === 0 ? "text-yellow-900" : ""}`}>{room.room}</span>
+                      <span className={`font-semibold ${index === 0 ? "text-yellow-900" : ""}`}>
+                        {room.room}
+                      </span>
                     </div>
                     <Badge
                       variant="outline"

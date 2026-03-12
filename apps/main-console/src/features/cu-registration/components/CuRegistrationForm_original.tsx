@@ -6,9 +6,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { getStudentCuCorrectionRequests } from "@/services/cu-registration";
-import { getCuRegistrationDocuments, getCuRegistrationDocumentSignedUrl } from "@/services/cu-registration-documents";
+import {
+  getCuRegistrationDocuments,
+  getCuRegistrationDocumentSignedUrl,
+} from "@/services/cu-registration-documents";
 import { fetchUserProfile } from "@/services/student";
-import { fetchStudentSubjectSelections, fetchMandatorySubjects } from "@/services/subject-selection";
+import {
+  fetchStudentSubjectSelections,
+  fetchMandatorySubjects,
+} from "@/services/subject-selection";
 import type { CuRegistrationCorrectionRequestDto } from "@repo/db/dtos/admissions";
 import type { StudentDto, ProfileInfo } from "@repo/db/dtos/user";
 
@@ -108,20 +114,50 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   const [subjectsDeclared, setSubjectsDeclared] = useState(false);
   const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
   const [subjectsData, setSubjectsData] = useState({
-    DSCC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    Minor: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    DSCC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
+    Minor: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
     IDC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     SEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     AEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    CVAC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    CVAC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
   });
   const [mandatorySubjects, setMandatorySubjects] = useState({
-    DSCC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    Minor: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    DSCC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
+    Minor: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
     IDC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     SEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     AEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    CVAC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    CVAC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
   });
 
   // Helper: format Aadhaar number to 4-4-4 format
@@ -234,7 +270,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               "",
             gender: personalDetails?.gender || "",
             nationality: personalDetails?.nationality?.name || "",
-            aadhaarNumber: formatAadhaarNumber(personalDetails?.aadhaarCardNumber || "XXXX XXXX XXXX"),
+            aadhaarNumber: formatAadhaarNumber(
+              personalDetails?.aadhaarCardNumber || "XXXX XXXX XXXX",
+            ),
             apaarId: formatApaarId((studentData?.apaarId && studentData.apaarId.trim()) || ""),
             ews: studentData?.belongsToEWS ? "Yes" : "No",
           });
@@ -243,14 +281,19 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         // Populate address data
         const addresses = (personalDetails?.address as Array<Record<string, unknown>>) || [];
         const resAddr = addresses.find((a) => a?.type === "RESIDENTIAL") || addresses[0] || null;
-        const mailAddr = addresses.find((a) => a?.type === "MAILING") || addresses[1] || resAddr || null;
+        const mailAddr =
+          addresses.find((a) => a?.type === "MAILING") || addresses[1] || resAddr || null;
 
         const getAddressField = (addr: Record<string, unknown> | null, field: string): string => {
           if (!addr) return "";
           return (addr[field] as string) || "";
         };
 
-        const getNestedField = (addr: Record<string, unknown> | null, parent: string, field: string): string => {
+        const getNestedField = (
+          addr: Record<string, unknown> | null,
+          parent: string,
+          field: string,
+        ): string => {
           if (!addr) return "";
           const parentObj = addr[parent] as Record<string, unknown> | undefined;
           return (parentObj?.[field] as string) || "";
@@ -285,9 +328,13 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 getAddressField(mailAddr, "otherPostoffice") ||
                 getNestedField(mailAddr, "postoffice", "name"),
               state:
-                getNestedField(resAddr, "state", "name") || getNestedField(mailAddr, "state", "name") || "West Bengal",
+                getNestedField(resAddr, "state", "name") ||
+                getNestedField(mailAddr, "state", "name") ||
+                "West Bengal",
               country:
-                getNestedField(resAddr, "country", "name") || getNestedField(mailAddr, "country", "name") || "India",
+                getNestedField(resAddr, "country", "name") ||
+                getNestedField(mailAddr, "country", "name") ||
+                "India",
               pinCode: getAddressField(resAddr, "pincode") || getAddressField(mailAddr, "pincode"),
             },
             mailing: {
@@ -317,9 +364,13 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 getAddressField(resAddr, "otherPostoffice") ||
                 getNestedField(resAddr, "postoffice", "name"),
               state:
-                getNestedField(mailAddr, "state", "name") || getNestedField(resAddr, "state", "name") || "West Bengal",
+                getNestedField(mailAddr, "state", "name") ||
+                getNestedField(resAddr, "state", "name") ||
+                "West Bengal",
               country:
-                getNestedField(mailAddr, "country", "name") || getNestedField(resAddr, "country", "name") || "India",
+                getNestedField(mailAddr, "country", "name") ||
+                getNestedField(resAddr, "country", "name") ||
+                "India",
               pinCode: getAddressField(mailAddr, "pincode") || getAddressField(resAddr, "pincode"),
             },
           });
@@ -349,7 +400,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             const mandatoryNext: any = { ...mandatorySubjects };
 
             const getCategoryKey = (label: string): string | undefined => {
-              if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label)) return "DSCC";
+              if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label))
+                return "DSCC";
               if (/Minor/i.test(label)) return "Minor";
               if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) return "IDC";
               if (/Skill Enhancement Course/i.test(label) || /SEC/i.test(label)) return "SEC";
@@ -365,7 +417,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               const nums: number[] = [];
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               forClasses.forEach((c: any) => {
-                const label = String(c?.name || c?.shortName || c?.class?.name || c?.class?.shortName || "");
+                const label = String(
+                  c?.name || c?.shortName || c?.class?.name || c?.class?.shortName || "",
+                );
                 const roman = /\b(I|II|III|IV|V|VI)\b/i.exec(label);
                 if (roman && roman[1]) {
                   nums.push(map[roman[1].toUpperCase()]);
@@ -502,7 +556,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               setDocPreviewUrls((prev) => ({ ...prev, [docId]: url }));
             }
           } catch (error) {
-            console.error(`[CU-REG MAIN-CONSOLE] Error fetching preview URL for document ${docId}:`, error);
+            console.error(
+              `[CU-REG MAIN-CONSOLE] Error fetching preview URL for document ${docId}:`,
+              error,
+            );
           }
         });
       await Promise.allSettled(promises);
@@ -580,7 +637,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               {/* Personal Info Tab */}
               <TabsContent value="personal" className="space-y-6">
                 <div>
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Student Name</h2>
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
+                    Student Name
+                  </h2>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Full Name */}
@@ -618,7 +677,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                         <div className={getReadOnlyDivStyle()}>{personalInfo.gender || "—"}</div>
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.3 Correction Requested</span>
-                          <Badge variant={correctionFlags.gender ? "destructive" : "outline"} className="text-xs">
+                          <Badge
+                            variant={correctionFlags.gender ? "destructive" : "outline"}
+                            className="text-xs"
+                          >
                             {correctionFlags.gender ? "Yes" : "No"}
                           </Badge>
                         </div>
@@ -629,10 +691,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-gray-700">1.4 Nationality</Label>
                       <div className="flex flex-col gap-2">
-                        <div className={getReadOnlyDivStyle()}>{personalInfo.nationality || "—"}</div>
+                        <div className={getReadOnlyDivStyle()}>
+                          {personalInfo.nationality || "—"}
+                        </div>
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.4 Correction Requested</span>
-                          <Badge variant={correctionFlags.nationality ? "destructive" : "outline"} className="text-xs">
+                          <Badge
+                            variant={correctionFlags.nationality ? "destructive" : "outline"}
+                            className="text-xs"
+                          >
                             {correctionFlags.nationality ? "Yes" : "No"}
                           </Badge>
                         </div>
@@ -649,9 +716,13 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
                     {/* Aadhaar Number */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">1.6 Aadhaar Number</Label>
+                      <Label className="text-sm font-medium text-gray-700">
+                        1.6 Aadhaar Number
+                      </Label>
                       <div className="flex flex-col gap-2">
-                        <div className={getReadOnlyDivStyle()}>{personalInfo.aadhaarNumber || "—"}</div>
+                        <div className={getReadOnlyDivStyle()}>
+                          {personalInfo.aadhaarNumber || "—"}
+                        </div>
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.6 Correction Requested</span>
                           <Badge
@@ -670,10 +741,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                         1.7 APAAR (ABC) ID
                       </Label>
                       <div className="flex flex-col gap-2">
-                        <div className={getReadOnlyDivStyle()}>{personalInfo.apaarId || "Not provided"}</div>
+                        <div className={getReadOnlyDivStyle()}>
+                          {personalInfo.apaarId || "Not provided"}
+                        </div>
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.7 Correction Requested</span>
-                          <Badge variant={correctionFlags.apaarId ? "destructive" : "outline"} className="text-xs">
+                          <Badge
+                            variant={correctionFlags.apaarId ? "destructive" : "outline"}
+                            className="text-xs"
+                          >
                             {correctionFlags.apaarId ? "Yes" : "No"}
                           </Badge>
                         </div>
@@ -683,7 +759,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                     {/* Declaration Status */}
                     <div className="pt-2 md:col-span-2">
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-gray-700">Personal Info Declaration:</span>
+                        <span className="text-sm font-medium text-gray-700">
+                          Personal Info Declaration:
+                        </span>
                         <Badge variant={personalDeclared ? "default" : "outline"}>
                           {personalDeclared ? "✓ Completed" : "Pending"}
                         </Badge>
@@ -699,10 +777,14 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
                     {/* Residential Address */}
                     <div className="space-y-4 xl:pr-8 xl:border-r xl:border-gray-200">
-                      <h3 className="text-sm sm:text-base font-medium text-gray-900">Residential Address</h3>
+                      <h3 className="text-sm sm:text-base font-medium text-gray-900">
+                        Residential Address
+                      </h3>
                       <div className="space-y-3">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.1 Address Line</Label>
+                          <Label className="text-sm font-medium text-gray-700">
+                            2.1 Address Line
+                          </Label>
                           <div className={getReadOnlyDivStyle() + " min-h-[80px]"}>
                             {addressData.residential.addressLine || "—"}
                           </div>
@@ -710,47 +792,69 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-700">2.2 Country</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.country}</div>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.residential.country}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-700">2.3 State</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.state}</div>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.residential.state}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-700">2.4 District</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.district || "—"}</div>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.residential.district || "—"}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-700">2.5 City</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.city || "—"}</div>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.residential.city || "—"}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-700">2.6 Pin Code</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.pinCode || "—"}</div>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.residential.pinCode || "—"}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.7 Police Station</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.policeStation || "—"}</div>
+                          <Label className="text-sm font-medium text-gray-700">
+                            2.7 Police Station
+                          </Label>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.residential.policeStation || "—"}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.8 Post Office</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.residential.postOffice || "—"}</div>
+                          <Label className="text-sm font-medium text-gray-700">
+                            2.8 Post Office
+                          </Label>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.residential.postOffice || "—"}
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     {/* Mailing Address */}
                     <div className="space-y-4 xl:pl-8">
-                      <h3 className="text-sm sm:text-base font-medium text-gray-900">Mailing Address</h3>
+                      <h3 className="text-sm sm:text-base font-medium text-gray-900">
+                        Mailing Address
+                      </h3>
                       <div className="space-y-3">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.9 Address Line</Label>
+                          <Label className="text-sm font-medium text-gray-700">
+                            2.9 Address Line
+                          </Label>
                           <div className={getReadOnlyDivStyle() + " min-h-[80px]"}>
                             {addressData.mailing.addressLine || "—"}
                           </div>
@@ -768,27 +872,41 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-700">2.12 District</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.district || "—"}</div>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.mailing.district || "—"}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-700">2.13 City</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.city || "—"}</div>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.mailing.city || "—"}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-700">2.14 Pin Code</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.pinCode || "—"}</div>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.mailing.pinCode || "—"}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.15 Police Station</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.policeStation || "—"}</div>
+                          <Label className="text-sm font-medium text-gray-700">
+                            2.15 Police Station
+                          </Label>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.mailing.policeStation || "—"}
+                          </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">2.16 Post Office</Label>
-                          <div className={getReadOnlyDivStyle()}>{addressData.mailing.postOffice || "—"}</div>
+                          <Label className="text-sm font-medium text-gray-700">
+                            2.16 Post Office
+                          </Label>
+                          <div className={getReadOnlyDivStyle()}>
+                            {addressData.mailing.postOffice || "—"}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -797,7 +915,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   {/* Declaration Status */}
                   <div className="mt-6">
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700">Address Info Declaration:</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        Address Info Declaration:
+                      </span>
                       <Badge variant={addressDeclared ? "default" : "outline"}>
                         {addressDeclared ? "✓ Completed" : "Pending"}
                       </Badge>
@@ -810,10 +930,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               <TabsContent value="subjects" className="space-y-6">
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">3.1 Subjects Overview (Semesters 1-4)</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      3.1 Subjects Overview (Semesters 1-4)
+                    </h2>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-gray-600">Correction Requested</span>
-                      <Badge variant={correctionFlags.subjects ? "destructive" : "outline"} className="text-xs">
+                      <Badge
+                        variant={correctionFlags.subjects ? "destructive" : "outline"}
+                        className="text-xs"
+                      >
                         {correctionFlags.subjects ? "Yes" : "No"}
                       </Badge>
                     </div>
@@ -842,57 +967,61 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                         </tr>
                       </thead>
                       <tbody>
-                        {(["DSCC", "Minor", "IDC", "SEC", "AEC", "CVAC"] as const).map((category) => {
-                          const semData = subjectsData[category];
-                          return (
-                            <tr key={category} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50">
-                                {category}
-                              </td>
-                              {(["sem1", "sem2", "sem3", "sem4"] as const).map((sem) => {
-                                const mandatorySubjectsList = (mandatorySubjects[category]?.[sem] as string[]) || [];
-                                const studentSubjectsList = Array.isArray(semData[sem])
-                                  ? semData[sem]
-                                  : semData[sem]
-                                    ? [semData[sem]]
-                                    : [];
+                        {(["DSCC", "Minor", "IDC", "SEC", "AEC", "CVAC"] as const).map(
+                          (category) => {
+                            const semData = subjectsData[category];
+                            return (
+                              <tr key={category} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50">
+                                  {category}
+                                </td>
+                                {(["sem1", "sem2", "sem3", "sem4"] as const).map((sem) => {
+                                  const mandatorySubjectsList =
+                                    (mandatorySubjects[category]?.[sem] as string[]) || [];
+                                  const studentSubjectsList = Array.isArray(semData[sem])
+                                    ? semData[sem]
+                                    : semData[sem]
+                                      ? [semData[sem]]
+                                      : [];
 
-                                // Combine all subjects (mandatory + optional)
-                                const allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
+                                  // Combine all subjects (mandatory + optional)
+                                  const allSubjects: Array<{ name: string; isMandatory: boolean }> =
+                                    [];
 
-                                // Add mandatory subjects
-                                mandatorySubjectsList.forEach((subject) => {
-                                  allSubjects.push({ name: subject, isMandatory: true });
-                                });
+                                  // Add mandatory subjects
+                                  mandatorySubjectsList.forEach((subject) => {
+                                    allSubjects.push({ name: subject, isMandatory: true });
+                                  });
 
-                                // Add optional subjects (filter out duplicates)
-                                const filteredSubjects = studentSubjectsList.filter(
-                                  (subject) => !mandatorySubjectsList.includes(subject),
-                                );
-                                filteredSubjects.forEach((subject) => {
-                                  allSubjects.push({ name: subject, isMandatory: false });
-                                });
+                                  // Add optional subjects (filter out duplicates)
+                                  const filteredSubjects = studentSubjectsList.filter(
+                                    (subject) => !mandatorySubjectsList.includes(subject),
+                                  );
+                                  filteredSubjects.forEach((subject) => {
+                                    allSubjects.push({ name: subject, isMandatory: false });
+                                  });
 
-                                return (
-                                  <td key={sem} className="border border-gray-300 px-2 py-2">
-                                    {allSubjects.length > 0 ? (
-                                      <div className="text-sm text-gray-900">
-                                        {allSubjects.map((subj, idx) => (
-                                          <span key={idx}>
-                                            {subj.name}
-                                            {idx < allSubjects.length - 1 && ", "}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div className="text-sm text-gray-400 text-center">—</div>
-                                    )}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          );
-                        })}
+                                  return (
+                                    <td key={sem} className="border border-gray-300 px-2 py-2">
+                                      {allSubjects.length > 0 ? (
+                                        <div className="text-sm text-gray-900">
+                                          {allSubjects.map((subj, idx) => (
+                                            <span key={idx}>
+                                              {subj.name}
+                                              {idx < allSubjects.length - 1 && ", "}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <div className="text-sm text-gray-400 text-center">—</div>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          },
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -900,7 +1029,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   {/* Declaration Status */}
                   <div className="mt-6">
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700">Subjects Declaration:</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        Subjects Declaration:
+                      </span>
                       <Badge variant={subjectsDeclared ? "default" : "outline"}>
                         {subjectsDeclared ? "✓ Completed" : "Pending"}
                       </Badge>
@@ -940,9 +1071,12 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                         <tbody>
                           {uploadedDocuments.map((doc, index) => {
                             const document = doc.document as Record<string, unknown> | undefined;
-                            const documentType = (document?.name as string) || `Document ${doc.documentId as string}`;
+                            const documentType =
+                              (document?.name as string) || `Document ${doc.documentId as string}`;
                             const fileSize = doc.fileSize as number | undefined;
-                            const fileSizeMB = fileSize ? (fileSize / 1024 / 1024).toFixed(2) : "Unknown";
+                            const fileSizeMB = fileSize
+                              ? (fileSize / 1024 / 1024).toFixed(2)
+                              : "Unknown";
                             const fileType = doc.fileType as string | undefined;
                             const fileName = doc.fileName as string | undefined;
                             const docId = doc.id as number;
@@ -962,15 +1096,24 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                             alt="Preview"
                                             className="w-full h-full object-cover"
                                             onError={async () => {
-                                              console.error(`[CU-REG MAIN-CONSOLE] Image load error for doc ${docId}`);
+                                              console.error(
+                                                `[CU-REG MAIN-CONSOLE] Image load error for doc ${docId}`,
+                                              );
                                               // Try to fetch signed URL on error
                                               try {
-                                                const url = await getCuRegistrationDocumentSignedUrl(docId);
+                                                const url =
+                                                  await getCuRegistrationDocumentSignedUrl(docId);
                                                 if (url) {
-                                                  setDocPreviewUrls((prev) => ({ ...prev, [docId]: url }));
+                                                  setDocPreviewUrls((prev) => ({
+                                                    ...prev,
+                                                    [docId]: url,
+                                                  }));
                                                 }
                                               } catch (error) {
-                                                console.error(`[CU-REG MAIN-CONSOLE] Failed to get signed URL:`, error);
+                                                console.error(
+                                                  `[CU-REG MAIN-CONSOLE] Failed to get signed URL:`,
+                                                  error,
+                                                );
                                               }
                                             }}
                                           />
@@ -985,14 +1128,19 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                         </div>
                                       )}
                                     </div>
-                                    <span className="truncate max-w-[200px]">{fileName || "Unknown"}</span>
+                                    <span className="truncate max-w-[200px]">
+                                      {fileName || "Unknown"}
+                                    </span>
                                   </div>
                                 </td>
                                 <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
                                   {fileSizeMB} MB
                                 </td>
                                 <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                  <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs text-green-600 border-green-600"
+                                  >
                                     Uploaded
                                   </Badge>
                                 </td>
@@ -1027,7 +1175,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   {/* Declaration Status */}
                   <div className="mt-6">
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700">Documents Declaration:</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        Documents Declaration:
+                      </span>
                       <Badge variant={documentsConfirmed ? "default" : "outline"}>
                         {documentsConfirmed ? "✓ Completed" : "Pending"}
                       </Badge>

@@ -56,11 +56,11 @@ interface ReportStore {
   downloadfilters: DownloadReportFilters;
   downloadUiFilters: downloadUiFilters;
   downloadFilteredData: Report[];
-  
+
   setDownloadFilters: (downloadfilters: DownloadReportFilters) => void;
   setDownloadFilteredData: (data: Report[]) => void;
   SearchStudentData: User[];
-  setSearchStudentData:(data:User[])=>void;
+  setSearchStudentData: (data: User[]) => void;
   setDownloadUiFilters: (uiFilters: Partial<downloadUiFilters>) => void;
 }
 
@@ -81,7 +81,7 @@ export const useDownloadFilterStore = create<ReportStore>((set) => ({
     selectedFramework: null,
   },
   SearchStudentData: [],
-  
+
   downloadFilteredData: [],
   setDownloadFilters: (filters) => {
     set({ downloadfilters: filters });
@@ -89,14 +89,13 @@ export const useDownloadFilterStore = create<ReportStore>((set) => ({
   setDownloadUiFilters: (uiFilters) => {
     set((state) => ({ downloadUiFilters: { ...state.downloadUiFilters, ...uiFilters } }));
   },
-  setSearchStudentData:(SearchStudentData)=>{
-    set({SearchStudentData});
+  setSearchStudentData: (SearchStudentData) => {
+    set({ SearchStudentData });
   },
   setDownloadFilteredData: (downloadFilteredData) => {
     set({ downloadFilteredData });
   },
 }));
-
 
 type ToggleStore = {
   isOpen: boolean;

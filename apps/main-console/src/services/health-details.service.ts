@@ -22,7 +22,9 @@ export async function getHealthDetailById(id: number): Promise<ApiResponse<Healt
   }
 }
 
-export async function getHealthDetailByStudentId(studentId: number): Promise<ApiResponse<HealthDto | null>> {
+export async function getHealthDetailByStudentId(
+  studentId: number,
+): Promise<ApiResponse<HealthDto | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
@@ -34,7 +36,9 @@ export async function getHealthDetailByStudentId(studentId: number): Promise<Api
   }
 }
 
-export async function createHealthDetail(payload: Partial<HealthDto>): Promise<ApiResponse<HealthDto>> {
+export async function createHealthDetail(
+  payload: Partial<HealthDto>,
+): Promise<ApiResponse<HealthDto>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
@@ -43,7 +47,10 @@ export async function createHealthDetail(payload: Partial<HealthDto>): Promise<A
   }
 }
 
-export async function updateHealthDetail(id: number, payload: Partial<HealthDto>): Promise<ApiResponse<HealthDto>> {
+export async function updateHealthDetail(
+  id: number,
+  payload: Partial<HealthDto>,
+): Promise<ApiResponse<HealthDto>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data;

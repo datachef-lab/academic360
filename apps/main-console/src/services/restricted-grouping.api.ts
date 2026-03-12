@@ -18,10 +18,12 @@ const BASE_URL = "/api/subject-selection/restricted-grouping-mains";
 
 export const restrictedGroupingApi = {
   async listRestrictedGroupingMains() {
-    const res = await api.get<ApiResponse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>>(
-      `${BASE_URL}`,
-    );
-    const p = res.data.payload as RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] };
+    const res = await api.get<
+      ApiResponse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>
+    >(`${BASE_URL}`);
+    const p = res.data.payload as
+      | RestrictedGroupingMainDto[]
+      | { content: RestrictedGroupingMainDto[] };
     return Array.isArray(p) ? p : (p?.content ?? []);
   },
   async listRestrictedGroupingMainsPaginated(params: {
@@ -30,7 +32,10 @@ export const restrictedGroupingApi = {
     search?: string;
     subjectType?: string;
   }) {
-    const res = await api.get<ApiResponse<PaginatedResponse<RestrictedGroupingMainDto>>>(`${BASE_URL}`, { params });
+    const res = await api.get<ApiResponse<PaginatedResponse<RestrictedGroupingMainDto>>>(
+      `${BASE_URL}`,
+      { params },
+    );
     return res.data.payload;
   },
   async getRestrictedGroupingMain(id: number) {

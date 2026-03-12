@@ -14,7 +14,9 @@ export async function getAllAcademicHistories(): Promise<ApiResponse<AcademicHis
   }
 }
 
-export async function getAcademicHistoryById(id: number): Promise<ApiResponse<AcademicHistory | null>> {
+export async function getAcademicHistoryById(
+  id: number,
+): Promise<ApiResponse<AcademicHistory | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -24,7 +26,9 @@ export async function getAcademicHistoryById(id: number): Promise<ApiResponse<Ac
   }
 }
 
-export async function getAcademicHistoryByStudentId(studentId: number): Promise<ApiResponse<AcademicHistory | null>> {
+export async function getAcademicHistoryByStudentId(
+  studentId: number,
+): Promise<ApiResponse<AcademicHistory | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
@@ -34,7 +38,9 @@ export async function getAcademicHistoryByStudentId(studentId: number): Promise<
   }
 }
 
-export async function createAcademicHistory(payload: Partial<AcademicHistory>): Promise<ApiResponse<AcademicHistory>> {
+export async function createAcademicHistory(
+  payload: Partial<AcademicHistory>,
+): Promise<ApiResponse<AcademicHistory>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
@@ -67,7 +73,9 @@ export async function deleteAcademicHistory(id: number): Promise<ApiResponse<nul
   }
 }
 
-export async function deleteAcademicHistoryByStudentId(studentId: number): Promise<ApiResponse<null>> {
+export async function deleteAcademicHistoryByStudentId(
+  studentId: number,
+): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
     return response.data;

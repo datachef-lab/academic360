@@ -15,7 +15,11 @@ export interface PersonalDetailsDto {
   isEWS?: boolean | null;
 }
 
-export async function fetchPersonalDetailsByStudentId(studentId: number): Promise<PersonalDetailsDto> {
-  const res = await axiosInstance.get<ApiResponse<PersonalDetailsDto>>(`/api/personal-details/student/${studentId}`);
+export async function fetchPersonalDetailsByStudentId(
+  studentId: number,
+): Promise<PersonalDetailsDto> {
+  const res = await axiosInstance.get<ApiResponse<PersonalDetailsDto>>(
+    `/api/personal-details/student/${studentId}`,
+  );
   return res.data.payload as PersonalDetailsDto;
 }

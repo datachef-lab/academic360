@@ -4,8 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 //
 //
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -14,7 +27,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, PlusCircle, MinusCircle, Download, ToggleLeft, ToggleRight, Edit3 } from "lucide-react";
+import {
+  Loader2,
+  PlusCircle,
+  MinusCircle,
+  Download,
+  ToggleLeft,
+  ToggleRight,
+  Edit3,
+} from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import {
@@ -130,7 +151,10 @@ const MappingForm = ({
                     </span>
                     <div className="flex items-center gap-2">
                       {bs.board.code ? (
-                        <Badge variant="outline" className="text-xs border-blue-500 text-blue-700 bg-blue-50">
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-blue-500 text-blue-700 bg-blue-50"
+                        >
                           {bs.board.code}
                         </Badge>
                       ) : null}
@@ -157,7 +181,10 @@ const MappingForm = ({
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Available</span>
                 <Badge className="text-xs bg-blue-100 text-blue-700 border-blue-300">
-                  {boardSubjectOptions.filter((bs) => !formData.boardSubjectIds.includes(bs.id)).length}
+                  {
+                    boardSubjectOptions.filter((bs) => !formData.boardSubjectIds.includes(bs.id))
+                      .length
+                  }
                 </Badge>
               </div>
               <div className="w-1/2">
@@ -208,7 +235,10 @@ const MappingForm = ({
                     </span>
                     <div className="flex items-center gap-2">
                       {bs.board.code ? (
-                        <Badge variant="outline" className="text-xs border-blue-500 text-blue-700 bg-blue-50">
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-blue-500 text-blue-700 bg-blue-50"
+                        >
                           {bs.board.code}
                         </Badge>
                       ) : null}
@@ -225,7 +255,8 @@ const MappingForm = ({
                     </div>
                   </div>
                 ))}
-              {boardSubjectOptions.filter((bs) => !formData.boardSubjectIds.includes(bs.id)).length === 0 && (
+              {boardSubjectOptions.filter((bs) => !formData.boardSubjectIds.includes(bs.id))
+                .length === 0 && (
                 <div className="text-xs text-muted-foreground">No available subjects</div>
               )}
             </div>
@@ -257,7 +288,9 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
   const [selected, setSelected] = React.useState<BoardSubjectUnivSubjectMappingDto | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const [subjects, setSubjects] = React.useState<{ id: number; name: string; code?: string | null }[]>([]);
+  const [subjects, setSubjects] = React.useState<
+    { id: number; name: string; code?: string | null }[]
+  >([]);
   const [boardSubjects, setBoardSubjects] = React.useState<BoardSubjectDto[]>([]);
 
   React.useEffect(() => {
@@ -296,7 +329,9 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
         r.subject.name.toLowerCase().includes(q) ||
         (r.subject.code ?? "").toLowerCase().includes(q) ||
         r.boardSubjects.some(
-          (bs) => bs.board.name.toLowerCase().includes(q) || bs.boardSubjectName.name.toLowerCase().includes(q),
+          (bs) =>
+            bs.board.name.toLowerCase().includes(q) ||
+            bs.boardSubjectName.name.toLowerCase().includes(q),
         ),
     );
   }, [rows, searchText, selectedSubjectId]);
@@ -380,7 +415,11 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
         return;
       }
       const uniqueIds = Array.from(
-        new Set((data.boardSubjectIds || []).filter((id): id is number => typeof id === "number" && id > 0)),
+        new Set(
+          (data.boardSubjectIds || []).filter(
+            (id): id is number => typeof id === "number" && id > 0,
+          ),
+        ),
       );
       if (uniqueIds.length === 0) {
         toast.error("Please add at least one Board Subject");
@@ -394,10 +433,14 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
       const payload: BoardSubjectUnivSubjectMappingDto = {
         id: selected?.id ?? 0,
         subject: { id: data.subjectId } as unknown as BoardSubjectUnivSubjectMappingDto["subject"],
-        boardSubjects: uniqueIds.map((id) => ({ id }) as Partial<BoardSubjectDto> as BoardSubjectDto),
+        boardSubjects: uniqueIds.map(
+          (id) => ({ id }) as Partial<BoardSubjectDto> as BoardSubjectDto,
+        ),
       };
       // If editing or mapping already exists for this subject, perform update instead of create
-      const existingForSubject = rows.find((r) => (r.subject as { id?: number })?.id === data.subjectId);
+      const existingForSubject = rows.find(
+        (r) => (r.subject as { id?: number })?.id === data.subjectId,
+      );
       if (selected || existingForSubject) {
         const targetId = (selected?.id as number | undefined) ?? (existingForSubject?.id as number);
         const updated = await boardSubjectUnivSubjectMappingService.update(targetId, payload);
@@ -454,7 +497,9 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
 
   const subjectOptionsForDialog = React.useMemo(() => {
     const keepId = (selected?.subject as { id?: number })?.id;
-    return subjects.filter((s) => !mappedSubjectIdSet.has(s.id) || (typeof keepId === "number" && s.id === keepId));
+    return subjects.filter(
+      (s) => !mappedSubjectIdSet.has(s.id) || (typeof keepId === "number" && s.id === keepId),
+    );
   }, [subjects, mappedSubjectIdSet, selected]);
 
   return (
@@ -469,7 +514,10 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={onAdd} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
+                <Button
+                  onClick={onAdd}
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+                >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Add Mapping</span>
                   <span className="sm:hidden">Add</span>
@@ -477,7 +525,9 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
               </AlertDialogTrigger>
               <AlertDialogContent className="w-[95vw] sm:w-full max-w-6xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selected ? "Edit Mapping" : "Add New Mapping"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selected ? "Edit Mapping" : "Add New Mapping"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <MappingForm
                   initialData={selected}
@@ -571,8 +621,8 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
             </div>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground flex-shrink-0">
               <span className="hidden sm:inline">
-                Showing {(currentPageSafe - 1) * pageSize + 1} to {Math.min(currentPageSafe * pageSize, totalItems)} of{" "}
-                {totalItems} results
+                Showing {(currentPageSafe - 1) * pageSize + 1} to{" "}
+                {Math.min(currentPageSafe * pageSize, totalItems)} of {totalItems} results
               </span>
               <span className="sm:hidden">
                 {Math.min(currentPageSafe * pageSize, totalItems)} / {totalItems}
@@ -689,10 +739,14 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                   ) : (
                     paginatedRows.map((r, idx) => (
                       <TableRow key={`${r.mappingId}-${r.boardSubjectId}`} className="group">
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           {(currentPageSafe - 1) * pageSize + idx + 1}
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           <div
                             className="truncate"
                             title={`${r.subjectName}${r.subjectCode ? ` (${r.subjectCode})` : ""}`}
@@ -700,24 +754,35 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
                             <span className="text-sm">
                               {r.subjectName}
                               {r.subjectCode ? (
-                                <span className="text-muted-foreground ml-1">({r.subjectCode})</span>
+                                <span className="text-muted-foreground ml-1">
+                                  ({r.subjectCode})
+                                </span>
                               ) : null}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           <span className="text-sm truncate">{r.boardSubjectName}</span>
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           {r.boardCode ? (
-                            <Badge variant="outline" className="text-xs border-blue-500 text-blue-700 bg-blue-50">
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-blue-500 text-blue-700 bg-blue-50"
+                            >
                               {r.boardCode}
                             </Badge>
                           ) : (
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell
+                          style={{ padding: "12px 8px", borderRight: "1px solid #e5e7eb" }}
+                        >
                           {r.isActive ? (
                             <Badge className="bg-green-500 text-white text-xs">Active</Badge>
                           ) : (
@@ -755,8 +820,8 @@ export default function BoardSubjectUnivSubjectMappingPaper() {
         <div className="mt-4 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
           <div className="text-xs sm:text-sm text-gray-600">
             <span className="hidden sm:inline">
-              Showing {(currentPageSafe - 1) * pageSize + 1} to {Math.min(currentPageSafe * pageSize, totalItems)} of{" "}
-              {totalItems} results
+              Showing {(currentPageSafe - 1) * pageSize + 1} to{" "}
+              {Math.min(currentPageSafe * pageSize, totalItems)} of {totalItems} results
             </span>
             <span className="sm:hidden">
               Page {currentPageSafe} of {totalPages} ({totalItems} total)

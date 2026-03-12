@@ -108,7 +108,9 @@ export default function Settings() {
                 <Boxes className="h-8 w-8 drop-shadow-xl text-white" />
               </motion.div>
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-white">{activeSetting!.label}</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-white">
+                  {activeSetting!.label}
+                </h2>
                 <p className="text-sm text-white/80 font-medium">
                   Customize your preferences and manage configurations effortlessly.
                 </p>
@@ -129,7 +131,10 @@ export default function Settings() {
 
         {/* Right Section: Replace with ResourceNavigationSidebar */}
         <div className="flex flex-col items-stretch">
-          <ResourceSidebar activeSection={activeResourceSection} onSectionChange={handleResourceSectionChange} />
+          <ResourceSidebar
+            activeSection={activeResourceSection}
+            onSectionChange={handleResourceSectionChange}
+          />
         </div>
       </div>
     </div>

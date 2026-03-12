@@ -13,7 +13,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { getAllExamTypes, createExamType, updateExamType, deleteExamType } from "@/services/exam-type.service";
+import {
+  getAllExamTypes,
+  createExamType,
+  updateExamType,
+  deleteExamType,
+} from "@/services/exam-type.service";
 import type { ExamTypeT } from "@repo/db/schemas/models/exams";
 
 type ExamTypeFormValues = Pick<ExamTypeT, "name" | "shortName" | "isActive" | "foilNumberRequired">;
@@ -25,11 +30,18 @@ type ExamTypeFormProps = {
   isSubmitting?: boolean;
 };
 
-function ExamTypeForm({ initialData, onSubmit, onCancel, isSubmitting = false }: ExamTypeFormProps) {
+function ExamTypeForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  isSubmitting = false,
+}: ExamTypeFormProps) {
   const [name, setName] = useState(initialData?.name ?? "");
   const [shortName, setShortName] = useState(initialData?.shortName ?? "");
   const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
-  const [foilNumberRequired, setFoilNumberRequired] = useState(initialData?.foilNumberRequired ?? false);
+  const [foilNumberRequired, setFoilNumberRequired] = useState(
+    initialData?.foilNumberRequired ?? false,
+  );
 
   useEffect(() => {
     if (initialData) {
@@ -283,7 +295,9 @@ export default function TestTypePage() {
               </AlertDialogTrigger>
               <AlertDialogContent className="max-w-xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedExamType ? "Edit Exam Type" : "Add Exam Type"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedExamType ? "Edit Exam Type" : "Add Exam Type"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <ExamTypeForm
                   initialData={selectedExamType ?? undefined}
@@ -306,7 +320,10 @@ export default function TestTypePage() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2 border-slate-200 shadow-none">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 border-slate-200 shadow-none"
+            >
               <Download className="h-4 w-4" />
               Export List
             </Button>
@@ -319,17 +336,28 @@ export default function TestTypePage() {
                   <tr className="text-xs font-semibold uppercase text-slate-600 border-b border-slate-300">
                     <th className="w-[6%] px-3 py-2 border-r border-slate-300 text-center">#</th>
                     <th className="w-[26%] px-3 py-2 border-r border-slate-300 text-left">Name</th>
-                    <th className="w-[16%] px-3 py-2 border-r border-slate-300 text-left">Short Name</th>
-                    <th className="w-[14%] px-3 py-2 border-r border-slate-300 text-center">Foil Number Required</th>
-                    <th className="w-[16%] px-3 py-2 border-r border-slate-300 text-left">Updated On</th>
-                    <th className="w-[10%] px-3 py-2 border-r border-slate-300 text-center">Status</th>
+                    <th className="w-[16%] px-3 py-2 border-r border-slate-300 text-left">
+                      Short Name
+                    </th>
+                    <th className="w-[14%] px-3 py-2 border-r border-slate-300 text-center">
+                      Foil Number Required
+                    </th>
+                    <th className="w-[16%] px-3 py-2 border-r border-slate-300 text-left">
+                      Updated On
+                    </th>
+                    <th className="w-[10%] px-3 py-2 border-r border-slate-300 text-center">
+                      Status
+                    </th>
                     <th className="w-[12%] px-3 py-2 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
+                      <td
+                        colSpan={7}
+                        className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200"
+                      >
                         <div className="flex items-center justify-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Loading exam types...
@@ -338,7 +366,10 @@ export default function TestTypePage() {
                     </tr>
                   ) : filteredExamTypes.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200">
+                      <td
+                        colSpan={7}
+                        className="px-3 py-8 text-center text-muted-foreground border-b border-slate-200"
+                      >
                         No exam types match your search.
                       </td>
                     </tr>
@@ -348,13 +379,20 @@ export default function TestTypePage() {
                         key={examType.id ?? `${examType.name}-${index}`}
                         className="border-b border-slate-200 hover:bg-muted/40 transition-colors"
                       >
-                        <td className="px-3 py-3 border-r border-slate-200 text-center">{index + 1}</td>
+                        <td className="px-3 py-3 border-r border-slate-200 text-center">
+                          {index + 1}
+                        </td>
                         <td className="px-3 py-3 border-r border-slate-200">
                           <div className="flex flex-col min-w-0">
-                            <span className="font-medium text-slate-800 truncate" title={examType.name ?? undefined}>
+                            <span
+                              className="font-medium text-slate-800 truncate"
+                              title={examType.name ?? undefined}
+                            >
                               {examType.name}
                             </span>
-                            <span className="text-xs text-muted-foreground">ID: {examType.id ?? "—"}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ID: {examType.id ?? "—"}
+                            </span>
                           </div>
                         </td>
                         <td className="px-3 py-3 border-r border-slate-200">
@@ -377,7 +415,9 @@ export default function TestTypePage() {
                         <td className="px-3 py-3 border-r border-slate-200 text-center">
                           <span
                             className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                              examType.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                              examType.isActive
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
                             }`}
                           >
                             {examType.isActive ? "Active" : "Inactive"}

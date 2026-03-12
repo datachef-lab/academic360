@@ -21,7 +21,6 @@
 //             fsb.specialitytypename,
 //             fsb.installmenttypename
 
-
 //         FROM
 //             feesstructuremaintab fsm,
 //             studentinstlmain si,
@@ -41,13 +40,6 @@
 //             AND fsm.courseId = crs.id
 //             AND sess.id = fsm.sessionid
 //         ;`;
-
-
-
-
-
-
-
 
 //         const feesStructure = await query(sqlQuery) as [];
 //     // console.log("exams", exams);

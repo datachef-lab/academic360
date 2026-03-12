@@ -9,9 +9,8 @@ export const Testimonials = () => {
           What Educators and Students Are Saying About Us
         </h2>
         <p className="max-w-2xl py-4 text-lg leading-normal text-gray-500 lg:text-xl xl:text-xl dark:text-gray-300">
-          Testimonials showcase how our student management app has transformed
-          education. Use this section to highlight the experiences of educators,
-          administrators, and students.
+          Testimonials showcase how our student management app has transformed education. Use this
+          section to highlight the experiences of educators, administrators, and students.
         </p>
       </div>
       <div className=" p-6 mx-auto mb-10 xl:px-0">
@@ -19,10 +18,9 @@ export const Testimonials = () => {
           <div className="lg:col-span-2 xl:col-auto">
             <div className="flex flex-col justify-between w-full h-full px-6 py-6 bg-gray-100 dark:bg-gray-800 md:px-14 rounded-2xl md:py-14 dark:bg-trueGray-800">
               <p className="text-2xl leading-normal dark:text-gray-300">
-                "The student management app has been a game-changer for our
-                institution. It has simplified attendance tracking, improved
-                communication between teachers and parents, and provided
-                real-time insights into student performance."
+                "The student management app has been a game-changer for our institution. It has
+                simplified attendance tracking, improved communication between teachers and parents,
+                and provided real-time insights into student performance."
               </p>
               <div className="flex items-center mt-8 space-x-3">
                 <div className="flex-shrink-0 overflow-hidden rounded-full w-14 h-14">
@@ -33,12 +31,8 @@ export const Testimonials = () => {
                   />
                 </div>
                 <div>
-                  <div className="text-lg font-medium text-gray-800">
-                    Sarah Steiner
-                  </div>
-                  <div className="text-gray-600 dark:text-gray-800">
-                    VP Sales at Google
-                  </div>
+                  <div className="text-lg font-medium text-gray-800">Sarah Steiner</div>
+                  <div className="text-gray-600 dark:text-gray-800">VP Sales at Google</div>
                 </div>
               </div>
             </div>
@@ -46,10 +40,9 @@ export const Testimonials = () => {
           <div className="">
             <div className="flex flex-col justify-between w-full h-full px-6 py-6 bg-gray-100 dark:bg-gray-800 md:px-14 rounded-2xl md:py-14 dark:bg-trueGray-800">
               <p className="text-2xl leading-normal dark:text-gray-300">
-                "Managing student records and academic progress has never been
-                easier. The app's user-friendly interface and robust features
-                have streamlined our administrative tasks, allowing us to focus
-                more on improving the learning experience."
+                "Managing student records and academic progress has never been easier. The app's
+                user-friendly interface and robust features have streamlined our administrative
+                tasks, allowing us to focus more on improving the learning experience."
               </p>
               <div className="flex items-center mt-8 space-x-3">
                 <div className="flex-shrink-0 overflow-hidden rounded-full w-14 h-14">
@@ -60,12 +53,8 @@ export const Testimonials = () => {
                   />
                 </div>
                 <div>
-                  <div className="text-lg font-medium text-gray-800">
-                    Dylan Ambrose
-                  </div>
-                  <div className="text-gray-600 dark:text-gray-800">
-                    Lead marketer at Netflix{" "}
-                  </div>
+                  <div className="text-lg font-medium text-gray-800">Dylan Ambrose</div>
+                  <div className="text-gray-600 dark:text-gray-800">Lead marketer at Netflix </div>
                 </div>
               </div>
             </div>
@@ -73,10 +62,9 @@ export const Testimonials = () => {
           <div className="">
             <div className="flex flex-col justify-between w-full h-full px-6 py-6 bg-gray-100 dark:bg-gray-800 md:px-14 rounded-2xl md:py-14 dark:bg-trueGray-800">
               <p className="text-2xl leading-normal dark:text-gray-300">
-                "As a teacher, the student management app has made my life so
-                much easier. I can track attendance, update grades, and
-                communicate with parents seamlessly. It’s an indispensable tool
-                for modern education."
+                "As a teacher, the student management app has made my life so much easier. I can
+                track attendance, update grades, and communicate with parents seamlessly. It’s an
+                indispensable tool for modern education."
               </p>
               <div className="flex items-center mt-8 space-x-3">
                 <div className="flex-shrink-0 overflow-hidden rounded-full w-14 h-14">
@@ -87,12 +75,8 @@ export const Testimonials = () => {
                   />
                 </div>
                 <div>
-                  <div className="text-lg font-medium text-gray-800">
-                    Gabrielle Winn
-                  </div>
-                  <div className="text-gray-600 dark:text-gray-800">
-                    Co-founder of Acme Inc
-                  </div>
+                  <div className="text-lg font-medium text-gray-800">Gabrielle Winn</div>
+                  <div className="text-gray-600 dark:text-gray-800">Co-founder of Acme Inc</div>
                 </div>
               </div>
             </div>

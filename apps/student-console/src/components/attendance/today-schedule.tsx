@@ -76,24 +76,16 @@ export default function TodaySchedule() {
         </div>
         {/* Example: Total classes today: 3, Attended: 2, Breaks: 1 */}
         <div className="mt-6 text-sm text-gray-600 italic">
-          * This section displays your schedule for today. Dummy entries with
-          dynamic times are included for demonstration purposes.
+          * This section displays your schedule for today. Dummy entries with dynamic times are
+          included for demonstration purposes.
         </div>
 
-        <Button
-          className="mt-4 w-full"
-          variant="outline"
-          onClick={() => setIsTimetableOpen(true)}
-        >
+        <Button className="mt-4 w-full" variant="outline" onClick={() => setIsTimetableOpen(true)}>
           View Full Timetable
         </Button>
       </div>
 
-      <TimeTableDialog
-        open={isTimetableOpen}
-        setOpen={setIsTimetableOpen}
-        mockData={mockData}
-      />
+      <TimeTableDialog open={isTimetableOpen} setOpen={setIsTimetableOpen} mockData={mockData} />
     </>
   );
 }

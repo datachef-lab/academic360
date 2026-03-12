@@ -2,7 +2,11 @@ import { useEffect, useState, type FC } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { HealthDto } from "@repo/db/dtos/user";
 import type { BloodGroupDto } from "@repo/db/dtos/resources";
-import { getHealthDetailById, createHealthDetail, updateHealthDetail } from "@/services/health-details.service";
+import {
+  getHealthDetailById,
+  createHealthDetail,
+  updateHealthDetail,
+} from "@/services/health-details.service";
 import { getAllBloodGroups } from "@/services/blood-group.service";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -10,7 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Save, CheckCircle } from "lucide-react";
 
 export interface HealthDetailsProps {
@@ -279,7 +289,14 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null })
                   fill="none"
                   viewBox="0 0 24 24"
                 >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
                   <path
                     className="opacity-75"
                     fill="currentColor"

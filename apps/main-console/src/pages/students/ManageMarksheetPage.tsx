@@ -2,9 +2,5 @@
 import ManageMarksheetWrapper from "@/components/manage-marksheet/ManageMarksheetWrapper";
 
 export default function ManageMarksheetPage() {
-  return (
-    <ManageMarksheetWrapper>
-
-    </ManageMarksheetWrapper>
-  );
+  return <ManageMarksheetWrapper></ManageMarksheetWrapper>;
 }

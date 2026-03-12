@@ -26,10 +26,10 @@
 //         editData: undefined,
 //         editId: undefined,
 //       });
-    
+
 //       const [data, setData] = useState<SettingsRow[]>([]);
 //       const [dataLength, setDataLength] = useState<number>(0);
-    
+
 //       const [columns, setColumns] = useState<ColumnDef<unknown, unknown>[]>([]);
 //       const [pagination, setPagination] = useState<CustomPaginationState>({
 //         pageIndex: 0, // TanStack Table is 0-based
@@ -37,7 +37,7 @@
 //         totalElements: 0,
 //         totalPages: 1,
 //       });
-    
+
 //       useEffect(() => {
 //         setPagination({
 //           pageIndex: 0, // TanStack Table is 0-based
@@ -46,7 +46,7 @@
 //           totalPages: 1,
 //         });
 //       }, []);
-    
+
 //     //   const { isLoading: isFetchingDefault } = useQuery({
 //     //     queryKey: ["board-universities", { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
 //     //     queryFn: async () => {
@@ -58,10 +58,10 @@
 //     //       }, handleEditRow);
 //     //       console.log(data);
 //     //       setColumns(tableCol as ColumnDef<unknown, unknown>[]);
-    
+
 //     //       // Handle different response structures
 //     //       let content: SettingsRow[] = [], page: number, pageSize: number, totalElements: number, totalPages: number;
-          
+
 //     //       if (data.payload && Array.isArray(data.payload)) {
 //     //         // Direct array response (like categories)
 //     //         content = data.payload;
@@ -80,17 +80,17 @@
 //     //         totalElements = 0;
 //     //         totalPages = 1;
 //     //       }
-    
+
 //     //       setData(content as SettingsRow[]);
 //     //       setDataLength(content.length);
 //     //       console.log({ pageIndex: page, pageSize, totalElements, totalPages });
 //     //       setPagination((prev) => ({ ...prev, totalElements, totalPages }));
-    
+
 //     //       return content;
 //     //     },
 //     //     enabled: searchText.trim() == "",
 //     //   });
-    
+
 //       // Fetch the filtered data using React Query
 //       const { isFetching: isFetchingSearch, refetch } = useQuery({
 //         queryKey: ["users", pagination.pageIndex, pagination.pageSize, searchText, dataLength], // Query key with pagination and filter
@@ -101,24 +101,21 @@
 //               pagination.pageSize,
 //               searchText.trim().toLowerCase(),
 //             );
-    
+
 //             console.log("while searching:", data);
 //             const { content, page, totalElements, totalPages } = data.payload;
-    
+
 //             setPagination((prev) => ({ ...prev, pageIndex: page - 1, totalElements, totalPages }));
-    
+
 //             setData(content as SettingsRow[]);
-    
+
 //             setDataLength(content.length);
-    
+
 //             return content;
 //           }
 //         }, // Query function with page, pageSize, and search text
 //         enabled: false,
 //       });
-
-
-
 
 //   return (
 //     <div className="p-4">
@@ -183,11 +180,6 @@
 //   );
 // }
 
-
-
-
 export default function BoardUniversitiesPage() {
-  return (
-    <div>BoardUniversitiesPage</div>
-  )
+  return <div>BoardUniversitiesPage</div>;
 }

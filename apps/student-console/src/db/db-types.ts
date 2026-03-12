@@ -70,8 +70,8 @@ import {
   feesComponents,
   feesHeads,
   feesSlabMapping,
-  feesSlab
-} from './schema';
+  feesSlab,
+} from "./schema";
 import { z } from "zod";
 
 export const createDocumentSchema = createInsertSchema(documents);
@@ -98,7 +98,9 @@ export type Payment = z.infer<typeof createPaymentSchema>;
 export const createStudentAcademicSubjectSchema = createInsertSchema(studentAcademicSubjects);
 export type StudentAcademicSubject = z.infer<typeof createStudentAcademicSubjectSchema>;
 
-export const createAdmissionCourseApplicationSchema = createInsertSchema(admissionCourseApplications);
+export const createAdmissionCourseApplicationSchema = createInsertSchema(
+  admissionCourseApplications,
+);
 export type AdmissionCourseApplication = z.infer<typeof createAdmissionCourseApplicationSchema>;
 
 export const createAdmissionGeneralInfoSchema = createInsertSchema(admissionGeneralInfo);
@@ -158,7 +160,7 @@ export type State = z.infer<typeof createStateSchema>;
 export const createCourseSchema = createInsertSchema(courses);
 export type Course = z.infer<typeof createCourseSchema>;
 
-export const createDepartmentSchema = createInsertSchema(departments)
+export const createDepartmentSchema = createInsertSchema(departments);
 export type Department = z.infer<typeof createDepartmentSchema>;
 
 export const createAppSchema = createInsertSchema(apps);

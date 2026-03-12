@@ -54,7 +54,8 @@ type StudentInput = Student | StudentDto | StudentSearchItem;
 
 export function formattedStudent(content: StudentInput[]) {
   const formattedArr: StudentSearchType[] = [];
-  const profileBaseUrl = import.meta.env.VITE_STUDENT_PROFILE_URL || "https://74.207.233.48:8443/hrclIRP/studentimages";
+  const profileBaseUrl =
+    import.meta.env.VITE_STUDENT_PROFILE_URL || "https://74.207.233.48:8443/hrclIRP/studentimages";
 
   //console.log("Profile base URL being used:", profileBaseUrl);
 

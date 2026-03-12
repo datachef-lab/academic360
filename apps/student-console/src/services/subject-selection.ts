@@ -72,7 +72,9 @@ export interface SaveSelectionsResponse {
   errors?: Array<{ field: string; message: string }>;
 }
 
-export async function fetchStudentSubjectSelections(studentId: number): Promise<StudentSubjectSelectionApiResponse> {
+export async function fetchStudentSubjectSelections(
+  studentId: number,
+): Promise<StudentSubjectSelectionApiResponse> {
   const res = await api.get<ApiResponse<StudentSubjectSelectionApiResponse>>(
     `/api/subject-selection/students/${studentId}/selections`,
   );
@@ -104,7 +106,9 @@ export async function fetchCurrentActiveSelections(studentId: number) {
 
 // Fetch mandatory subjects for a student (non-optional papers for their academic year)
 export async function fetchMandatorySubjects(studentId: number) {
-  const res = await api.get<ApiResponse<any[]>>(`/api/subject-selection/students/${studentId}/mandatory-papers`);
+  const res = await api.get<ApiResponse<any[]>>(
+    `/api/subject-selection/students/${studentId}/mandatory-papers`,
+  );
   return res.data.payload;
 }
 

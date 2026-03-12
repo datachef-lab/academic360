@@ -42,7 +42,9 @@ export function NavUser() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton size="lg" className="flex items-center gap-2 p-2">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {initials}
+                </AvatarFallback>
               </Avatar>
               <div className="flex flex-col text-left">
                 <span className="text-sm font-semibold">{user?.name || "Student"}</span>

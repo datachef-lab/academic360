@@ -11,8 +11,7 @@ import { Person } from "@/types/user/person";
 
 interface FamilyDetailsFormProps {
   onSubmit: (data: Family) => void;
-  initialData?:  Partial<Family>;
-
+  initialData?: Partial<Family>;
 }
 
 const createPerson = (data: Partial<Person>): Person => ({
@@ -67,7 +66,7 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
       {/* Parents Section */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-800">Parents Information</h2>
-        
+
         {/* Father's Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
@@ -79,10 +78,15 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
               <Input
                 id="fatherName"
                 value={parentFormData.fatherDetails?.name || ""}
-                onChange={(e) => setParentFormData({
-                  ...parentFormData,
-                  fatherDetails: createPerson({ ...parentFormData.fatherDetails, name: e.target.value || null })
-                })}
+                onChange={(e) =>
+                  setParentFormData({
+                    ...parentFormData,
+                    fatherDetails: createPerson({
+                      ...parentFormData.fatherDetails,
+                      name: e.target.value || null,
+                    }),
+                  })
+                }
                 placeholder="Enter father's name"
                 required
                 className="pl-10"
@@ -100,10 +104,15 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
               <Input
                 id="fatherOccupation"
                 value={parentFormData.fatherDetails?.occupation?.name || ""}
-                onChange={(e) => setParentFormData({
-                  ...parentFormData,
-                  fatherDetails: createPerson({ ...parentFormData.fatherDetails, occupation: createOccupation(e.target.value) })
-                })}
+                onChange={(e) =>
+                  setParentFormData({
+                    ...parentFormData,
+                    fatherDetails: createPerson({
+                      ...parentFormData.fatherDetails,
+                      occupation: createOccupation(e.target.value),
+                    }),
+                  })
+                }
                 placeholder="Enter occupation"
                 className="pl-10"
               />
@@ -120,10 +129,15 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
               <Input
                 id="fatherContact"
                 value={parentFormData.fatherDetails?.phone || ""}
-                onChange={(e) => setParentFormData({
-                  ...parentFormData,
-                  fatherDetails: createPerson({ ...parentFormData.fatherDetails, phone: e.target.value || null })
-                })}
+                onChange={(e) =>
+                  setParentFormData({
+                    ...parentFormData,
+                    fatherDetails: createPerson({
+                      ...parentFormData.fatherDetails,
+                      phone: e.target.value || null,
+                    }),
+                  })
+                }
                 placeholder="Enter contact number"
                 type="tel"
                 className="pl-10"
@@ -141,10 +155,15 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
               <Input
                 id="fatherEmail"
                 value={parentFormData.fatherDetails?.email || ""}
-                onChange={(e) => setParentFormData({
-                  ...parentFormData,
-                  fatherDetails: createPerson({ ...parentFormData.fatherDetails, email: e.target.value || null })
-                })}
+                onChange={(e) =>
+                  setParentFormData({
+                    ...parentFormData,
+                    fatherDetails: createPerson({
+                      ...parentFormData.fatherDetails,
+                      email: e.target.value || null,
+                    }),
+                  })
+                }
                 placeholder="Enter email"
                 type="email"
                 className="pl-10"
@@ -165,10 +184,15 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
               <Input
                 id="motherName"
                 value={parentFormData.motherDetails?.name || ""}
-                onChange={(e) => setParentFormData({
-                  ...parentFormData,
-                  motherDetails: createPerson({ ...parentFormData.motherDetails, name: e.target.value || null })
-                })}
+                onChange={(e) =>
+                  setParentFormData({
+                    ...parentFormData,
+                    motherDetails: createPerson({
+                      ...parentFormData.motherDetails,
+                      name: e.target.value || null,
+                    }),
+                  })
+                }
                 placeholder="Enter mother's name"
                 required
                 className="pl-10"
@@ -186,10 +210,15 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
               <Input
                 id="motherOccupation"
                 value={parentFormData.motherDetails?.occupation?.name || ""}
-                onChange={(e) => setParentFormData({
-                  ...parentFormData,
-                  motherDetails: createPerson({ ...parentFormData.motherDetails, occupation: createOccupation(e.target.value) })
-                })}
+                onChange={(e) =>
+                  setParentFormData({
+                    ...parentFormData,
+                    motherDetails: createPerson({
+                      ...parentFormData.motherDetails,
+                      occupation: createOccupation(e.target.value),
+                    }),
+                  })
+                }
                 placeholder="Enter occupation"
                 className="pl-10"
               />
@@ -206,10 +235,15 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
               <Input
                 id="motherContact"
                 value={parentFormData.motherDetails?.phone || ""}
-                onChange={(e) => setParentFormData({
-                  ...parentFormData,
-                  motherDetails: createPerson({ ...parentFormData.motherDetails, phone: e.target.value || null })
-                })}
+                onChange={(e) =>
+                  setParentFormData({
+                    ...parentFormData,
+                    motherDetails: createPerson({
+                      ...parentFormData.motherDetails,
+                      phone: e.target.value || null,
+                    }),
+                  })
+                }
                 placeholder="Enter contact number"
                 type="tel"
                 className="pl-10"
@@ -227,10 +261,15 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
               <Input
                 id="motherEmail"
                 value={parentFormData.motherDetails?.email || ""}
-                onChange={(e) => setParentFormData({
-                  ...parentFormData,
-                  motherDetails: createPerson({ ...parentFormData.motherDetails, email: e.target.value || null })
-                })}
+                onChange={(e) =>
+                  setParentFormData({
+                    ...parentFormData,
+                    motherDetails: createPerson({
+                      ...parentFormData.motherDetails,
+                      email: e.target.value || null,
+                    }),
+                  })
+                }
                 placeholder="Enter email"
                 type="email"
                 className="pl-10"
@@ -251,10 +290,12 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
               <Input
                 id="annualIncome"
                 value={parentFormData.annualIncome?.range || ""}
-                onChange={(e) => setParentFormData({
-                  ...parentFormData,
-                  annualIncome: createAnnualIncome(e.target.value)
-                })}
+                onChange={(e) =>
+                  setParentFormData({
+                    ...parentFormData,
+                    annualIncome: createAnnualIncome(e.target.value),
+                  })
+                }
                 placeholder="Enter annual income range"
                 className="pl-10"
               />
@@ -286,4 +327,4 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
       </div>
     </div>
   );
-} 
+}

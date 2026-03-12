@@ -1,24 +1,19 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Qualification } from "@/types/resources/qualification.types";
-import { 
-  Award, 
-  Calendar,
-  Clock,
-  Edit,
-} from 'lucide-react';
+import { Award, Calendar, Clock, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export const qualificationColumns = (onEditRow?: (rowData: Qualification) => void): ColumnDef<Qualification>[] => [
+export const qualificationColumns = (
+  onEditRow?: (rowData: Qualification) => void,
+): ColumnDef<Qualification>[] => [
   {
     accessorKey: "id",
     header: "ID",
     cell: ({ row }) => {
       return (
         <div className="flex items-center">
-          <span className="font-mono text-sm text-gray-500">
-            #{row.getValue("id")}
-          </span>
+          <span className="font-mono text-sm text-gray-500">#{row.getValue("id")}</span>
         </div>
       );
     },
@@ -73,9 +68,7 @@ export const qualificationColumns = (onEditRow?: (rowData: Qualification) => voi
       return (
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-gray-400" />
-          <span className="text-sm text-gray-600">
-            {date.toLocaleDateString()}
-          </span>
+          <span className="text-sm text-gray-600">{date.toLocaleDateString()}</span>
         </div>
       );
     },
@@ -88,9 +81,7 @@ export const qualificationColumns = (onEditRow?: (rowData: Qualification) => voi
       return (
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-gray-400" />
-          <span className="text-sm text-gray-600">
-            {date.toLocaleDateString()}
-          </span>
+          <span className="text-sm text-gray-600">{date.toLocaleDateString()}</span>
         </div>
       );
     },
@@ -102,7 +93,12 @@ export const qualificationColumns = (onEditRow?: (rowData: Qualification) => voi
       const rowData = row.original;
       return (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEditRow && onEditRow(rowData)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => onEditRow && onEditRow(rowData)}
+          >
             <Edit className="h-4 w-4" />
             <span className="sr-only">Edit</span>
           </Button>

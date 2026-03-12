@@ -1,5 +1,5 @@
-import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import React from "react";
+import { AlertTriangle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { SubjectMetadata } from '@/types/academics/subject-metadata';
+import { SubjectMetadata } from "@/types/academics/subject-metadata";
 // import { Subject } from '@/services/subject-metadata';
 
 interface DeleteSubjectDialogProps {
@@ -51,12 +51,13 @@ const DeleteSubjectDialog: React.FC<DeleteSubjectDialogProps> = ({
               </div>
             )}
             <p className="mt-2 text-red-500">
-              This action cannot be undone and may affect student records that reference this subject.
+              This action cannot be undone and may affect student records that reference this
+              subject.
             </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel 
+          <AlertDialogCancel
             disabled={isDeleting}
             className="border-purple-300 text-purple-800 hover:bg-purple-100 hover:text-purple-900"
           >
@@ -75,4 +76,4 @@ const DeleteSubjectDialog: React.FC<DeleteSubjectDialogProps> = ({
   );
 };
 
-export default DeleteSubjectDialog; 
+export default DeleteSubjectDialog;

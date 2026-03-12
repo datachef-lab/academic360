@@ -2,21 +2,9 @@ import { Bell } from "lucide-react";
 import React, { useState } from "react";
 import NotificationSheet from "./NotificationSheet";
 
-export type NotificationType =
-  | "assignment"
-  | "quiz"
-  | "class"
-  | "exam"
-  | "feedback";
+export type NotificationType = "assignment" | "quiz" | "class" | "exam" | "feedback";
 
-export type NotificationColor =
-  | "blue"
-  | "emerald"
-  | "amber"
-  | "rose"
-  | "indigo"
-  | "violet"
-  | "red";
+export type NotificationColor = "blue" | "emerald" | "amber" | "rose" | "indigo" | "violet" | "red";
 
 export interface Notification {
   id: number;

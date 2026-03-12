@@ -40,10 +40,7 @@ export const columns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<Course>[]
   {
     accessorKey: "name",
     header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
+      <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
         Name
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>

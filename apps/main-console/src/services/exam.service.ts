@@ -142,7 +142,9 @@ export async function triggerExamAdmitCardByExamGroupId(
 }
 
 export async function fetchExamPapersStatsByExamId(id: number): Promise<ExamPapersWithStats[]> {
-  const response = await axiosInstance.get<ApiResponse<ExamPapersWithStats[]>>(`/api/exams/schedule/exam-papers/${id}`);
+  const response = await axiosInstance.get<ApiResponse<ExamPapersWithStats[]>>(
+    `/api/exams/schedule/exam-papers/${id}`,
+  );
   return response.data.payload;
 }
 
@@ -174,7 +176,8 @@ export async function fetchExamCandidatesByExamIdOrExamGroupId(
 
     const contentDisposition = response.headers["content-disposition"];
     let fileName =
-      preferredFileName || `exam_${id ?? examGroupId}-candidates-${new Date().toISOString().split("T")[0]}.xlsx`;
+      preferredFileName ||
+      `exam_${id ?? examGroupId}-candidates-${new Date().toISOString().split("T")[0]}.xlsx`;
 
     if (contentDisposition) {
       const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
@@ -227,7 +230,9 @@ export async function updateExamAdmitCardDates(
 }
 
 export async function deleteExamById(examId: number): Promise<{ examId: number }> {
-  const response = await axiosInstance.delete<ApiResponse<{ examId: number }>>(`/api/exams/schedule/${examId}`);
+  const response = await axiosInstance.delete<ApiResponse<{ examId: number }>>(
+    `/api/exams/schedule/${examId}`,
+  );
   return response.data.payload;
 }
 
@@ -250,7 +255,8 @@ export async function downloadAdmitCardTracking(
 
   const contentDisposition = response.headers["content-disposition"];
   let fileName =
-    preferredFileName || `exam_${examGroupId}-admit-card-tracking-${new Date().toISOString().split("T")[0]}.xlsx`;
+    preferredFileName ||
+    `exam_${examGroupId}-admit-card-tracking-${new Date().toISOString().split("T")[0]}.xlsx`;
 
   if (contentDisposition) {
     const fileNameMatch = contentDisposition.match(/filename="(.+)"/);

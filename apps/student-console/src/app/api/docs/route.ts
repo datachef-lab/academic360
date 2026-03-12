@@ -124,9 +124,18 @@ export async function GET(request: NextRequest) {
 
       // Set content disposition based on parameter (inline for preview, attachment for download)
       const contentDisposition =
-        disposition === "attachment" ? `attachment; filename="${filename}"` : `inline; filename="${filename}"`;
+        disposition === "attachment"
+          ? `attachment; filename="${filename}"`
+          : `inline; filename="${filename}"`;
 
-      console.log("Serving file:", filename, "Content-Type:", contentType, "Disposition:", disposition);
+      console.log(
+        "Serving file:",
+        filename,
+        "Content-Type:",
+        contentType,
+        "Disposition:",
+        disposition,
+      );
 
       // Create headers with additional settings for better PDF viewing
       const headers: HeadersInit = {
@@ -144,7 +153,8 @@ export async function GET(request: NextRequest) {
         headers["Cross-Origin-Resource-Policy"] = "cross-origin";
         headers["X-Frame-Options"] = "SAMEORIGIN";
         // Allow embedding in iframes from same origin
-        headers["Content-Security-Policy"] = "default-src 'self'; object-src 'self'; frame-ancestors 'self'";
+        headers["Content-Security-Policy"] =
+          "default-src 'self'; object-src 'self'; frame-ancestors 'self'";
         // Allow PDF.js to render the PDF as well
         headers["Access-Control-Allow-Origin"] = "*";
       }

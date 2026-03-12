@@ -11,7 +11,9 @@ import styles from "./MaterLayout.module.css";
 export type LinkType = {
   title: string;
   url: string;
-  icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
+  icon: React.ForwardRefExoticComponent<
+    Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
+  >;
   isModal?: boolean;
 
   nestedLinks?: LinkType[];
@@ -56,7 +58,11 @@ export default function MasterLayout({
     <>
       {/* Sidebar Header */}
       <div className="border-b px-4 py-3 flex items-center justify-between bg-white shadow-sm">
-        {rightBarHeader !== undefined ? rightBarHeader : <span className="text-base font-semibold">Quick Links</span>}
+        {rightBarHeader !== undefined ? (
+          rightBarHeader
+        ) : (
+          <span className="text-base font-semibold">Quick Links</span>
+        )}
       </div>
       {/* Sidebar Content */}
       <div className="flex-1 overflow-y-auto">
@@ -82,7 +88,10 @@ export default function MasterLayout({
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <span className={cn("h-5 w-5")}> {link.icon && <link.icon className="h-5 w-5" />} </span>
+                      <span className={cn("h-5 w-5")}>
+                        {" "}
+                        {link.icon && <link.icon className="h-5 w-5" />}{" "}
+                      </span>
                       <span className="text-base">{link.title}</span>
                     </div>
                   </div>
@@ -214,7 +223,9 @@ export function NavItem({ href, icon, children, isActive, onNavigate }: NavItemP
           isActive ? "bg-purple-100 text-purple-700 shadow-sm" : "text-gray-700 hover:bg-gray-100",
         )}
       >
-        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-gray-500")}>{icon}</span>
+        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-gray-500")}>
+          {icon}
+        </span>
         <span className="text-sm">{children}</span>
       </Link>
     </li>

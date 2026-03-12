@@ -11,8 +11,14 @@ import {
   updateCuCorrectionRequest,
   type CuRegistrationCorrectionRequestDto,
 } from "@/services/cu-registration";
-import { getCuRegistrationDocuments, uploadCuRegistrationDocument } from "@/services/cu-registration-documents";
-import { fetchStudentSubjectSelections, fetchMandatorySubjects } from "@/services/subject-selection";
+import {
+  getCuRegistrationDocuments,
+  uploadCuRegistrationDocument,
+} from "@/services/cu-registration-documents";
+import {
+  fetchStudentSubjectSelections,
+  fetchMandatorySubjects,
+} from "@/services/subject-selection";
 import { fetchPersonalDetailsByStudentId } from "@/services/personal-details";
 import { fetchCities, fetchDistricts, type IdNameDto } from "@/services/resources";
 import { useProfile } from "@/hooks/use-profile";
@@ -68,7 +74,8 @@ export interface DocumentFile {
 export function useCuRegistrationForm(student: StudentDto | undefined) {
   const { profileInfo } = useProfile();
 
-  const [correctionRequest, setCorrectionRequest] = useState<CuRegistrationCorrectionRequestDto | null>(null);
+  const [correctionRequest, setCorrectionRequest] =
+    useState<CuRegistrationCorrectionRequestDto | null>(null);
   const [correctionRequestId, setCorrectionRequestId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,15 +126,31 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
   const [mailingDistricts, setMailingDistricts] = useState<IdNameDto[]>([]);
 
   const createInitialSubjects = () => ({
-    DSCC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    Minor: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    DSCC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
+    Minor: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
     IDC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     SEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     AEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    CVAC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    CVAC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
   });
 
-  const [subjectsData, setSubjectsData] = useState<Record<string, Record<string, string[]>>>(createInitialSubjects);
+  const [subjectsData, setSubjectsData] =
+    useState<Record<string, Record<string, string[]>>>(createInitialSubjects);
   const [mandatorySubjects, setMandatorySubjects] =
     useState<Record<string, Record<string, string[]>>>(createInitialSubjects);
   const [subjectsDeclared, setSubjectsDeclared] = useState(false);
@@ -198,14 +221,18 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
           name?: string;
           studentFamily?: { members?: { type: string; name?: string }[] };
         } | null;
-        if (profile?.name) setPersonalInfo((p) => ({ ...p, fullName: p.fullName || profile.name! }));
+        if (profile?.name)
+          setPersonalInfo((p) => ({ ...p, fullName: p.fullName || profile.name! }));
         const family = profile?.studentFamily?.members;
         const father = family?.find((m) => m.type === "FATHER");
         const mother = family?.find((m) => m.type === "MOTHER");
-        if (father?.name) setPersonalInfo((p) => ({ ...p, parentName: p.parentName || father.name! }));
-        else if (mother?.name) setPersonalInfo((p) => ({ ...p, parentName: p.parentName || mother.name! }));
+        if (father?.name)
+          setPersonalInfo((p) => ({ ...p, parentName: p.parentName || father.name! }));
+        else if (mother?.name)
+          setPersonalInfo((p) => ({ ...p, parentName: p.parentName || mother.name! }));
         const studentWithApaar = student as { apaarId?: string };
-        if (studentWithApaar?.apaarId) setPersonalInfo((p) => ({ ...p, apaarId: studentWithApaar.apaarId! }));
+        if (studentWithApaar?.apaarId)
+          setPersonalInfo((p) => ({ ...p, apaarId: studentWithApaar.apaarId! }));
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed");
       } finally {
@@ -219,13 +246,17 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
 
   useEffect(() => {
     if (!residentialAddress.city) return;
-    const cityId = cities.find((c) => c.name.trim().toLowerCase() === residentialAddress.city.trim().toLowerCase())?.id;
+    const cityId = cities.find(
+      (c) => c.name.trim().toLowerCase() === residentialAddress.city.trim().toLowerCase(),
+    )?.id;
     if (cityId) fetchDistricts({ cityId }).then((d) => setDistricts(d));
   }, [residentialAddress.city, cities]);
 
   useEffect(() => {
     if (!mailingAddress.city) return;
-    const cityId = cities.find((c) => c.name.trim().toLowerCase() === mailingAddress.city.trim().toLowerCase())?.id;
+    const cityId = cities.find(
+      (c) => c.name.trim().toLowerCase() === mailingAddress.city.trim().toLowerCase(),
+    )?.id;
     if (cityId) fetchDistricts({ cityId }).then((d) => setMailingDistricts(d));
   }, [mailingAddress.city, cities]);
 
@@ -243,7 +274,8 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
         fetchMandatorySubjects(student.id).catch(() => []),
       ]);
 
-      const programName = student?.programCourse?.name || student?.currentPromotion?.programCourse?.name || "";
+      const programName =
+        student?.programCourse?.name || student?.currentPromotion?.programCourse?.name || "";
       const normalizedName = programName
         .normalize("NFKD")
         .replace(/[^A-Za-z]/g, "")
@@ -262,8 +294,14 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
         const map: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6 };
         const nums: number[] = [];
         forClasses.forEach((c: unknown) => {
-          const obj = c as { name?: string; shortName?: string; class?: { name?: string; shortName?: string } };
-          const label = String(obj?.name || obj?.shortName || obj?.class?.name || obj?.class?.shortName || "");
+          const obj = c as {
+            name?: string;
+            shortName?: string;
+            class?: { name?: string; shortName?: string };
+          };
+          const label = String(
+            obj?.name || obj?.shortName || obj?.class?.name || obj?.class?.shortName || "",
+          );
           const roman = /\b(I|II|III|IV|V|VI)\b/i.exec(label);
           if (roman) {
             nums.push(map[roman[1].toUpperCase()]);
@@ -281,7 +319,11 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
         if (isBbaProgram && (/Core\s*Course/i.test(label) || /\bCC\b/i.test(label))) return "DSCC";
         if (/Minor/i.test(label)) return "Minor";
         if (isMdcProgramForDisplay) {
-          if (/Major Discipline Course/i.test(label) || /Multi Disciplinary Course/i.test(label) || /MDC/i.test(label))
+          if (
+            /Major Discipline Course/i.test(label) ||
+            /Multi Disciplinary Course/i.test(label) ||
+            /MDC/i.test(label)
+          )
             return "IDC";
           if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) return undefined;
         } else {
@@ -295,10 +337,12 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
       const next = createInitialSubjects();
       const mandatoryNext = createInitialSubjects();
 
-      const actualSelections = ((studentRows as { actualStudentSelections?: unknown[] })?.actualStudentSelections ||
-        []) as Record<string, unknown>[];
+      const actualSelections = ((studentRows as { actualStudentSelections?: unknown[] })
+        ?.actualStudentSelections || []) as Record<string, unknown>[];
       actualSelections.forEach((r) => {
-        const label = String(r?.metaLabel || (r?.subjectSelectionMeta as { label?: string })?.label || "");
+        const label = String(
+          r?.metaLabel || (r?.subjectSelectionMeta as { label?: string })?.label || "",
+        );
         const name = String(
           r?.subjectName ||
             (r?.subject as { name?: string; code?: string })?.name ||
@@ -319,14 +363,20 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
           if (semesters.length === 0 && /MDC\s*1/i.test(label)) semesters = [1];
           if (semesters.length === 0 && /MDC\s*2/i.test(label)) semesters = [2];
           if (semesters.length === 0 && /MDC\s*3/i.test(label)) semesters = [3];
-          if (semesters.length === 0 && /Major Discipline Course/i.test(label)) semesters = [1, 2, 3];
-          if (semesters.length === 0 && /Multi Disciplinary Course/i.test(label)) semesters = [1, 2, 3];
+          if (semesters.length === 0 && /Major Discipline Course/i.test(label))
+            semesters = [1, 2, 3];
+          if (semesters.length === 0 && /Multi Disciplinary Course/i.test(label))
+            semesters = [1, 2, 3];
         } else {
           if (semesters.length === 0 && /IDC\s*1/i.test(label)) semesters = [1];
           if (semesters.length === 0 && /IDC\s*2/i.test(label)) semesters = [2];
           if (semesters.length === 0 && /IDC\s*3/i.test(label)) semesters = [3];
         }
-        if (isBbaProgram && (/Core\s*Course/i.test(label) || /\bCC\b/i.test(label)) && semesters.length === 0)
+        if (
+          isBbaProgram &&
+          (/Core\s*Course/i.test(label) || /\bCC\b/i.test(label)) &&
+          semesters.length === 0
+        )
           semesters = [1, 2, 3, 4];
         if (semesters.length === 0 && /AEC/i.test(label)) semesters = [3, 4];
         if (semesters.length === 0 && /CVAC/i.test(label)) semesters = [2];
@@ -365,11 +415,23 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
         const semMatch = className.match(/\b(I|II|III|IV|1|2|3|4)\b/i);
         if (semMatch) {
           const sem = semMatch[1].toUpperCase();
-          const semMap: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, "1": 1, "2": 2, "3": 3, "4": 4 };
+          const semMap: Record<string, number> = {
+            I: 1,
+            II: 2,
+            III: 3,
+            IV: 4,
+            "1": 1,
+            "2": 2,
+            "3": 3,
+            "4": 4,
+          };
           semesters = [semMap[sem]];
         }
         if (semesters.length === 0) {
-          if (isBbaProgram && (/Core\s*Course/i.test(subjectTypeName) || /\bCC\b/i.test(subjectTypeName)))
+          if (
+            isBbaProgram &&
+            (/Core\s*Course/i.test(subjectTypeName) || /\bCC\b/i.test(subjectTypeName))
+          )
             semesters = [1, 2, 3, 4];
           if (/Minor\s*1/i.test(subjectTypeName)) semesters = [1, 2];
           else if (/Minor\s*2/i.test(subjectTypeName)) semesters = [3, 4];
@@ -437,14 +499,20 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
     const addresses = pd?.address || [];
     const resAddr = addresses.find((a) => a?.type === "RESIDENTIAL");
     const mailAddr = addresses.find((a) => a?.type === "MAILING");
-    const get = (p: string | undefined, o: string | undefined, f: string | undefined, d = "") => p || o || f || d;
+    const get = (p: string | undefined, o: string | undefined, f: string | undefined, d = "") =>
+      p || o || f || d;
     if (resAddr || mailAddr) {
       setResidentialAddress((prev) => ({
         ...prev,
-        addressLine: get(resAddr?.addressLine, mailAddr?.addressLine, prev.addressLine) || prev.addressLine,
+        addressLine:
+          get(resAddr?.addressLine, mailAddr?.addressLine, prev.addressLine) || prev.addressLine,
         city:
-          get(resAddr?.city?.name, resAddr?.otherCity, mailAddr?.city?.name || mailAddr?.otherCity, prev.city) ||
-          prev.city,
+          get(
+            resAddr?.city?.name,
+            resAddr?.otherCity,
+            mailAddr?.city?.name || mailAddr?.otherCity,
+            prev.city,
+          ) || prev.city,
         district:
           get(
             resAddr?.district?.name,
@@ -486,10 +554,15 @@ export function useCuRegistrationForm(student: StudentDto | undefined) {
     if (mailAddr || resAddr) {
       setMailingAddress((prev) => ({
         ...prev,
-        addressLine: get(mailAddr?.addressLine, resAddr?.addressLine, prev.addressLine) || prev.addressLine,
+        addressLine:
+          get(mailAddr?.addressLine, resAddr?.addressLine, prev.addressLine) || prev.addressLine,
         city:
-          get(mailAddr?.city?.name, mailAddr?.otherCity, resAddr?.city?.name || resAddr?.otherCity, prev.city) ||
-          prev.city,
+          get(
+            mailAddr?.city?.name,
+            mailAddr?.otherCity,
+            resAddr?.city?.name || resAddr?.otherCity,
+            prev.city,
+          ) || prev.city,
         district:
           get(
             mailAddr?.district?.name,

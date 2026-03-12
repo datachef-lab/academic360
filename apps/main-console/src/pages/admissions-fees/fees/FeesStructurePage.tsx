@@ -5,11 +5,22 @@ import FeeStructureMaster from "@/components/fees/FeeStructureMaster";
 import { FeeStructureDto, CreateFeeStructureDto } from "@repo/db/dtos/fees";
 // import { AcademicYear } from "@/types/academics/academic-year";
 import { updateFeeStructureByDto } from "@/services/fees-api";
-import { useFeesStructures, useAcademicYearsFromFeesStructures, useFeesHeads } from "@/hooks/useFees";
+import {
+  useFeesStructures,
+  useAcademicYearsFromFeesStructures,
+  useFeesHeads,
+} from "@/hooks/useFees";
 import { useFeesReceiptTypes } from "@/hooks/useFees";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +29,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 // import { FeesReceiptType } from "@/types/fees";
 import { Class } from "@/types/academics/class";
@@ -98,8 +115,10 @@ const FeesStructurePage: React.FC = () => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
-  const [selectedFeeStructureForEdit, setSelectedFeeStructureForEdit] = useState<FeeStructureDto | null>(null);
-  const [selectedConcessionSlabModal, setSelectedConcessionSlabModal] = useState<FeeStructureDto | null>(null);
+  const [selectedFeeStructureForEdit, setSelectedFeeStructureForEdit] =
+    useState<FeeStructureDto | null>(null);
+  const [selectedConcessionSlabModal, setSelectedConcessionSlabModal] =
+    useState<FeeStructureDto | null>(null);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
 
   // Filter state
@@ -205,19 +224,31 @@ const FeesStructurePage: React.FC = () => {
   useEffect(() => {
     if (!socket || !isConnected || (user?.type !== "ADMIN" && user?.type !== "STAFF")) return;
 
-    const handleFeeStructureCreated = (data: { feeStructureId: number; type: string; message: string }) => {
+    const handleFeeStructureCreated = (data: {
+      feeStructureId: number;
+      type: string;
+      message: string;
+    }) => {
       console.log("[Fees Structure Page] Fee structure created:", data);
       // Silently refresh UI without showing toast
       refetchFeesStructures();
     };
 
-    const handleFeeStructureUpdated = (data: { feeStructureId: number; type: string; message: string }) => {
+    const handleFeeStructureUpdated = (data: {
+      feeStructureId: number;
+      type: string;
+      message: string;
+    }) => {
       console.log("[Fees Structure Page] Fee structure updated:", data);
       // Silently refresh UI without showing toast
       refetchFeesStructures();
     };
 
-    const handleFeeStructureDeleted = (data: { feeStructureId: number; type: string; message: string }) => {
+    const handleFeeStructureDeleted = (data: {
+      feeStructureId: number;
+      type: string;
+      message: string;
+    }) => {
       console.log("[Fees Structure Page] Fee structure deleted:", data);
       // Silently refresh UI without showing toast
       refetchFeesStructures();
@@ -322,7 +353,10 @@ const FeesStructurePage: React.FC = () => {
                     <Select
                       value={localFilters.academicYearId?.toString() || "all"}
                       onValueChange={(value) =>
-                        setLocalFilters({ ...localFilters, academicYearId: value === "all" ? null : Number(value) })
+                        setLocalFilters({
+                          ...localFilters,
+                          academicYearId: value === "all" ? null : Number(value),
+                        })
                       }
                     >
                       <SelectTrigger id="academic-year">
@@ -345,7 +379,10 @@ const FeesStructurePage: React.FC = () => {
                     <Select
                       value={localFilters.receiptTypeId?.toString() || "all"}
                       onValueChange={(value) =>
-                        setLocalFilters({ ...localFilters, receiptTypeId: value === "all" ? null : Number(value) })
+                        setLocalFilters({
+                          ...localFilters,
+                          receiptTypeId: value === "all" ? null : Number(value),
+                        })
                       }
                     >
                       <SelectTrigger id="receipt-type">
@@ -368,7 +405,10 @@ const FeesStructurePage: React.FC = () => {
                     <Select
                       value={localFilters.classId?.toString() || "all"}
                       onValueChange={(value) =>
-                        setLocalFilters({ ...localFilters, classId: value === "all" ? null : Number(value) })
+                        setLocalFilters({
+                          ...localFilters,
+                          classId: value === "all" ? null : Number(value),
+                        })
                       }
                     >
                       <SelectTrigger id="class">
@@ -391,7 +431,10 @@ const FeesStructurePage: React.FC = () => {
                     <Select
                       value={localFilters.shiftId?.toString() || "all"}
                       onValueChange={(value) =>
-                        setLocalFilters({ ...localFilters, shiftId: value === "all" ? null : Number(value) })
+                        setLocalFilters({
+                          ...localFilters,
+                          shiftId: value === "all" ? null : Number(value),
+                        })
                       }
                     >
                       <SelectTrigger id="shift">
@@ -444,7 +487,8 @@ const FeesStructurePage: React.FC = () => {
                 variant="outline"
                 className="text-xs border-slate-300 text-slate-700 bg-slate-50 flex items-center gap-1"
               >
-                {academicYears.find((y) => y.id === filters.academicYearId)?.year || "Academic Year"}
+                {academicYears.find((y) => y.id === filters.academicYearId)?.year ||
+                  "Academic Year"}
                 <button
                   aria-label="Clear academic year filter"
                   className="ml-1 hover:text-slate-900"
@@ -462,7 +506,8 @@ const FeesStructurePage: React.FC = () => {
                 variant="outline"
                 className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50 flex items-center gap-1"
               >
-                {feesReceiptTypes.find((t) => t.id === filters.receiptTypeId)?.name || "Receipt Type"}
+                {feesReceiptTypes.find((t) => t.id === filters.receiptTypeId)?.name ||
+                  "Receipt Type"}
                 <button
                   aria-label="Clear receipt type filter"
                   className="ml-1 hover:text-indigo-900"
@@ -533,7 +578,10 @@ const FeesStructurePage: React.FC = () => {
                   // Get unique fee heads (since each fee head now has multiple components per slab)
                   const allFeeHeads = fs.components
                     .map((c) => c.feeHead)
-                    .filter((head): head is NonNullable<typeof head> => head !== null && head !== undefined);
+                    .filter(
+                      (head): head is NonNullable<typeof head> =>
+                        head !== null && head !== undefined,
+                    );
                   const uniqueFeeHeadMap = new Map();
                   allFeeHeads.forEach((head) => {
                     if (head.id && !uniqueFeeHeadMap.has(head.id)) {
@@ -541,13 +589,17 @@ const FeesStructurePage: React.FC = () => {
                     }
                   });
                   const feeHeads = Array.from(uniqueFeeHeadMap.values());
-                  const hasConcessionSlabs = fs.feeStructureSlabs && fs.feeStructureSlabs.length > 0;
+                  const hasConcessionSlabs =
+                    fs.feeStructureSlabs && fs.feeStructureSlabs.length > 0;
 
                   return (
                     <TableRow key={fs.id || Math.random()} className="border-b">
                       <TableCell className="border-r">
                         {programCourseName !== "-" ? (
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200">
+                          <Badge
+                            variant="secondary"
+                            className="bg-blue-100 text-blue-700 hover:bg-blue-200"
+                          >
                             {programCourseName}
                           </Badge>
                         ) : (
@@ -556,7 +608,10 @@ const FeesStructurePage: React.FC = () => {
                       </TableCell>
                       <TableCell className="border-r">
                         {shiftName !== "-" ? (
-                          <Badge variant="outline" className="border-orange-300 text-orange-700 bg-orange-50">
+                          <Badge
+                            variant="outline"
+                            className="border-orange-300 text-orange-700 bg-orange-50"
+                          >
                             {shiftName}
                           </Badge>
                         ) : (
@@ -618,8 +673,8 @@ const FeesStructurePage: React.FC = () => {
           <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-2 sm:px-0">
             <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
               <span className="hidden sm:inline">
-                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of{" "}
-                {totalItems} results
+                Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                {Math.min(currentPage * pageSize, totalItems)} of {totalItems} results
               </span>
               <span className="sm:hidden">
                 Page {currentPage} of {totalPages} ({totalItems} total)
@@ -784,7 +839,10 @@ const FeesStructurePage: React.FC = () => {
 
               if (selectedFeeStructureForEdit?.id) {
                 // Update existing fee structure
-                console.log("[FeesStructurePage] Updating fee structure:", selectedFeeStructureForEdit.id);
+                console.log(
+                  "[FeesStructurePage] Updating fee structure:",
+                  selectedFeeStructureForEdit.id,
+                );
                 await updateFeeStructureByDto(selectedFeeStructureForEdit.id, data);
                 // Show success toast for the initiator
                 toast.success("Fee structure updated successfully");
@@ -989,38 +1047,42 @@ const FeesStructurePage: React.FC = () => {
                             <TableHead className="w-[150px] border-r-2 border-gray-400 p-2 text-center text-base font-semibold whitespace-nowrap bg-yellow-50">
                               Allocation
                             </TableHead>
-                            {selectedConcessionSlabModal.feeStructureSlabs.map((slabMapping, slabIndex) => {
-                              const slab = slabMapping.feeConcessionSlab;
-                              const concessionRate = slabMapping.concessionRate || 0;
-                              return (
-                                <TableHead
-                                  key={slabMapping.id || slabIndex}
-                                  className={`w-[150px] p-2 text-center text-base font-semibold whitespace-nowrap ${
-                                    slabIndex < selectedConcessionSlabModal.feeStructureSlabs.length - 1
-                                      ? "border-r-2 border-gray-400"
-                                      : ""
-                                  }`}
-                                  style={{
-                                    backgroundColor:
-                                      slabIndex % 4 === 0
-                                        ? "#fef3c7" // yellow-100
-                                        : slabIndex % 4 === 1
-                                          ? "#fce7f3" // pink-100
-                                          : slabIndex % 4 === 2
-                                            ? "#dbeafe" // blue-100
-                                            : "#e0e7ff", // indigo-100
-                                  }}
-                                >
-                                  {slab?.name || "-"} ({concessionRate}%)
-                                </TableHead>
-                              );
-                            })}
+                            {selectedConcessionSlabModal.feeStructureSlabs.map(
+                              (slabMapping, slabIndex) => {
+                                const slab = slabMapping.feeConcessionSlab;
+                                const concessionRate = slabMapping.concessionRate || 0;
+                                return (
+                                  <TableHead
+                                    key={slabMapping.id || slabIndex}
+                                    className={`w-[150px] p-2 text-center text-base font-semibold whitespace-nowrap ${
+                                      slabIndex <
+                                      selectedConcessionSlabModal.feeStructureSlabs.length - 1
+                                        ? "border-r-2 border-gray-400"
+                                        : ""
+                                    }`}
+                                    style={{
+                                      backgroundColor:
+                                        slabIndex % 4 === 0
+                                          ? "#fef3c7" // yellow-100
+                                          : slabIndex % 4 === 1
+                                            ? "#fce7f3" // pink-100
+                                            : slabIndex % 4 === 2
+                                              ? "#dbeafe" // blue-100
+                                              : "#e0e7ff", // indigo-100
+                                    }}
+                                  >
+                                    {slab?.name || "-"} ({concessionRate}%)
+                                  </TableHead>
+                                );
+                              },
+                            )}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {selectedConcessionSlabModal.components.map((component, index) => {
                             const componentAmount = Math.round(
-                              ((selectedConcessionSlabModal.baseAmount || 0) * (component.feeHeadPercentage || 0)) /
+                              ((selectedConcessionSlabModal.baseAmount || 0) *
+                                (component.feeHeadPercentage || 0)) /
                                 100,
                             );
                             return (
@@ -1036,39 +1098,46 @@ const FeesStructurePage: React.FC = () => {
                                 </TableCell>
                                 <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-green-50">
                                   {component.feeHead?.name || "-"}{" "}
-                                  <span className="text-red-600">({component.feeHeadPercentage || 0}%)</span>
+                                  <span className="text-red-600">
+                                    ({component.feeHeadPercentage || 0}%)
+                                  </span>
                                 </TableCell>
                                 <TableCell className="text-center border-r-2 border-gray-400 p-2 font-semibold bg-yellow-50">
                                   ₹{componentAmount.toLocaleString()}
                                 </TableCell>
-                                {selectedConcessionSlabModal.feeStructureSlabs.map((slabMapping, slabIndex) => {
-                                  const concessionRate = slabMapping.concessionRate || 0;
-                                  // Calculate concession amount for this component with this slab
-                                  const concessionAmount = Math.round((componentAmount * concessionRate) / 100);
-                                  const totalAfterConcession = componentAmount - concessionAmount;
-                                  const isLastColumn =
-                                    slabIndex === selectedConcessionSlabModal.feeStructureSlabs.length - 1;
-                                  return (
-                                    <TableCell
-                                      key={slabMapping.id || slabIndex}
-                                      className={`text-center p-2 font-semibold ${
-                                        !isLastColumn ? "border-r-2 border-gray-400" : ""
-                                      }`}
-                                      style={{
-                                        backgroundColor:
-                                          slabIndex % 4 === 0
-                                            ? "#fef3c7" // yellow-100
-                                            : slabIndex % 4 === 1
-                                              ? "#fce7f3" // pink-100
-                                              : slabIndex % 4 === 2
-                                                ? "#dbeafe" // blue-100
-                                                : "#e0e7ff", // indigo-100
-                                      }}
-                                    >
-                                      ₹{totalAfterConcession.toLocaleString()}
-                                    </TableCell>
-                                  );
-                                })}
+                                {selectedConcessionSlabModal.feeStructureSlabs.map(
+                                  (slabMapping, slabIndex) => {
+                                    const concessionRate = slabMapping.concessionRate || 0;
+                                    // Calculate concession amount for this component with this slab
+                                    const concessionAmount = Math.round(
+                                      (componentAmount * concessionRate) / 100,
+                                    );
+                                    const totalAfterConcession = componentAmount - concessionAmount;
+                                    const isLastColumn =
+                                      slabIndex ===
+                                      selectedConcessionSlabModal.feeStructureSlabs.length - 1;
+                                    return (
+                                      <TableCell
+                                        key={slabMapping.id || slabIndex}
+                                        className={`text-center p-2 font-semibold ${
+                                          !isLastColumn ? "border-r-2 border-gray-400" : ""
+                                        }`}
+                                        style={{
+                                          backgroundColor:
+                                            slabIndex % 4 === 0
+                                              ? "#fef3c7" // yellow-100
+                                              : slabIndex % 4 === 1
+                                                ? "#fce7f3" // pink-100
+                                                : slabIndex % 4 === 2
+                                                  ? "#dbeafe" // blue-100
+                                                  : "#e0e7ff", // indigo-100
+                                        }}
+                                      >
+                                        ₹{totalAfterConcession.toLocaleString()}
+                                      </TableCell>
+                                    );
+                                  },
+                                )}
                               </TableRow>
                             );
                           })}
@@ -1083,41 +1152,50 @@ const FeesStructurePage: React.FC = () => {
                             <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-yellow-50">
                               ₹{selectedConcessionSlabModal.baseAmount.toLocaleString()}
                             </TableCell>
-                            {selectedConcessionSlabModal.feeStructureSlabs.map((slabMapping, slabIndex) => {
-                              const concessionRate = slabMapping.concessionRate || 0;
-                              // Calculate total for this slab column (sum of all components after concession)
-                              const columnTotal = selectedConcessionSlabModal.components.reduce((sum, component) => {
-                                const componentAmount = Math.round(
-                                  ((selectedConcessionSlabModal.baseAmount || 0) * (component.feeHeadPercentage || 0)) /
-                                    100,
+                            {selectedConcessionSlabModal.feeStructureSlabs.map(
+                              (slabMapping, slabIndex) => {
+                                const concessionRate = slabMapping.concessionRate || 0;
+                                // Calculate total for this slab column (sum of all components after concession)
+                                const columnTotal = selectedConcessionSlabModal.components.reduce(
+                                  (sum, component) => {
+                                    const componentAmount = Math.round(
+                                      ((selectedConcessionSlabModal.baseAmount || 0) *
+                                        (component.feeHeadPercentage || 0)) /
+                                        100,
+                                    );
+                                    const concessionAmount = Math.round(
+                                      (componentAmount * concessionRate) / 100,
+                                    );
+                                    const totalAfterConcession = componentAmount - concessionAmount;
+                                    return sum + totalAfterConcession;
+                                  },
+                                  0,
                                 );
-                                const concessionAmount = Math.round((componentAmount * concessionRate) / 100);
-                                const totalAfterConcession = componentAmount - concessionAmount;
-                                return sum + totalAfterConcession;
-                              }, 0);
-                              const isLastColumn =
-                                slabIndex === selectedConcessionSlabModal.feeStructureSlabs.length - 1;
-                              return (
-                                <TableCell
-                                  key={slabMapping.id || slabIndex}
-                                  className={`text-center p-2 font-bold text-base ${
-                                    !isLastColumn ? "border-r-2 border-gray-400" : ""
-                                  }`}
-                                  style={{
-                                    backgroundColor:
-                                      slabIndex % 4 === 0
-                                        ? "#fef3c7" // yellow-100
-                                        : slabIndex % 4 === 1
-                                          ? "#fce7f3" // pink-100
-                                          : slabIndex % 4 === 2
-                                            ? "#dbeafe" // blue-100
-                                            : "#e0e7ff", // indigo-100
-                                  }}
-                                >
-                                  ₹{columnTotal.toLocaleString()}
-                                </TableCell>
-                              );
-                            })}
+                                const isLastColumn =
+                                  slabIndex ===
+                                  selectedConcessionSlabModal.feeStructureSlabs.length - 1;
+                                return (
+                                  <TableCell
+                                    key={slabMapping.id || slabIndex}
+                                    className={`text-center p-2 font-bold text-base ${
+                                      !isLastColumn ? "border-r-2 border-gray-400" : ""
+                                    }`}
+                                    style={{
+                                      backgroundColor:
+                                        slabIndex % 4 === 0
+                                          ? "#fef3c7" // yellow-100
+                                          : slabIndex % 4 === 1
+                                            ? "#fce7f3" // pink-100
+                                            : slabIndex % 4 === 2
+                                              ? "#dbeafe" // blue-100
+                                              : "#e0e7ff", // indigo-100
+                                    }}
+                                  >
+                                    ₹{columnTotal.toLocaleString()}
+                                  </TableCell>
+                                );
+                              },
+                            )}
                           </TableRow>
                         </TableBody>
                       </Table>
@@ -1129,12 +1207,12 @@ const FeesStructurePage: React.FC = () => {
                   <h4 className="text-base font-semibold text-gray-900 mb-3">Notes:</h4>
                   <ol className="list-decimal list-inside space-y-2.5 text-sm text-gray-800">
                     <li className="leading-relaxed">
-                      <span className="font-medium">No late fee charges will be applicable</span> as this fee structure
-                      is not configured with time-bound payment deadlines.
+                      <span className="font-medium">No late fee charges will be applicable</span> as
+                      this fee structure is not configured with time-bound payment deadlines.
                     </li>
                     <li className="leading-relaxed">
-                      <span className="font-medium">Full payment is required upfront</span> as no installment plan has
-                      been configured for this fee structure.
+                      <span className="font-medium">Full payment is required upfront</span> as no
+                      installment plan has been configured for this fee structure.
                     </li>
                   </ol>
                 </div>

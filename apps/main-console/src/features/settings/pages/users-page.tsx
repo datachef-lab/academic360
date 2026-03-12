@@ -28,7 +28,9 @@ export default function UsersPage() {
     findAdminsAndStaff(1, 100).then((list) => setUsers(list));
   }, []);
 
-  const handleAddUser = (newUserData: Omit<User, "id" | "createdAt" | "updatedAt" | "disabled">) => {
+  const handleAddUser = (
+    newUserData: Omit<User, "id" | "createdAt" | "updatedAt" | "disabled">,
+  ) => {
     const newUser: User = {
       ...newUserData,
       id: users.length + 1,
@@ -46,10 +48,12 @@ export default function UsersPage() {
 
   const filteredUsers = users.filter((u) => {
     const isActive = (u as { isActive?: boolean }).isActive !== false;
-    const sendStaging = (u as { sendStagingNotifications?: boolean }).sendStagingNotifications === true;
+    const sendStaging =
+      (u as { sendStagingNotifications?: boolean }).sendStagingNotifications === true;
     const statusOk = statusFilter === "ALL" || (statusFilter === "ACTIVE" ? isActive : !isActive);
     const typeOk = typeFilter === "ALL" || u.type === typeFilter;
-    const stagingOk = stagingFilter === "ALL" || (stagingFilter === "ENABLED" ? sendStaging : !sendStaging);
+    const stagingOk =
+      stagingFilter === "ALL" || (stagingFilter === "ENABLED" ? sendStaging : !sendStaging);
     const q = search.trim().toLowerCase();
     const matchesSearch =
       q.length === 0 ||
@@ -71,7 +75,9 @@ export default function UsersPage() {
               <LucideUser className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400" />
               Users
             </CardTitle>
-            <CardDescription className="text-sm sm:text-base">Manage users in your system.</CardDescription>
+            <CardDescription className="text-sm sm:text-base">
+              Manage users in your system.
+            </CardDescription>
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <button
@@ -226,12 +232,15 @@ export default function UsersPage() {
             {/* Body */}
             <div className="bg-white relative min-w-max">
               {paginatedUsers.length === 0 ? (
-                <div className="flex items-center justify-center p-6 text-slate-500 min-w-max">No users found.</div>
+                <div className="flex items-center justify-center p-6 text-slate-500 min-w-max">
+                  No users found.
+                </div>
               ) : (
                 paginatedUsers.map((user, idx) => {
                   const isActive = (user as { isActive?: boolean }).isActive !== false;
                   const sendStaging =
-                    (user as { sendStagingNotifications?: boolean }).sendStagingNotifications === true;
+                    (user as { sendStagingNotifications?: boolean }).sendStagingNotifications ===
+                    true;
                   const sr = (page - 1) * usersPerPage + idx + 1;
                   return (
                     <div key={user.id} className="flex border-b hover:bg-slate-50 group min-w-max">
@@ -247,14 +256,19 @@ export default function UsersPage() {
                       >
                         <UserAvatar
                           user={
-                            { name: (user as { name?: string }).name, image: (user as { image?: string }).image } as {
+                            {
+                              name: (user as { name?: string }).name,
+                              image: (user as { image?: string }).image,
+                            } as {
                               name?: string;
                               image?: string;
                             }
                           }
                           className=""
                         />
-                        <span className="text-slate-800 text-xs sm:text-sm truncate">{user.name}</span>
+                        <span className="text-slate-800 text-xs sm:text-sm truncate">
+                          {user.name}
+                        </span>
                       </div>
                       <div
                         className="flex-shrink-0 p-2 sm:p-3 border-r flex items-center text-slate-700 text-xs sm:text-sm truncate"
@@ -328,7 +342,11 @@ export default function UsersPage() {
                         className="flex-shrink-0 p-2 sm:p-3 flex items-center justify-center"
                         style={{ width: "60px", minWidth: "60px" }}
                       >
-                        <EditUserModal key={`user-${user.id}`} onUpdate={handleUpdateUser} user={user} />
+                        <EditUserModal
+                          key={`user-${user.id}`}
+                          onUpdate={handleUpdateUser}
+                          user={user}
+                        />
                       </div>
                     </div>
                   );
@@ -344,8 +362,9 @@ export default function UsersPage() {
         <div className="mt-4 p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
           <div className="text-xs sm:text-sm text-slate-600">
             <span className="hidden sm:inline">
-              Showing {(page - 1) * usersPerPage + 1} to {Math.min(page * usersPerPage, filteredUsers.length)} of{" "}
-              {filteredUsers.length} results
+              Showing {(page - 1) * usersPerPage + 1} to{" "}
+              {Math.min(page * usersPerPage, filteredUsers.length)} of {filteredUsers.length}{" "}
+              results
             </span>
             <span className="sm:hidden">
               Page {page} of {totalPages} ({filteredUsers.length} total)

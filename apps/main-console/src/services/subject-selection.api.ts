@@ -27,9 +27,9 @@ const BASE_SUB = "/api/subject-selection/related-subject-subs";
 export const subjectSelectionApi = {
   // Related Subject Main
   async listRelatedSubjectMains() {
-    const res = await api.get<ApiResponse<RelatedSubjectMainDto[] | { content: RelatedSubjectMainDto[] }>>(
-      `${BASE_MAIN}`,
-    );
+    const res = await api.get<
+      ApiResponse<RelatedSubjectMainDto[] | { content: RelatedSubjectMainDto[] }>
+    >(`${BASE_MAIN}`);
     const p = res.data.payload;
     return Array.isArray(p) ? p : (p?.content ?? []);
   },
@@ -40,7 +40,10 @@ export const subjectSelectionApi = {
     programCourse?: string;
     subjectType?: string;
   }) {
-    const res = await api.get<ApiResponse<PaginatedResponse<RelatedSubjectMainDto>>>(`${BASE_MAIN}`, { params });
+    const res = await api.get<ApiResponse<PaginatedResponse<RelatedSubjectMainDto>>>(
+      `${BASE_MAIN}`,
+      { params },
+    );
     return res.data.payload;
   },
   async getRelatedSubjectMain(id: number) {

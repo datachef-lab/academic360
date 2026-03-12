@@ -22,6 +22,8 @@ export async function updateDesignation(id: number, payload: DesignationPayload)
 }
 
 export async function deleteDesignation(id: number) {
-  const { data } = await axiosInstance.delete<ApiResponse<DesignationT | null>>(`${BASE_URL}/${id}`);
+  const { data } = await axiosInstance.delete<ApiResponse<DesignationT | null>>(
+    `${BASE_URL}/${id}`,
+  );
   return data;
 }

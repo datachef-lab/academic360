@@ -1,6 +1,9 @@
 import { axiosInstance as api } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api-response";
-import type { CuRegistrationCorrectionRequestDto, CuRegistrationDocumentUploadDto } from "@repo/db/dtos/admissions";
+import type {
+  CuRegistrationCorrectionRequestDto,
+  CuRegistrationDocumentUploadDto,
+} from "@repo/db/dtos/admissions";
 
 export interface CreateCuCorrectionPayload {
   studentId: number;
@@ -38,13 +41,17 @@ export async function getStudentCuCorrectionRequests(studentId: number) {
   console.info(`[CU-REG FRONTEND] Fetching correction requests for student: ${studentId}`);
   try {
     const res = await api.get<
-      ApiResponse<CuRegistrationCorrectionRequestDto[] | { content: CuRegistrationCorrectionRequestDto[] }>
+      ApiResponse<
+        CuRegistrationCorrectionRequestDto[] | { content: CuRegistrationCorrectionRequestDto[] }
+      >
     >(BASE, {
       params: { studentId },
     });
     console.info(`[CU-REG FRONTEND] Correction requests response:`, res.data);
     const p = res.data.payload as any;
-    const result = (Array.isArray(p) ? p : p?.content || p?.requests) as CuRegistrationCorrectionRequestDto[];
+    const result = (
+      Array.isArray(p) ? p : p?.content || p?.requests
+    ) as CuRegistrationCorrectionRequestDto[];
     console.info(`[CU-REG FRONTEND] Parsed correction requests:`, result);
     return result;
   } catch (error) {
@@ -65,16 +72,24 @@ export async function getCuCorrectionRequestById(id: number) {
   }
 }
 
-export async function updateCuCorrectionRequest(id: number, data: Partial<CreateCuCorrectionPayload>) {
+export async function updateCuCorrectionRequest(
+  id: number,
+  data: Partial<CreateCuCorrectionPayload>,
+) {
   console.info(`[CU-REG FRONTEND] Updating correction request ${id}:`, data);
-  const res = await api.put<ApiResponse<CuRegistrationCorrectionRequestDto>>(`${BASE}/${id}` as string, data);
+  const res = await api.put<ApiResponse<CuRegistrationCorrectionRequestDto>>(
+    `${BASE}/${id}` as string,
+    data,
+  );
   console.info(`[CU-REG FRONTEND] Correction request updated:`, res.data);
   return res.data.payload as CuRegistrationCorrectionRequestDto;
 }
 
 // Get next CU registration application number from backend helper
 export async function getNextCuRegistrationApplicationNumber() {
-  const res = await api.get<ApiResponse<{ number: string } | string>>(`${BASE}/next-application-number` as string);
+  const res = await api.get<ApiResponse<{ number: string } | string>>(
+    `${BASE}/next-application-number` as string,
+  );
   const p: any = res.data.payload;
   return typeof p === "string" ? p : p?.number;
 }
@@ -118,7 +133,10 @@ export async function submitCuRegistrationCorrectionRequestWithDocuments(data: {
     console.info(`[CU-REG FRONTEND] Batch submission response:`, res.data);
     return res.data; // return full ApiResponse to allow caller to check partial success
   } catch (error: any) {
-    console.error(`[CU-REG FRONTEND] Batch submission failed:`, error.response?.data || error.message);
+    console.error(
+      `[CU-REG FRONTEND] Batch submission failed:`,
+      error.response?.data || error.message,
+    );
     throw error;
   }
 }
@@ -165,7 +183,10 @@ export async function submitAddressInfoDeclaration(data: {
   }
 }
 
-export async function submitSubjectsDeclaration(data: { correctionRequestId: number; flags: Record<string, boolean> }) {
+export async function submitSubjectsDeclaration(data: {
+  correctionRequestId: number;
+  flags: Record<string, boolean>;
+}) {
   console.info(`[CU-REG FRONTEND] Submitting subjects declaration:`, data);
   try {
     const res = await api.post<

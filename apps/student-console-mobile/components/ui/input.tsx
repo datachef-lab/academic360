@@ -14,7 +14,15 @@ export function Input({ label, error, style, ...props }: InputProps) {
   return (
     <View>
       {label && (
-        <Text style={{ color: theme.text, fontSize: 14, fontWeight: "500", opacity: 0.9, marginBottom: 6 }}>
+        <Text
+          style={{
+            color: theme.text,
+            fontSize: 14,
+            fontWeight: "500",
+            opacity: 0.9,
+            marginBottom: 6,
+          }}
+        >
           {label}
         </Text>
       )}
@@ -25,7 +33,11 @@ export function Input({ label, error, style, ...props }: InputProps) {
             color: theme.text,
             borderColor: theme.border,
             backgroundColor:
-              props.editable === false ? (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)") : theme.background,
+              props.editable === false
+                ? isDark
+                  ? "rgba(255,255,255,0.05)"
+                  : "rgba(0,0,0,0.03)"
+                : theme.background,
             borderWidth: 1,
             borderRadius: 8,
             paddingHorizontal: 12,

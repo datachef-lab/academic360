@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Layers, Edit, Trash2, Download, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,7 +50,8 @@ const FeeHeadsPage: React.FC = () => {
     remarks: "",
   });
 
-  const { feesHeads, loading, addFeesHead, updateFeesHeadById, deleteFeesHeadById } = useFeesHeads();
+  const { feesHeads, loading, addFeesHead, updateFeesHeadById, deleteFeesHeadById } =
+    useFeesHeads();
 
   // Listen for fee head socket events (only for staff/admin)
   useEffect(() => {
@@ -137,7 +145,9 @@ const FeeHeadsPage: React.FC = () => {
     }
 
     // Duplicate name check
-    const duplicate = feesHeads?.find((h) => h.name.toLowerCase() === name.toLowerCase() && h.id !== editingItem?.id);
+    const duplicate = feesHeads?.find(
+      (h) => h.name.toLowerCase() === name.toLowerCase() && h.id !== editingItem?.id,
+    );
     if (duplicate) {
       toast.warning("Fee head with this name already exists");
       return;
@@ -157,7 +167,9 @@ const FeeHeadsPage: React.FC = () => {
         await addFeesHead(feesHeadData);
       }
       handleClose();
-      toast.success(editingItem ? "Fee head updated successfully" : "Fee head created successfully");
+      toast.success(
+        editingItem ? "Fee head updated successfully" : "Fee head created successfully",
+      );
     } catch (error) {
       console.error("Error saving fee head:", error);
       toast.error("Failed to save fee head");
@@ -261,7 +273,9 @@ const FeeHeadsPage: React.FC = () => {
               </AlertDialogTrigger>
               <AlertDialogContent className="sm:max-w-[700px]">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{editingItem ? "Edit Fee Head" : "Add New Fee Head"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {editingItem ? "Edit Fee Head" : "Add New Fee Head"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <div className="py-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -349,7 +363,11 @@ const FeeHeadsPage: React.FC = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
@@ -357,7 +375,9 @@ const FeeHeadsPage: React.FC = () => {
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto h-full">
               <Table className="border rounded-md" style={{ tableLayout: "fixed", width: "100%" }}>
-                <TableHeader style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}>
+                <TableHeader
+                  style={{ position: "sticky", top: 0, zIndex: 10, background: "#f3f4f6" }}
+                >
                   <TableRow>
                     <TableHead style={{ width: 60, whiteSpace: "nowrap" }}>Sr. No.</TableHead>
                     <TableHead style={{ width: 250 }}>Head Name</TableHead>
@@ -379,12 +399,19 @@ const FeeHeadsPage: React.FC = () => {
                       <TableRow key={row.id} className="group">
                         <TableCell style={{ width: 60 }}>{index + 1}</TableCell>
                         <TableCell style={{ width: 250 }}>{row.name}</TableCell>
-                        <TableCell style={{ width: 150 }}>{(row as any).defaultPercentage ?? 0}%</TableCell>
+                        <TableCell style={{ width: 150 }}>
+                          {(row as any).defaultPercentage ?? 0}%
+                        </TableCell>
                         <TableCell style={{ width: 120 }}>{row.sequence || "-"}</TableCell>
                         <TableCell style={{ width: 220 }}>{row.remarks || "-"}</TableCell>
                         <TableCell style={{ width: 140 }}>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(row)} className="h-5 w-5 p-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(row)}
+                              className="h-5 w-5 p-0"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button

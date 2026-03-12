@@ -1,7 +1,12 @@
 import { motion } from "framer-motion";
 import { Dispatch, SetStateAction, useState } from "react";
 
-const tabs = ["Academic (39)", "Administrative (17)", "Co-curricular/Sports/Cultural (13)", "Examination (5)"];
+const tabs = [
+  "Academic (39)",
+  "Administrative (17)",
+  "Co-curricular/Sports/Cultural (13)",
+  "Examination (5)",
+];
 
 const ChipTabs = () => {
   const [selected, setSelected] = useState(tabs[0]!);

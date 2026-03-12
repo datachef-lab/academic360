@@ -88,7 +88,10 @@ export const columns: ColumnDef<SportsCategory>[] = [
 
       return (
         <div className="flex justify-end gap-2">
-          <SportsCategoryDialog onSuccess={() => window.location.reload()} sportsCategory={sportsCategory}>
+          <SportsCategoryDialog
+            onSuccess={() => window.location.reload()}
+            sportsCategory={sportsCategory}
+          >
             <Button variant="ghost" size="icon">
               <Pencil className="h-4 w-4" />
             </Button>

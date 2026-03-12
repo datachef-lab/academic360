@@ -12,10 +12,9 @@ export const About = () => {
                 Empowering Education with a 360° Student Management Experience
               </p>
               <p className="mt-4 max-w-2xl text-lg text-gray-500 lg:mx-auto">
-                Our student management app offers a comprehensive solution that
-                covers everything from academic performance tracking to
-                communication with students and parents. We believe in making
-                education more accessible, organized, and efficient.
+                Our student management app offers a comprehensive solution that covers everything
+                from academic performance tracking to communication with students and parents. We
+                believe in making education more accessible, organized, and efficient.
               </p>
             </div>
 
@@ -31,9 +30,8 @@ export const About = () => {
                     </p>
                   </dt>
                   <dd className="mt-2 ml-16 text-base text-gray-500">
-                    Track students' academic performance, grades, assignments,
-                    and attendance in one unified platform. Make data-driven
-                    decisions to help students excel.
+                    Track students' academic performance, grades, assignments, and attendance in one
+                    unified platform. Make data-driven decisions to help students excel.
                   </dd>
                 </div>
                 <div className="relative">
@@ -46,9 +44,8 @@ export const About = () => {
                     </p>
                   </dt>
                   <dd className="mt-2 ml-16 text-base text-gray-500">
-                    Our app provides an easy-to-use communication channel for
-                    parents and teachers, ensuring everyone is on the same page
-                    when it comes to student progress.
+                    Our app provides an easy-to-use communication channel for parents and teachers,
+                    ensuring everyone is on the same page when it comes to student progress.
                   </dd>
                 </div>
                 <div className="relative">
@@ -61,10 +58,9 @@ export const About = () => {
                     </p>
                   </dt>
                   <dd className="mt-2 ml-16 text-base text-gray-500">
-                    Each student has a profile containing personal details,
-                    academic records, behavior logs, and extracurricular
-                    activities—empowering educators to address every aspect of a
-                    student’s growth.
+                    Each student has a profile containing personal details, academic records,
+                    behavior logs, and extracurricular activities—empowering educators to address
+                    every aspect of a student’s growth.
                   </dd>
                 </div>
                 <div className="relative">
@@ -77,9 +73,8 @@ export const About = () => {
                     </p>
                   </dt>
                   <dd className="mt-2 ml-16 text-base text-gray-500">
-                    Receive instant alerts about student performance, deadlines,
-                    school events, and updates. Stay informed with real-time
-                    notifications.
+                    Receive instant alerts about student performance, deadlines, school events, and
+                    updates. Stay informed with real-time notifications.
                   </dd>
                 </div>
               </dl>

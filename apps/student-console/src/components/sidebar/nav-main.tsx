@@ -47,7 +47,9 @@ export function NavMain({
   }, [items]);
 
   const toggleExpanded = (title: string) => {
-    setExpandedItems((prev) => (prev.includes(title) ? prev.filter((item) => item !== title) : [...prev, title]));
+    setExpandedItems((prev) =>
+      prev.includes(title) ? prev.filter((item) => item !== title) : [...prev, title],
+    );
   };
 
   return (

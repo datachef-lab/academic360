@@ -137,7 +137,11 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex flex-col md:flex-row items-stretch justify-center">
       {/* Left Illustration */}
       <div className="hidden md:block md:w-1/2 md:h-auto">
-        <img src="/reset-password.jpg" alt="Reset Password Illustration" className="w-full h-full object-cover" />
+        <img
+          src="/reset-password.jpg"
+          alt="Reset Password Illustration"
+          className="w-full h-full object-cover"
+        />
       </div>
 
       {/* Right Section (mirrors login) */}
@@ -155,7 +159,10 @@ export default function ResetPasswordPage() {
               </AvatarFallback>
             </Avatar>
             <div className="text-left">
-              <Badge variant="outline" className="text-sm font-bold text-blue-900 bg-blue-50 border-blue-200 mb-2">
+              <Badge
+                variant="outline"
+                className="text-sm font-bold text-blue-900 bg-blue-50 border-blue-200 mb-2"
+              >
                 {settings?.find((ele) => ele.name === "College Abbreviation")?.value}
               </Badge>
               <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
@@ -180,7 +187,9 @@ export default function ResetPasswordPage() {
                       <path d="M17.211 10.108a7.25 7.25 0 01-13.61 3.284l1.32-.758a5.75 5.75 0 101.14-6.41l1.14.65L3.5 8.75 2 3.75l1.75 1 .001-.001L7 7.25l-1.11.636a7.25 7.25 0 1111.321 2.222z" />
                     </svg>
                   </div>
-                  <span className="text-lg sm:text-2xl font-extrabold text-purple-600">Reset Password</span>
+                  <span className="text-lg sm:text-2xl font-extrabold text-purple-600">
+                    Reset Password
+                  </span>
                 </div>
               </CardTitle>
               <h3 className="font-extrabold text-center text-xl sm:text-2xl md:text-3xl text-gray-900">
@@ -304,7 +313,8 @@ export default function ResetPasswordPage() {
                       <div className="text-xs text-gray-500 text-center">
                         {otpRemaining > 0 ? (
                           <>
-                            Resend available in {String(Math.floor(otpRemaining / 60)).padStart(2, "0")}:
+                            Resend available in{" "}
+                            {String(Math.floor(otpRemaining / 60)).padStart(2, "0")}:
                             {String(otpRemaining % 60).padStart(2, "0")}
                           </>
                         ) : (
@@ -358,7 +368,10 @@ export default function ResetPasswordPage() {
                         </div>
                       </div>
                       <div>
-                        <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                        <label
+                          htmlFor="confirmPassword"
+                          className="text-sm font-medium text-gray-700"
+                        >
                           Confirm Password
                         </label>
                         <div className="relative mt-1">
@@ -405,7 +418,8 @@ export default function ResetPasswordPage() {
                           setSuccess(null);
                           try {
                             const res = await resetPasswordWithEmailOtp(email, otp, newPassword);
-                            if (res.success) setSuccess("Password has been reset. You may now sign in.");
+                            if (res.success)
+                              setSuccess("Password has been reset. You may now sign in.");
                             else setError(res.message || "Failed to reset password");
                           } catch {
                             setError("Failed to reset password");

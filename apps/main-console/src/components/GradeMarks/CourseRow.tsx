@@ -12,7 +12,12 @@ interface CourseRowProps {
   showActions?: boolean;
 }
 
-const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true }: CourseRowProps) => {
+const CourseRow = ({
+  course,
+  onCourseUpdate,
+  onCourseDelete,
+  showActions = true,
+}: CourseRowProps) => {
   const [components, setComponents] = useState<CourseComponent[]>(course.components);
   const [isNewCourse, setIsNewCourse] = useState(false);
 
@@ -21,38 +26,41 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true 
     setIsNewCourse(course.courseCode === "NEW");
   }, [course]);
 
-  const handleComponentChange = (componentId: string, field: keyof CourseComponent, value: string | number) => {
-    const updatedComponents = components.map(comp => {
+  const handleComponentChange = (
+    componentId: string,
+    field: keyof CourseComponent,
+    value: string | number,
+  ) => {
+    const updatedComponents = components.map((comp) => {
       if (comp.id === componentId) {
         return { ...comp, [field]: value };
       }
       return comp;
     });
-    
+
     setComponents(updatedComponents);
-    
+
     const updatedCourse = {
       ...course,
-      components: updatedComponents
+      components: updatedComponents,
     };
-    
+
     onCourseUpdate(updatedCourse);
   };
 
   const handleCourseChange = (field: keyof Course, value: string | number) => {
     const updatedCourse = {
       ...course,
-      [field]: value
+      [field]: value,
     };
-    
+
     onCourseUpdate(updatedCourse);
   };
 
-  
   const totalFullMarks = components.reduce((sum, comp) => sum + comp.fullMarks, 0);
   const totalMarksObtained = components.reduce((sum, comp) => sum + comp.marksObtained, 0);
   const totalCredit = components.reduce((sum, comp) => sum + comp.credit, 0);
-  
+
   const percentage = totalFullMarks > 0 ? (totalMarksObtained / totalFullMarks) * 100 : 0;
   const grade = calculateGrade(percentage);
   const status = calculateStatus(percentage);
@@ -64,7 +72,7 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true 
           {index === 0 && (
             <>
               <TableCell rowSpan={components.length + 1} className="border-r align-middle">
-                <EditableCell 
+                <EditableCell
                   value={`${course.courseCode} ${course.courseType}`}
                   onChange={(value) => {
                     const parts = String(value).split(" ");
@@ -78,7 +86,7 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true 
                 />
               </TableCell>
               <TableCell rowSpan={components.length + 1} className="border-r align-middle">
-                <EditableCell 
+                <EditableCell
                   value={course.courseName}
                   onChange={(value) => handleCourseChange("courseName", value)}
                   className="text-left"
@@ -88,21 +96,21 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true 
             </>
           )}
           <TableCell className="border-r">
-            <EditableCell 
+            <EditableCell
               value={course.year}
               onChange={(value) => handleCourseChange("year", value)}
               disabled={!isNewCourse}
             />
           </TableCell>
           <TableCell className="border-r">
-            <EditableCell 
+            <EditableCell
               value={component.componentType}
               onChange={(value) => handleComponentChange(component.id, "componentType", value)}
               disabled={!isNewCourse}
             />
           </TableCell>
           <TableCell className="border-r ">
-            <EditableCell 
+            <EditableCell
               value={component.fullMarks}
               onChange={(value) => handleComponentChange(component.id, "fullMarks", Number(value))}
               type="number"
@@ -110,16 +118,18 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true 
             />
           </TableCell>
           <TableCell className="border-r py-4 px-6">
-            <EditableCell 
+            <EditableCell
               value={component.marksObtained}
-              onChange={(value) => handleComponentChange(component.id, "marksObtained", Number(value))}
+              onChange={(value) =>
+                handleComponentChange(component.id, "marksObtained", Number(value))
+              }
               type="number"
               className=" border text-center rounded-md"
               max={component.fullMarks}
             />
           </TableCell>
           <TableCell className="border-r">
-            <EditableCell 
+            <EditableCell
               value={component.credit}
               onChange={(value) => handleComponentChange(component.id, "credit", Number(value))}
               type="number"
@@ -136,8 +146,8 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true 
               </TableCell>
               {showActions && (
                 <TableCell rowSpan={components.length + 1} className="align-middle">
-                  <DeleteCourseDialog 
-                    courseName={course.courseName} 
+                  <DeleteCourseDialog
+                    courseName={course.courseName}
                     onDelete={() => onCourseDelete(course.id)}
                     isNewCourse={isNewCourse}
                   />
@@ -150,7 +160,9 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true 
 
       {/* Total Row */}
       <TableRow className="bg-gray-100 border-b font-semibold">
-        <TableCell colSpan={2} className="border-r text-center">Total</TableCell>
+        <TableCell colSpan={2} className="border-r text-center">
+          Total
+        </TableCell>
         <TableCell className="border-r text-start">
           <div className="px-2 py-1">{totalFullMarks}</div>
         </TableCell>

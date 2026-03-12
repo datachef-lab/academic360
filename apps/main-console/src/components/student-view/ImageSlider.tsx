@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
-import img1 from '@/assets/img1.png';
-import img6 from '@/assets/img6.jpg';
-import img5 from '@/assets/img5.png';
+import img1 from "@/assets/img1.png";
+import img6 from "@/assets/img6.jpg";
+import img5 from "@/assets/img5.png";
 
 const ImageSlider: React.FC = () => {
   const images = [img1, img5, img6];
@@ -22,15 +22,11 @@ const ImageSlider: React.FC = () => {
       <motion.div
         className="flex"
         animate={{ x: `-${currentIndex * 100}%` }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
       >
         {images.map((image, index) => (
           <div key={index} className="w-full flex-shrink-0">
-            <img
-              src={image}
-              alt={`Slide ${index + 1}`}
-              className="w-full h-full object-cover"
-            />
+            <img src={image} alt={`Slide ${index + 1}`} className="w-full h-full object-cover" />
           </div>
         ))}
       </motion.div>
@@ -39,7 +35,7 @@ const ImageSlider: React.FC = () => {
           <div
             key={index}
             className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              index === currentIndex ? 'bg-blue-500' : 'bg-gray-300'
+              index === currentIndex ? "bg-blue-500" : "bg-gray-300"
             }`}
           ></div>
         ))}

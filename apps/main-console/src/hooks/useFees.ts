@@ -73,7 +73,12 @@ import {
   CreateFeesStructureDto,
 } from "@/types/fees";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
-import { CreateFeeStructureDto, FeeStructureDto, FeeCategoryDto, FeeGroupDto } from "@repo/db/dtos/fees";
+import {
+  CreateFeeStructureDto,
+  FeeStructureDto,
+  FeeCategoryDto,
+  FeeGroupDto,
+} from "@repo/db/dtos/fees";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Course } from "@/types/course-design";
 import {
@@ -244,7 +249,10 @@ export const useCoursesFromFeesStructures = (academicYearId: number | null) => {
   return { courses, loading };
 };
 
-export const useFeesStructuresByAcademicYearAndCourse = (academicYearId: number | null, courseId: number | null) => {
+export const useFeesStructuresByAcademicYearAndCourse = (
+  academicYearId: number | null,
+  courseId: number | null,
+) => {
   const [feesStructures, setFeesStructures] = useState<FeesStructureDto[]>([]);
   const [loading, setLoading] = useState(false);
   const { showError } = useError();
@@ -300,7 +308,9 @@ export const useFeesHeads = () => {
         return response.payload;
       } catch (error) {
         console.error("Error creating fees head:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to create fees head" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to create fees head",
+        });
         return null;
       }
     },
@@ -315,7 +325,9 @@ export const useFeesHeads = () => {
         return response.payload;
       } catch (error) {
         console.error("Error updating fees head:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to update fees head" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to update fees head",
+        });
         return null;
       }
     },
@@ -330,7 +342,9 @@ export const useFeesHeads = () => {
         return true;
       } catch (error) {
         console.error("Error deleting fees head:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to delete fees head" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to delete fees head",
+        });
         return false;
       }
     },
@@ -685,7 +699,9 @@ export const useFeesSlabMappings = () => {
   const addFeesSlabMappings = useCallback(
     async (newFeesSlabMappings: FeesSlabMapping[]) => {
       try {
-        const createdSlabYears = await Promise.all(newFeesSlabMappings.map((slabYear) => createFeesSlabYear(slabYear)));
+        const createdSlabYears = await Promise.all(
+          newFeesSlabMappings.map((slabYear) => createFeesSlabYear(slabYear)),
+        );
         await fetchFeesSlabMappings();
         return createdSlabYears.map((res) => res.payload);
       } catch {
@@ -754,7 +770,9 @@ export const useFeeConcessionSlabs = () => {
         return response.payload;
       } catch (error) {
         console.error("Error creating fee concession slab:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to create fee concession slab" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to create fee concession slab",
+        });
         return null;
       }
     },
@@ -780,7 +798,9 @@ export const useFeeConcessionSlabs = () => {
         return response.payload;
       } catch (error) {
         console.error("Error updating fee concession slab:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to update fee concession slab" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to update fee concession slab",
+        });
         return null;
       }
     },
@@ -795,7 +815,9 @@ export const useFeeConcessionSlabs = () => {
         return true;
       } catch (error) {
         console.error("Error deleting fee concession slab:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to delete fee concession slab" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to delete fee concession slab",
+        });
         return false;
       }
     },
@@ -849,7 +871,9 @@ export const useFeeCategories = () => {
         return response.payload;
       } catch (error) {
         console.error("Error creating fee category:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to create fee category" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to create fee category",
+        });
         return null;
       }
     },
@@ -864,7 +888,9 @@ export const useFeeCategories = () => {
         return response.payload;
       } catch (error) {
         console.error("Error updating fee category:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to update fee category" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to update fee category",
+        });
         return null;
       }
     },
@@ -879,7 +905,9 @@ export const useFeeCategories = () => {
         return true;
       } catch (error) {
         console.error("Error deleting fee category:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to delete fee category" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to delete fee category",
+        });
         return false;
       }
     },
@@ -933,7 +961,9 @@ export const useFeeGroups = () => {
         return response.payload;
       } catch (error) {
         console.error("Error creating fee group:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to create fee group" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to create fee group",
+        });
         return null;
       }
     },
@@ -948,7 +978,9 @@ export const useFeeGroups = () => {
         return response.payload;
       } catch (error) {
         console.error("Error updating fee group:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to update fee group" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to update fee group",
+        });
         return null;
       }
     },
@@ -963,7 +995,9 @@ export const useFeeGroups = () => {
         return true;
       } catch (error) {
         console.error("Error deleting fee group:", error);
-        showError({ message: error instanceof Error ? error.message : "Failed to delete fee group" });
+        showError({
+          message: error instanceof Error ? error.message : "Failed to delete fee group",
+        });
         return false;
       }
     },

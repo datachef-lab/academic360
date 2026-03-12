@@ -16,9 +16,7 @@ export const FAQ = () => {
               tabIndex={0}
               aria-expanded="false"
             >
-              <span className="flex-1 text-base-content">
-                How do I add a new student?
-              </span>
+              <span className="flex-1 text-base-content">How do I add a new student?</span>
               <svg
                 className="flex-shrink-0 w-4 h-4 ml-auto fill-current"
                 viewBox="0 0 16 16"
@@ -46,8 +44,8 @@ export const FAQ = () => {
             >
               <div className="pb-5 leading-relaxed">
                 <div className="space-y-2 leading-relaxed">
-                  Go to the "Students" section and click on "Add New Student". Fill
-                  in the required information and submit the form.
+                  Go to the "Students" section and click on "Add New Student". Fill in the required
+                  information and submit the form.
                 </div>
               </div>
             </div>
@@ -59,9 +57,7 @@ export const FAQ = () => {
               tabIndex={0}
               aria-expanded="false"
             >
-              <span className="flex-1 text-base-content">
-                How do I generate reports?
-              </span>
+              <span className="flex-1 text-base-content">How do I generate reports?</span>
               <svg
                 className="flex-shrink-0 w-4 h-4 ml-auto fill-current"
                 viewBox="0 0 16 16"
@@ -89,9 +85,8 @@ export const FAQ = () => {
             >
               <div className="pb-5 leading-relaxed">
                 <div className="space-y-2 leading-relaxed">
-                  Navigate to the "Reports" section, select the desired student,
-                  and choose the type of report you want to generate, such as
-                  academic performance or attendance.
+                  Navigate to the "Reports" section, select the desired student, and choose the type
+                  of report you want to generate, such as academic performance or attendance.
                 </div>
               </div>
             </div>
@@ -103,9 +98,7 @@ export const FAQ = () => {
               tabIndex={0}
               aria-expanded="false"
             >
-              <span className="flex-1 text-base-content">
-                How do I manage class schedules?
-              </span>
+              <span className="flex-1 text-base-content">How do I manage class schedules?</span>
               <svg
                 className="flex-shrink-0 w-4 h-4 ml-auto fill-current"
                 viewBox="0 0 16 16"
@@ -133,8 +126,8 @@ export const FAQ = () => {
             >
               <div className="pb-5 leading-relaxed">
                 <div className="space-y-2 leading-relaxed">
-                  Access the "Schedule" section where you can view and modify class
-                  timings, assign teachers, and manage classroom allocations.
+                  Access the "Schedule" section where you can view and modify class timings, assign
+                  teachers, and manage classroom allocations.
                 </div>
               </div>
             </div>
@@ -142,6 +135,5 @@ export const FAQ = () => {
         </div>
       </div>
     </div>
-
-  )
-}
+  );
+};

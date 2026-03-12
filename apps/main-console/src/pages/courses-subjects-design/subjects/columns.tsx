@@ -89,7 +89,7 @@ export const columns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<Subject>[
     id: "actions",
     cell: ({ row }) => {
       const subject = row.original;
-      
+
       return (
         <div className="flex space-x-2">
           <Button

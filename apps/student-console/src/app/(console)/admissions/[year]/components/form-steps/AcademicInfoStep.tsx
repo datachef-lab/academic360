@@ -1,7 +1,13 @@
 // @ts-nocheck
 import { FormData } from "../../types";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import SubjectMarksModal from "./SubjectMarksModal";
@@ -14,7 +20,11 @@ import {
   Course,
   Institution,
 } from "@/db/schema";
-import { AdmissionAcademicInfoDto, ApplicationFormDto, BoardUniversityDto } from "@/types/admissions";
+import {
+  AdmissionAcademicInfoDto,
+  ApplicationFormDto,
+  BoardUniversityDto,
+} from "@/types/admissions";
 import { useParams } from "next/navigation";
 import { getCourses } from "../../action";
 import { toast } from "@/components/ui/use-toast";
@@ -86,7 +96,9 @@ export default function AcademicInfoStep({
 
   const [showMarksEntryModal, setShowMarksEntryModal] = useState(false);
   const [showInstituteDetailsModal, setShowInstituteDetailsModal] = useState(false);
-  const [enteredInstituteDetails, setEnteredInstituteDetails] = useState<InstituteDetails | null>(null);
+  const [enteredInstituteDetails, setEnteredInstituteDetails] = useState<InstituteDetails | null>(
+    null,
+  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
@@ -144,7 +156,10 @@ export default function AcademicInfoStep({
           if (data.success && Array.isArray(data.data)) {
             setAcademicSubjects(data.data);
           } else {
-            console.error("API response for academic subjects was not successful or data was not an array:", data);
+            console.error(
+              "API response for academic subjects was not successful or data was not an array:",
+              data,
+            );
             setAcademicSubjects([]);
           }
         } else {
@@ -173,8 +188,12 @@ export default function AcademicInfoStep({
                 // If there are institute details, populate the enteredInstituteDetails state
                 if (existingData.rollNumber || existingData.instituteId) {
                   const institute = institutions.find((c) => c.id === existingData.instituteId);
-                  const medium = languageMediums.find((m) => m.id === existingData.languageMediumId);
-                  const previousCollege = institutions.find((c) => c.id === existingData.previousCollegeId);
+                  const medium = languageMediums.find(
+                    (m) => m.id === existingData.languageMediumId,
+                  );
+                  const previousCollege = institutions.find(
+                    (c) => c.id === existingData.previousCollegeId,
+                  );
 
                   setEnteredInstituteDetails({
                     rollNo: existingData.rollNumber || "",
@@ -196,7 +215,10 @@ export default function AcademicInfoStep({
                 }
               }
             } else {
-              console.error("Failed to fetch existing academic info:", existingAcademicInfoResponse.status);
+              console.error(
+                "Failed to fetch existing academic info:",
+                existingAcademicInfoResponse.status,
+              );
             }
           } catch (error) {
             console.error("Error fetching existing academic info:", error);
@@ -296,7 +318,9 @@ export default function AcademicInfoStep({
       streamType: details.stream as "COMMERCE" | "SCIENCE" | "HUMANITIES",
       isRegisteredForUGInCU: details.calcuttaUniversityRegistered === "Yes",
       cuRegistrationNumber:
-        details.calcuttaUniversityRegistered === "Yes" ? details.calcuttaUniversityRegistrationNo : null,
+        details.calcuttaUniversityRegistered === "Yes"
+          ? details.calcuttaUniversityRegistrationNo
+          : null,
       previousCollegeId: institutions.find((c) => c.name === details.previousCollege)?.id ?? 0,
       otherCollege: details.previousCollege === "Other college" ? details.otherCollege : null,
       previouslyRegisteredCourseId: 0,
@@ -373,7 +397,8 @@ export default function AcademicInfoStep({
     for (const subject of subjects) {
       if (!subject.academicSubjectId || subject.academicSubjectId === 0) return false;
       if (!subject.fullMarks || subject.fullMarks === "" || subject.fullMarks === "0") return false;
-      if (!subject.totalMarks || subject.totalMarks === "" || subject.totalMarks === "0") return false;
+      if (!subject.totalMarks || subject.totalMarks === "" || subject.totalMarks === "0")
+        return false;
       if (seenSubjects.has(subject.academicSubjectId)) return false;
       seenSubjects.add(subject.academicSubjectId);
     }
@@ -464,13 +489,16 @@ export default function AcademicInfoStep({
           let subjectResponse;
           if (subject.id) {
             // Update existing subject
-            subjectResponse = await fetch(`/api/admissions/academic-info/subjects?id=${subject.id}`, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
+            subjectResponse = await fetch(
+              `/api/admissions/academic-info/subjects?id=${subject.id}`,
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(subjectData),
               },
-              body: JSON.stringify(subjectData),
-            });
+            );
           } else {
             // Create new subject
             subjectResponse = await fetch("/api/admissions/academic-info/subjects", {
@@ -493,18 +521,22 @@ export default function AcademicInfoStep({
       const formData = {
         form: {
           admissionId: applicationForm.admissionId,
-          admissionStep: academicInfo.id == 0 ? "COURSE_APPLICATION" : applicationForm.admissionStep,
+          admissionStep:
+            academicInfo.id == 0 ? "COURSE_APPLICATION" : applicationForm.admissionStep,
           formStatus: applicationForm.formStatus,
         },
       } as { form: ApplicationForm };
 
-      const formResponse = await fetch(`/api/admissions/application-forms?id=${applicationForm.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+      const formResponse = await fetch(
+        `/api/admissions/application-forms?id=${applicationForm.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
         },
-        body: JSON.stringify(formData),
-      });
+      );
 
       if (!formResponse.ok) {
         const errorData = await formResponse.json();
@@ -596,13 +628,16 @@ export default function AcademicInfoStep({
 
           let subjectResponse;
           if (subject.id) {
-            subjectResponse = await fetch(`/api/admissions/academic-info/subjects?id=${subject.id}`, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
+            subjectResponse = await fetch(
+              `/api/admissions/academic-info/subjects?id=${subject.id}`,
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(subjectData),
               },
-              body: JSON.stringify(subjectData),
-            });
+            );
           } else {
             subjectResponse = await fetch("/api/admissions/academic-info/subjects", {
               method: "POST",
@@ -687,8 +722,14 @@ export default function AcademicInfoStep({
                 15. Board/University <span className="text-red-600">*</span>
               </label>
               <Select
-                value={academicInfo.boardUniversityId === 0 ? "0" : academicInfo.boardUniversityId.toString()}
-                onValueChange={(val) => handleAcademicInfoChange("boardUniversityId", parseInt(val))}
+                value={
+                  academicInfo.boardUniversityId === 0
+                    ? "0"
+                    : academicInfo.boardUniversityId.toString()
+                }
+                onValueChange={(val) =>
+                  handleAcademicInfoChange("boardUniversityId", parseInt(val))
+                }
                 disabled={academicInfo.boardResultStatus !== "PASS"}
               >
                 <SelectTriggerFixed className="w-full">
@@ -708,7 +749,8 @@ export default function AcademicInfoStep({
               </Select>
               {academicInfo.boardResultStatus !== "PASS" && (
                 <p className="text-sm text-red-600 mt-2">
-                  Failed or Compartmental students are not allowed to apply as per Calcutta University Norms.
+                  Failed or Compartmental students are not allowed to apply as per Calcutta
+                  University Norms.
                 </p>
               )}
             </div>
@@ -776,25 +818,27 @@ export default function AcademicInfoStep({
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {academicInfo.subjects.map((subject: StudentAcademicSubject, index: number) => (
-                        <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                          <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
-                            {index + 1}
-                          </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
-                            {getSubjectName(subject.academicSubjectId)}
-                          </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
-                            {subject.fullMarks}
-                          </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
-                            {subject.totalMarks}
-                          </td>
-                          <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
-                            {subject.resultStatus}
-                          </td>
-                        </tr>
-                      ))}
+                      {academicInfo.subjects.map(
+                        (subject: StudentAcademicSubject, index: number) => (
+                          <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                            <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
+                              {index + 1}
+                            </td>
+                            <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                              {getSubjectName(subject.academicSubjectId)}
+                            </td>
+                            <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                              {subject.fullMarks}
+                            </td>
+                            <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                              {subject.totalMarks}
+                            </td>
+                            <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                              {subject.resultStatus}
+                            </td>
+                          </tr>
+                        ),
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -810,7 +854,10 @@ export default function AcademicInfoStep({
                   <Button
                     onClick={handleOpenInstituteDetails}
                     className="w-full sm:w-auto"
-                    disabled={academicInfo.boardResultStatus !== "PASS" || academicInfo.boardUniversityId === 0}
+                    disabled={
+                      academicInfo.boardResultStatus !== "PASS" ||
+                      academicInfo.boardUniversityId === 0
+                    }
                   >
                     Institute Details Entry
                   </Button>
@@ -831,7 +878,9 @@ export default function AcademicInfoStep({
 
               {enteredInstituteDetails && (
                 <div className="mt-4 p-3 sm:p-4 border rounded-md bg-gray-50">
-                  <p className="font-semibold mb-2 text-sm sm:text-base">Entered Institute Details:</p>
+                  <p className="font-semibold mb-2 text-sm sm:text-base">
+                    Entered Institute Details:
+                  </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
                     <p>
                       <strong>Roll No:</strong> {enteredInstituteDetails.rollNo}

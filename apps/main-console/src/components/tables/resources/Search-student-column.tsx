@@ -21,8 +21,8 @@ export const StudentSearchColumn: ColumnDef<SearchStudent>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => {
-         return <DataTableColumnHeader column={column} title="Name" />;
-       },
+      return <DataTableColumnHeader column={column} title="Name" />;
+    },
   },
   // {
   //   accessorKey: "email",
@@ -78,6 +78,4 @@ export const StudentSearchColumn: ColumnDef<SearchStudent>[] = [
     accessorKey: "leaving_date",
     header: "Leaving Date",
   },
- 
- 
 ];

@@ -1,6 +1,6 @@
 /**
  * Blood Group Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Blood Group module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Blood Group interface that mirrors the backend model
  */
 export interface BloodGroup {
-    readonly id?: number;
+  readonly id?: number;
   type: string;
   sequence?: number | null;
   disabled: boolean;
@@ -120,15 +120,15 @@ export interface BloodGroupState {
  * Action types for blood group state management
  */
 export type BloodGroupAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_BLOOD_GROUPS'; payload: BloodGroup[] }
-  | { type: 'SET_CURRENT_BLOOD_GROUP'; payload: BloodGroup | null }
-  | { type: 'ADD_BLOOD_GROUP'; payload: BloodGroup }
-  | { type: 'UPDATE_BLOOD_GROUP'; payload: BloodGroup }
-  | { type: 'DELETE_BLOOD_GROUP'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_BLOOD_GROUPS"; payload: BloodGroup[] }
+  | { type: "SET_CURRENT_BLOOD_GROUP"; payload: BloodGroup | null }
+  | { type: "ADD_BLOOD_GROUP"; payload: BloodGroup }
+  | { type: "UPDATE_BLOOD_GROUP"; payload: BloodGroup }
+  | { type: "DELETE_BLOOD_GROUP"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -143,7 +143,7 @@ export interface BloodGroupTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -160,7 +160,7 @@ export interface BloodGroupFilter {
  */
 export interface BloodGroupSort {
   field: keyof BloodGroup;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -195,7 +195,7 @@ export type BloodGroupDisabled = boolean;
  * Default values for blood group
  */
 export const DEFAULT_BLOOD_GROUP: CreateBloodGroupPayload = {
-  type: '',
+  type: "",
   sequence: null,
   disabled: false,
 };
@@ -204,8 +204,8 @@ export const DEFAULT_BLOOD_GROUP: CreateBloodGroupPayload = {
  * Default form data for blood group
  */
 export const DEFAULT_BLOOD_GROUP_FORM: BloodGroupFormData = {
-  type: '',
-  sequence: '',
+  type: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -213,25 +213,23 @@ export const DEFAULT_BLOOD_GROUP_FORM: BloodGroupFormData = {
  * Table columns configuration for blood group
  */
 export const BLOOD_GROUP_TABLE_COLUMNS: BloodGroupTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'type', label: 'Blood Group Type', sortable: true, filterable: true },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "type", label: "Blood Group Type", sortable: true, filterable: true },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Common blood group types for reference
  */
-export const COMMON_BLOOD_GROUPS = [
-  'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'
-] as const;
+export const COMMON_BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
 /**
  * Type for common blood group values
  */
-export type CommonBloodGroup = typeof COMMON_BLOOD_GROUPS[number];
+export type CommonBloodGroup = (typeof COMMON_BLOOD_GROUPS)[number];
 
 // ============================================================================
 // TYPE GUARDS
@@ -243,12 +241,12 @@ export type CommonBloodGroup = typeof COMMON_BLOOD_GROUPS[number];
 export function isBloodGroup(obj: object): obj is BloodGroup {
   return (
     obj &&
-    typeof (obj as BloodGroup).id === 'number' &&
-    typeof (obj as BloodGroup).type === 'string' &&
-    ((obj as BloodGroup).sequence === null || typeof (obj as BloodGroup).sequence === 'number') &&
-    typeof (obj as BloodGroup).disabled === 'boolean' &&
-    typeof (obj as BloodGroup).createdAt === 'string' &&
-    typeof (obj as BloodGroup).updatedAt === 'string'
+    typeof (obj as BloodGroup).id === "number" &&
+    typeof (obj as BloodGroup).type === "string" &&
+    ((obj as BloodGroup).sequence === null || typeof (obj as BloodGroup).sequence === "number") &&
+    typeof (obj as BloodGroup).disabled === "boolean" &&
+    typeof (obj as BloodGroup).createdAt === "string" &&
+    typeof (obj as BloodGroup).updatedAt === "string"
   );
 }
 
@@ -258,9 +256,12 @@ export function isBloodGroup(obj: object): obj is BloodGroup {
 export function isCreateBloodGroupPayload(obj: object): obj is CreateBloodGroupPayload {
   return (
     obj &&
-    typeof (obj as CreateBloodGroupPayload).type === 'string' &&
-    ((obj as CreateBloodGroupPayload).sequence === undefined || (obj as CreateBloodGroupPayload).sequence === null || typeof (obj as CreateBloodGroupPayload).sequence === 'number') &&
-    ((obj as CreateBloodGroupPayload).disabled === undefined || typeof (obj as CreateBloodGroupPayload).disabled === 'boolean')
+    typeof (obj as CreateBloodGroupPayload).type === "string" &&
+    ((obj as CreateBloodGroupPayload).sequence === undefined ||
+      (obj as CreateBloodGroupPayload).sequence === null ||
+      typeof (obj as CreateBloodGroupPayload).sequence === "number") &&
+    ((obj as CreateBloodGroupPayload).disabled === undefined ||
+      typeof (obj as CreateBloodGroupPayload).disabled === "boolean")
   );
 }
 
@@ -270,9 +271,13 @@ export function isCreateBloodGroupPayload(obj: object): obj is CreateBloodGroupP
 export function isUpdateBloodGroupPayload(obj: object): obj is UpdateBloodGroupPayload {
   return (
     obj &&
-    ((obj as UpdateBloodGroupPayload).type === undefined || typeof (obj as UpdateBloodGroupPayload).type === 'string') &&
-    ((obj as UpdateBloodGroupPayload).sequence === undefined || (obj as UpdateBloodGroupPayload).sequence === null || typeof (obj as UpdateBloodGroupPayload).sequence === 'number') &&
-    ((obj as UpdateBloodGroupPayload).disabled === undefined || typeof (obj as UpdateBloodGroupPayload).disabled === 'boolean')
+    ((obj as UpdateBloodGroupPayload).type === undefined ||
+      typeof (obj as UpdateBloodGroupPayload).type === "string") &&
+    ((obj as UpdateBloodGroupPayload).sequence === undefined ||
+      (obj as UpdateBloodGroupPayload).sequence === null ||
+      typeof (obj as UpdateBloodGroupPayload).sequence === "number") &&
+    ((obj as UpdateBloodGroupPayload).disabled === undefined ||
+      typeof (obj as UpdateBloodGroupPayload).disabled === "boolean")
   );
 }
 
@@ -304,7 +309,7 @@ export function formDataToPayload(formData: BloodGroupFormData): CreateBloodGrou
 export function apiDataToFormData(bloodGroup: BloodGroup): BloodGroupFormData {
   return {
     type: bloodGroup.type,
-    sequence: bloodGroup.sequence?.toString() || '',
+    sequence: bloodGroup.sequence?.toString() || "",
     disabled: bloodGroup.disabled,
   };
 }
@@ -328,12 +333,12 @@ export function formatBloodGroupType(type: string): string {
  * Get blood group status text
  */
 export function getBloodGroupStatusText(disabled: boolean): string {
-  return disabled ? 'Inactive' : 'Active';
+  return disabled ? "Inactive" : "Active";
 }
 
 /**
  * Get blood group status color
  */
 export function getBloodGroupStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
-} 
+  return disabled ? "text-red-600" : "text-green-600";
+}

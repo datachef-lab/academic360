@@ -188,7 +188,10 @@ export default function ExamPage() {
   useEffect(() => {
     if (examGroupId) {
       setLoading(true);
-      Promise.all([fetchExamGroupById(Number(examGroupId)), fetchExamGroupPapersStatsByExamId(Number(examGroupId))])
+      Promise.all([
+        fetchExamGroupById(Number(examGroupId)),
+        fetchExamGroupPapersStatsByExamId(Number(examGroupId)),
+      ])
         .then(([groupData, statsData]) => {
           setExamGroup(groupData);
           // Set admit card dates if they exist
@@ -218,8 +221,12 @@ export default function ExamPage() {
       setUpdatingDates(true);
       const updatedExamGroup = await updateExamAdmitCardDates(
         Number(examGroupId),
-        admitCardStartDate && admitCardStartDate.trim() !== "" ? new Date(admitCardStartDate).toISOString() : null,
-        admitCardEndDate && admitCardEndDate.trim() !== "" ? new Date(admitCardEndDate).toISOString() : null,
+        admitCardStartDate && admitCardStartDate.trim() !== ""
+          ? new Date(admitCardStartDate).toISOString()
+          : null,
+        admitCardEndDate && admitCardEndDate.trim() !== ""
+          ? new Date(admitCardEndDate).toISOString()
+          : null,
       );
       setExamGroup(updatedExamGroup);
       setAdmitCardDatesDialogOpen(false);
@@ -469,13 +476,16 @@ export default function ExamPage() {
 
       // Determine if it's a "no admit cards" error
       const isNoAdmitCardsError =
-        errorMessage.toLowerCase().includes("no admit cards") || errorMessage.toLowerCase().includes("not available");
+        errorMessage.toLowerCase().includes("no admit cards") ||
+        errorMessage.toLowerCase().includes("not available");
 
       setCurrentProgressUpdate({
         id: `export_${Date.now()}`,
         userId: user!.id!.toString(),
         type: "export_progress",
-        message: isNoAdmitCardsError ? "No admit cards available for download" : "Download failed due to an error",
+        message: isNoAdmitCardsError
+          ? "No admit cards available for download"
+          : "Download failed due to an error",
         progress: 0,
         status: "error",
         error: errorMessage,
@@ -532,7 +542,9 @@ export default function ExamPage() {
         id: `export_${Date.now()}`,
         userId: user!.id!.toString(),
         type: "export_progress",
-        message: isNoSheetsError ? "No attendance sheets available for download" : "Download failed due to an error",
+        message: isNoSheetsError
+          ? "No attendance sheets available for download"
+          : "Download failed due to an error",
         progress: 0,
         status: "error",
         error: errorMessage,
@@ -584,13 +596,16 @@ export default function ExamPage() {
         rawMessage.includes("not found") ||
         rawMessage.includes("no candidates") ||
         rawMessage.includes("not available");
-      const isEmailError = rawMessage.includes("email") || rawMessage.includes("send") || rawMessage.includes("mail");
+      const isEmailError =
+        rawMessage.includes("email") || rawMessage.includes("send") || rawMessage.includes("mail");
 
       setCurrentProgressUpdate({
         id: `export_${Date.now()}`,
         userId: user!.id!.toString(),
         type: "in_progress",
-        message: isNoAdmitCardsError ? "No admit cards available to send" : "Failed to send admit cards",
+        message: isNoAdmitCardsError
+          ? "No admit cards available to send"
+          : "Failed to send admit cards",
         progress: 0,
         status: "error",
         error: errorMessage,
@@ -639,7 +654,10 @@ export default function ExamPage() {
       : undefined;
 
     try {
-      const { downloadUrl, fileName } = await downloadAdmitCardTracking(Number(examGroupId), preferredFileName);
+      const { downloadUrl, fileName } = await downloadAdmitCardTracking(
+        Number(examGroupId),
+        preferredFileName,
+      );
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = fileName;
@@ -715,11 +733,17 @@ export default function ExamPage() {
           {loading ? (
             <div className="border-b" style={{ minWidth: "950px" }}>
               <div className="flex">
-                <div className="flex-shrink-0 p-3 border-r flex items-center gap-2 flex-col" style={{ width: "15%" }}>
+                <div
+                  className="flex-shrink-0 p-3 border-r flex items-center gap-2 flex-col"
+                  style={{ width: "15%" }}
+                >
                   <Skeleton className="h-5 w-24" />
                   <Skeleton className="h-4 w-20" />
                 </div>
-                <div className="p-3 border-r flex gap-1 flex-col items-center" style={{ width: "45%" }}>
+                <div
+                  className="p-3 border-r flex gap-1 flex-col items-center"
+                  style={{ width: "45%" }}
+                >
                   <Skeleton className="h-4 w-40" />
                   <Skeleton className="h-4 w-36" />
                 </div>
@@ -730,7 +754,10 @@ export default function ExamPage() {
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-4 w-24" />
                 </div>
-                <div className="flex-shrink-0 p-3 border-r flex flex-col justify-center" style={{ width: "15%" }}>
+                <div
+                  className="flex-shrink-0 p-3 border-r flex flex-col justify-center"
+                  style={{ width: "15%" }}
+                >
                   <div className="space-y-2 w-full">
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-full" />
@@ -761,7 +788,10 @@ export default function ExamPage() {
               ))}
             </div> */}
 
-                <div className="flex-shrink-0 p-3 border-r flex items-center justify-center" style={{ width: "10%" }}>
+                <div
+                  className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                  style={{ width: "10%" }}
+                >
                   <Skeleton className="h-4 w-16" />
                 </div>
               </div>
@@ -776,7 +806,10 @@ export default function ExamPage() {
                   >
                     {/* Display exam component names */}
                     <p>
-                      <Badge variant="outline" className="text-xs border-red-300 text-red-700 bg-red-50">
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-red-300 text-red-700 bg-red-50"
+                      >
                         {examGroup?.exams[0]?.examType.name}
                       </Badge>
                     </p>
@@ -787,14 +820,22 @@ export default function ExamPage() {
                       </p>
                     )}
                   </div>
-                  <div className="p-3 border-r flex gap-1 flex-col items-center" style={{ width: "45%" }}>
+                  <div
+                    className="p-3 border-r flex gap-1 flex-col items-center"
+                    style={{ width: "45%" }}
+                  >
                     {Array.from(
                       new Map(
-                        examGroup.exams.flatMap((ep) => ep.examProgramCourses).map((pc) => [pc.programCourse.id, pc]),
+                        examGroup.exams
+                          .flatMap((ep) => ep.examProgramCourses)
+                          .map((pc) => [pc.programCourse.id, pc]),
                       ).values(),
                     ).map((pc, index) => (
                       <p key={`pc-index-${index}`}>
-                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                        >
                           {pc.programCourse.name}
                         </Badge>
                       </p>
@@ -807,21 +848,31 @@ export default function ExamPage() {
                   >
                     {Array.from(
                       new Map(
-                        examGroup.exams.flatMap((ep) => ep.examShifts).map((esh) => [esh.shift.id, esh.shift]),
+                        examGroup.exams
+                          .flatMap((ep) => ep.examShifts)
+                          .map((esh) => [esh.shift.id, esh.shift]),
                       ).values(),
                     ).map((shift) => (
                       <p key={shift.id}>
-                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-blue-300 text-blue-700 bg-blue-50"
+                        >
                           {shift.name}
                         </Badge>
                       </p>
                     ))}
                   </div>
 
-                  <div className="flex-shrink-0 p-3 border-r flex flex-col justify-center" style={{ width: "15%" }}>
+                  <div
+                    className="flex-shrink-0 p-3 border-r flex flex-col justify-center"
+                    style={{ width: "15%" }}
+                  >
                     <div className="text-[11px] leading-4 text-slate-700 space-y-1">
                       <div className="flex items-start justify-between gap-2">
-                        <span className="font-semibold text-slate-600 whitespace-nowrap">Start</span>
+                        <span className="font-semibold text-slate-600 whitespace-nowrap">
+                          Start
+                        </span>
                         <span className="text-right whitespace-nowrap">
                           {formatDate(examGroup.exams[0]?.admitCardStartDownloadDate)}{" "}
                           {formatTime(examGroup.exams[0]?.admitCardStartDownloadDate)}
@@ -837,8 +888,14 @@ export default function ExamPage() {
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0 p-3 border-r flex items-center justify-center" style={{ width: "10%" }}>
-                    <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                  <div
+                    className="flex-shrink-0 p-3 border-r flex items-center justify-center"
+                    style={{ width: "10%" }}
+                  >
+                    <Badge
+                      variant="outline"
+                      className="text-xs border-orange-300 text-orange-700 bg-orange-50"
+                    >
                       {examGroup.exams?.[0]?.class.name.split(" ")[1]}
                     </Badge>
                   </div>
@@ -862,21 +919,29 @@ export default function ExamPage() {
                   <TooltipContent>
                     <div className="space-y-1">
                       <p className="font-semibold">Download Admit Cards</p>
-                      <p className="text-xs text-gray-400">Download all admit cards as a ZIP file</p>
+                      <p className="text-xs text-gray-400">
+                        Download all admit cards as a ZIP file
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" onClick={handleDownloadAttendanceSheets} className="p-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadAttendanceSheets}
+                      className="p-2"
+                    >
                       <Sheet className="h-4 w-4" size={21} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     <div className="space-y-1">
                       <p className="font-semibold">Download Attendance Sheets</p>
-                      <p className="text-xs text-gray-400">Download attendance sheets for all exam rooms</p>
+                      <p className="text-xs text-gray-400">
+                        Download attendance sheets for all exam rooms
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -895,7 +960,9 @@ export default function ExamPage() {
                                   .trim()
                                   .slice(0, 100);
                                 const date = examGroup.examCommencementDate
-                                  ? new Date(examGroup.examCommencementDate).toISOString().slice(0, 10)
+                                  ? new Date(examGroup.examCommencementDate)
+                                      .toISOString()
+                                      .slice(0, 10)
                                   : "";
                                 return `${name} ${date}-candidates.xlsx`;
                               })()
@@ -907,7 +974,10 @@ export default function ExamPage() {
                           );
                           ExportService.downloadFile(response.downloadUrl, response.fileName);
                         } catch (error: any) {
-                          toast.error(error?.message || "Failed to download exam candidates. Please try again.");
+                          toast.error(
+                            error?.message ||
+                              "Failed to download exam candidates. Please try again.",
+                          );
                         }
                       }}
                       className="p-2"
@@ -918,7 +988,9 @@ export default function ExamPage() {
                   <TooltipContent>
                     <div className="space-y-1">
                       <p className="font-semibold">Download Students</p>
-                      <p className="text-xs text-gray-400">Export student list for this exam as Excel</p>
+                      <p className="text-xs text-gray-400">
+                        Export student list for this exam as Excel
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -939,7 +1011,11 @@ export default function ExamPage() {
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" onClick={handleDownloadAdmitCardTracking} className="p-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadAdmitCardTracking}
+                      className="p-2"
+                    >
                       <Download className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -968,7 +1044,9 @@ export default function ExamPage() {
                   <TooltipContent>
                     <div className="space-y-1">
                       <p className="font-semibold">Update Admit Card Dates</p>
-                      <p className="text-xs text-gray-400">Set the date range when students can download admit cards</p>
+                      <p className="text-xs text-gray-400">
+                        Set the date range when students can download admit cards
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -1009,7 +1087,10 @@ export default function ExamPage() {
           <div className="w-full flex py-4">
             <div className="w-full border">
               {/* Fixed Header */}
-              <div className="sticky top-0 z-50 text-[14px] border-b bg-gray-100" style={{ minWidth: "950px" }}>
+              <div
+                className="sticky top-0 z-50 text-[14px] border-b bg-gray-100"
+                style={{ minWidth: "950px" }}
+              >
                 <div className="flex">
                   <div
                     className="flex-shrink-0 text-gray-500  font-bold p-1 border-r flex items-center justify-center"
@@ -1126,7 +1207,8 @@ export default function ExamPage() {
           <DialogHeader>
             <DialogTitle>Update Admit Card Download Dates</DialogTitle>
             <DialogDescription>
-              Set the date range when students can download their admit cards. Leave empty if not applicable.
+              Set the date range when students can download their admit cards. Leave empty if not
+              applicable.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1155,7 +1237,11 @@ export default function ExamPage() {
                 onChange={(e) => {
                   const value = e.target.value;
                   setAdmitCardEndDate(value);
-                  if (value && admitCardStartDate && new Date(value) < new Date(admitCardStartDate)) {
+                  if (
+                    value &&
+                    admitCardStartDate &&
+                    new Date(value) < new Date(admitCardStartDate)
+                  ) {
                     toast.error("End date must be after start date");
                   }
                 }}
@@ -1213,13 +1299,15 @@ export default function ExamPage() {
               </div>
 
               <p className="text-base text-gray-600 mt-4">
-                This process may take several minutes depending on the number of students. You can track the progress in
-                the export dialog.
+                This process may take several minutes depending on the number of students. You can
+                track the progress in the export dialog.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSendAdmitCardDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setSendAdmitCardDialogOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setSendAdmitCardDialogOpen(false);
@@ -1239,8 +1327,11 @@ export default function ExamPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this exam?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the exam and all related data (subjects, rooms, candidates).
-              <span className="block mt-2 text-red-600 font-medium">This action cannot be undone.</span>
+              This will permanently delete the exam and all related data (subjects, rooms,
+              candidates).
+              <span className="block mt-2 text-red-600 font-medium">
+                This action cannot be undone.
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

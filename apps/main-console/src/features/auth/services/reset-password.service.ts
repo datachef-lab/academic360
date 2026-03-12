@@ -1,6 +1,8 @@
 import axiosInstance from "@/utils/api";
 
-export async function requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+export async function requestPasswordReset(
+  email: string,
+): Promise<{ success: boolean; message: string }> {
   // Send OTP to email for verification (no link)
   const res = await axiosInstance.post(`/auth/otp/send-email`, { email });
   return { success: res.data.httpStatus === "SUCCESS", message: res.data.message || "" };
@@ -9,8 +11,14 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
 export async function validateResetToken(
   token: string,
 ): Promise<{ success: boolean; email?: string; message?: string }> {
-  const res = await axiosInstance.get(`/api/users/password-reset/validate/${encodeURIComponent(token)}`);
-  return { success: res.data.httpStatus === "SUCCESS", email: res.data.payload?.email, message: res.data.message };
+  const res = await axiosInstance.get(
+    `/api/users/password-reset/validate/${encodeURIComponent(token)}`,
+  );
+  return {
+    success: res.data.httpStatus === "SUCCESS",
+    email: res.data.payload?.email,
+    message: res.data.message,
+  };
 }
 
 export async function resetPasswordWithToken(
@@ -26,11 +34,18 @@ export async function resetPasswordWithEmailOtp(
   otp: string,
   newPassword: string,
 ): Promise<{ success: boolean; message?: string }> {
-  const res = await axiosInstance.post(`/api/users/password-reset/reset-with-otp`, { email, otp, newPassword });
+  const res = await axiosInstance.post(`/api/users/password-reset/reset-with-otp`, {
+    email,
+    otp,
+    newPassword,
+  });
   return { success: res.data.httpStatus === "SUCCESS", message: res.data.message };
 }
 
-export async function verifyEmailOtp(email: string, otp: string): Promise<{ success: boolean; message?: string }> {
+export async function verifyEmailOtp(
+  email: string,
+  otp: string,
+): Promise<{ success: boolean; message?: string }> {
   const res = await axiosInstance.post(`/auth/otp/verify-only`, { email, otp });
   return { success: res.data.httpStatus === "SUCCESS", message: res.data.message };
 }

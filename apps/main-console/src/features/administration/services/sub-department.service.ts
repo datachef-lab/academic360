@@ -23,6 +23,9 @@ export async function createSubDepartment(payload: SubDepartmentPayload) {
 }
 
 export async function updateSubDepartment(id: number, payload: SubDepartmentPayload) {
-  const { data } = await axiosInstance.put<ApiResponse<SubDepartmentT>>(`${BASE_URL}/${id}`, payload);
+  const { data } = await axiosInstance.put<ApiResponse<SubDepartmentT>>(
+    `${BASE_URL}/${id}`,
+    payload,
+  );
   return data;
 }

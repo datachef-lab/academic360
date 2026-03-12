@@ -97,7 +97,11 @@ function FilePreview({ filePath }: { filePath: string }) {
         <p className="text-gray-500">Unable to preview file</p>
       )}
       <p className="mt-4">
-        <a href={fileUrl as string} download="marksheet.pdf" className="text-blue-500 hover:underline">
+        <a
+          href={fileUrl as string}
+          download="marksheet.pdf"
+          className="text-blue-500 hover:underline"
+        >
           Download File
         </a>
       </p>

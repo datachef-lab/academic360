@@ -40,5 +40,5 @@ export default function DocumentPage() {
         />
       </motion.div>
     </div>
-  )
+  );
 }

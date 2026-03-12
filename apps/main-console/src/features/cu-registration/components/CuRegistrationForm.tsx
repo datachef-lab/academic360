@@ -7,11 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
-import { getStudentCuCorrectionRequests, getCuCorrectionRequestById } from "@/services/cu-registration";
+import {
+  getStudentCuCorrectionRequests,
+  getCuCorrectionRequestById,
+} from "@/services/cu-registration";
 import {
   getCuRegistrationDocuments,
   getCuRegistrationDocumentSignedUrl,
@@ -19,13 +28,23 @@ import {
   uploadCuRegistrationDocument,
 } from "@/services/cu-registration-documents";
 import { fetchUserProfile } from "@/services/student";
-import { fetchStudentSubjectSelections, fetchMandatorySubjects } from "@/services/subject-selection";
+import {
+  fetchStudentSubjectSelections,
+  fetchMandatorySubjects,
+} from "@/services/subject-selection";
 import { getActiveCountries } from "@/services/country.service";
 import { getStatesByCountry } from "@/services/state.service";
 import { getCitiesByState } from "@/services/city.service";
 import { getDistrictsByState } from "@/services/address.service";
 import { getAllNationalities } from "@/services/nationalities.service";
-import type { StudentDto, ProfileInfo, FamilyDto, PersonalDetailsDto, PersonDto, AddressDto } from "@repo/db/dtos/user";
+import type {
+  StudentDto,
+  ProfileInfo,
+  FamilyDto,
+  PersonalDetailsDto,
+  PersonDto,
+  AddressDto,
+} from "@repo/db/dtos/user";
 import { genderTypeEnum, cuRegistrationCorrectionRequestStatusEnum } from "@repo/db/index";
 import axiosInstance from "@/utils/api";
 
@@ -174,11 +193,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   });
 
   // Correction request status
-  const [correctionRequestStatus, setCorrectionRequestStatus] = useState<CorrectionRequestStatus | null>(null);
+  const [correctionRequestStatus, setCorrectionRequestStatus] =
+    useState<CorrectionRequestStatus | null>(null);
 
   // Debug: Track correction request status changes
   React.useEffect(() => {
-    console.info("[CU-REG MAIN-CONSOLE] correctionRequestStatus changed to:", correctionRequestStatus);
+    console.info(
+      "[CU-REG MAIN-CONSOLE] correctionRequestStatus changed to:",
+      correctionRequestStatus,
+    );
   }, [correctionRequestStatus]);
 
   // File upload states for each document (like student console - store files, upload on declaration)
@@ -189,14 +212,22 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   const [nationalities, setNationalities] = useState<Array<{ id?: number; name: string }>>([]);
 
   // Residential address data states
-  const [residentialStates, setResidentialStates] = useState<Array<{ id?: number; name: string }>>([]);
-  const [residentialCities, setResidentialCities] = useState<Array<{ id?: number; name: string }>>([]);
-  const [residentialDistricts, setResidentialDistricts] = useState<Array<{ id?: number; name: string }>>([]);
+  const [residentialStates, setResidentialStates] = useState<Array<{ id?: number; name: string }>>(
+    [],
+  );
+  const [residentialCities, setResidentialCities] = useState<Array<{ id?: number; name: string }>>(
+    [],
+  );
+  const [residentialDistricts, setResidentialDistricts] = useState<
+    Array<{ id?: number; name: string }>
+  >([]);
 
   // Mailing address data states
   const [mailingStates, setMailingStates] = useState<Array<{ id?: number; name: string }>>([]);
   const [mailingCities, setMailingCities] = useState<Array<{ id?: number; name: string }>>([]);
-  const [mailingDistricts, setMailingDistricts] = useState<Array<{ id?: number; name: string }>>([]);
+  const [mailingDistricts, setMailingDistricts] = useState<Array<{ id?: number; name: string }>>(
+    [],
+  );
 
   const [addressDeclared, setAddressDeclared] = useState(false);
   const [subjectsDeclared, setSubjectsDeclared] = useState(false);
@@ -207,23 +238,54 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   const [isSavingDocuments, setIsSavingDocuments] = useState(false);
 
   // Check if all declarations are completed
-  const allDeclarationsCompleted = personalDeclared && addressDeclared && subjectsDeclared && documentsConfirmed;
+  const allDeclarationsCompleted =
+    personalDeclared && addressDeclared && subjectsDeclared && documentsConfirmed;
 
   const [subjectsData, setSubjectsData] = useState<SubjectData>({
-    DSCC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    Minor: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    DSCC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
+    Minor: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
     IDC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     SEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     AEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    CVAC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    CVAC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
   });
   const [mandatorySubjects, setMandatorySubjects] = useState<SubjectData>({
-    DSCC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    Minor: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    DSCC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
+    Minor: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
     IDC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     SEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
     AEC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
-    CVAC: { sem1: [] as string[], sem2: [] as string[], sem3: [] as string[], sem4: [] as string[] },
+    CVAC: {
+      sem1: [] as string[],
+      sem2: [] as string[],
+      sem3: [] as string[],
+      sem4: [] as string[],
+    },
   });
 
   const [uploadedDocuments, setUploadedDocuments] = useState<Array<Record<string, unknown>>>([]);
@@ -307,7 +369,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     .filter((option) => option.value !== "APPROVED" && option.value !== "REJECTED");
 
   // Document types for file uploads - fetched from API
-  const [documentTypes, setDocumentTypes] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [documentTypes, setDocumentTypes] = useState<
+    Array<{ id: string; name: string; code: string }>
+  >([]);
 
   // File size limits based on PDF document (Annexure 9)
   const getFileSizeLimit = (documentName: string): { maxSizeKB: number; maxSizeMB: number } => {
@@ -334,9 +398,12 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         console.info("[CU-REG MAIN-CONSOLE] Updating correction request status to:", status);
 
         // Call the backend API to update the status
-        await axiosInstance.put(`/api/admissions/cu-registration-correction-requests/${correctionRequestStatus.id}`, {
-          status: status,
-        });
+        await axiosInstance.put(
+          `/api/admissions/cu-registration-correction-requests/${correctionRequestStatus.id}`,
+          {
+            status: status,
+          },
+        );
 
         // Update local state only after successful API call
         setCorrectionRequestStatus((prev) => (prev ? { ...prev, status } : null));
@@ -409,14 +476,24 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             try {
               const profileInfo = await fetchUserProfile(studentData.userId);
               console.info(`[CU-REG MAIN-CONSOLE] Refreshed profile info after save:`, profileInfo);
-              console.info(`[CU-REG MAIN-CONSOLE] Family details from refreshed profile:`, profileInfo?.familyDetails);
-              console.info(`[CU-REG MAIN-CONSOLE] Family members:`, profileInfo?.familyDetails?.members);
+              console.info(
+                `[CU-REG MAIN-CONSOLE] Family details from refreshed profile:`,
+                profileInfo?.familyDetails,
+              );
+              console.info(
+                `[CU-REG MAIN-CONSOLE] Family members:`,
+                profileInfo?.familyDetails?.members,
+              );
 
               const familyDetails: FamilyDto | null = profileInfo?.familyDetails ?? null;
 
               // Determine which parent name is being displayed (prefer FATHER, fallback to MOTHER)
-              const fatherName = familyDetails?.members?.find((m: PersonDto) => m.type === "FATHER")?.name ?? undefined;
-              const motherName = familyDetails?.members?.find((m: PersonDto) => m.type === "MOTHER")?.name ?? undefined;
+              const fatherName =
+                familyDetails?.members?.find((m: PersonDto) => m.type === "FATHER")?.name ??
+                undefined;
+              const motherName =
+                familyDetails?.members?.find((m: PersonDto) => m.type === "MOTHER")?.name ??
+                undefined;
 
               console.info(`[CU-REG MAIN-CONSOLE] Extracted parent names:`, {
                 fatherName,
@@ -425,7 +502,11 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               });
 
               const displayedParentName = fatherName || motherName;
-              const parentType: "FATHER" | "MOTHER" = fatherName ? "FATHER" : motherName ? "MOTHER" : "FATHER";
+              const parentType: "FATHER" | "MOTHER" = fatherName
+                ? "FATHER"
+                : motherName
+                  ? "MOTHER"
+                  : "FATHER";
 
               setDisplayedParentType(parentType);
               console.info(`[CU-REG MAIN-CONSOLE] Refreshed displayed parent type after save:`, {
@@ -436,7 +517,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               });
 
               // Update editable data with refreshed values
-              const personalDetails: PersonalDetailsDto | null = profileInfo?.personalDetails ?? null;
+              const personalDetails: PersonalDetailsDto | null =
+                profileInfo?.personalDetails ?? null;
 
               setEditableData((prev) => {
                 const updatedFullName =
@@ -464,12 +546,20 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 };
               });
 
-              console.info(`[CU-REG MAIN-CONSOLE] Updated form data with refreshed values from database`);
+              console.info(
+                `[CU-REG MAIN-CONSOLE] Updated form data with refreshed values from database`,
+              );
             } catch (profileError) {
-              console.error(`[CU-REG MAIN-CONSOLE] Error refreshing profile after save:`, profileError);
+              console.error(
+                `[CU-REG MAIN-CONSOLE] Error refreshing profile after save:`,
+                profileError,
+              );
             }
           } catch (error) {
-            console.error("[CU-REG MAIN-CONSOLE] Error refreshing correction request status:", error);
+            console.error(
+              "[CU-REG MAIN-CONSOLE] Error refreshing correction request status:",
+              error,
+            );
           }
         }
       } catch (error) {
@@ -522,33 +612,56 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           payload: {
             addressData: {
               residential: {
-                cityId: residentialCities.find((c) => c.id?.toString() === editableData.residentialCity)?.id,
-                districtId: residentialDistricts.find((d) => d.id?.toString() === editableData.residentialDistrict)?.id,
+                cityId: residentialCities.find(
+                  (c) => c.id?.toString() === editableData.residentialCity,
+                )?.id,
+                districtId: residentialDistricts.find(
+                  (d) => d.id?.toString() === editableData.residentialDistrict,
+                )?.id,
                 postofficeId: null,
                 otherPostoffice: editableData.residentialPostOffice,
                 policeStationId: null,
                 otherPoliceStation: editableData.residentialPoliceStation,
                 addressLine: editableData.residentialAddress,
                 pincode: editableData.residentialPinCode,
-                city: residentialCities.find((c) => c.id?.toString() === editableData.residentialCity)?.name || "",
+                city:
+                  residentialCities.find((c) => c.id?.toString() === editableData.residentialCity)
+                    ?.name || "",
                 district:
-                  residentialDistricts.find((d) => d.id?.toString() === editableData.residentialDistrict)?.name || "",
-                state: residentialStates.find((s) => s.id?.toString() === editableData.residentialState)?.name || "",
-                country: countries.find((c) => c.id?.toString() === editableData.residentialCountry)?.name || "",
+                  residentialDistricts.find(
+                    (d) => d.id?.toString() === editableData.residentialDistrict,
+                  )?.name || "",
+                state:
+                  residentialStates.find((s) => s.id?.toString() === editableData.residentialState)
+                    ?.name || "",
+                country:
+                  countries.find((c) => c.id?.toString() === editableData.residentialCountry)
+                    ?.name || "",
               },
               mailing: {
-                cityId: mailingCities.find((c) => c.id?.toString() === editableData.mailingCity)?.id,
-                districtId: mailingDistricts.find((d) => d.id?.toString() === editableData.mailingDistrict)?.id,
+                cityId: mailingCities.find((c) => c.id?.toString() === editableData.mailingCity)
+                  ?.id,
+                districtId: mailingDistricts.find(
+                  (d) => d.id?.toString() === editableData.mailingDistrict,
+                )?.id,
                 postofficeId: null,
                 otherPostoffice: editableData.mailingPostOffice,
                 policeStationId: null,
                 otherPoliceStation: editableData.mailingPoliceStation,
                 addressLine: editableData.mailingAddress,
                 pincode: editableData.mailingPinCode,
-                city: mailingCities.find((c) => c.id?.toString() === editableData.mailingCity)?.name || "",
-                district: mailingDistricts.find((d) => d.id?.toString() === editableData.mailingDistrict)?.name || "",
-                state: mailingStates.find((s) => s.id?.toString() === editableData.mailingState)?.name || "",
-                country: countries.find((c) => c.id?.toString() === editableData.mailingCountry)?.name || "",
+                city:
+                  mailingCities.find((c) => c.id?.toString() === editableData.mailingCity)?.name ||
+                  "",
+                district:
+                  mailingDistricts.find((d) => d.id?.toString() === editableData.mailingDistrict)
+                    ?.name || "",
+                state:
+                  mailingStates.find((s) => s.id?.toString() === editableData.mailingState)?.name ||
+                  "",
+                country:
+                  countries.find((c) => c.id?.toString() === editableData.mailingCountry)?.name ||
+                  "",
               },
             },
           },
@@ -582,7 +695,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               updatedRequest.status,
             );
           } catch (error) {
-            console.error("[CU-REG MAIN-CONSOLE] Error refreshing correction request status:", error);
+            console.error(
+              "[CU-REG MAIN-CONSOLE] Error refreshing correction request status:",
+              error,
+            );
           }
         }
       } catch (error) {
@@ -609,10 +725,14 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             correctionRequestStatus: correctionRequestStatus,
             correctionRequestId: correctionRequestStatus?.id,
           });
-          throw new Error("Correction request ID not found. Please ensure the correction request is properly loaded.");
+          throw new Error(
+            "Correction request ID not found. Please ensure the correction request is properly loaded.",
+          );
         }
 
-        console.info(`[CU-REG MAIN-CONSOLE] Using correction request ID: ${correctionRequestStatus.id}`);
+        console.info(
+          `[CU-REG MAIN-CONSOLE] Using correction request ID: ${correctionRequestStatus.id}`,
+        );
 
         // Update correction request with subjects declaration
         const updateData = {
@@ -646,7 +766,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               updatedRequest.status,
             );
           } catch (error) {
-            console.error("[CU-REG MAIN-CONSOLE] Error refreshing correction request status:", error);
+            console.error(
+              "[CU-REG MAIN-CONSOLE] Error refreshing correction request status:",
+              error,
+            );
           }
         }
       } catch (error) {
@@ -675,10 +798,14 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             correctionRequestStatus: correctionRequestStatus,
             correctionRequestId: correctionRequestStatus?.id,
           });
-          throw new Error("Correction request ID not found. Please ensure the correction request is properly loaded.");
+          throw new Error(
+            "Correction request ID not found. Please ensure the correction request is properly loaded.",
+          );
         }
 
-        console.info(`[CU-REG MAIN-CONSOLE] Using correction request ID: ${correctionRequestStatus.id}`);
+        console.info(
+          `[CU-REG MAIN-CONSOLE] Using correction request ID: ${correctionRequestStatus.id}`,
+        );
 
         // Get student data for upload
         const studentUid = studentData?.uid || "";
@@ -700,11 +827,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
         // Warn user if no files are selected but they're trying to declare documents
         if (filesToUpload.length === 0) {
-          console.info(`[CU-REG MAIN-CONSOLE] No files selected for upload - proceeding with declaration only`);
+          console.info(
+            `[CU-REG MAIN-CONSOLE] No files selected for upload - proceeding with declaration only`,
+          );
         }
 
         if (filesToUpload.length > 0) {
-          console.info(`[CU-REG MAIN-CONSOLE] Starting upload process for ${filesToUpload.length} files`);
+          console.info(
+            `[CU-REG MAIN-CONSOLE] Starting upload process for ${filesToUpload.length} files`,
+          );
           const uploadPromises = filesToUpload.map(async ([documentKey, file]) => {
             if (file) {
               // Extract document ID from key (format: "document-{id}")
@@ -721,10 +852,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   cuRegistrationCorrectionRequestId: correctionRequestStatus.id,
                   documentId,
                 });
-                console.info(`[CU-REG MAIN-CONSOLE] File uploaded successfully for document ID ${documentId}`);
+                console.info(
+                  `[CU-REG MAIN-CONSOLE] File uploaded successfully for document ID ${documentId}`,
+                );
                 uploadSuccessCount++;
               } catch (error) {
-                console.error(`[CU-REG MAIN-CONSOLE] Error uploading file for document ID ${documentId}:`, error);
+                console.error(
+                  `[CU-REG MAIN-CONSOLE] Error uploading file for document ID ${documentId}:`,
+                  error,
+                );
                 uploadErrorCount++;
                 throw error;
               }
@@ -745,7 +881,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           documentsDeclaration: true,
         };
 
-        console.info("[CU-REG MAIN-CONSOLE] Updating correction request with documents declaration:", updateData);
+        console.info(
+          "[CU-REG MAIN-CONSOLE] Updating correction request with documents declaration:",
+          updateData,
+        );
 
         await axiosInstance.put(
           `/api/admissions/cu-registration-correction-requests/${correctionRequestStatus?.id}`,
@@ -773,7 +912,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         if (filesToUpload.length === 0) {
           toast.success("Documents declaration saved successfully! (No files to upload)");
         } else if (uploadSuccessCount > 0 && uploadErrorCount === 0) {
-          toast.success(`Documents declaration saved and ${uploadSuccessCount} file(s) uploaded successfully!`);
+          toast.success(
+            `Documents declaration saved and ${uploadSuccessCount} file(s) uploaded successfully!`,
+          );
         } else if (uploadSuccessCount > 0 && uploadErrorCount > 0) {
           toast.warning(
             `Documents declaration saved. ${uploadSuccessCount} file(s) uploaded, ${uploadErrorCount} failed.`,
@@ -797,7 +938,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               updatedRequest.status,
             );
           } catch (error) {
-            console.error("[CU-REG MAIN-CONSOLE] Error refreshing correction request status:", error);
+            console.error(
+              "[CU-REG MAIN-CONSOLE] Error refreshing correction request status:",
+              error,
+            );
           }
         }
       } catch (error) {
@@ -870,7 +1014,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   useEffect(() => {
     const fetchApiData = async () => {
       try {
-        const [countriesData, nationalitiesData] = await Promise.all([getActiveCountries(), getAllNationalities()]);
+        const [countriesData, nationalitiesData] = await Promise.all([
+          getActiveCountries(),
+          getAllNationalities(),
+        ]);
         setCountries(countriesData);
         setNationalities(nationalitiesData);
       } catch (error) {
@@ -1000,7 +1147,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           const getBool = (v: unknown): boolean => Boolean(v);
           const getNum = (v: unknown): number | undefined =>
             typeof v === "number" ? v : typeof v === "string" ? Number(v) : undefined;
-          const getStr = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+          const getStr = (v: unknown): string | undefined =>
+            typeof v === "string" ? v : undefined;
           console.info(`[CU-REG MAIN-CONSOLE] Found correction request:`, existingRequest);
 
           // Update correction flags
@@ -1052,17 +1200,20 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           if (existingRequestId) {
             void (async () => {
               try {
-                const rawDocs: Array<Record<string, unknown>> = await getCuRegistrationDocuments(existingRequestId);
+                const rawDocs: Array<Record<string, unknown>> =
+                  await getCuRegistrationDocuments(existingRequestId);
                 const filtered = (rawDocs || []).filter((d: Record<string, unknown>) => {
                   const reqId = existingRequestId;
                   const flatId = d?.cuRegistrationCorrectionRequestId as number | undefined;
                   const altFlat = d?.correctionRequestId as number | undefined;
-                  const nested = (d?.cuRegistrationCorrectionRequest as Record<string, unknown> | undefined)?.id as
-                    | number
-                    | undefined;
+                  const nested = (
+                    d?.cuRegistrationCorrectionRequest as Record<string, unknown> | undefined
+                  )?.id as number | undefined;
                   const nestedDoc = (d?.document as Record<string, unknown> | undefined)
                     ?.cuRegistrationCorrectionRequestId as number | undefined;
-                  return flatId === reqId || altFlat === reqId || nested === reqId || nestedDoc === reqId;
+                  return (
+                    flatId === reqId || altFlat === reqId || nested === reqId || nestedDoc === reqId
+                  );
                 });
                 // Only override if we actually received rows; otherwise keep embedded docs shown earlier
                 if (filtered && filtered.length > 0) {
@@ -1072,7 +1223,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   `[CU-REG MAIN-CONSOLE] Loaded ${filtered?.length || 0} documents for correction request ${existingRequest.id}`,
                 );
               } catch (docError) {
-                console.error(`[CU-REG MAIN-CONSOLE] Error fetching documents by correction request:`, docError);
+                console.error(
+                  `[CU-REG MAIN-CONSOLE] Error fetching documents by correction request:`,
+                  docError,
+                );
               }
             })();
           }
@@ -1087,11 +1241,17 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
         if (personalDetails || studentData) {
           // Determine which parent name is being displayed (prefer FATHER, fallback to MOTHER)
-          const fatherName = familyDetails?.members?.find((m: PersonDto) => m.type === "FATHER")?.name ?? undefined;
-          const motherName = familyDetails?.members?.find((m: PersonDto) => m.type === "MOTHER")?.name ?? undefined;
+          const fatherName =
+            familyDetails?.members?.find((m: PersonDto) => m.type === "FATHER")?.name ?? undefined;
+          const motherName =
+            familyDetails?.members?.find((m: PersonDto) => m.type === "MOTHER")?.name ?? undefined;
 
           const displayedParentName = fatherName || motherName;
-          const parentType: "FATHER" | "MOTHER" = fatherName ? "FATHER" : motherName ? "MOTHER" : "FATHER"; // Default to FATHER if neither exists
+          const parentType: "FATHER" | "MOTHER" = fatherName
+            ? "FATHER"
+            : motherName
+              ? "MOTHER"
+              : "FATHER"; // Default to FATHER if neither exists
 
           setDisplayedParentType(parentType);
           console.info(`[CU-REG MAIN-CONSOLE] Determined displayed parent type:`, {
@@ -1110,7 +1270,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             fatherMotherName: displayedParentName || "",
             gender: personalDetails?.gender || "",
             nationality: String(personalDetails?.nationality?.id || ""),
-            aadhaarNumber: formatAadhaarNumber(personalDetails?.aadhaarCardNumber || "XXXX XXXX XXXX"),
+            aadhaarNumber: formatAadhaarNumber(
+              personalDetails?.aadhaarCardNumber || "XXXX XXXX XXXX",
+            ),
             apaarId: formatApaarId((studentData?.apaarId && studentData.apaarId.trim()) || ""),
             belongsToEWS: studentData?.belongsToEWS ? "Yes" : "No",
           }));
@@ -1122,7 +1284,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         // Populate address data
         const addresses = personalDetails?.address ?? [];
         const resAddr = addresses.find((a) => a?.type === "RESIDENTIAL") || addresses[0] || null;
-        const mailAddr = addresses.find((a) => a?.type === "MAILING") || addresses[1] || resAddr || null;
+        const mailAddr =
+          addresses.find((a) => a?.type === "MAILING") || addresses[1] || resAddr || null;
 
         console.info("[CU-REG MAIN-CONSOLE] Address data structure:", { resAddr, mailAddr });
 
@@ -1132,7 +1295,11 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
           return value ? String(value) : "";
         };
 
-        const getNestedField = (addr: AddressDto | null, parent: keyof AddressDto, field: string): string => {
+        const getNestedField = (
+          addr: AddressDto | null,
+          parent: keyof AddressDto,
+          field: string,
+        ): string => {
           if (!addr) return "";
           const parentObj = addr[parent] as unknown as Record<string, unknown> | null | undefined;
           return parentObj ? String(parentObj[field] || "") : "";
@@ -1181,7 +1348,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               getNestedField(mailAddr, "postoffice", "name"),
             residentialState: String(resStateId || mailStateId || ""),
             residentialCountry: String(resCountryId || mailCountryId || ""),
-            residentialPinCode: getAddressField(resAddr, "pincode") || getAddressField(mailAddr, "pincode"),
+            residentialPinCode:
+              getAddressField(resAddr, "pincode") || getAddressField(mailAddr, "pincode"),
             mailingAddress:
               getAddressField(mailAddr, "addressLine") ||
               getAddressField(mailAddr, "address") ||
@@ -1201,7 +1369,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               getNestedField(resAddr, "postoffice", "name"),
             mailingState: String(mailStateId || resStateId || ""),
             mailingCountry: String(mailCountryId || resCountryId || ""),
-            mailingPinCode: getAddressField(mailAddr, "pincode") || getAddressField(resAddr, "pincode"),
+            mailingPinCode:
+              getAddressField(mailAddr, "pincode") || getAddressField(resAddr, "pincode"),
           };
 
           console.info("[CU-REG MAIN-CONSOLE] Setting address data:", {
@@ -1222,14 +1391,20 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             try {
               // Load states for residential address
               if (resCountryId) {
-                console.info("[CU-REG MAIN-CONSOLE] Loading states for residential country:", resCountryId);
+                console.info(
+                  "[CU-REG MAIN-CONSOLE] Loading states for residential country:",
+                  resCountryId,
+                );
                 const resStatesData = await getStatesByCountry(parseInt(resCountryId));
                 setResidentialStates(resStatesData);
                 console.info("[CU-REG MAIN-CONSOLE] Loaded residential states:", resStatesData);
 
                 // Load cities for residential state
                 if (resStateId) {
-                  console.info("[CU-REG MAIN-CONSOLE] Loading cities for residential state:", resStateId);
+                  console.info(
+                    "[CU-REG MAIN-CONSOLE] Loading cities for residential state:",
+                    resStateId,
+                  );
                   const resCitiesData = await getCitiesByState(parseInt(resStateId));
                   setResidentialCities(resCitiesData);
                   console.info("[CU-REG MAIN-CONSOLE] Loaded residential cities:", resCitiesData);
@@ -1238,23 +1413,35 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   try {
                     const resDistrictsData = await getDistrictsByState(parseInt(resStateId));
                     setResidentialDistricts(resDistrictsData);
-                    console.info("[CU-REG MAIN-CONSOLE] Loaded residential districts:", resDistrictsData);
+                    console.info(
+                      "[CU-REG MAIN-CONSOLE] Loaded residential districts:",
+                      resDistrictsData,
+                    );
                   } catch (error) {
-                    console.error("[CU-REG MAIN-CONSOLE] Error loading residential districts:", error);
+                    console.error(
+                      "[CU-REG MAIN-CONSOLE] Error loading residential districts:",
+                      error,
+                    );
                   }
                 }
               }
 
               // Load states for mailing address
               if (mailCountryId) {
-                console.info("[CU-REG MAIN-CONSOLE] Loading states for mailing country:", mailCountryId);
+                console.info(
+                  "[CU-REG MAIN-CONSOLE] Loading states for mailing country:",
+                  mailCountryId,
+                );
                 const mailStatesData = await getStatesByCountry(parseInt(mailCountryId));
                 setMailingStates(mailStatesData);
                 console.info("[CU-REG MAIN-CONSOLE] Loaded mailing states:", mailStatesData);
 
                 // Load cities for mailing state
                 if (mailStateId) {
-                  console.info("[CU-REG MAIN-CONSOLE] Loading cities for mailing state:", mailStateId);
+                  console.info(
+                    "[CU-REG MAIN-CONSOLE] Loading cities for mailing state:",
+                    mailStateId,
+                  );
                   const mailCitiesData = await getCitiesByState(parseInt(mailStateId));
                   setMailingCities(mailCitiesData);
                   console.info("[CU-REG MAIN-CONSOLE] Loaded mailing cities:", mailCitiesData);
@@ -1263,7 +1450,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   try {
                     const mailDistrictsData = await getDistrictsByState(parseInt(mailStateId));
                     setMailingDistricts(mailDistrictsData);
-                    console.info("[CU-REG MAIN-CONSOLE] Loaded mailing districts:", mailDistrictsData);
+                    console.info(
+                      "[CU-REG MAIN-CONSOLE] Loaded mailing districts:",
+                      mailDistrictsData,
+                    );
                   } catch (error) {
                     console.error("[CU-REG MAIN-CONSOLE] Error loading mailing districts:", error);
                   }
@@ -1280,7 +1470,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         // Fetch subject selections and mandatory subjects (results already awaited above)
         if (studentId) {
           try {
-            const [studentRows, mandatoryRows] = subjectBundles as [StudentSelectionsResponse, MandatorySubjectRow[]];
+            const [studentRows, mandatoryRows] = subjectBundles as [
+              StudentSelectionsResponse,
+              MandatorySubjectRow[],
+            ];
 
             console.info(`[CU-REG MAIN-CONSOLE] Student selections:`, studentRows);
             console.info(`[CU-REG MAIN-CONSOLE] Mandatory subjects:`, mandatoryRows);
@@ -1292,7 +1485,8 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             // isBcomProgram is now defined at component level
 
             const getCategoryKey = (label: string): SubjectCategory | undefined => {
-              if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label)) return "DSCC";
+              if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label))
+                return "DSCC";
               if (/Minor/i.test(label)) return "Minor";
 
               // For BCOM students, show MDC instead of IDC
@@ -1327,7 +1521,11 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               forClasses.forEach((c: unknown) => {
                 const classObj = c as ClassObject;
                 const label = String(
-                  classObj?.name || classObj?.shortName || classObj?.class?.name || classObj?.class?.shortName || "",
+                  classObj?.name ||
+                    classObj?.shortName ||
+                    classObj?.class?.name ||
+                    classObj?.class?.shortName ||
+                    "",
                 );
                 const roman = /\b(I|II|III|IV|V|VI)\b/i.exec(label);
                 if (roman && roman[1]) {
@@ -1365,7 +1563,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               const key = getCategoryKey(label);
               if (!key || !next[key]) return;
 
-              let semesters: number[] = toSemNumsFromClasses(r?.forClasses || r?.subjectSelectionMeta?.forClasses);
+              let semesters: number[] = toSemNumsFromClasses(
+                r?.forClasses || r?.subjectSelectionMeta?.forClasses,
+              );
 
               // Category-specific defaults when class span is unavailable
               if (semesters.length === 0 && /Minor\s*1/i.test(label)) semesters = [1, 2];
@@ -1409,7 +1609,16 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
               const semMatch = className.match(/\b(I|II|III|IV|1|2|3|4)\b/i);
               if (semMatch && semMatch[1]) {
                 const sem = semMatch[1].toUpperCase();
-                const semMap: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, "1": 1, "2": 2, "3": 3, "4": 4 };
+                const semMap: Record<string, number> = {
+                  I: 1,
+                  II: 2,
+                  III: 3,
+                  IV: 4,
+                  "1": 1,
+                  "2": 2,
+                  "3": 3,
+                  "4": 4,
+                };
                 semesters = semMap[sem] ? [semMap[sem]] : [];
               }
 
@@ -1463,7 +1672,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
   useEffect(() => {
     if (uploadedDocuments.length === 0) return;
 
-    console.info(`[CU-REG MAIN-CONSOLE] Loading preview URLs for ${uploadedDocuments.length} documents`);
+    console.info(
+      `[CU-REG MAIN-CONSOLE] Loading preview URLs for ${uploadedDocuments.length} documents`,
+    );
 
     (async () => {
       const promises = (uploadedDocuments || [])
@@ -1484,13 +1695,22 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
             if (url && url !== "undefined" && url !== "null") {
               // Add cache-busting parameter to force browser refresh
               const cacheBustedUrl = url + (url.includes("?") ? "&" : "?") + `t=${Date.now()}`;
-              console.info(`[CU-REG MAIN-CONSOLE] Got preview URL for document ${docId}:`, cacheBustedUrl);
+              console.info(
+                `[CU-REG MAIN-CONSOLE] Got preview URL for document ${docId}:`,
+                cacheBustedUrl,
+              );
               setDocPreviewUrls((prev) => ({ ...prev, [docId]: cacheBustedUrl }));
             } else {
-              console.error(`[CU-REG MAIN-CONSOLE] Invalid URL received for document ${docId}:`, url);
+              console.error(
+                `[CU-REG MAIN-CONSOLE] Invalid URL received for document ${docId}:`,
+                url,
+              );
             }
           } catch (error) {
-            console.error(`[CU-REG MAIN-CONSOLE] Error fetching preview URL for document ${docId}:`, error);
+            console.error(
+              `[CU-REG MAIN-CONSOLE] Error fetching preview URL for document ${docId}:`,
+              error,
+            );
           }
         });
       await Promise.allSettled(promises);
@@ -1510,7 +1730,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
     // Check for MA (but not Mathematics - MA should be exactly "MA" or start with "MA" followed by non-letter)
     const isMA =
       normalizedName === "MA" ||
-      (normalizedName.startsWith("MA") && normalizedName.length > 2 && !normalizedName.startsWith("MATHEMATICS"));
+      (normalizedName.startsWith("MA") &&
+        normalizedName.length > 2 &&
+        !normalizedName.startsWith("MATHEMATICS"));
 
     // Check for MCOM
     const isMCOM = normalizedName.startsWith("MCOM");
@@ -1542,9 +1764,12 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-yellow-800 mb-2">CU Registration Not Available</h2>
+              <h2 className="text-xl font-semibold text-yellow-800 mb-2">
+                CU Registration Not Available
+              </h2>
               <p className="text-yellow-700">
-                CU Registration form is not available for {studentData?.programCourse?.course?.name} students.
+                CU Registration form is not available for {studentData?.programCourse?.course?.name}{" "}
+                students.
                 <br />
                 Redirecting to dashboard...
               </p>
@@ -1600,7 +1825,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   );
                   toast.info("Loading admission form PDF...");
 
-                  const pdfUrl = await getCuRegistrationPdfUrlByRequestId(correctionRequestStatus.id);
+                  const pdfUrl = await getCuRegistrationPdfUrlByRequestId(
+                    correctionRequestStatus.id,
+                  );
 
                   if (pdfUrl && pdfUrl !== "undefined" && pdfUrl !== "null") {
                     console.info(`[CU-REG MAIN-CONSOLE] Opening PDF URL:`, pdfUrl);
@@ -1617,7 +1844,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                   if (error && typeof error === "object" && "response" in error && error.response) {
                     const apiError = error as { response: { status?: number } };
                     if (apiError.response.status === 400) {
-                      toast.error("Please complete all required declarations before viewing the PDF");
+                      toast.error(
+                        "Please complete all required declarations before viewing the PDF",
+                      );
                     } else {
                       toast.error("Failed to open admission form PDF");
                     }
@@ -1690,7 +1919,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 {/* Personal Info Tab */}
                 <TabsContent value="personal" className="space-y-6">
                   <div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Student Name</h2>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
+                      Student Name
+                    </h2>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {/* Full Name */}
@@ -1709,7 +1940,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
                       {/* Father/Mother Name */}
                       <div className="space-y-2">
-                        <Label htmlFor="fatherMotherName" className="text-sm font-medium text-gray-700">
+                        <Label
+                          htmlFor="fatherMotherName"
+                          className="text-sm font-medium text-gray-700"
+                        >
                           1.2 Father / Mother's Name
                         </Label>
                         <Input
@@ -1741,7 +1975,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                         </Select>
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.3 Correction Requested</span>
-                          <Badge variant={correctionFlags.gender ? "destructive" : "outline"} className="text-xs">
+                          <Badge
+                            variant={correctionFlags.gender ? "destructive" : "outline"}
+                            className="text-xs"
+                          >
                             {correctionFlags.gender ? "Yes" : "No"}
                           </Badge>
                         </div>
@@ -1759,7 +1996,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </SelectTrigger>
                           <SelectContent>
                             {nationalities.map((nationality) => (
-                              <SelectItem key={nationality.id || 0} value={(nationality.id || 0).toString()}>
+                              <SelectItem
+                                key={nationality.id || 0}
+                                value={(nationality.id || 0).toString()}
+                              >
                                 {nationality.name}
                               </SelectItem>
                             ))}
@@ -1767,7 +2007,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                         </Select>
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.4 Correction Requested</span>
-                          <Badge variant={correctionFlags.nationality ? "destructive" : "outline"} className="text-xs">
+                          <Badge
+                            variant={correctionFlags.nationality ? "destructive" : "outline"}
+                            className="text-xs"
+                          >
                             {correctionFlags.nationality ? "Yes" : "No"}
                           </Badge>
                         </div>
@@ -1797,7 +2040,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
                       {/* Aadhaar Number */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">1.6 Aadhaar Number</Label>
+                        <Label className="text-sm font-medium text-gray-700">
+                          1.6 Aadhaar Number
+                        </Label>
                         <Input
                           value={editableData.aadhaarNumber}
                           onChange={(e) => {
@@ -1836,7 +2081,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                         />
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">1.7 Correction Requested</span>
-                          <Badge variant={correctionFlags.apaarId ? "destructive" : "outline"} className="text-xs">
+                          <Badge
+                            variant={correctionFlags.apaarId ? "destructive" : "outline"}
+                            className="text-xs"
+                          >
                             {correctionFlags.apaarId ? "Yes" : "No"}
                           </Badge>
                         </div>
@@ -1857,12 +2105,17 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                             className="text-sm text-gray-700 leading-relaxed cursor-pointer"
                             onClick={() => handlePersonalInfoDeclarationChange(true)}
                           >
-                            I declare that the personal information provided above is correct and complete.
+                            I declare that the personal information provided above is correct and
+                            complete.
                             {isSavingPersonal && (
-                              <span className="ml-2 text-xs text-blue-600 font-medium">⏳ Saving...</span>
+                              <span className="ml-2 text-xs text-blue-600 font-medium">
+                                ⏳ Saving...
+                              </span>
                             )}
                             {personalDeclared && !isSavingPersonal && (
-                              <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                              <span className="ml-2 text-xs text-green-600 font-medium">
+                                ✓ Completed
+                              </span>
                             )}
                           </Label>
                         </div>
@@ -1877,13 +2130,19 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
                       {/* Residential Address */}
                       <div className="space-y-4 xl:pr-8 xl:border-r xl:border-gray-200">
-                        <h3 className="text-sm sm:text-base font-medium text-gray-900">Residential Address</h3>
+                        <h3 className="text-sm sm:text-base font-medium text-gray-900">
+                          Residential Address
+                        </h3>
                         <div className="space-y-3">
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.1 Address Line</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.1 Address Line
+                            </Label>
                             <Input
                               value={editableData.residentialAddress}
-                              onChange={(e) => handleInputChange("residentialAddress", e.target.value)}
+                              onChange={(e) =>
+                                handleInputChange("residentialAddress", e.target.value)
+                              }
                               placeholder="Enter residential address"
                               className="bg-white text-gray-900 border-gray-300"
                             />
@@ -1900,7 +2159,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                               </SelectTrigger>
                               <SelectContent>
                                 {countries.map((country) => (
-                                  <SelectItem key={country.id || 0} value={(country.id || 0).toString()}>
+                                  <SelectItem
+                                    key={country.id || 0}
+                                    value={(country.id || 0).toString()}
+                                  >
                                     {country.name}
                                   </SelectItem>
                                 ))}
@@ -1935,7 +2197,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                   </div>
                                 </div>
                                 {residentialStates.map((state) => (
-                                  <SelectItem key={state.id || 0} value={(state.id || 0).toString()}>
+                                  <SelectItem
+                                    key={state.id || 0}
+                                    value={(state.id || 0).toString()}
+                                  >
                                     {state.name}
                                   </SelectItem>
                                 ))}
@@ -1944,10 +2209,14 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.4 District</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.4 District
+                            </Label>
                             <Select
                               value={editableData.residentialDistrict}
-                              onValueChange={(value) => handleInputChange("residentialDistrict", value)}
+                              onValueChange={(value) =>
+                                handleInputChange("residentialDistrict", value)
+                              }
                             >
                               <SelectTrigger className="bg-white text-gray-900 border-gray-300">
                                 <SelectValue placeholder="Select district" />
@@ -1970,7 +2239,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                   </div>
                                 </div>
                                 {residentialDistricts.map((district) => (
-                                  <SelectItem key={district.id || 0} value={(district.id || 0).toString()}>
+                                  <SelectItem
+                                    key={district.id || 0}
+                                    value={(district.id || 0).toString()}
+                                  >
                                     {district.name}
                                   </SelectItem>
                                 ))}
@@ -2014,30 +2286,42 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.6 Pin Code</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.6 Pin Code
+                            </Label>
                             <Input
                               value={editableData.residentialPinCode}
-                              onChange={(e) => handleInputChange("residentialPinCode", e.target.value)}
+                              onChange={(e) =>
+                                handleInputChange("residentialPinCode", e.target.value)
+                              }
                               placeholder="Enter pin code"
                               className="bg-white text-gray-900 border-gray-300"
                             />
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.7 Police Station</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.7 Police Station
+                            </Label>
                             <Input
                               value={editableData.residentialPoliceStation}
-                              onChange={(e) => handleInputChange("residentialPoliceStation", e.target.value)}
+                              onChange={(e) =>
+                                handleInputChange("residentialPoliceStation", e.target.value)
+                              }
                               placeholder="Enter police station"
                               className="bg-white text-gray-900 border-gray-300"
                             />
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.8 Post Office</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.8 Post Office
+                            </Label>
                             <Input
                               value={editableData.residentialPostOffice}
-                              onChange={(e) => handleInputChange("residentialPostOffice", e.target.value)}
+                              onChange={(e) =>
+                                handleInputChange("residentialPostOffice", e.target.value)
+                              }
                               placeholder="Enter post office"
                               className="bg-white text-gray-900 border-gray-300"
                             />
@@ -2047,10 +2331,14 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
                       {/* Mailing Address */}
                       <div className="space-y-4 xl:pl-8">
-                        <h3 className="text-sm sm:text-base font-medium text-gray-900">Mailing Address</h3>
+                        <h3 className="text-sm sm:text-base font-medium text-gray-900">
+                          Mailing Address
+                        </h3>
                         <div className="space-y-3">
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.9 Address Line</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.9 Address Line
+                            </Label>
                             <Input
                               value={editableData.mailingAddress}
                               onChange={(e) => handleInputChange("mailingAddress", e.target.value)}
@@ -2060,7 +2348,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.10 Country</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.10 Country
+                            </Label>
                             <Select
                               value={editableData.mailingCountry}
                               onValueChange={(value) => handleCountryChange(value, "mailing")}
@@ -2070,7 +2360,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                               </SelectTrigger>
                               <SelectContent>
                                 {countries.map((country) => (
-                                  <SelectItem key={country.id || 0} value={(country.id || 0).toString()}>
+                                  <SelectItem
+                                    key={country.id || 0}
+                                    value={(country.id || 0).toString()}
+                                  >
                                     {country.name}
                                   </SelectItem>
                                 ))}
@@ -2105,7 +2398,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                   </div>
                                 </div>
                                 {mailingStates.map((state) => (
-                                  <SelectItem key={state.id || 0} value={(state.id || 0).toString()}>
+                                  <SelectItem
+                                    key={state.id || 0}
+                                    value={(state.id || 0).toString()}
+                                  >
                                     {state.name}
                                   </SelectItem>
                                 ))}
@@ -2114,7 +2410,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.12 District</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.12 District
+                            </Label>
                             <Select
                               value={editableData.mailingDistrict}
                               onValueChange={(value) => handleInputChange("mailingDistrict", value)}
@@ -2140,7 +2438,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                   </div>
                                 </div>
                                 {mailingDistricts.map((district) => (
-                                  <SelectItem key={district.id || 0} value={(district.id || 0).toString()}>
+                                  <SelectItem
+                                    key={district.id || 0}
+                                    value={(district.id || 0).toString()}
+                                  >
                                     {district.name}
                                   </SelectItem>
                                 ))}
@@ -2184,7 +2485,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.14 Pin Code</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.14 Pin Code
+                            </Label>
                             <Input
                               value={editableData.mailingPinCode}
                               onChange={(e) => handleInputChange("mailingPinCode", e.target.value)}
@@ -2194,20 +2497,28 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.15 Police Station</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.15 Police Station
+                            </Label>
                             <Input
                               value={editableData.mailingPoliceStation}
-                              onChange={(e) => handleInputChange("mailingPoliceStation", e.target.value)}
+                              onChange={(e) =>
+                                handleInputChange("mailingPoliceStation", e.target.value)
+                              }
                               placeholder="Enter police station"
                               className="bg-white text-gray-900 border-gray-300"
                             />
                           </div>
 
                           <div className="space-y-2">
-                            <Label className="text-sm font-medium text-gray-700">2.16 Post Office</Label>
+                            <Label className="text-sm font-medium text-gray-700">
+                              2.16 Post Office
+                            </Label>
                             <Input
                               value={editableData.mailingPostOffice}
-                              onChange={(e) => handleInputChange("mailingPostOffice", e.target.value)}
+                              onChange={(e) =>
+                                handleInputChange("mailingPostOffice", e.target.value)
+                              }
                               placeholder="Enter post office"
                               className="bg-white text-gray-900 border-gray-300"
                             />
@@ -2231,12 +2542,17 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           className="text-sm text-gray-700 leading-relaxed cursor-pointer"
                           onClick={() => handleAddressInfoDeclarationChange(true)}
                         >
-                          I declare that the address information provided above is correct and complete.
+                          I declare that the address information provided above is correct and
+                          complete.
                           {isSavingAddress && (
-                            <span className="ml-2 text-xs text-blue-600 font-medium">⏳ Saving...</span>
+                            <span className="ml-2 text-xs text-blue-600 font-medium">
+                              ⏳ Saving...
+                            </span>
                           )}
                           {addressDeclared && !isSavingAddress && (
-                            <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                            <span className="ml-2 text-xs text-green-600 font-medium">
+                              ✓ Completed
+                            </span>
                           )}
                         </Label>
                       </div>
@@ -2248,10 +2564,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                 <TabsContent value="subjects" className="space-y-6">
                   <div>
                     <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-lg font-semibold text-gray-900">3.1 Subjects Overview (Semesters 1-4)</h2>
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        3.1 Subjects Overview (Semesters 1-4)
+                      </h2>
                       <div className="flex items-center space-x-2">
                         <span className="text-sm text-gray-600">Correction Requested</span>
-                        <Badge variant={correctionFlags.subjects ? "destructive" : "outline"} className="text-xs">
+                        <Badge
+                          variant={correctionFlags.subjects ? "destructive" : "outline"}
+                          className="text-xs"
+                        >
                           {correctionFlags.subjects ? "Yes" : "No"}
                         </Badge>
                       </div>
@@ -2292,15 +2613,26 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                   const categoryKey = category as SubjectCategory;
                                   const semesterKey = sem as SemesterKey;
                                   const mandatorySubjectsList =
-                                    (mandatorySubjects[categoryKey]?.[semesterKey] as string[]) || [];
-                                  const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
+                                    (mandatorySubjects[categoryKey]?.[semesterKey] as string[]) ||
+                                    [];
+                                  const studentSubjectsList = Array.isArray(value)
+                                    ? value
+                                    : value
+                                      ? [value]
+                                      : [];
 
                                   return (
-                                    <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
+                                    <td
+                                      key={sem}
+                                      className="border border-gray-300 px-2 py-2 min-w-[150px]"
+                                    >
                                       <div className="text-sm text-gray-900">
                                         {(() => {
                                           // Combine all subjects (mandatory + optional) into one array
-                                          const allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
+                                          const allSubjects: Array<{
+                                            name: string;
+                                            isMandatory: boolean;
+                                          }> = [];
 
                                           // Add mandatory subjects
                                           mandatorySubjectsList.forEach((subject) => {
@@ -2316,10 +2648,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                           });
 
                                           // For Minor category, if sem4 is empty and sem3 has subjects, duplicate sem3 subjects to sem4
-                                          if (category === "Minor" && sem === "sem4" && allSubjects.length === 0) {
+                                          if (
+                                            category === "Minor" &&
+                                            sem === "sem4" &&
+                                            allSubjects.length === 0
+                                          ) {
                                             const sem3Mandatory =
-                                              (mandatorySubjects[category as keyof typeof mandatorySubjects]
-                                                ?.sem3 as string[]) || [];
+                                              (mandatorySubjects[
+                                                category as keyof typeof mandatorySubjects
+                                              ]?.sem3 as string[]) || [];
                                             const sem3Student = Array.isArray(semesters.sem3)
                                               ? semesters.sem3
                                               : semesters.sem3
@@ -2328,7 +2665,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
 
                                             // Add sem3 mandatory subjects
                                             sem3Mandatory.forEach((subject: string) => {
-                                              allSubjects.push({ name: subject, isMandatory: true });
+                                              allSubjects.push({
+                                                name: subject,
+                                                isMandatory: true,
+                                              });
                                             });
 
                                             // Add sem3 student subjects (filter out duplicates)
@@ -2336,7 +2676,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                               (subject: string) => !sem3Mandatory.includes(subject),
                                             );
                                             filteredSem3Subjects.forEach((subject: string) => {
-                                              allSubjects.push({ name: subject, isMandatory: false });
+                                              allSubjects.push({
+                                                name: subject,
+                                                isMandatory: false,
+                                              });
                                             });
                                           }
 
@@ -2350,7 +2693,11 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                                 </span>
                                               );
                                             }
-                                            return <span className="text-gray-500 italic">Not Applicable</span>;
+                                            return (
+                                              <span className="text-gray-500 italic">
+                                                Not Applicable
+                                              </span>
+                                            );
                                           }
 
                                           // Render all subjects as ordered list
@@ -2392,10 +2739,14 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                         >
                           I confirm the subjects listed above for Semesters 1-4.
                           {isSavingSubjects && (
-                            <span className="ml-2 text-xs text-blue-600 font-medium">⏳ Saving...</span>
+                            <span className="ml-2 text-xs text-blue-600 font-medium">
+                              ⏳ Saving...
+                            </span>
                           )}
                           {subjectsDeclared && !isSavingSubjects && (
-                            <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                            <span className="ml-2 text-xs text-green-600 font-medium">
+                              ✓ Completed
+                            </span>
                           )}
                         </Label>
                       </div>
@@ -2431,61 +2782,70 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           {documentTypes.map((docType) => {
                             // Find existing document for this type
 
-                            const existingDoc = uploadedDocuments.find((doc: Record<string, unknown>) => {
-                              // Use ONLY document ID matching - most reliable method
-                              const docId = doc.documentId;
-                              const nestedDocId = (doc.document as Record<string, unknown>)?.id;
-                              const nestedDocCode = (doc.document as Record<string, unknown>)?.code as
-                                | string
-                                | undefined;
-                              const nestedDocName = (doc.document as Record<string, unknown>)?.name as
-                                | string
-                                | undefined;
-                              const docTypeId = docType.id;
-                              const docTypeIdNum = parseInt(docType.id);
-                              const typeCode = (docType.code || "").toString().toUpperCase();
-                              const typeName = (docType.name || "").toString().toUpperCase();
-                              // Also ensure this document row belongs to current correction request id
-                              const reqId = correctionRequestStatus?.id;
-                              const docReqId = (doc as Record<string, unknown>)?.cuRegistrationCorrectionRequestId as
-                                | number
-                                | undefined;
-                              const altDocReqId = (doc as Record<string, unknown>)?.correctionRequestId as
-                                | number
-                                | undefined;
-                              const nestedReqId =
-                                (doc as Record<string, unknown>)?.cuRegistrationCorrectionRequest &&
-                                (
-                                  (doc as Record<string, unknown>)?.cuRegistrationCorrectionRequest as Record<
-                                    string,
-                                    unknown
-                                  >
-                                )?.id;
+                            const existingDoc = uploadedDocuments.find(
+                              (doc: Record<string, unknown>) => {
+                                // Use ONLY document ID matching - most reliable method
+                                const docId = doc.documentId;
+                                const nestedDocId = (doc.document as Record<string, unknown>)?.id;
+                                const nestedDocCode = (doc.document as Record<string, unknown>)
+                                  ?.code as string | undefined;
+                                const nestedDocName = (doc.document as Record<string, unknown>)
+                                  ?.name as string | undefined;
+                                const docTypeId = docType.id;
+                                const docTypeIdNum = parseInt(docType.id);
+                                const typeCode = (docType.code || "").toString().toUpperCase();
+                                const typeName = (docType.name || "").toString().toUpperCase();
+                                // Also ensure this document row belongs to current correction request id
+                                const reqId = correctionRequestStatus?.id;
+                                const docReqId = (doc as Record<string, unknown>)
+                                  ?.cuRegistrationCorrectionRequestId as number | undefined;
+                                const altDocReqId = (doc as Record<string, unknown>)
+                                  ?.correctionRequestId as number | undefined;
+                                const nestedReqId =
+                                  (doc as Record<string, unknown>)
+                                    ?.cuRegistrationCorrectionRequest &&
+                                  (
+                                    (doc as Record<string, unknown>)
+                                      ?.cuRegistrationCorrectionRequest as Record<string, unknown>
+                                  )?.id;
 
-                              // Removed excessive logging for performance
+                                // Removed excessive logging for performance
 
-                              // Primary matching: Check document ID (most reliable)
-                              const idMatch =
-                                docId === docTypeId ||
-                                docId === docTypeIdNum ||
-                                nestedDocId === docTypeId ||
-                                nestedDocId === docTypeIdNum;
+                                // Primary matching: Check document ID (most reliable)
+                                const idMatch =
+                                  docId === docTypeId ||
+                                  docId === docTypeIdNum ||
+                                  nestedDocId === docTypeId ||
+                                  nestedDocId === docTypeIdNum;
 
-                              // Secondary matching: Match by document code or name when IDs differ across sources
-                              const codeMatch =
-                                (nestedDocCode && typeCode && nestedDocCode.toUpperCase() === typeCode) || false;
-                              const nameMatch =
-                                (nestedDocName && typeName && nestedDocName.toUpperCase() === typeName) || false;
+                                // Secondary matching: Match by document code or name when IDs differ across sources
+                                const codeMatch =
+                                  (nestedDocCode &&
+                                    typeCode &&
+                                    nestedDocCode.toUpperCase() === typeCode) ||
+                                  false;
+                                const nameMatch =
+                                  (nestedDocName &&
+                                    typeName &&
+                                    nestedDocName.toUpperCase() === typeName) ||
+                                  false;
 
-                              const belongsToCurrent =
-                                !reqId || docReqId === reqId || altDocReqId === reqId || nestedReqId === reqId;
+                                const belongsToCurrent =
+                                  !reqId ||
+                                  docReqId === reqId ||
+                                  altDocReqId === reqId ||
+                                  nestedReqId === reqId;
 
-                              // Removed excessive logging for performance
+                                // Removed excessive logging for performance
 
-                              return (idMatch || codeMatch || nameMatch) && belongsToCurrent;
-                            });
+                                return (idMatch || codeMatch || nameMatch) && belongsToCurrent;
+                              },
+                            );
 
-                            console.info(`[CU-REG MAIN-CONSOLE] Found existing doc for ${docType.name}:`, existingDoc);
+                            console.info(
+                              `[CU-REG MAIN-CONSOLE] Found existing doc for ${docType.name}:`,
+                              existingDoc,
+                            );
 
                             const fileSizeKB = existingDoc?.fileSize
                               ? ((existingDoc.fileSize as number) / 1024).toFixed(1)
@@ -2508,10 +2868,15 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                               className="w-full h-full object-cover"
                                               onError={async () => {
                                                 try {
-                                                  const url = await getCuRegistrationDocumentSignedUrl(
-                                                    existingDoc.id as number,
-                                                  );
-                                                  if (url && url !== "undefined" && url !== "null") {
+                                                  const url =
+                                                    await getCuRegistrationDocumentSignedUrl(
+                                                      existingDoc.id as number,
+                                                    );
+                                                  if (
+                                                    url &&
+                                                    url !== "undefined" &&
+                                                    url !== "null"
+                                                  ) {
                                                     setDocPreviewUrls((prev) => ({
                                                       ...prev,
                                                       [existingDoc.id as number]: url,
@@ -2527,17 +2892,25 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                               <button
                                                 onClick={async () => {
                                                   try {
-                                                    const url = await getCuRegistrationDocumentSignedUrl(
-                                                      existingDoc.id as number,
-                                                    );
-                                                    if (url && url !== "undefined" && url !== "null") {
+                                                    const url =
+                                                      await getCuRegistrationDocumentSignedUrl(
+                                                        existingDoc.id as number,
+                                                      );
+                                                    if (
+                                                      url &&
+                                                      url !== "undefined" &&
+                                                      url !== "null"
+                                                    ) {
                                                       setDocPreviewUrls((prev) => ({
                                                         ...prev,
                                                         [existingDoc.id as number]: url,
                                                       }));
                                                     }
                                                   } catch (error) {
-                                                    console.error("Failed to get signed URL:", error);
+                                                    console.error(
+                                                      "Failed to get signed URL:",
+                                                      error,
+                                                    );
                                                   }
                                                 }}
                                                 className="text-xs text-blue-600 hover:underline"
@@ -2579,7 +2952,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                       </div>
                                     </div>
                                   ) : (
-                                    <span className="text-gray-500 italic">No document uploaded</span>
+                                    <span className="text-gray-500 italic">
+                                      No document uploaded
+                                    </span>
                                   )}
                                 </td>
                                 <td className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
@@ -2596,16 +2971,24 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                         console.info(
                                           `[CU-REG MAIN-CONSOLE] Button clicked for document ${docType.name}, looking for input: ${inputId}`,
                                         );
-                                        const input = document.getElementById(inputId) as HTMLInputElement;
+                                        const input = document.getElementById(
+                                          inputId,
+                                        ) as HTMLInputElement;
                                         if (input) {
-                                          console.info(`[CU-REG MAIN-CONSOLE] Input found, triggering click`);
+                                          console.info(
+                                            `[CU-REG MAIN-CONSOLE] Input found, triggering click`,
+                                          );
                                           input.click();
                                         } else {
-                                          console.error(`[CU-REG MAIN-CONSOLE] Input not found: ${inputId}`);
+                                          console.error(
+                                            `[CU-REG MAIN-CONSOLE] Input not found: ${inputId}`,
+                                          );
                                         }
                                       }}
                                     >
-                                      {documents[`document-${docType.id}`] ? "Change File" : "Select File"}
+                                      {documents[`document-${docType.id}`]
+                                        ? "Change File"
+                                        : "Select File"}
                                     </Button>
                                     <p className="text-xs text-gray-500">
                                       Max {getFileSizeLimit(docType.name).maxSizeKB}KB
@@ -2630,8 +3013,14 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                           },
                                         );
                                         setDocuments((prev) => {
-                                          const newState = { ...prev, [`document-${docType.id}`]: file };
-                                          console.info(`[CU-REG MAIN-CONSOLE] Updated documents state:`, newState);
+                                          const newState = {
+                                            ...prev,
+                                            [`document-${docType.id}`]: file,
+                                          };
+                                          console.info(
+                                            `[CU-REG MAIN-CONSOLE] Updated documents state:`,
+                                            newState,
+                                          );
                                           return newState;
                                         });
                                         // Files will be uploaded when documents declaration is clicked
@@ -2644,7 +3033,10 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                         Selected: {documents[`document-${docType.id}`]?.name}
                                       </p>
                                       <p className="text-xs text-gray-500">
-                                        {((documents[`document-${docType.id}`]?.size || 0) / 1024).toFixed(1)} kB
+                                        {(
+                                          (documents[`document-${docType.id}`]?.size || 0) / 1024
+                                        ).toFixed(1)}{" "}
+                                        kB
                                       </p>
                                     </div>
                                   )}
@@ -2652,7 +3044,9 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                                   {process.env.NODE_ENV === "development" && (
                                     <div className="mt-1 text-xs text-gray-400">
                                       Debug: documents[{`document-${docType.id}`}] ={" "}
-                                      {documents[`document-${docType.id}`] ? "File selected" : "No file"}
+                                      {documents[`document-${docType.id}`]
+                                        ? "File selected"
+                                        : "No file"}
                                     </div>
                                   )}
                                 </td>
@@ -2670,13 +3064,16 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                           id="documentsDeclaration"
                           checked={documentsConfirmed}
                           onCheckedChange={(checked) => {
-                            console.info(`[CU-REG MAIN-CONSOLE] Documents declaration checkbox clicked:`, {
-                              checked,
-                              documentsConfirmed,
-                              isSavingDocuments,
-                              documentUploadsCount: Object.keys(documents).length,
-                              documentUploads: documents,
-                            });
+                            console.info(
+                              `[CU-REG MAIN-CONSOLE] Documents declaration checkbox clicked:`,
+                              {
+                                checked,
+                                documentsConfirmed,
+                                isSavingDocuments,
+                                documentUploadsCount: Object.keys(documents).length,
+                                documentUploads: documents,
+                              },
+                            );
                             handleDocumentsDeclarationChange(checked as boolean);
                           }}
                           disabled={isSavingDocuments}
@@ -2689,10 +3086,14 @@ export default function CuRegistrationForm({ studentId, studentData }: CuRegistr
                         >
                           I confirm that the uploaded documents correspond to the data provided.
                           {isSavingDocuments && (
-                            <span className="ml-2 text-xs text-blue-600 font-medium">⏳ Saving...</span>
+                            <span className="ml-2 text-xs text-blue-600 font-medium">
+                              ⏳ Saving...
+                            </span>
                           )}
                           {documentsConfirmed && !isSavingDocuments && (
-                            <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                            <span className="ml-2 text-xs text-green-600 font-medium">
+                              ✓ Completed
+                            </span>
                           )}
                         </Label>
                       </div>

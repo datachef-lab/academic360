@@ -39,12 +39,11 @@ export function LanguageMediumDialog({
     setIsSubmitting(true);
 
     try {
-      const url = mode === "add" 
-        ? "/api/language-mediums"
-        : `/api/language-mediums?id=${languageMedium?.id}`;
-      
+      const url =
+        mode === "add" ? "/api/language-mediums" : `/api/language-mediums?id=${languageMedium?.id}`;
+
       const method = mode === "add" ? "POST" : "PUT";
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -58,9 +57,10 @@ export function LanguageMediumDialog({
       if (result.success) {
         toast({
           title: mode === "add" ? "Language Medium Added" : "Language Medium Updated",
-          description: mode === "add" 
-            ? "New language medium has been added successfully."
-            : "Language medium has been updated successfully.",
+          description:
+            mode === "add"
+              ? "New language medium has been added successfully."
+              : "Language medium has been updated successfully.",
         });
         setOpen(false);
         onSuccess();
@@ -134,4 +134,4 @@ export function LanguageMediumDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

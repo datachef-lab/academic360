@@ -2,20 +2,25 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  CheckCircle2, 
-  Home, 
-  Building2, 
-  Calendar, 
-  MapPin, 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  CheckCircle2,
+  Home,
+  Building2,
+  Calendar,
+  MapPin,
   Phone,
   Globe,
-  Mailbox
+  Mailbox,
 } from "lucide-react";
 import { Accommodation } from "@/types/user/accommodation";
 import { PlaceOfStay } from "@/types/enums";
-
 
 interface AccommodationFormProps {
   onSubmit: (data: Accommodation) => void;
@@ -60,7 +65,9 @@ export default function AccommodationForm({ onSubmit, initialData = {} }: Accomm
           </Label>
           <Select
             value={formData.placeOfStay || ""}
-            onValueChange={(value) => setFormData({ ...formData, placeOfStay: value as PlaceOfStay })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, placeOfStay: value as PlaceOfStay })
+            }
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select accommodation type" />
@@ -83,7 +90,9 @@ export default function AccommodationForm({ onSubmit, initialData = {} }: Accomm
           <Input
             id="startDate"
             type="date"
-            value={formData.startDate ? new Date(formData.startDate).toISOString().split('T')[0] : ""}
+            value={
+              formData.startDate ? new Date(formData.startDate).toISOString().split("T")[0] : ""
+            }
             onChange={(e) => setFormData({ ...formData, startDate: new Date(e.target.value) })}
             className="w-full"
           />
@@ -97,7 +106,7 @@ export default function AccommodationForm({ onSubmit, initialData = {} }: Accomm
           <Input
             id="endDate"
             type="date"
-            value={formData.endDate ? new Date(formData.endDate).toISOString().split('T')[0] : ""}
+            value={formData.endDate ? new Date(formData.endDate).toISOString().split("T")[0] : ""}
             onChange={(e) => setFormData({ ...formData, endDate: new Date(e.target.value) })}
             className="w-full"
           />
@@ -114,10 +123,12 @@ export default function AccommodationForm({ onSubmit, initialData = {} }: Accomm
               <Input
                 id="addressLine"
                 value={formData.address.addressLine || ""}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  address: { ...formData.address!, addressLine: e.target.value }
-                })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    address: { ...formData.address!, addressLine: e.target.value },
+                  })
+                }
                 placeholder="Enter address line"
                 className="w-full"
               />
@@ -182,10 +193,12 @@ export default function AccommodationForm({ onSubmit, initialData = {} }: Accomm
               <Input
                 id="pincode"
                 value={formData.address.pincode || ""}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  address: { ...formData.address!, pincode: e.target.value }
-                })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    address: { ...formData.address!, pincode: e.target.value },
+                  })
+                }
                 placeholder="Enter pincode"
                 className="w-full"
               />
@@ -200,10 +213,12 @@ export default function AccommodationForm({ onSubmit, initialData = {} }: Accomm
                 id="phone"
                 type="tel"
                 value={formData.address.phone || ""}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  address: { ...formData.address!, phone: e.target.value }
-                })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    address: { ...formData.address!, phone: e.target.value },
+                  })
+                }
                 placeholder="Enter phone number"
                 className="w-full"
               />
@@ -234,4 +249,4 @@ export default function AccommodationForm({ onSubmit, initialData = {} }: Accomm
       </div>
     </div>
   );
-} 
+}

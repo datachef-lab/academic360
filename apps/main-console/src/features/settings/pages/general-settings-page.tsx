@@ -23,7 +23,8 @@ export default function GeneralSettingsPage() {
       const filePreviews: Record<number, string> = {};
       settings.forEach((setting: Settings) => {
         if (setting.type === "FILE") {
-          filePreviews[setting.id!] = `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${setting.id}`;
+          filePreviews[setting.id!] =
+            `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${setting.id}`;
         }
       });
       setPreviewImages(filePreviews);
@@ -41,7 +42,9 @@ export default function GeneralSettingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const updatePromises = Object.entries(updatedSettings).map(([id, value]) => updateSetting(Number(id), value));
+      const updatePromises = Object.entries(updatedSettings).map(([id, value]) =>
+        updateSetting(Number(id), value),
+      );
       await Promise.all(updatePromises);
       alert("Settings updated successfully!");
       setUpdatedSettings({});
@@ -57,7 +60,8 @@ export default function GeneralSettingsPage() {
         const filePreviews: Record<number, string> = {};
         payload.forEach((setting: Settings) => {
           if (setting.type === "FILE") {
-            filePreviews[setting.id!] = `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${setting.id}`;
+            filePreviews[setting.id!] =
+              `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${setting.id}`;
           }
         });
         setPreviewImages(filePreviews);
@@ -75,7 +79,9 @@ export default function GeneralSettingsPage() {
               <Library className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400" />
               General Settings
             </CardTitle>
-            <div className="text-sm sm:text-base text-muted-foreground">Configure your college details below.</div>
+            <div className="text-sm sm:text-base text-muted-foreground">
+              Configure your college details below.
+            </div>
           </div>
         </CardHeader>
       </Card>
@@ -89,7 +95,10 @@ export default function GeneralSettingsPage() {
               .map((settingItem) => {
                 // const currentValue = updatedSettings[settingItem.id!] ?? settingItem.value;
                 return (
-                  <div key={settingItem.id!} className="grid grid-cols-1 sm:grid-cols-2 items-center gap-3 sm:gap-4">
+                  <div
+                    key={settingItem.id!}
+                    className="grid grid-cols-1 sm:grid-cols-2 items-center gap-3 sm:gap-4"
+                  >
                     <Label className="text-sm sm:text-base">{settingItem.name}</Label>
                     {settingItem.type === "FILE" ? (
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
@@ -140,7 +149,11 @@ export default function GeneralSettingsPage() {
       <Dialog open={!!zoomedImage} onOpenChange={() => setZoomedImage(null)}>
         <DialogContent className="w-[95vw] sm:w-full max-w-3xl p-0">
           {zoomedImage && (
-            <img src={zoomedImage} alt="Zoomed Preview" className="w-full h-auto object-contain rounded-md" />
+            <img
+              src={zoomedImage}
+              alt="Zoomed Preview"
+              className="w-full h-auto object-contain rounded-md"
+            />
           )}
         </DialogContent>
       </Dialog>

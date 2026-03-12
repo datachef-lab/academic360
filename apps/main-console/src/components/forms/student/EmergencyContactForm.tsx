@@ -3,7 +3,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CheckCircle2, User, Phone, Mail, Shield } from "lucide-react";
 import { EmergencyContact } from "@/types/user/emergency-contact";
 
@@ -12,7 +18,10 @@ interface EmergencyContactFormProps {
   initialData?: Partial<EmergencyContact>;
 }
 
-export default function EmergencyContactForm({ onSubmit, initialData = {} }: EmergencyContactFormProps) {
+export default function EmergencyContactForm({
+  onSubmit,
+  initialData = {},
+}: EmergencyContactFormProps) {
   const [formData, setFormData] = useState<EmergencyContact>({
     studentId: initialData.studentId || 0,
     personName: initialData.personName || "",
@@ -193,4 +202,4 @@ export default function EmergencyContactForm({ onSubmit, initialData = {} }: Eme
       </div>
     </div>
   );
-} 
+}

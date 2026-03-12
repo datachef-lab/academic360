@@ -44,7 +44,10 @@ export const createCourseLevel = async (data: CourseLevelData): Promise<CourseLe
   return res.data;
 };
 
-export const updateCourseLevel = async (id: number, data: Partial<CourseLevelData>): Promise<CourseLevel> => {
+export const updateCourseLevel = async (
+  id: number,
+  data: Partial<CourseLevelData>,
+): Promise<CourseLevel> => {
   const res = await axiosInstance.put<CourseLevel>(`${BASE}/${id}`, data);
   return res.data;
 };
@@ -61,16 +64,20 @@ export const bulkUploadCourseLevels = async (
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(`${BASE}/bulk-upload`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(
+    `${BASE}/bulk-upload`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onUploadProgress(percentCompleted);
+        }
+      },
     },
-    onUploadProgress: (progressEvent) => {
-      if (progressEvent.total) {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        onUploadProgress(percentCompleted);
-      }
-    },
-  });
+  );
   return res.data.payload;
 };

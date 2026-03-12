@@ -1,5 +1,12 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 const TableSkeletonCell = () => (
   <TableCell className="text-center py-5">
@@ -28,7 +35,13 @@ const TableSkeletonHeader = ({ semesterCount }: { semesterCount: number }) => (
   </TableRow>
 );
 
-const TableSkeletonRow = ({ semesterCount, rowIndex }: { semesterCount: number; rowIndex: number }) => (
+const TableSkeletonRow = ({
+  semesterCount,
+  rowIndex,
+}: {
+  semesterCount: number;
+  rowIndex: number;
+}) => (
   <TableRow className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
     <TableCell className="border-r text-center font-medium text-gray-700 py-5">
       <Skeleton className="h-4 w-16 mx-auto" />

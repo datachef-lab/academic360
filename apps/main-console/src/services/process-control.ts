@@ -34,7 +34,8 @@ export class ProcessControlService {
   static async getProcessControls(filters?: ProcessControlFilters): Promise<ProcessControl[]> {
     const params = new URLSearchParams();
     if (filters?.academicYearId) params.append("academicYearId", filters.academicYearId.toString());
-    if (filters?.programCourseId) params.append("programCourseId", filters.programCourseId.toString());
+    if (filters?.programCourseId)
+      params.append("programCourseId", filters.programCourseId.toString());
     if (filters?.semester) params.append("semester", filters.semester.toString());
     if (filters?.processType) params.append("processType", filters.processType);
     if (filters?.status) params.append("status", filters.status);
@@ -79,7 +80,10 @@ export class ProcessControlService {
     return data.payload;
   }
 
-  static async updateProcessControl(id: number, updates: ProcessControlUpdate): Promise<ProcessControl> {
+  static async updateProcessControl(
+    id: number,
+    updates: ProcessControlUpdate,
+  ): Promise<ProcessControl> {
     const response = await fetch(`${API_BASE}/api/process-controls/${id}`, {
       method: "PATCH",
       headers: this.getAuthHeaders(),
@@ -105,7 +109,10 @@ export class ProcessControlService {
     }
   }
 
-  static async toggleProcessStatus(id: number, newStatus: "ACTIVE" | "PAUSED" | "INACTIVE"): Promise<ProcessControl> {
+  static async toggleProcessStatus(
+    id: number,
+    newStatus: "ACTIVE" | "PAUSED" | "INACTIVE",
+  ): Promise<ProcessControl> {
     return this.updateProcessControl(id, { status: newStatus });
   }
 

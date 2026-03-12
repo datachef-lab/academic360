@@ -1,5 +1,11 @@
-import React from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import React from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SemesterFilterProps {
   semesters: number[];
@@ -17,10 +23,7 @@ const SemesterFilter: React.FC<SemesterFilterProps> = ({
   return (
     <div className="flex justify-between items-center mb-4">
       <div className="flex items-center gap-2">
-        <Select
-          value={currentSemester}
-          onValueChange={onSemesterChange}
-        >
+        <Select value={currentSemester} onValueChange={onSemesterChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select semester" />
           </SelectTrigger>
@@ -34,12 +37,10 @@ const SemesterFilter: React.FC<SemesterFilterProps> = ({
           </SelectContent>
         </Select>
       </div>
-      
-      <p className="text-sm font-medium">
-        Total: {totalSubjects} subjects
-      </p>
+
+      <p className="text-sm font-medium">Total: {totalSubjects} subjects</p>
     </div>
   );
 };
 
-export default SemesterFilter; 
+export default SemesterFilter;

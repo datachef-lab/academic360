@@ -1,12 +1,11 @@
-import React from 'react';
-import { Plus } from 'lucide-react';
-import { CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import SubjectForm from './SubjectForm';
-import { SubjectMetadata, SubjectType } from '@/types/academics/subject-metadata';
-import { Degree } from '@/types/resources/degree.types';
-
+import React from "react";
+import { Plus } from "lucide-react";
+import { CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import SubjectForm from "./SubjectForm";
+import { SubjectMetadata, SubjectType } from "@/types/academics/subject-metadata";
+import { Degree } from "@/types/resources/degree.types";
 
 interface SubjectHeaderProps {
   isAddDialogOpen: boolean;
@@ -45,7 +44,7 @@ const SubjectHeader: React.FC<SubjectHeaderProps> = ({
     <CardHeader className="bg-white border-b border-purple-100">
       <div className="flex items-center justify-between">
         <CardTitle className="text-2xl font-bold text-purple-900">Subjects</CardTitle>
-        <Button 
+        <Button
           onClick={() => setIsAddDialogOpen(true)}
           className="bg-purple-700 text-white hover:bg-purple-800"
         >
@@ -58,7 +57,7 @@ const SubjectHeader: React.FC<SubjectHeaderProps> = ({
         <DialogContent className="sm:max-w-[700px] bg-white p-6 rounded-lg">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-purple-900">
-              {isEditMode ? 'Edit Subject' : 'Add New Subject'}
+              {isEditMode ? "Edit Subject" : "Add New Subject"}
             </DialogTitle>
           </DialogHeader>
           <SubjectForm
@@ -87,4 +86,4 @@ const SubjectHeader: React.FC<SubjectHeaderProps> = ({
   );
 };
 
-export default SubjectHeader; 
+export default SubjectHeader;

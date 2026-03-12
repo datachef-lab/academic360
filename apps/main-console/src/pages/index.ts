@@ -10,14 +10,14 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import MyWorkspacePage from "@/pages/exam-management/MyWorkspace";
 
 export {
-    // RootPage,
+  // RootPage,
 
-    HomePage,
-    AddStudentPage,
-    GetReportsPage,
-    SearchStudentPage,
-    SettingsPage,
-    UserProfilePage,
-    NotFoundPage,
-    MyWorkspacePage,
-}
+  HomePage,
+  AddStudentPage,
+  GetReportsPage,
+  SearchStudentPage,
+  SettingsPage,
+  UserProfilePage,
+  NotFoundPage,
+  MyWorkspacePage,
+};

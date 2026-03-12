@@ -9,3 +9,4 @@ export * from "./exam.model";
 export * from "./exam-type.model";
 export * from "./floor.model";
 export * from "./room.model";
+export * from "./tempAdmitCardDistributions.model";

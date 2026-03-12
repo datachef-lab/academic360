@@ -7,7 +7,7 @@ import {
   MultipleStateResponse,
 } from "@/types/resources/state.types";
 
-const BASE_URL = '/api/states';
+const BASE_URL = "/api/states";
 
 export async function getAllStates(): Promise<State[]> {
   const response = await axiosInstance.get<MultipleStateResponse>(BASE_URL);
@@ -20,7 +20,9 @@ export async function getStateById(id: number): Promise<State> {
 }
 
 export async function getStatesByCountry(countryId: number): Promise<State[]> {
-  const response = await axiosInstance.get<MultipleStateResponse>(`${BASE_URL}?countryId=${countryId}`);
+  const response = await axiosInstance.get<MultipleStateResponse>(
+    `${BASE_URL}?countryId=${countryId}`,
+  );
   return response.data.payload || [];
 }
 
@@ -45,4 +47,4 @@ export const stateService = {
   createState,
   updateState,
   deleteState,
-}; 
+};

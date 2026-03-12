@@ -102,6 +102,7 @@ import feesSlabRouter from "@/features/fees/routes/index.js";
 // import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
 // import studentFeesMappingRouter from "./features/fees/routes/student-fees-mapping.route.js";
 import feesRouter from "./features/fees/routes/index.js";
+import paymentRouter from "@/features/payments/routes/payment.route.js";
 import {
   admissionRouter,
   applicationFormRouter,
@@ -159,6 +160,7 @@ import {
 } from "@/features/subject-selection/routes/index.js";
 import { userStatusMappingRouter } from "./features/user/routes/index.js";
 import { examGroupRouter } from "./features/exams/routes/index.js";
+import admitCardRouter from "./features/exams/routes/admit-card.routes.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -492,6 +494,7 @@ app.use("/api/exams/rooms", roomRouter);
 app.use("/api/exams/exam-types", examTypeRouter);
 app.use("/api/exams/schedule", examScheduleRouter);
 app.use("/api/exam-groups", examGroupRouter);
+app.use("/api/admit-card", admitCardRouter);
 
 // Admissions routes - Mount specific routes before generic routes to avoid conflicts
 app.use("/api/admissions/application-forms", applicationFormRouter);
@@ -528,6 +531,8 @@ app.use(
 app.use("/api/admissions/cu-registration-pdf", cuRegistrationPdfRouter);
 // Mount the generic admission router last to avoid conflicts with specific routes
 app.use("/api/admissions", admissionRouter);
+
+app.use("/api/payments", paymentRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 

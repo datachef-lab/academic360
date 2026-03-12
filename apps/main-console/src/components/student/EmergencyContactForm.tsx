@@ -44,7 +44,10 @@ function stripDates<T>(obj: T): T {
   return obj;
 }
 
-export default function EmergencyContactForm({ emergencyId, initialData = null }: EmergencyContactFormProps) {
+export default function EmergencyContactForm({
+  emergencyId,
+  initialData = null,
+}: EmergencyContactFormProps) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Partial<EmergencyContact>>({
     ...defaultEmergencyContact,
@@ -114,7 +117,9 @@ export default function EmergencyContactForm({ emergencyId, initialData = null }
     <Card className="max-w-8xl mx-auto my-8">
       <CardHeader className="relative pb-0">
         <div className="absolute left-6 top-0 h-1 w-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full" />
-        <CardTitle className="pl-6 pt-3 text-xl font-semibold text-gray-800">Emergency Contact Details</CardTitle>
+        <CardTitle className="pl-6 pt-3 text-xl font-semibold text-gray-800">
+          Emergency Contact Details
+        </CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-6 [&_label]:text-xs [&_label]:text-gray-600">
@@ -198,7 +203,14 @@ export default function EmergencyContactForm({ emergencyId, initialData = null }
                   fill="none"
                   viewBox="0 0 24 24"
                 >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
                   <path
                     className="opacity-75"
                     fill="currentColor"

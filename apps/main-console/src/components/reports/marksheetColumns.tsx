@@ -1,10 +1,10 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Award, 
-  Code2, 
-  ArrowUpDown, 
-  GraduationCap, 
+import {
+  Award,
+  Code2,
+  ArrowUpDown,
+  GraduationCap,
   BookUser,
   School,
   Calendar,
@@ -15,10 +15,9 @@ import {
   BookMarked,
   Calculator,
   Percent,
- 
   FilePenLine,
   CheckCircle2,
-  XCircle
+  XCircle,
 } from "lucide-react";
 import { MarksheetTableType } from "@/types/tableTypes/MarksheetTableType";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,7 +29,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-start pl-3 gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -41,7 +40,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => {
       const { name, uid } = row.original;
-      
+
       const stringToColor = (str: string) => {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -49,19 +48,15 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
         }
         return `hsl(${hash % 360}, 70%, 60%)`;
       };
-    
-      const bgColor = stringToColor(name || '');
+
+      const bgColor = stringToColor(name || "");
       const avatar = `${profileImageUrl}/Student_Image_${uid}.jpg`;
-    
+
       return (
         <div className="flex items-center justify-start">
           <Avatar className="h-8 w-8">
             {avatar ? (
-              <AvatarImage
-                src={avatar}
-                alt={name}
-                className="object-cover"
-              />
+              <AvatarImage src={avatar} alt={name} className="object-cover" />
             ) : (
               <AvatarFallback style={{ backgroundColor: bgColor }}>
                 {name?.charAt(0).toUpperCase()}
@@ -81,7 +76,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "rollNumber",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -92,7 +87,10 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex justify-center">
-        <Badge variant="outline" className="bg-amber-100 text-amber-700 hover:bg-amber-100 py-1 px-3 drop-shadow-md  border-none">
+        <Badge
+          variant="outline"
+          className="bg-amber-100 text-amber-700 hover:bg-amber-100 py-1 px-3 drop-shadow-md  border-none"
+        >
           {row.getValue("rollNumber")}
         </Badge>
       </div>
@@ -101,7 +99,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "registrationNumber",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -112,7 +110,10 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex justify-center">
-        <Badge variant="outline" className="bg-blue-100 text-blue-700 hover:bg-blue-100 py-1 px-3 drop-shadow-md  border-none">
+        <Badge
+          variant="outline"
+          className="bg-blue-100 text-blue-700 hover:bg-blue-100 py-1 px-3 drop-shadow-md  border-none"
+        >
           {row.getValue("registrationNumber")}
         </Badge>
       </div>
@@ -121,7 +122,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "stream",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -132,15 +133,18 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     cell: ({ row }) => {
       const stream = row.getValue("stream") as string;
       const streamStyles = {
-        "BSC": "bg-blue-100 text-blue-800",
-        "BCOM": "bg-purple-100 text-purple-800",
-        "BA": "bg-green-100 text-green-800",
-        "MA": "bg-amber-100 text-amber-800",
+        BSC: "bg-blue-100 text-blue-800",
+        BCOM: "bg-purple-100 text-purple-800",
+        BA: "bg-green-100 text-green-800",
+        MA: "bg-amber-100 text-amber-800",
       };
-      
+
       return (
         <div className="flex justify-center">
-          <Badge variant="outline" className={`${streamStyles[stream as keyof typeof streamStyles] || "bg-gray-100 text-gray-800"} font-medium drop-shadow-md  border-none py-1 px-3`}>
+          <Badge
+            variant="outline"
+            className={`${streamStyles[stream as keyof typeof streamStyles] || "bg-gray-100 text-gray-800"} font-medium drop-shadow-md  border-none py-1 px-3`}
+          >
             {stream}
           </Badge>
         </div>
@@ -150,7 +154,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "framework",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -161,13 +165,16 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     cell: ({ row }) => {
       const framework = row.getValue("framework") as string;
       const frameworkStyles = {
-        "CCF": "bg-amber-100 text-amber-700",
-        "CBCS": "bg-amber-100 text-amber-700"
+        CCF: "bg-amber-100 text-amber-700",
+        CBCS: "bg-amber-100 text-amber-700",
       };
-      
+
       return (
         <div className="flex justify-center">
-          <Badge variant="outline" className={`${frameworkStyles[framework as keyof typeof frameworkStyles]} drop-shadow-md  border-none text-xs py-1 px-3`}>
+          <Badge
+            variant="outline"
+            className={`${frameworkStyles[framework as keyof typeof frameworkStyles]} drop-shadow-md  border-none text-xs py-1 px-3`}
+          >
             {framework}
           </Badge>
         </div>
@@ -177,7 +184,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "year1",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -187,7 +194,10 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex justify-center text-slate-700">
-        <Badge variant="outline" className="bg-indigo-100 text-indigo-700 drop-shadow-md py-1 px-3  border-none">
+        <Badge
+          variant="outline"
+          className="bg-indigo-100 text-indigo-700 drop-shadow-md py-1 px-3  border-none"
+        >
           {row.getValue("year1")}
         </Badge>
       </div>
@@ -196,7 +206,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "year2",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -206,7 +216,10 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex justify-center text-slate-700">
-        <Badge variant="outline" className="bg-emerald-100 text-emerald-700 drop-shadow-md py-1 px-3  border-none">
+        <Badge
+          variant="outline"
+          className="bg-emerald-100 text-emerald-700 drop-shadow-md py-1 px-3  border-none"
+        >
           {row.getValue("year2")}
         </Badge>
       </div>
@@ -215,7 +228,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "semester",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -225,16 +238,19 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex justify-center text-slate-700">
-        <Badge variant="outline" className="bg-teal-100 text-teal-700 drop-shadow-md py-1 px-3  border-none">
+        <Badge
+          variant="outline"
+          className="bg-teal-100 text-teal-700 drop-shadow-md py-1 px-3  border-none"
+        >
           {row.getValue("semester")}
         </Badge>
       </div>
     ),
   },
-   {
+  {
     accessorKey: "marksheetCode",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-start gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -251,7 +267,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "subjectName",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-start pl-8 gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -265,11 +281,11 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
       </div>
     ),
   },
- 
+
   {
     accessorKey: "fullMarks",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -279,7 +295,10 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex justify-center text-slate-700">
-        <Badge variant="outline" className="bg-orange-100 text-orange-700 drop-shadow-md py-1 px-3  border-none">
+        <Badge
+          variant="outline"
+          className="bg-orange-100 text-orange-700 drop-shadow-md py-1 px-3  border-none"
+        >
           {row.getValue("fullMarks")}
         </Badge>
       </div>
@@ -288,7 +307,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "obtainedMarks",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -298,7 +317,10 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex justify-center text-slate-700">
-        <Badge variant="outline" className="bg-pink-100 text-pink-700 drop-shadow-md py-1 px-3  border-none">
+        <Badge
+          variant="outline"
+          className="bg-pink-100 text-pink-700 drop-shadow-md py-1 px-3  border-none"
+        >
           {row.getValue("obtainedMarks")}
         </Badge>
       </div>
@@ -307,7 +329,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "credit",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -317,7 +339,10 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex justify-center text-slate-700">
-        <Badge variant="outline" className="bg-yellow-100 text-yellow-700 drop-shadow-md py-1 px-3  border-none">
+        <Badge
+          variant="outline"
+          className="bg-yellow-100 text-yellow-700 drop-shadow-md py-1 px-3  border-none"
+        >
           {row.getValue("credit")}
         </Badge>
       </div>
@@ -326,7 +351,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "sgpa",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -336,7 +361,10 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex justify-center text-slate-700">
-        <Badge variant="outline" className="bg-purple-100 text-purple-700 drop-shadow-md py-1 px-3  border-none">
+        <Badge
+          variant="outline"
+          className="bg-purple-100 text-purple-700 drop-shadow-md py-1 px-3  border-none"
+        >
           {row.getValue("sgpa")}
         </Badge>
       </div>
@@ -345,7 +373,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "cgpa",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -355,7 +383,10 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
     cell: ({ row }) => (
       <div className="flex justify-center text-slate-700">
-        <Badge variant="outline" className="bg-pink-100 text-pink-700 drop-shadow-md py-1 px-3  border-none">
+        <Badge
+          variant="outline"
+          className="bg-pink-100 text-pink-700 drop-shadow-md py-1 px-3  border-none"
+        >
           {row.getValue("cgpa")}
         </Badge>
       </div>
@@ -364,7 +395,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
   {
     accessorKey: "letterGrade",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -377,60 +408,65 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
       const gradeStyles = {
         "A++": "bg-purple-100 text-purple-800",
         "A+": "bg-blue-100 text-blue-800",
-        "A": "bg-green-100 text-green-800",
+        A: "bg-green-100 text-green-800",
         "B+": "bg-purple-100 text-purple-800",
-        "B": "bg-cyan-100 text-cyan-800",
+        B: "bg-cyan-100 text-cyan-800",
         "C+": "bg-amber-100 text-amber-800",
-        "C": "bg-orange-100 text-orange-800",
+        C: "bg-orange-100 text-orange-800",
         "D+": "bg-yellow-100 text-yellow-800",
-        "D": "bg-lime-100 text-lime-800",
-        "E": "bg-pink-100 text-pink-800",
-        "F": "bg-red-100 text-red-800",
+        D: "bg-lime-100 text-lime-800",
+        E: "bg-pink-100 text-pink-800",
+        F: "bg-red-100 text-red-800",
         "F(TH)": "bg-red-200 text-red-900",
         "F(PR)": "bg-red-200 text-red-900",
       };
-      
+
       return (
         <div className="flex justify-center">
-          <Badge variant="outline" className={`${gradeStyles[grade as keyof typeof gradeStyles] || "bg-gray-100 text-gray-800"} border-none drop-shadow-md py-1 px-3  font-medium`}>
+          <Badge
+            variant="outline"
+            className={`${gradeStyles[grade as keyof typeof gradeStyles] || "bg-gray-100 text-gray-800"} border-none drop-shadow-md py-1 px-3  font-medium`}
+          >
             {grade}
           </Badge>
         </div>
       );
     },
   },
-   {
-     accessorKey: "status",
-     header: ({ column }) => (
-       <div 
-         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer "
-         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-       >
-         <CheckCircle2 className="h-5 w-5 text-purple-500" />
-         <span>Status</span>
-       
-       </div>
-     ),
-     cell: ({ row }) => {
-       const status = row.original.status;
-       const isPass = status?.includes("PASS");
-       
-       return (
-         <Badge variant={"outline"} className={`${isPass ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"} drop-shadow-lg border-transparent`}>
-           {isPass ? (
-             <CheckCircle2 className="h-4 w-4 text-emerald-700 mr-1" />
-           ) : (
-             <XCircle className="h-4 w-4 text-rose-700 mr-1" />
-           )}
-           {status}
-         </Badge>
-       );
-     },
-   },
+  {
+    accessorKey: "status",
+    header: ({ column }) => (
+      <div
+        className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer "
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        <CheckCircle2 className="h-5 w-5 text-purple-500" />
+        <span>Status</span>
+      </div>
+    ),
+    cell: ({ row }) => {
+      const status = row.original.status;
+      const isPass = status?.includes("PASS");
+
+      return (
+        <Badge
+          variant={"outline"}
+          className={`${isPass ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"} drop-shadow-lg border-transparent`}
+        >
+          {isPass ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-700 mr-1" />
+          ) : (
+            <XCircle className="h-4 w-4 text-rose-700 mr-1" />
+          )}
+          {status}
+        </Badge>
+      );
+    },
+  },
   {
     accessorKey: "remarks",
     header: ({ column }) => (
-      <div 
+      <div
         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
@@ -441,10 +477,13 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     cell: ({ row }) => {
       const remarks = row.original.remarks;
       const isCritical = remarks?.includes("not") || remarks?.includes("re-exam");
-      
+
       return (
         <div className="flex justify-center">
-          <Badge variant="outline" className={`${isCritical ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"} drop-shadow-md py-1 px-3  border-none max-w-[200px] truncate`}>
+          <Badge
+            variant="outline"
+            className={`${isCritical ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"} drop-shadow-md py-1 px-3  border-none max-w-[200px] truncate`}
+          >
             {remarks}
           </Badge>
         </div>

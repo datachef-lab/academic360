@@ -69,7 +69,10 @@ export default function CUFormUploadPage() {
       }
 
       try {
-        const promotionResponse = await fetchPromotionByStudentIdAndClassId(student.id, SEMESTER_ONE_CLASS_ID);
+        const promotionResponse = await fetchPromotionByStudentIdAndClassId(
+          student.id,
+          SEMESTER_ONE_CLASS_ID,
+        );
         const promotion = promotionResponse.data?.payload;
 
         if (promotion?.isExamFormSubmitted === true) {
@@ -139,7 +142,10 @@ export default function CUFormUploadPage() {
       setIsSubmitting(true);
 
       // console.log("Submitting CU exam form for student ID:", student.id);
-      const promotionResponse = await fetchPromotionByStudentIdAndClassId(student.id!, SEMESTER_ONE_CLASS_ID);
+      const promotionResponse = await fetchPromotionByStudentIdAndClassId(
+        student.id!,
+        SEMESTER_ONE_CLASS_ID,
+      );
 
       const promotion = promotionResponse.data?.payload;
 
@@ -151,11 +157,15 @@ export default function CUFormUploadPage() {
       const formData = new FormData();
       formData.append("examForm", file);
 
-      await axiosInstance.post(`/api/promotions/${promotion.id}/mark-exam-form-submitted`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
+      await axiosInstance.post(
+        `/api/promotions/${promotion.id}/mark-exam-form-submitted`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
 
       setSubmitted(true);
       toast.success("Semester I CU Examination Form uploaded successfully.");
@@ -211,13 +221,15 @@ export default function CUFormUploadPage() {
                 <FileText className="w-7 h-7 text-white" />
               </div>
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">Exams</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">
+                  Exams
+                </p>
                 <h1 className="text-2xl md:text-3xl font-semibold leading-snug">
                   CU Semester I Examination Form Upload
                 </h1>
                 <p className="mt-1 text-xs md:text-sm text-blue-100/90 max-w-xl">
-                  Upload your Calcutta University Semester I examination form and verify every page before final
-                  submission.
+                  Upload your Calcutta University Semester I examination form and verify every page
+                  before final submission.
                 </p>
               </div>
             </div>
@@ -236,8 +248,19 @@ export default function CUFormUploadPage() {
               fill="none"
               viewBox="0 0 24 24"
             >
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
             </svg>
             <p className="text-sm">Checking submission status…</p>
           </div>
@@ -261,11 +284,15 @@ export default function CUFormUploadPage() {
               <FileText className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">Exams</p>
-              <h1 className="text-2xl md:text-3xl font-semibold leading-snug">CU Semester I Examination Form Upload</h1>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">
+                Exams
+              </p>
+              <h1 className="text-2xl md:text-3xl font-semibold leading-snug">
+                CU Semester I Examination Form Upload
+              </h1>
               <p className="mt-1 text-xs md:text-sm text-blue-100/90 max-w-xl">
-                Upload your Calcutta University Semester I examination form and verify every page before final
-                submission.
+                Upload your Calcutta University Semester I examination form and verify every page
+                before final submission.
               </p>
             </div>
           </div>
@@ -303,7 +330,11 @@ export default function CUFormUploadPage() {
                       <div
                         className={`flex items-center justify-center w-9 h-9 rounded-full text-xs font-medium border-2 transition-all ${circleClasses}`}
                       >
-                        {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                        {isCompleted ? (
+                          <CheckCircle2 className="w-4 h-4" />
+                        ) : (
+                          <Icon className="w-4 h-4" />
+                        )}
                       </div>
                       <span
                         className={`text-[10px] whitespace-nowrap ${
@@ -339,9 +370,10 @@ export default function CUFormUploadPage() {
                 <ul className="mt-3 list-disc pl-5 space-y-1.5">
                   <li>Exam form must be downloaded from the Calcutta University website.</li>
                   <li>
-                    Please verify that all details mentioned in your examination form are correct. In case of any
-                    discrepancy, kindly fill out the Google Form provided here with to notify us. It is advised to
-                    submit the form using your institutional email ID only.
+                    Please verify that all details mentioned in your examination form are correct.
+                    In case of any discrepancy, kindly fill out the Google Form provided here with
+                    to notify us. It is advised to submit the form using your institutional email ID
+                    only.
                     <a
                       href="https://docs.google.com/forms/d/e/1FAIpQLScwVkcMABpAExw-6TZwtMfdKycygF9DzCJhX1GAkum3ajoP7w/viewform?pli=1"
                       target="_blank"
@@ -363,7 +395,9 @@ export default function CUFormUploadPage() {
             <section className="space-y-3 text-sm text-slate-800">
               <h3 className="font-semibold">Upload &amp; Preview</h3>
 
-              <div className={`grid gap-4 items-start ${file ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+              <div
+                className={`grid gap-4 items-start ${file ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}
+              >
                 {/* Upload */}
                 <motion.div
                   layout
@@ -389,11 +423,16 @@ export default function CUFormUploadPage() {
                     <UploadCloud className="w-5 h-5" />
                   </motion.div>
                   <p className="text-xs text-slate-700">
-                    Drag and drop your PDF here, or <span className="font-semibold text-indigo-600">browse</span> from
-                    your device.
+                    Drag and drop your PDF here, or{" "}
+                    <span className="font-semibold text-indigo-600">browse</span> from your device.
                   </p>
                   <label className="mt-3 inline-flex items-center justify-center">
-                    <input type="file" accept="application/pdf" className="hidden" onChange={handleFileChange} />
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
                     <span className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 cursor-pointer">
                       Browse PDF
                     </span>
@@ -455,8 +494,8 @@ export default function CUFormUploadPage() {
                 {isSubmitting ? "Submitting..." : "Submit Semester I Examination Form"}
               </button>
               <p className="text-[11px] text-slate-500">
-                Once submitted, changes cannot be made from the portal. For any corrections, please fillup the google
-                form given above.
+                Once submitted, changes cannot be made from the portal. For any corrections, please
+                fillup the google form given above.
               </p>
             </section>
           </div>
@@ -471,10 +510,12 @@ export default function CUFormUploadPage() {
               <CheckCircle2 className="w-7 h-7" />
             </div>
             <div>
-              <h2 className="text-base md:text-lg font-semibold text-slate-900">Form uploaded successfully</h2>
+              <h2 className="text-base md:text-lg font-semibold text-slate-900">
+                Form uploaded successfully
+              </h2>
               <p className="mt-1 text-xs text-slate-600">
-                Your Semester I Calcutta University Examination Form has been submitted. Please check your Institutional
-                Email ID for the confirmation of the same.
+                Your Semester I Calcutta University Examination Form has been submitted. Please
+                check your Institutional Email ID for the confirmation of the same.
               </p>
             </div>
           </div>

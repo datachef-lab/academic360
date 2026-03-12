@@ -3,9 +3,6 @@ import { MarksheetTableType } from "@/types/tableTypes/MarksheetTableType";
 import { Student } from "@/types/user/student";
 import { create } from "zustand";
 
-
-
-
 type uiFilters = {
   selectedStream: { name: string } | null;
   selectedYear: string | null;
@@ -28,11 +25,11 @@ interface ReportStore {
   filters: ReportFilters;
   uiFilters: uiFilters;
   filteredData: MarksheetTableType[];
-  
+
   setFilters: (filters: ReportFilters) => void;
   setFilteredData: (data: MarksheetTableType[]) => void;
   StudentData: Student[];
-  setStudentData:(data:Student[])=>void;
+  setStudentData: (data: Student[]) => void;
   setUiFilters: (uiFilters: Partial<uiFilters>) => void;
 }
 
@@ -53,7 +50,7 @@ export const useMarksheetStore = create<ReportStore>((set) => ({
     selectedFramework: null,
   },
   StudentData: [],
-  
+
   filteredData: [],
   setFilters: (filters) => {
     set({ filters });
@@ -61,8 +58,8 @@ export const useMarksheetStore = create<ReportStore>((set) => ({
   setUiFilters: (uiFilters) => {
     set((state) => ({ uiFilters: { ...state.uiFilters, ...uiFilters } }));
   },
-  setStudentData:(StudentData)=>{
-    set({StudentData});
+  setStudentData: (StudentData) => {
+    set({ StudentData });
   },
   setFilteredData: (filteredData) => {
     set({ filteredData });

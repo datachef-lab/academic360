@@ -3,7 +3,11 @@ import { useContext } from "react";
 
 // Define the return type explicitly
 type ErrorContextType = {
-  showError: (error: { statusCode?: number; message?: string; retry?: () => Promise<void> }) => void;
+  showError: (error: {
+    statusCode?: number;
+    message?: string;
+    retry?: () => Promise<void>;
+  }) => void;
 };
 
 export const useError = (): ErrorContextType => {

@@ -1,29 +1,27 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  BookOpen, 
-  Users, 
-  Clock, 
-  Bookmark, 
-  Search, 
-  Bell, 
-  User, 
-  Book, 
-  Library, 
-  Calendar, 
-  Settings 
-} from 'lucide-react';
-import LibFineManagement from './LibFines';
-
-
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  BookOpen,
+  Users,
+  Clock,
+  Bookmark,
+  Search,
+  Bell,
+  User,
+  Book,
+  Library,
+  Calendar,
+  Settings,
+} from "lucide-react";
+import LibFineManagement from "./LibFines";
 
 const Dashboard: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Implement search functionality
-    console.log('Searching for:', searchQuery);
+    console.log("Searching for:", searchQuery);
   };
 
   return (
@@ -46,7 +44,9 @@ const Dashboard: React.FC = () => {
             </motion.div>
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-gray-800">Library Management</h1>
-              <p className="text-sm text-purple-600 font-medium">Welcome to your digital library hub</p>
+              <p className="text-sm text-purple-600 font-medium">
+                Welcome to your digital library hub
+              </p>
             </div>
           </div>
         </motion.div>
@@ -59,10 +59,30 @@ const Dashboard: React.FC = () => {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           {[
-            { icon: <BookOpen className="h-6 w-6" />, title: "Total Books", value: "2,543", color: "from-blue-400 to-blue-600" },
-            { icon: <Users className="h-6 w-6" />, title: "Active Members", value: "1,234", color: "from-green-400 to-green-600" },
-            { icon: <Clock className="h-6 w-6" />, title: "Overdue Books", value: "23", color: "from-red-400 to-red-600" },
-            { icon: <Bookmark className="h-6 w-6" />, title: "Reserved Books", value: "45", color: "from-yellow-400 to-yellow-600" },
+            {
+              icon: <BookOpen className="h-6 w-6" />,
+              title: "Total Books",
+              value: "2,543",
+              color: "from-blue-400 to-blue-600",
+            },
+            {
+              icon: <Users className="h-6 w-6" />,
+              title: "Active Members",
+              value: "1,234",
+              color: "from-green-400 to-green-600",
+            },
+            {
+              icon: <Clock className="h-6 w-6" />,
+              title: "Overdue Books",
+              value: "23",
+              color: "from-red-400 to-red-600",
+            },
+            {
+              icon: <Bookmark className="h-6 w-6" />,
+              title: "Reserved Books",
+              value: "45",
+              color: "from-yellow-400 to-yellow-600",
+            },
           ].map((stat, index) => (
             <motion.div
               key={index}
@@ -90,7 +110,10 @@ const Dashboard: React.FC = () => {
             className="lg:col-span-2 space-y-6"
           >
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="bg-white/50 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+            <form
+              onSubmit={handleSearch}
+              className="bg-white/50 rounded-2xl p-4 shadow-lg backdrop-blur-sm"
+            >
               <div className="flex items-center gap-4">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -102,7 +125,7 @@ const Dashboard: React.FC = () => {
                     className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
-                <button 
+                <button
                   type="submit"
                   className="bg-purple-500 text-white px-6 py-2 rounded-xl hover:bg-purple-600 transition-colors"
                 >

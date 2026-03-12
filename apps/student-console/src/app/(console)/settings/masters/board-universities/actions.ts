@@ -1,6 +1,6 @@
 "use server";
 
-import {dbPostgres, } from "@/db";
+import { dbPostgres } from "@/db";
 import { boardUniversities, degree } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -46,7 +46,9 @@ export async function addBoardUniversity(formData: FormData): Promise<AddBoardUn
   }
 }
 
-export async function deleteBoardUniversity(id: number): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function deleteBoardUniversity(
+  id: number,
+): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     await dbPostgres.delete(boardUniversities).where(eq(boardUniversities.id, id));
     revalidatePath("/settings/masters/board-universities");
@@ -57,15 +59,21 @@ export async function deleteBoardUniversity(id: number): Promise<{ success: bool
   }
 }
 
-export async function uploadBoardUniversitiesFromFile(formData: FormData): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function uploadBoardUniversitiesFromFile(
+  formData: FormData,
+): Promise<{ success: boolean; message?: string; error?: string }> {
   // Placeholder for upload logic
   console.log("Upload Board Universities action triggered.", formData);
   revalidatePath("/settings/masters/board-universities");
   return { success: true, message: "Upload action placeholder executed." };
 }
 
-export async function downloadBoardUniversities(): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function downloadBoardUniversities(): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
   // Placeholder for download logic
   console.log("Download Board Universities action triggered.");
   return { success: true, message: "Download action placeholder executed." };
-} 
+}

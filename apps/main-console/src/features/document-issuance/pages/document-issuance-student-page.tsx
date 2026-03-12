@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, User, FileText, Calendar, GraduationCap, BookOpen, CreditCard, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  User,
+  FileText,
+  Calendar,
+  GraduationCap,
+  BookOpen,
+  CreditCard,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -105,12 +114,16 @@ const DocumentIssuanceStudentPage = () => {
   const changeSession = (index: number, value: string) => {
     const options = getSemesterOptionsForSession(value);
     setSemSelections((prev) =>
-      prev.map((sem, idx) => (idx === index ? { ...sem, session: value, selectedSemester: options[0] ?? "" } : sem)),
+      prev.map((sem, idx) =>
+        idx === index ? { ...sem, session: value, selectedSemester: options[0] ?? "" } : sem,
+      ),
     );
   };
 
   const changeSelectedSemester = (index: number, value: string) => {
-    setSemSelections((prev) => prev.map((sem, idx) => (idx === index ? { ...sem, selectedSemester: value } : sem)));
+    setSemSelections((prev) =>
+      prev.map((sem, idx) => (idx === index ? { ...sem, selectedSemester: value } : sem)),
+    );
   };
 
   const addCasualRow = () => {
@@ -298,7 +311,9 @@ const DocumentIssuanceStudentPage = () => {
                 <h3 className="font-semibold mb-4 text-gray-900 text-lg">Academic Documents</h3>
 
                 <div className="grid grid-cols-12 gap-4 mb-3 px-4 py-2 bg-gray-100 rounded-lg">
-                  <div className="col-span-3 text-sm font-semibold text-gray-700">Academic Session</div>
+                  <div className="col-span-3 text-sm font-semibold text-gray-700">
+                    Academic Session
+                  </div>
                   <div className="col-span-3 text-sm font-semibold text-gray-700">Semester</div>
                   <div className="col-span-6 text-sm font-semibold text-gray-700">Documents</div>
                 </div>
@@ -341,7 +356,10 @@ const DocumentIssuanceStudentPage = () => {
                             onCheckedChange={() => toggleDocument(index, "admitCard")}
                             className="border-violet-600 data-[state=checked]:bg-violet-600"
                           />
-                          <label htmlFor={`admit-${index}`} className="text-sm cursor-pointer text-gray-900">
+                          <label
+                            htmlFor={`admit-${index}`}
+                            className="text-sm cursor-pointer text-gray-900"
+                          >
                             Admit Card
                           </label>
                         </div>
@@ -357,7 +375,10 @@ const DocumentIssuanceStudentPage = () => {
                             onCheckedChange={() => toggleDocument(index, "marksheet")}
                             className="border-violet-600 data-[state=checked]:bg-violet-600"
                           />
-                          <label htmlFor={`marksheet-${index}`} className="text-sm cursor-pointer text-gray-900">
+                          <label
+                            htmlFor={`marksheet-${index}`}
+                            className="text-sm cursor-pointer text-gray-900"
+                          >
                             Marksheet
                           </label>
                         </div>
@@ -406,21 +427,30 @@ const DocumentIssuanceStudentPage = () => {
                           <Checkbox
                             id={`casual-admit-${row.id}`}
                             checked={row.admitCard}
-                            onCheckedChange={(checked) => updateCasualRow(row.id, "admitCard", checked as boolean)}
+                            onCheckedChange={(checked) =>
+                              updateCasualRow(row.id, "admitCard", checked as boolean)
+                            }
                             className="border-violet-600 data-[state=checked]:bg-violet-600"
                           />
-                          <label htmlFor={`casual-admit-${row.id}`} className="text-sm cursor-pointer text-gray-900">
+                          <label
+                            htmlFor={`casual-admit-${row.id}`}
+                            className="text-sm cursor-pointer text-gray-900"
+                          >
                             Admit Card
                           </label>
                         </div>
                         {row.admitDate && (
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{row.admitDate}</span>
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                            {row.admitDate}
+                          </span>
                         )}
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id={`casual-marksheet-${row.id}`}
                             checked={row.marksheet}
-                            onCheckedChange={(checked) => updateCasualRow(row.id, "marksheet", checked as boolean)}
+                            onCheckedChange={(checked) =>
+                              updateCasualRow(row.id, "marksheet", checked as boolean)
+                            }
                             className="border-violet-600 data-[state=checked]:bg-violet-600"
                           />
                           <label
@@ -493,20 +523,38 @@ const DocumentIssuanceStudentPage = () => {
                               }}
                               className="border-violet-600 data-[state=checked]:bg-violet-600"
                             />
-                            <label htmlFor={key} className="text-sm font-semibold cursor-pointer text-gray-900">
+                            <label
+                              htmlFor={key}
+                              className="text-sm font-semibold cursor-pointer text-gray-900"
+                            >
                               {docLabels[key]}
                             </label>
                           </div>
 
                           {key === "tc" && (
                             <div className="flex gap-2">
-                              <Button onClick={applyChallan} size="sm" variant="outline" className="text-xs">
+                              <Button
+                                onClick={applyChallan}
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                              >
                                 Apply Challan
                               </Button>
-                              <Button onClick={generateTC} size="sm" variant="outline" className="text-xs">
+                              <Button
+                                onClick={generateTC}
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                              >
                                 Generate TC
                               </Button>
-                              <Button onClick={updateFees} size="sm" variant="outline" className="text-xs">
+                              <Button
+                                onClick={updateFees}
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                              >
                                 Update Fees
                               </Button>
                             </div>
@@ -526,7 +574,10 @@ const DocumentIssuanceStudentPage = () => {
                                 onCheckedChange={() => toggleFeesExemption(key)}
                                 className="border-violet-600 data-[state=checked]:bg-violet-600"
                               />
-                              <label htmlFor={`${key}-fees`} className="text-xs cursor-pointer text-gray-900">
+                              <label
+                                htmlFor={`${key}-fees`}
+                                className="text-xs cursor-pointer text-gray-900"
+                              >
                                 Fees Exemption
                               </label>
                             </div>
@@ -563,7 +614,10 @@ const DocumentIssuanceStudentPage = () => {
             >
               Cancel
             </Button>
-            <Button onClick={handleSave} className="bg-violet-600 hover:bg-violet-700 text-white px-8">
+            <Button
+              onClick={handleSave}
+              className="bg-violet-600 hover:bg-violet-700 text-white px-8"
+            >
               Save Changes
             </Button>
           </div>

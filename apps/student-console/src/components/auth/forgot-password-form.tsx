@@ -54,15 +54,10 @@ export function ForgotPasswordForm() {
       <div className="space-y-4">
         <Alert>
           <AlertDescription>
-            If an account exists with that email, you will receive a password
-            reset link.
+            If an account exists with that email, you will receive a password reset link.
           </AlertDescription>
         </Alert>
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => router.push("/")}
-        >
+        <Button variant="outline" className="w-full" onClick={() => router.push("/")}>
           Return to Sign In
         </Button>
       </div>
@@ -92,10 +87,7 @@ export function ForgotPasswordForm() {
       </Button>
       <div className="text-center text-sm">
         Remember your password?{" "}
-        <Link
-          href="/"
-          className="text-indigo-600 hover:text-indigo-800 font-medium"
-        >
+        <Link href="/" className="text-indigo-600 hover:text-indigo-800 font-medium">
           Sign in
         </Link>
       </div>

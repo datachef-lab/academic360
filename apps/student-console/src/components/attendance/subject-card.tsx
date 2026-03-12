@@ -19,9 +19,7 @@ type SubjectCardProps = {
 };
 
 export default function SubjectCard({ subject }: SubjectCardProps) {
-  const percentage = Number(
-    calculateAttendancePercentage(subject.attended, subject.total)
-  );
+  const percentage = Number(calculateAttendancePercentage(subject.attended, subject.total));
   const { status, textColor } = getAttendanceStatus(percentage);
 
   // Determine color theme based on attendance percentage
@@ -29,10 +27,10 @@ export default function SubjectCard({ subject }: SubjectCardProps) {
     percentage >= 90
       ? "border-green-200 bg-gradient-to-br from-white to-green-50"
       : percentage >= 75
-      ? "border-blue-200 bg-gradient-to-br from-white to-blue-50"
-      : percentage >= 60
-      ? "border-amber-200 bg-gradient-to-br from-white to-amber-50"
-      : "border-red-200 bg-gradient-to-br from-white to-red-50";
+        ? "border-blue-200 bg-gradient-to-br from-white to-blue-50"
+        : percentage >= 60
+          ? "border-amber-200 bg-gradient-to-br from-white to-amber-50"
+          : "border-red-200 bg-gradient-to-br from-white to-red-50";
 
   return (
     <Card
@@ -71,12 +69,8 @@ export default function SubjectCard({ subject }: SubjectCardProps) {
           <div>
             <div className="flex justify-between mb-1">
               <div className="flex items-baseline">
-                <span className="text-3xl font-bold mr-2 text-gray-800">
-                  {percentage}%
-                </span>
-                <span className={`text-sm font-medium ${textColor}`}>
-                  {status}
-                </span>
+                <span className="text-3xl font-bold mr-2 text-gray-800">{percentage}%</span>
+                <span className={`text-sm font-medium ${textColor}`}>{status}</span>
               </div>
               <span className="text-sm bg-white px-2 py-1 rounded-full text-gray-700 shadow-sm border border-gray-100">
                 {subject.attended}/{subject.total} classes
@@ -89,10 +83,10 @@ export default function SubjectCard({ subject }: SubjectCardProps) {
                   percentage >= 90
                     ? "bg-gradient-to-r from-green-400 to-emerald-500"
                     : percentage >= 75
-                    ? "bg-gradient-to-r from-blue-400 to-indigo-500"
-                    : percentage >= 60
-                    ? "bg-amber-400 to-orange-500"
-                    : "bg-red-400 to-rose-500"
+                      ? "bg-gradient-to-r from-blue-400 to-indigo-500"
+                      : percentage >= 60
+                        ? "bg-amber-400 to-orange-500"
+                        : "bg-red-400 to-rose-500"
                 }`}
                 style={{ width: `${percentage}%` }}
               ></div>

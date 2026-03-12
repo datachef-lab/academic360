@@ -188,7 +188,11 @@ class SocketService {
     // Filter out notifications initiated by the current user
     // Don't show toast if this notification was created by the current user
     // Compare as strings to handle any type mismatches
-    if (notification.userId && this.userId && String(notification.userId).trim() === String(this.userId).trim()) {
+    if (
+      notification.userId &&
+      this.userId &&
+      String(notification.userId).trim() === String(this.userId).trim()
+    ) {
       console.log("[SocketService] Filtering out self-initiated notification", {
         notificationUserId: notification.userId,
         currentUserId: this.userId,

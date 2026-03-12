@@ -13,7 +13,10 @@ export async function POST(req: NextRequest) {
     const { type, recipient, name } = await req.json();
 
     if (!type || !recipient) {
-      return NextResponse.json({ message: "OTP type and recipient are required." }, { status: 400 });
+      return NextResponse.json(
+        { message: "OTP type and recipient are required." },
+        { status: 400 },
+      );
     }
 
     if (!otpType.enumValues.includes(type)) {
@@ -24,8 +27,15 @@ export async function POST(req: NextRequest) {
     console.log("otpCode:", otpCode);
     // Now, send the OTP
     if (type == "FOR_EMAIL") {
-      await sendZeptoMail(recipient, "Email Verify", `${otpCode} is your code. This only valid for 3min.`);
-      return NextResponse.json({ message: "OTP generated and sent successfully!" }, { status: 200 });
+      await sendZeptoMail(
+        recipient,
+        "Email Verify",
+        `${otpCode} is your code. This only valid for 3min.`,
+      );
+      return NextResponse.json(
+        { message: "OTP generated and sent successfully!" },
+        { status: 200 },
+      );
     } else if (type == "FOR_PHONE") {
       const notificationData = await sendWhatsAppMessage(recipient, [otpCode], "OTP");
 
@@ -37,7 +47,10 @@ export async function POST(req: NextRequest) {
       //     );
       // }
 
-      return NextResponse.json({ message: "OTP generated and sent successfully!" }, { status: 200 });
+      return NextResponse.json(
+        { message: "OTP generated and sent successfully!" },
+        { status: 200 },
+      );
     }
   } catch (error) {
     console.error("Error generating OTP:", error);

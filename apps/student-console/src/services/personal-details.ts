@@ -17,6 +17,8 @@ export interface PersonalDetailsDto {
 }
 
 export async function fetchPersonalDetailsByStudentId(studentId: number) {
-  const res = await api.get<ApiResponse<PersonalDetailsDto>>(`/api/personal-details/student/${studentId}`);
+  const res = await api.get<ApiResponse<PersonalDetailsDto>>(
+    `/api/personal-details/student/${studentId}`,
+  );
   return res.data.payload as PersonalDetailsDto;
 }

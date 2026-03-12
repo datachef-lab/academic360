@@ -1,6 +1,13 @@
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const chartData: {
   year: string;
@@ -27,7 +34,12 @@ export function MyLineChart() {
         <CardDescription>Year-over-Year Trends</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
-        <LineChart width={600} height={300} data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+        <LineChart
+          width={600}
+          height={300}
+          data={chartData}
+          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="year" />
           <YAxis />

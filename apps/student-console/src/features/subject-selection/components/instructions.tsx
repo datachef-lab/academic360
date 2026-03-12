@@ -1,5 +1,13 @@
 import React from "react";
-import { BookOpen, Layers, FileText, GraduationCap, Lightbulb, Info, AlertTriangle } from "lucide-react";
+import {
+  BookOpen,
+  Layers,
+  FileText,
+  GraduationCap,
+  Lightbulb,
+  Info,
+  AlertTriangle,
+} from "lucide-react";
 
 interface InstructionsProps {
   compact?: boolean;
@@ -12,7 +20,11 @@ interface InstructionsProps {
   };
 }
 
-export default function Instructions({ compact = false, student, visibleCategories }: InstructionsProps) {
+export default function Instructions({
+  compact = false,
+  student,
+  visibleCategories,
+}: InstructionsProps) {
   // Determine student's program type
   const programCourseName =
     student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "";
@@ -89,11 +101,12 @@ export default function Instructions({ compact = false, student, visibleCategori
                           <p className="font-semibold mb-2">For B.Com (H & G) Students:</p>
                           <ul className="list-disc list-inside space-y-1 ml-2">
                             <li>
-                              Choose one Minor subject from Semester III through Semester VI: E-Business or Marketing.
+                              Choose one Minor subject from Semester III through Semester VI:
+                              E-Business or Marketing.
                             </li>
                             <li>
-                              The corresponding papers for Semester III are Fundamentals of Information System
-                              (E-Business) and Consumer Behaviour (Marketing).
+                              The corresponding papers for Semester III are Fundamentals of
+                              Information System (E-Business) and Consumer Behaviour (Marketing).
                             </li>
                           </ul>
                         </div>
@@ -102,10 +115,13 @@ export default function Instructions({ compact = false, student, visibleCategori
                           <p className="font-semibold mb-2">For B.A. & B.Sc. Students:</p>
                           <ul className="list-disc list-inside space-y-1 ml-2">
                             <li>
-                              Choose two distinct Minor subjects - Minor I (Studied in Semesters I & II) & Minor II
-                              (Studied in Semesters III & IV).
+                              Choose two distinct Minor subjects - Minor I (Studied in Semesters I &
+                              II) & Minor II (Studied in Semesters III & IV).
                             </li>
-                            <li>You will choose either Minor I or Minor II for Semesters V & VI respectively.</li>
+                            <li>
+                              You will choose either Minor I or Minor II for Semesters V & VI
+                              respectively.
+                            </li>
                           </ul>
                         </div>
                       )}
@@ -125,16 +141,22 @@ export default function Instructions({ compact = false, student, visibleCategori
                     <div className="text-green-700 text-sm leading-relaxed space-y-2">
                       {isBcomProgram ? (
                         <div>
-                          <p className="text-green-600 italic">IDC subjects are not applicable for B.Com students.</p>
+                          <p className="text-green-600 italic">
+                            IDC subjects are not applicable for B.Com students.
+                          </p>
                         </div>
                       ) : (
                         <div>
                           <p className="font-semibold mb-2">For B.A. & B.Sc. Students:</p>
                           <ul className="list-disc list-inside space-y-1 ml-2">
                             <li>
-                              You must select a different IDC subject for each of the three semesters (I, II, & III).
+                              You must select a different IDC subject for each of the three
+                              semesters (I, II, & III).
                             </li>
-                            <li>The three IDC subjects chosen cannot be the same as your Major or Minor subjects.</li>
+                            <li>
+                              The three IDC subjects chosen cannot be the same as your Major or
+                              Minor subjects.
+                            </li>
                           </ul>
                         </div>
                       )}
@@ -154,16 +176,22 @@ export default function Instructions({ compact = false, student, visibleCategori
                     <div className="text-purple-700 text-sm leading-relaxed space-y-2">
                       {isBcomProgram ? (
                         <div>
-                          <p className="text-purple-600 italic">AEC subjects are not applicable for B.Com students.</p>
+                          <p className="text-purple-600 italic">
+                            AEC subjects are not applicable for B.Com students.
+                          </p>
                         </div>
                       ) : (
                         <div>
                           <p className="font-semibold mb-2">For B.A. & B.Sc. (Hons.):</p>
                           <ul className="list-disc list-inside space-y-1 ml-2">
                             <li>
-                              You'll study Compulsory English in Semesters I & II named as AEC 1 and AEC 2 respectively.
+                              You'll study Compulsory English in Semesters I & II named as AEC 1 and
+                              AEC 2 respectively.
                             </li>
-                            <li>For Semesters III & IV, you must choose one subject to study across both semesters.</li>
+                            <li>
+                              For Semesters III & IV, you must choose one subject to study across
+                              both semesters.
+                            </li>
                           </ul>
                         </div>
                       )}
@@ -192,12 +220,18 @@ export default function Instructions({ compact = false, student, visibleCategori
                       <div>
                         <p className="font-semibold mb-2">Semester II</p>
                         <p className="ml-2">
-                          B.Com/ B.A./B.Sc. students will continue to study Environmental Studies (ENVS).
+                          B.Com/ B.A./B.Sc. students will continue to study Environmental Studies
+                          (ENVS).
                         </p>
                         <p className="ml-2 mt-1">Additionally,</p>
                         <ul className="list-disc list-inside space-y-1 ml-4">
-                          <li>B.A. students must also study Value-Oriented Life Skill Education.</li>
-                          <li>B.Sc. students must also choose one subject from two available CVAC options.</li>
+                          <li>
+                            B.A. students must also study Value-Oriented Life Skill Education.
+                          </li>
+                          <li>
+                            B.Sc. students must also choose one subject from two available CVAC
+                            options.
+                          </li>
                         </ul>
                       </div>
                     </div>

@@ -18,7 +18,13 @@ import { cva, VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 
 const months = [
@@ -56,8 +62,7 @@ const multiSelectVariants = cva(
 );
 
 interface CalendarDatePickerProps
-  extends React.HTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof multiSelectVariants> {
+  extends React.HTMLAttributes<HTMLButtonElement>, VariantProps<typeof multiSelectVariants> {
   id?: string;
   className?: string;
   date: DateRange;
@@ -88,7 +93,9 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
     );
     const [monthFrom, setMonthFrom] = React.useState<Date | undefined>(date?.from);
     const [yearFrom, setYearFrom] = React.useState<number | undefined>(date?.from?.getFullYear());
-    const [monthTo, setMonthTo] = React.useState<Date | undefined>(numberOfMonths === 2 ? date?.to : date?.from);
+    const [monthTo, setMonthTo] = React.useState<Date | undefined>(
+      numberOfMonths === 2 ? date?.to : date?.from,
+    );
     const [yearTo, setYearTo] = React.useState<number | undefined>(
       numberOfMonths === 2 ? date?.to?.getFullYear() : date?.from?.getFullYear(),
     );
@@ -134,99 +141,121 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
       setSelectedRange(null);
     };
 
-    const handleMonthChange = React.useCallback((newMonthIndex: number, part: string) => {
-      setSelectedRange(null);
-      
-      if (part === "from") {
-        if (monthFrom) {
-          const currentYear = monthFrom.getFullYear();
-          const newDate = new Date(currentYear, newMonthIndex, 1);
-          
-          if (
-            (numberOfMonths === 2 && newDate <= (date.to as Date)) ||
-            numberOfMonths === 1
-          ) {
-            if (numberOfMonths === 2) {
-              onDateSelect({
-                from: new Date(newDate),
-                to: new Date(date.to as Date),
-              });
-            } else {
-              onDateSelect({ from: new Date(newDate), to: new Date(newDate) });
-            }
-            
-            setMonthFrom(newDate);
-            setYearFrom(currentYear);
-          }
-        }
-      } else if (part === "to" && numberOfMonths === 2) {
-        if (monthTo) {
-          const currentYear = monthTo.getFullYear();
-          const newDate = new Date(currentYear, newMonthIndex, 1);
-          
-          if (newDate >= (date.from as Date)) {
-            onDateSelect({
-              from: new Date(date.from as Date),
-              to: new Date(newDate),
-            });
-            
-            setMonthTo(newDate);
-            setYearTo(currentYear);
-          }
-        }
-      }
-    }, [date, monthFrom, monthTo, numberOfMonths, onDateSelect, setMonthFrom, setMonthTo, setSelectedRange, setYearFrom, setYearTo]);
+    const handleMonthChange = React.useCallback(
+      (newMonthIndex: number, part: string) => {
+        setSelectedRange(null);
 
-    const handleYearChange = React.useCallback((newYear: number, part: string) => {
-      setSelectedRange(null);
-      
-      if (part === "from") {
-        if (monthFrom) {
-          const currentMonth = monthFrom.getMonth();
-          const newDate = new Date(newYear, currentMonth, 1);
-          
-          if (
-            (numberOfMonths === 2 && newDate <= (date.to as Date)) ||
-            numberOfMonths === 1
-          ) {
-            if (numberOfMonths === 2) {
-              onDateSelect({
-                from: new Date(newDate),
-                to: new Date(date.to as Date),
-              });
-            } else {
-              onDateSelect({ from: new Date(newDate), to: new Date(newDate) });
+        if (part === "from") {
+          if (monthFrom) {
+            const currentYear = monthFrom.getFullYear();
+            const newDate = new Date(currentYear, newMonthIndex, 1);
+
+            if ((numberOfMonths === 2 && newDate <= (date.to as Date)) || numberOfMonths === 1) {
+              if (numberOfMonths === 2) {
+                onDateSelect({
+                  from: new Date(newDate),
+                  to: new Date(date.to as Date),
+                });
+              } else {
+                onDateSelect({ from: new Date(newDate), to: new Date(newDate) });
+              }
+
+              setMonthFrom(newDate);
+              setYearFrom(currentYear);
             }
-            
-            setMonthFrom(newDate);
-            setYearFrom(newYear);
+          }
+        } else if (part === "to" && numberOfMonths === 2) {
+          if (monthTo) {
+            const currentYear = monthTo.getFullYear();
+            const newDate = new Date(currentYear, newMonthIndex, 1);
+
+            if (newDate >= (date.from as Date)) {
+              onDateSelect({
+                from: new Date(date.from as Date),
+                to: new Date(newDate),
+              });
+
+              setMonthTo(newDate);
+              setYearTo(currentYear);
+            }
           }
         }
-      } else if (part === "to" && numberOfMonths === 2) {
-        if (monthTo) {
-          const currentMonth = monthTo.getMonth();
-          const newDate = new Date(newYear, currentMonth, 1);
-          
-          if (newDate >= (date.from as Date)) {
-            onDateSelect({
-              from: new Date(date.from as Date),
-              to: new Date(newDate),
-            });
-            
-            setMonthTo(newDate);
-            setYearTo(newYear);
+      },
+      [
+        date,
+        monthFrom,
+        monthTo,
+        numberOfMonths,
+        onDateSelect,
+        setMonthFrom,
+        setMonthTo,
+        setSelectedRange,
+        setYearFrom,
+        setYearTo,
+      ],
+    );
+
+    const handleYearChange = React.useCallback(
+      (newYear: number, part: string) => {
+        setSelectedRange(null);
+
+        if (part === "from") {
+          if (monthFrom) {
+            const currentMonth = monthFrom.getMonth();
+            const newDate = new Date(newYear, currentMonth, 1);
+
+            if ((numberOfMonths === 2 && newDate <= (date.to as Date)) || numberOfMonths === 1) {
+              if (numberOfMonths === 2) {
+                onDateSelect({
+                  from: new Date(newDate),
+                  to: new Date(date.to as Date),
+                });
+              } else {
+                onDateSelect({ from: new Date(newDate), to: new Date(newDate) });
+              }
+
+              setMonthFrom(newDate);
+              setYearFrom(newYear);
+            }
+          }
+        } else if (part === "to" && numberOfMonths === 2) {
+          if (monthTo) {
+            const currentMonth = monthTo.getMonth();
+            const newDate = new Date(newYear, currentMonth, 1);
+
+            if (newDate >= (date.from as Date)) {
+              onDateSelect({
+                from: new Date(date.from as Date),
+                to: new Date(newDate),
+              });
+
+              setMonthTo(newDate);
+              setYearTo(newYear);
+            }
           }
         }
-      }
-    }, [date, monthFrom, monthTo, numberOfMonths, onDateSelect, setMonthFrom, setMonthTo, setSelectedRange, setYearFrom, setYearTo]);
+      },
+      [
+        date,
+        monthFrom,
+        monthTo,
+        numberOfMonths,
+        onDateSelect,
+        setMonthFrom,
+        setMonthTo,
+        setSelectedRange,
+        setYearFrom,
+        setYearTo,
+      ],
+    );
 
     const today = new Date();
-    
+
     const years = Array.from(
-      { length: yearsRange + 1 }, 
-      (_, i) => today.getFullYear() - Math.floor(yearsRange / 2) + i
+      { length: yearsRange + 1 },
+      (_, i) => today.getFullYear() - Math.floor(yearsRange / 2) + i,
     );
-    
+
     const dateRanges = [
       { label: "Today", start: today, end: today },
       { label: "Yesterday", start: subDays(today, 1), end: subDays(today, 1) },
@@ -267,48 +296,64 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
       setHighlightedPart(null);
     };
 
-    const handleWheel = React.useCallback((event: React.WheelEvent) => {
-      event.preventDefault();
-      setSelectedRange(null);
-      if (highlightedPart === "firstDay") {
-        const newDate = new Date(date.from as Date);
-        const increment = event.deltaY > 0 ? -1 : 1;
-        newDate.setDate(newDate.getDate() + increment);
-        if (newDate <= (date.to as Date)) {
-          if (numberOfMonths === 2) {
-            onDateSelect({ from: newDate, to: new Date(date.to as Date) });
-          } else {
+    const handleWheel = React.useCallback(
+      (event: React.WheelEvent) => {
+        event.preventDefault();
+        setSelectedRange(null);
+        if (highlightedPart === "firstDay") {
+          const newDate = new Date(date.from as Date);
+          const increment = event.deltaY > 0 ? -1 : 1;
+          newDate.setDate(newDate.getDate() + increment);
+          if (newDate <= (date.to as Date)) {
+            if (numberOfMonths === 2) {
+              onDateSelect({ from: newDate, to: new Date(date.to as Date) });
+            } else {
+              onDateSelect({ from: newDate, to: newDate });
+            }
+            setMonthFrom(newDate);
+          } else if (newDate > (date.to as Date) && numberOfMonths === 1) {
             onDateSelect({ from: newDate, to: newDate });
+            setMonthFrom(newDate);
           }
-          setMonthFrom(newDate);
-        } else if (newDate > (date.to as Date) && numberOfMonths === 1) {
-          onDateSelect({ from: newDate, to: newDate });
-          setMonthFrom(newDate);
+        } else if (highlightedPart === "firstMonth") {
+          const currentMonth = monthFrom ? monthFrom.getMonth() : 0;
+          const newMonthIndex = currentMonth + (event.deltaY > 0 ? -1 : 1);
+          handleMonthChange(newMonthIndex, "from");
+        } else if (highlightedPart === "firstYear" && yearFrom !== undefined) {
+          const newYear = yearFrom + (event.deltaY > 0 ? -1 : 1);
+          handleYearChange(newYear, "from");
+        } else if (highlightedPart === "secondDay") {
+          const newDate = new Date(date.to as Date);
+          const increment = event.deltaY > 0 ? -1 : 1;
+          newDate.setDate(newDate.getDate() + increment);
+          if (newDate >= (date.from as Date)) {
+            onDateSelect({ from: new Date(date.from as Date), to: newDate });
+            setMonthTo(newDate);
+          }
+        } else if (highlightedPart === "secondMonth") {
+          const currentMonth = monthTo ? monthTo.getMonth() : 0;
+          const newMonthIndex = currentMonth + (event.deltaY > 0 ? -1 : 1);
+          handleMonthChange(newMonthIndex, "to");
+        } else if (highlightedPart === "secondYear" && yearTo !== undefined) {
+          const newYear = yearTo + (event.deltaY > 0 ? -1 : 1);
+          handleYearChange(newYear, "to");
         }
-      } else if (highlightedPart === "firstMonth") {
-        const currentMonth = monthFrom ? monthFrom.getMonth() : 0;
-        const newMonthIndex = currentMonth + (event.deltaY > 0 ? -1 : 1);
-        handleMonthChange(newMonthIndex, "from");
-      } else if (highlightedPart === "firstYear" && yearFrom !== undefined) {
-        const newYear = yearFrom + (event.deltaY > 0 ? -1 : 1);
-        handleYearChange(newYear, "from");
-      } else if (highlightedPart === "secondDay") {
-        const newDate = new Date(date.to as Date);
-        const increment = event.deltaY > 0 ? -1 : 1;
-        newDate.setDate(newDate.getDate() + increment);
-        if (newDate >= (date.from as Date)) {
-          onDateSelect({ from: new Date(date.from as Date), to: newDate });
-          setMonthTo(newDate);
-        }
-      } else if (highlightedPart === "secondMonth") {
-        const currentMonth = monthTo ? monthTo.getMonth() : 0;
-        const newMonthIndex = currentMonth + (event.deltaY > 0 ? -1 : 1);
-        handleMonthChange(newMonthIndex, "to");
-      } else if (highlightedPart === "secondYear" && yearTo !== undefined) {
-        const newYear = yearTo + (event.deltaY > 0 ? -1 : 1);
-        handleYearChange(newYear, "to");
-      }
-    }, [highlightedPart, date, numberOfMonths, onDateSelect, setMonthFrom, setMonthTo, monthFrom, monthTo, yearFrom, yearTo, handleMonthChange, handleYearChange]);
+      },
+      [
+        highlightedPart,
+        date,
+        numberOfMonths,
+        onDateSelect,
+        setMonthFrom,
+        setMonthTo,
+        monthFrom,
+        monthTo,
+        yearFrom,
+        yearTo,
+        handleMonthChange,
+        handleYearChange,
+      ],
+    );
 
     React.useEffect(() => {
       const firstDayElement = document.getElementById(`firstDay-${id}`);
@@ -374,7 +419,10 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
                     <>
                       <span
                         id={`firstDay-${id}`}
-                        className={cn("date-part", highlightedPart === "firstDay" && "underline font-bold")}
+                        className={cn(
+                          "date-part",
+                          highlightedPart === "firstDay" && "underline font-bold",
+                        )}
                         onMouseOver={() => handleMouseOver("firstDay")}
                         onMouseLeave={handleMouseLeave}
                       >
@@ -382,7 +430,10 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
                       </span>{" "}
                       <span
                         id={`firstMonth-${id}`}
-                        className={cn("date-part", highlightedPart === "firstMonth" && "underline font-bold")}
+                        className={cn(
+                          "date-part",
+                          highlightedPart === "firstMonth" && "underline font-bold",
+                        )}
                         onMouseOver={() => handleMouseOver("firstMonth")}
                         onMouseLeave={handleMouseLeave}
                       >
@@ -391,7 +442,10 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
                       ,{" "}
                       <span
                         id={`firstYear-${id}`}
-                        className={cn("date-part", highlightedPart === "firstYear" && "underline font-bold")}
+                        className={cn(
+                          "date-part",
+                          highlightedPart === "firstYear" && "underline font-bold",
+                        )}
                         onMouseOver={() => handleMouseOver("firstYear")}
                         onMouseLeave={handleMouseLeave}
                       >
@@ -402,7 +456,10 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
                           {" - "}
                           <span
                             id={`secondDay-${id}`}
-                            className={cn("date-part", highlightedPart === "secondDay" && "underline font-bold")}
+                            className={cn(
+                              "date-part",
+                              highlightedPart === "secondDay" && "underline font-bold",
+                            )}
                             onMouseOver={() => handleMouseOver("secondDay")}
                             onMouseLeave={handleMouseLeave}
                           >
@@ -410,7 +467,10 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
                           </span>{" "}
                           <span
                             id={`secondMonth-${id}`}
-                            className={cn("date-part", highlightedPart === "secondMonth" && "underline font-bold")}
+                            className={cn(
+                              "date-part",
+                              highlightedPart === "secondMonth" && "underline font-bold",
+                            )}
                             onMouseOver={() => handleMouseOver("secondMonth")}
                             onMouseLeave={handleMouseLeave}
                           >
@@ -419,7 +479,10 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
                           ,{" "}
                           <span
                             id={`secondYear-${id}`}
-                            className={cn("date-part", highlightedPart === "secondYear" && "underline font-bold")}
+                            className={cn(
+                              "date-part",
+                              highlightedPart === "secondYear" && "underline font-bold",
+                            )}
                             onMouseOver={() => handleMouseOver("secondYear")}
                             onMouseLeave={handleMouseLeave}
                           >
@@ -432,7 +495,10 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
                     <>
                       <span
                         id="day"
-                        className={cn("date-part", highlightedPart === "day" && "underline font-bold")}
+                        className={cn(
+                          "date-part",
+                          highlightedPart === "day" && "underline font-bold",
+                        )}
                         onMouseOver={() => handleMouseOver("day")}
                         onMouseLeave={handleMouseLeave}
                       >
@@ -440,7 +506,10 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
                       </span>{" "}
                       <span
                         id="month"
-                        className={cn("date-part", highlightedPart === "month" && "underline font-bold")}
+                        className={cn(
+                          "date-part",
+                          highlightedPart === "month" && "underline font-bold",
+                        )}
                         onMouseOver={() => handleMouseOver("month")}
                         onMouseLeave={handleMouseLeave}
                       >
@@ -449,7 +518,10 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
                       ,{" "}
                       <span
                         id="year"
-                        className={cn("date-part", highlightedPart === "year" && "underline font-bold")}
+                        className={cn(
+                          "date-part",
+                          highlightedPart === "year" && "underline font-bold",
+                        )}
                         onMouseOver={() => handleMouseOver("year")}
                         onMouseLeave={handleMouseLeave}
                       >

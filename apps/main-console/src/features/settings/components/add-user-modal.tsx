@@ -79,7 +79,12 @@ export function AddUserModal({ onAdd }: AddUserModalProps) {
               onChange={handleChange}
             />
           ))}
-          <select name="type" value={formData.type} onChange={handleChange} className="p-2 border rounded-md">
+          <select
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            className="p-2 border rounded-md"
+          >
             {["ADMIN", "FACULTY", "STAFF", "STUDENT", "PARENTS"].map((role) => (
               <option key={role} value={role}>
                 {role}

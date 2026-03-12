@@ -106,12 +106,21 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">UID</Label>
-            <Input id="uid" type="text" value={uid} onChange={(e) => setUID(e.target.value)} required />
+            <Input
+              id="uid"
+              type="text"
+              value={uid}
+              onChange={(e) => setUID(e.target.value)}
+              required
+            />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">OTP</Label>
-              <Link href="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-800">
+              <Link
+                href="/forgot-password"
+                className="text-sm text-indigo-600 hover:text-indigo-800"
+              >
                 Forgot password?
               </Link>
             </div>

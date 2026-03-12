@@ -11,23 +11,15 @@ type AttendanceTabsProps = {
   selectedSemester: string;
 };
 
-export default function AttendanceTabs({
-  selectedSemester,
-}: AttendanceTabsProps) {
+export default function AttendanceTabs({ selectedSemester }: AttendanceTabsProps) {
   const [selectedView, setSelectedView] = useState<string>("today");
 
   const currentSubjects =
-    mockData.subjects[
-      selectedSemester as unknown as keyof typeof mockData.subjects
-    ] || [];
+    mockData.subjects[selectedSemester as unknown as keyof typeof mockData.subjects] || [];
   const currentOrNextClass = getCurrentOrNextClass(currentSubjects, mockData);
 
   return (
-    <Tabs
-      value={selectedView}
-      onValueChange={setSelectedView}
-      className="w-full"
-    >
+    <Tabs value={selectedView} onValueChange={setSelectedView} className="w-full">
       <TabsList className="grid w-full grid-cols-3 md:w-auto md:grid-cols-auto mb-6">
         <TabsTrigger value="today">Today</TabsTrigger>
         <TabsTrigger value="statistics">Statistics</TabsTrigger>
@@ -35,17 +27,11 @@ export default function AttendanceTabs({
       </TabsList>
 
       <TabsContent value="today">
-        <TodayContent
-          mockData={mockData}
-          currentOrNextClass={currentOrNextClass}
-        />
+        <TodayContent mockData={mockData} currentOrNextClass={currentOrNextClass} />
       </TabsContent>
 
       <TabsContent value="statistics">
-        <StatisticsContent
-          mockData={mockData}
-          selectedSemester={selectedSemester}
-        />
+        <StatisticsContent mockData={mockData} selectedSemester={selectedSemester} />
       </TabsContent>
 
       <TabsContent value="events">
@@ -54,7 +40,6 @@ export default function AttendanceTabs({
     </Tabs>
   );
 }
-
 
 // Helper to determine class status based on time
 const getClassStatus = (timeRange: string): "Ongoing" | "Upcoming" | "Past" => {
@@ -111,7 +96,7 @@ const getClassStatus = (timeRange: string): "Ongoing" | "Upcoming" | "Past" => {
 
 const getCurrentOrNextClass = (
   subjects: Subject[],
-  mockData: MockData
+  mockData: MockData,
 ): UpcomingClass | undefined => {
   const now = new Date();
   const upcoming: UpcomingClass[] = [];
@@ -137,26 +122,14 @@ const getCurrentOrNextClass = (
 
     days.forEach((day: string) => {
       // Get next date for this day
-      const dayIndex = [
-        "Sun",
-        "Mon",
-        "Tue",
-        "Wed",
-        "Thu",
-        "Fri",
-        "Sat",
-      ].indexOf(day.slice(0, 3));
+      const dayIndex = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(day.slice(0, 3));
       if (dayIndex === -1) return;
       const classDate = new Date(now);
       classDate.setHours(
-        period === "PM" && hour !== "12"
-          ? +hour + 12
-          : +hour === 12 && period === "AM"
-          ? 0
-          : +hour,
+        period === "PM" && hour !== "12" ? +hour + 12 : +hour === 12 && period === "AM" ? 0 : +hour,
         +min,
         0,
-        0
+        0,
       );
       let diff = (dayIndex + 7 - now.getDay()) % 7;
       if (diff === 0 && classDate < now) diff = 7; // if today but already passed, go to next week
@@ -165,13 +138,13 @@ const getCurrentOrNextClass = (
       // Find corresponding class in timetable to get room and floor using parsed time
       let classInTimetable = undefined;
       const fullTimetableDays = Object.keys(
-        mockData.timetable
+        mockData.timetable,
       ) as (keyof typeof mockData.timetable)[];
       for (const tableDay of fullTimetableDays) {
         classInTimetable = mockData.timetable[tableDay].find(
           (cls) =>
             cls.subject === subject.code &&
-            parseComparableTime(cls.time) === comparableScheduleTime
+            parseComparableTime(cls.time) === comparableScheduleTime,
         );
         if (classInTimetable) break; // Found a match, no need to check other days
       }
@@ -200,14 +173,9 @@ const getCurrentOrNextClass = (
     itemDate.setHours(0, 0, 0, 0);
     // Check if the class is today and its time hasn't passed yet
     const itemTimeStr = item.schedule.split(" - ")[1];
-    return (
-      itemDate.getTime() === today.getTime() &&
-      getClassStatus(itemTimeStr) !== "Past"
-    );
+    return itemDate.getTime() === today.getTime() && getClassStatus(itemTimeStr) !== "Past";
   });
 
   // Return the soonest one from today, or the overall soonest if none today are upcoming/ongoing
-  return todayUpcomingOrOngoing.length > 0
-    ? todayUpcomingOrOngoing[0]
-    : upcoming[0];
+  return todayUpcomingOrOngoing.length > 0 ? todayUpcomingOrOngoing[0] : upcoming[0];
 };

@@ -1,5 +1,13 @@
-
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export interface ChartBarHorizontalProps {
@@ -8,7 +16,11 @@ export interface ChartBarHorizontalProps {
   description?: string;
 }
 
-export function ChartBarHorizontal({ data, title = "Course-wise Student Stats", description }: ChartBarHorizontalProps) {
+export function ChartBarHorizontal({
+  data,
+  title = "Course-wise Student Stats",
+  description,
+}: ChartBarHorizontalProps) {
   return (
     <Card className="w-full">
       <CardHeader>
@@ -35,4 +47,4 @@ export function ChartBarHorizontal({ data, title = "Course-wise Student Stats", 
       </CardContent>
     </Card>
   );
-} 
+}

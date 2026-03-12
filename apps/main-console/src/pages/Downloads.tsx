@@ -1,18 +1,17 @@
-import React, { useState } from 'react';
-import { Download } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { ChipTabs } from '@/components/ui/chipTabs';
-import StudentDownloads from '@/components/downloads/StudentDownloads';
-import MarksheetDownloads from '@/components/downloads/MarksheetDownloads';
+import React, { useState } from "react";
+import { Download } from "lucide-react";
+import { motion } from "framer-motion";
+import { ChipTabs } from "@/components/ui/chipTabs";
+import StudentDownloads from "@/components/downloads/StudentDownloads";
+import MarksheetDownloads from "@/components/downloads/MarksheetDownloads";
 
 const Downloads: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState('Students');
+  const [selectedTab, setSelectedTab] = useState("Students");
 
-  const tabs = ['Students', 'Marksheet'];
+  const tabs = ["Students", "Marksheet"];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white p-2 sm:p-2 lg:p-4">
-     
       <div className="max-w-auto mx-auto space-y-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -30,7 +29,9 @@ const Downloads: React.FC = () => {
             </motion.div>
             <div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Downloads</h2>
-              <p className="text-sm text-purple-600 font-medium">Export your data in multiple formats</p>
+              <p className="text-sm text-purple-600 font-medium">
+                Export your data in multiple formats
+              </p>
             </div>
           </div>
 
@@ -42,9 +43,7 @@ const Downloads: React.FC = () => {
           />
         </motion.div>
 
-     
         <div className="grid grid-cols-1 space-y-1   w-full">
-     
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -64,12 +63,8 @@ const Downloads: React.FC = () => {
             />
           </motion.div>
 
-         
-          <div
-           
-            className=""
-          >
-            {selectedTab === 'Students' ? <StudentDownloads /> : <MarksheetDownloads />}
+          <div className="">
+            {selectedTab === "Students" ? <StudentDownloads /> : <MarksheetDownloads />}
           </div>
         </div>
       </div>

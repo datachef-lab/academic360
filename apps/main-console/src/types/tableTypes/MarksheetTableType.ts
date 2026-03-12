@@ -11,9 +11,9 @@ export type MarksheetTableType = {
   theoryMarks: number;
   practicalMarks: number;
   internalMarks: number;
-  marksheetCode:string;
+  marksheetCode: string;
   subject: string;
-  
+
   vivalMarks: number;
   fullMarks: number;
   obtainedMarks: number;
@@ -21,6 +21,6 @@ export type MarksheetTableType = {
   sgpa: number;
   cgpa: number;
   letterGrade: string;
-  status:string;
+  status: string;
   remarks: string;
-}; 
+};

@@ -3,7 +3,13 @@ import React, { useState, useEffect, Dispatch, SetStateAction, useRef } from "re
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import {
@@ -21,7 +27,11 @@ import { ApplicationFormDto } from "@/types/admissions/index";
 
 // Work around strict shadcn typings with proper type extensions
 const LabelFixed = Label as React.ComponentType<
-  React.ComponentProps<typeof Label> & { children?: React.ReactNode; className?: string; htmlFor?: string }
+  React.ComponentProps<typeof Label> & {
+    children?: React.ReactNode;
+    className?: string;
+    htmlFor?: string;
+  }
 >;
 const SelectTriggerFixed = SelectTrigger as React.ComponentType<
   React.ComponentProps<typeof SelectTrigger> & { children?: React.ReactNode; className?: string }
@@ -30,7 +40,11 @@ const SelectContentFixed = SelectContent as React.ComponentType<
   React.ComponentProps<typeof SelectContent> & { children?: React.ReactNode }
 >;
 const SelectItemFixed = SelectItem as React.ComponentType<
-  React.ComponentProps<typeof SelectItem> & { children?: React.ReactNode; value?: string; key?: string | number }
+  React.ComponentProps<typeof SelectItem> & {
+    children?: React.ReactNode;
+    value?: string;
+    key?: string | number;
+  }
 >;
 
 interface GeneralInfoStepProps {
@@ -544,7 +558,9 @@ export default function GeneralInfoStep({ stepNotes, onNext, onPrev }: GeneralIn
           <div>
             <div className="flex flex-col gap-4">
               <div className="flex-1">
-                <LabelFixed className="mb-1 block text-sm sm:text-base">1. Applicant's Name</LabelFixed>
+                <LabelFixed className="mb-1 block text-sm sm:text-base">
+                  1. Applicant's Name
+                </LabelFixed>
                 <div className="flex flex-col sm:flex-row w-full gap-3 mt-2">
                   <div className="w-full sm:w-1/3">
                     <LabelFixed className="mb-1 flex items-center text-sm">
@@ -640,7 +656,9 @@ export default function GeneralInfoStep({ stepNotes, onNext, onPrev }: GeneralIn
                   </>
                 )}
                 {emailVerified && (
-                  <span className="text-green-600 font-semibold text-sm flex items-center">Verified ✅</span>
+                  <span className="text-green-600 font-semibold text-sm flex items-center">
+                    Verified ✅
+                  </span>
                 )}
               </div>
             </div>
@@ -719,7 +737,10 @@ export default function GeneralInfoStep({ stepNotes, onNext, onPrev }: GeneralIn
               <LabelFixed className="flex items-center mb-1">
                 4(a). Nationality <RedDot />
               </LabelFixed>
-              <Select value={generalInfo.nationalityId?.toString() || "other"} onValueChange={handleNationalityChange}>
+              <Select
+                value={generalInfo.nationalityId?.toString() || "other"}
+                onValueChange={handleNationalityChange}
+              >
                 <SelectTriggerFixed>
                   <SelectValue placeholder="Select Nationality" />
                 </SelectTriggerFixed>
@@ -815,7 +836,8 @@ export default function GeneralInfoStep({ stepNotes, onNext, onPrev }: GeneralIn
             {/* 8(a). Mobile Number */}
             <div className="flex-1">
               <LabelFixed className="flex items-center mb-1 text-sm">
-                8(a). Mobile Number <span className="text-blue-700 font-bold text-xs sm:text-sm">(10-digit only.)</span>{" "}
+                8(a). Mobile Number{" "}
+                <span className="text-blue-700 font-bold text-xs sm:text-sm">(10-digit only.)</span>{" "}
                 <RedDot />
               </LabelFixed>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -869,7 +891,9 @@ export default function GeneralInfoStep({ stepNotes, onNext, onPrev }: GeneralIn
                     </>
                   )}
                   {mobileVerified && (
-                    <span className="text-green-600 font-semibold text-sm flex items-center">Verified ✅</span>
+                    <span className="text-green-600 font-semibold text-sm flex items-center">
+                      Verified ✅
+                    </span>
                   )}
                 </div>
               </div>
@@ -882,7 +906,9 @@ export default function GeneralInfoStep({ stepNotes, onNext, onPrev }: GeneralIn
               </LabelFixed>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                 <Input
-                  value={sameAsMobile ? generalInfo.mobileNumber || "" : generalInfo.whatsappNumber || ""}
+                  value={
+                    sameAsMobile ? generalInfo.mobileNumber || "" : generalInfo.whatsappNumber || ""
+                  }
                   onChange={(e) => handleGeneralInfoChange("whatsappNumber", e.target.value)}
                   required
                   disabled={isGeneralInfoLocked || sameAsMobile}
@@ -932,8 +958,8 @@ export default function GeneralInfoStep({ stepNotes, onNext, onPrev }: GeneralIn
         <Card className="p-6 space-y-4">
           <h3 className="text-lg font-semibold mb-2">Login Details</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            The mobile number entered above in Sr. No. 8 (a) will be your login ID by default in order to access your
-            profile on college website.
+            The mobile number entered above in Sr. No. 8 (a) will be your login ID by default in
+            order to access your profile on college website.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
@@ -976,7 +1002,8 @@ export default function GeneralInfoStep({ stepNotes, onNext, onPrev }: GeneralIn
         <Card className="p-6 space-y-4">
           <h3 className="text-lg font-semibold mb-2">Application To</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Since you are applying to B.Com./B.A./B.Sc./BBA course, the selection will remain "Undergraduate".
+            Since you are applying to B.Com./B.A./B.Sc./BBA course, the selection will remain
+            "Undergraduate".
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>

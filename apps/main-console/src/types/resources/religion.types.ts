@@ -1,6 +1,6 @@
 /**
  * Religion Types
- * 
+ *
  * This file contains all TypeScript types and interfaces related to the Religion module.
  * These types mirror the backend model structure and provide type safety for frontend operations.
  */
@@ -13,7 +13,7 @@
  * Main Religion interface that mirrors the backend model
  */
 export interface Religion {
-    readonly id?: number;
+  readonly id?: number;
   name: string;
   sequence?: number | null;
   disabled: boolean;
@@ -120,15 +120,15 @@ export interface ReligionState {
  * Action types for religion state management
  */
 export type ReligionAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_SUCCESS'; payload: string | null }
-  | { type: 'SET_RELIGIONS'; payload: Religion[] }
-  | { type: 'SET_CURRENT_RELIGION'; payload: Religion | null }
-  | { type: 'ADD_RELIGION'; payload: Religion }
-  | { type: 'UPDATE_RELIGION'; payload: Religion }
-  | { type: 'DELETE_RELIGION'; payload: number }
-  | { type: 'CLEAR_STATE' };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "SET_RELIGIONS"; payload: Religion[] }
+  | { type: "SET_CURRENT_RELIGION"; payload: Religion | null }
+  | { type: "ADD_RELIGION"; payload: Religion }
+  | { type: "UPDATE_RELIGION"; payload: Religion }
+  | { type: "DELETE_RELIGION"; payload: number }
+  | { type: "CLEAR_STATE" };
 
 // ============================================================================
 // TABLE AND DISPLAY TYPES
@@ -143,7 +143,7 @@ export interface ReligionTableColumn {
   sortable?: boolean;
   filterable?: boolean;
   width?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
 /**
@@ -160,7 +160,7 @@ export interface ReligionFilter {
  */
 export interface ReligionSort {
   field: keyof Religion;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 // ============================================================================
@@ -190,7 +190,7 @@ export type ReligionSequence = number | null;
  * Default values for religion
  */
 export const DEFAULT_RELIGION: CreateReligionPayload = {
-  name: '',
+  name: "",
   sequence: null,
   disabled: false,
 };
@@ -199,8 +199,8 @@ export const DEFAULT_RELIGION: CreateReligionPayload = {
  * Default form data for religion
  */
 export const DEFAULT_RELIGION_FORM: ReligionFormData = {
-  name: '',
-  sequence: '',
+  name: "",
+  sequence: "",
   disabled: false,
 };
 
@@ -208,27 +208,37 @@ export const DEFAULT_RELIGION_FORM: ReligionFormData = {
  * Table columns configuration for religion
  */
 export const RELIGION_TABLE_COLUMNS: ReligionTableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: '80px' },
-  { key: 'name', label: 'Religion Name', sortable: true, filterable: true },
-  { key: 'sequence', label: 'Sequence', sortable: true, width: '100px' },
-  { key: 'disabled', label: 'Status', sortable: true, width: '100px' },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: '150px' },
-  { key: 'updatedAt', label: 'Updated At', sortable: true, width: '150px' },
+  { key: "id", label: "ID", sortable: true, width: "80px" },
+  { key: "name", label: "Religion Name", sortable: true, filterable: true },
+  { key: "sequence", label: "Sequence", sortable: true, width: "100px" },
+  { key: "disabled", label: "Status", sortable: true, width: "100px" },
+  { key: "createdAt", label: "Created At", sortable: true, width: "150px" },
+  { key: "updatedAt", label: "Updated At", sortable: true, width: "150px" },
 ];
 
 /**
  * Common religions for reference
  */
 export const COMMON_RELIGIONS = [
-  'Hinduism', 'Islam', 'Christianity', 'Sikhism', 'Buddhism', 'Jainism',
-  'Judaism', 'Zoroastrianism', 'Bahá\'í Faith', 'Atheism', 'Agnosticism',
-  'Other', 'Not Specified'
+  "Hinduism",
+  "Islam",
+  "Christianity",
+  "Sikhism",
+  "Buddhism",
+  "Jainism",
+  "Judaism",
+  "Zoroastrianism",
+  "Bahá'í Faith",
+  "Atheism",
+  "Agnosticism",
+  "Other",
+  "Not Specified",
 ] as const;
 
 /**
  * Type for common religion values
  */
-export type CommonReligion = typeof COMMON_RELIGIONS[number];
+export type CommonReligion = (typeof COMMON_RELIGIONS)[number];
 
 // ============================================================================
 // TYPE GUARDS
@@ -240,12 +250,14 @@ export type CommonReligion = typeof COMMON_RELIGIONS[number];
 export function isReligion(obj: object): obj is Religion {
   return (
     obj &&
-    typeof (obj as Religion).id === 'number' &&
-    typeof (obj as Religion).name === 'string' &&
-    ((obj as Religion).sequence === null || (obj as Religion).sequence === undefined || typeof (obj as Religion).sequence === 'number') &&
-    typeof (obj as Religion).disabled === 'boolean' &&
-    typeof (obj as Religion).createdAt === 'string' &&
-    typeof (obj as Religion).updatedAt === 'string'
+    typeof (obj as Religion).id === "number" &&
+    typeof (obj as Religion).name === "string" &&
+    ((obj as Religion).sequence === null ||
+      (obj as Religion).sequence === undefined ||
+      typeof (obj as Religion).sequence === "number") &&
+    typeof (obj as Religion).disabled === "boolean" &&
+    typeof (obj as Religion).createdAt === "string" &&
+    typeof (obj as Religion).updatedAt === "string"
   );
 }
 
@@ -255,9 +267,12 @@ export function isReligion(obj: object): obj is Religion {
 export function isCreateReligionPayload(obj: object): obj is CreateReligionPayload {
   return (
     obj &&
-    typeof (obj as CreateReligionPayload).name === 'string' &&
-    ((obj as CreateReligionPayload).sequence === undefined || (obj as CreateReligionPayload).sequence === null || typeof (obj as CreateReligionPayload).sequence === 'number') &&
-    ((obj as CreateReligionPayload).disabled === undefined || typeof (obj as CreateReligionPayload).disabled === 'boolean')
+    typeof (obj as CreateReligionPayload).name === "string" &&
+    ((obj as CreateReligionPayload).sequence === undefined ||
+      (obj as CreateReligionPayload).sequence === null ||
+      typeof (obj as CreateReligionPayload).sequence === "number") &&
+    ((obj as CreateReligionPayload).disabled === undefined ||
+      typeof (obj as CreateReligionPayload).disabled === "boolean")
   );
 }
 
@@ -267,9 +282,13 @@ export function isCreateReligionPayload(obj: object): obj is CreateReligionPaylo
 export function isUpdateReligionPayload(obj: object): obj is UpdateReligionPayload {
   return (
     obj &&
-    ((obj as UpdateReligionPayload).name === undefined || typeof (obj as UpdateReligionPayload).name === 'string') &&
-    ((obj as UpdateReligionPayload).sequence === undefined || (obj as UpdateReligionPayload).sequence === null || typeof (obj as UpdateReligionPayload).sequence === 'number') &&
-    ((obj as UpdateReligionPayload).disabled === undefined || typeof (obj as UpdateReligionPayload).disabled === 'boolean')
+    ((obj as UpdateReligionPayload).name === undefined ||
+      typeof (obj as UpdateReligionPayload).name === "string") &&
+    ((obj as UpdateReligionPayload).sequence === undefined ||
+      (obj as UpdateReligionPayload).sequence === null ||
+      typeof (obj as UpdateReligionPayload).sequence === "number") &&
+    ((obj as UpdateReligionPayload).disabled === undefined ||
+      typeof (obj as UpdateReligionPayload).disabled === "boolean")
   );
 }
 
@@ -301,7 +320,7 @@ export function formDataToPayload(formData: ReligionFormData): CreateReligionPay
 export function apiDataToFormData(religion: Religion): ReligionFormData {
   return {
     name: religion.name,
-    sequence: religion.sequence?.toString() || '',
+    sequence: religion.sequence?.toString() || "",
     disabled: religion.disabled,
   };
 }
@@ -340,21 +359,21 @@ export function getReligionDisplayName(religion: Religion): string {
  * Get religion status text
  */
 export function getReligionStatusText(disabled: boolean): string {
-  return disabled ? 'Disabled' : 'Active';
+  return disabled ? "Disabled" : "Active";
 }
 
 /**
  * Get religion status color
  */
 export function getReligionStatusColor(disabled: boolean): string {
-  return disabled ? 'text-red-600' : 'text-green-600';
+  return disabled ? "text-red-600" : "text-green-600";
 }
 
 /**
  * Get religion status badge variant
  */
-export function getReligionStatusBadge(disabled: boolean): 'destructive' | 'default' {
-  return disabled ? 'destructive' : 'default';
+export function getReligionStatusBadge(disabled: boolean): "destructive" | "default" {
+  return disabled ? "destructive" : "default";
 }
 
 /**
@@ -362,7 +381,11 @@ export function getReligionStatusBadge(disabled: boolean): 'destructive' | 'defa
  */
 export function sortReligionsBySequence(religions: Religion[]): Religion[] {
   return [...religions].sort((a, b) => {
-    if ((a.sequence === null || a.sequence === undefined) && (b.sequence === null || b.sequence === undefined)) return 0;
+    if (
+      (a.sequence === null || a.sequence === undefined) &&
+      (b.sequence === null || b.sequence === undefined)
+    )
+      return 0;
     if (a.sequence === null || a.sequence === undefined) return 1;
     if (b.sequence === null || b.sequence === undefined) return -1;
     return (a.sequence ?? 0) - (b.sequence ?? 0);
@@ -373,7 +396,7 @@ export function sortReligionsBySequence(religions: Religion[]): Religion[] {
  * Filter active religions
  */
 export function filterActiveReligions(religions: Religion[]): Religion[] {
-  return religions.filter(r => !r.disabled);
+  return religions.filter((r) => !r.disabled);
 }
 
 /**
@@ -381,22 +404,22 @@ export function filterActiveReligions(religions: Religion[]): Religion[] {
  */
 export function getReligionIcon(religionName: string): string {
   const iconMap: Record<string, string> = {
-    'Hinduism': '🕉️',
-    'Islam': '☪️',
-    'Christianity': '✝️',
-    'Sikhism': '☬',
-    'Buddhism': '☸️',
-    'Jainism': '🕉️',
-    'Judaism': '✡️',
-    'Zoroastrianism': '🔥',
-    'Bahá\'í Faith': '⭐',
-    'Atheism': '🚫',
-    'Agnosticism': '❓',
-    'Other': '🔄',
-    'Not Specified': '❓',
+    Hinduism: "🕉️",
+    Islam: "☪️",
+    Christianity: "✝️",
+    Sikhism: "☬",
+    Buddhism: "☸️",
+    Jainism: "🕉️",
+    Judaism: "✡️",
+    Zoroastrianism: "🔥",
+    "Bahá'í Faith": "⭐",
+    Atheism: "🚫",
+    Agnosticism: "❓",
+    Other: "🔄",
+    "Not Specified": "❓",
   };
-  
-  return iconMap[religionName] || '🕉️';
+
+  return iconMap[religionName] || "🕉️";
 }
 
 /**
@@ -413,22 +436,22 @@ export function getReligionDisplayWithIcon(religion: Religion): string {
  */
 export function getReligionCategory(religionName: string): string {
   const categoryMap: Record<string, string> = {
-    'Hinduism': 'Dharma',
-    'Buddhism': 'Dharma',
-    'Jainism': 'Dharma',
-    'Sikhism': 'Dharma',
-    'Islam': 'Abrahamic',
-    'Christianity': 'Abrahamic',
-    'Judaism': 'Abrahamic',
-    'Zoroastrianism': 'Iranian',
-    'Bahá\'í Faith': 'Abrahamic',
-    'Atheism': 'Non-religious',
-    'Agnosticism': 'Non-religious',
-    'Other': 'Other',
-    'Not Specified': 'Other',
+    Hinduism: "Dharma",
+    Buddhism: "Dharma",
+    Jainism: "Dharma",
+    Sikhism: "Dharma",
+    Islam: "Abrahamic",
+    Christianity: "Abrahamic",
+    Judaism: "Abrahamic",
+    Zoroastrianism: "Iranian",
+    "Bahá'í Faith": "Abrahamic",
+    Atheism: "Non-religious",
+    Agnosticism: "Non-religious",
+    Other: "Other",
+    "Not Specified": "Other",
   };
-  
-  return categoryMap[religionName] || 'Other';
+
+  return categoryMap[religionName] || "Other";
 }
 
 /**
@@ -436,12 +459,12 @@ export function getReligionCategory(religionName: string): string {
  */
 export function getReligionCategoryColor(category: string): string {
   const colorMap: Record<string, string> = {
-    'Dharma': 'text-orange-600',
-    'Abrahamic': 'text-blue-600',
-    'Iranian': 'text-purple-600',
-    'Non-religious': 'text-gray-600',
-    'Other': 'text-gray-500',
+    Dharma: "text-orange-600",
+    Abrahamic: "text-blue-600",
+    Iranian: "text-purple-600",
+    "Non-religious": "text-gray-600",
+    Other: "text-gray-500",
   };
-  
-  return colorMap[category] || 'text-gray-500';
-} 
+
+  return colorMap[category] || "text-gray-500";
+}

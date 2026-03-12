@@ -52,7 +52,11 @@ export default function SemesterSummary({ student }: { student: StudentDto }) {
       </Card>
 
       {/* Backlogs Dialog */}
-      <BacklogDialog open={backlogsDialogOpen} setOpen={setBacklogsDialogOpen} backlogs={selectedBacklogs} />
+      <BacklogDialog
+        open={backlogsDialogOpen}
+        setOpen={setBacklogsDialogOpen}
+        backlogs={selectedBacklogs}
+      />
     </>
   );
 }

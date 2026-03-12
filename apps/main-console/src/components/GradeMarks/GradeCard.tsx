@@ -7,7 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Plus, ArrowLeft, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateId } from "../../utils/gradeUtils";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +52,9 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
   const [remarks, setRemarks] = useState<string>("");
   const [sgpa, setSgpa] = useState<number | null>();
   const [data, setData] = useState<GradeCardData | null>(initialData || null);
-  const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(initialData?.studentInfo || null);
+  const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(
+    initialData?.studentInfo || null,
+  );
 
   const transformCourseToSubject = useCallback((course: Course) => {
     const theoretical = course.components.find((c) => c.componentType === "Theoretical");
@@ -103,7 +112,9 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
       if (!studentId || !semester) return null;
       const response = await findMarksheetsByStudentId(Number(studentId), Number(semester));
       if (marksheetId && Array.isArray(response.payload)) {
-        const foundMarksheet = response.payload.find((m: Marksheet) => m.id === Number(marksheetId));
+        const foundMarksheet = response.payload.find(
+          (m: Marksheet) => m.id === Number(marksheetId),
+        );
         return foundMarksheet || null;
       }
       return Array.isArray(response.payload) ? response.payload[0] : response.payload;
@@ -184,7 +195,9 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
       if (!data || !marksheetData?.id) return;
       setData((prev) => ({
         ...prev!,
-        courses: prev!.courses.map((course) => (course.id === updatedCourse.id ? updatedCourse : course)),
+        courses: prev!.courses.map((course) =>
+          course.id === updatedCourse.id ? updatedCourse : course,
+        ),
       }));
     },
     [data, marksheetData?.id],
@@ -279,7 +292,9 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
           <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-2xl animate-pulse"></div>
           <Loader2 className="h-14 w-14 animate-spin text-purple-600 relative z-10" />
         </div>
-        <p className="text-center text-base text-purple-700 mt-6 font-base">Loading grade card...</p>
+        <p className="text-center text-base text-purple-700 mt-6 font-base">
+          Loading grade card...
+        </p>
       </motion.div>
     );
   }
@@ -287,13 +302,20 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
   return (
     <div className="min-h-screen px-2 sm:px-4 py-4 sm:py-6 print:bg-white print:p-0 ">
       <div className="mb-4 no-print">
-        <motion.div whileTap={{ scale: 0.95 }} transition={{ duration: 0.2 }} className="inline-block">
+        <motion.div
+          whileTap={{ scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          className="inline-block"
+        >
           <Button
             variant="outline"
             onClick={handleBack}
             className="flex drop-shadow-md items-center gap-2 px-4 sm:px-6 py-2.5 rounded-full bg-white border border-purple-300 hover:bg-transparent "
           >
-            <motion.div animate={{ x: [0, -4, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}>
+            <motion.div
+              animate={{ x: [0, -4, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            >
               <ArrowLeft className="w-7 h-7 text-purple-700 font-extrabold" />
             </motion.div>
             <span className="font-medium text-purple-700">Back</span>
@@ -341,18 +363,30 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
                   <TableHead className="font-bold text-black border-r text-center whitespace-nowrap">
                     Course Code (Course Type)
                   </TableHead>
-                  <TableHead className="font-bold text-black border-r text-center">Course Name</TableHead>
-                  <TableHead className="font-bold text-black border-r text-center w-20">Year</TableHead>
-                  <TableHead className="font-bold text-black border-r text-center">Course Component</TableHead>
+                  <TableHead className="font-bold text-black border-r text-center">
+                    Course Name
+                  </TableHead>
+                  <TableHead className="font-bold text-black border-r text-center w-20">
+                    Year
+                  </TableHead>
+                  <TableHead className="font-bold text-black border-r text-center">
+                    Course Component
+                  </TableHead>
                   <TableHead className="font-bold text-black border-r text-center whitespace-nowrap w-24">
                     Full Marks
                   </TableHead>
-                  <TableHead className="font-bold text-black border-r text-center w-32">Marks Obtained</TableHead>
+                  <TableHead className="font-bold text-black border-r text-center w-32">
+                    Marks Obtained
+                  </TableHead>
                   <TableHead className="font-bold text-black border-r text-center whitespace-nowrap w-24">
                     Credit
                   </TableHead>
-                  <TableHead className="font-bold text-black border-r text-center w-20">Grade</TableHead>
-                  <TableHead className="font-bold text-black border-r text-center w-20">Status</TableHead>
+                  <TableHead className="font-bold text-black border-r text-center w-20">
+                    Grade
+                  </TableHead>
+                  <TableHead className="font-bold text-black border-r text-center w-20">
+                    Status
+                  </TableHead>
                   {showActions && <TableHead className="w-12 text-center">Action</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -380,7 +414,8 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
           </div>
           <div className="grid grid-cols-1 gap-4 sm:gap-6 border-t pt-4">
             <div className="text-center font-semibold text-lg">
-              Semester Grade Point Average (SGPA): {sgpa !== null && sgpa !== undefined ? sgpa : "awaited"}
+              Semester Grade Point Average (SGPA):{" "}
+              {sgpa !== null && sgpa !== undefined ? sgpa : "awaited"}
             </div>
             <div className="font-semibold">Remarks: {remarks}</div>
           </div>
@@ -388,7 +423,9 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
             <h3 className="font-semibold mb-2">Abbreviations</h3>
             <div className="grid grid-cols-1 gap-1 sm:gap-2 text-sm">
               <p>P: Passed in the Course, F: Failed in the Course</p>
-              <p>F(TH): Failed in Theoretical, F(PR): Failed in Practical, F(TU): Failed in Tutorial</p>
+              <p>
+                F(TH): Failed in Theoretical, F(PR): Failed in Practical, F(TU): Failed in Tutorial
+              </p>
               <p>AB: Absent, +1: Grace Mark, EC: Examination Cancelled</p>
               <p>ECDB1: Debarment for 1 year, ECDB2: Debarment for 2 year</p>
               <p>N.A.: Not Applicable</p>
@@ -429,13 +466,19 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleUpdateMarks} className="bg-green-600 hover:bg-green-700">
+                    <AlertDialogAction
+                      onClick={handleUpdateMarks}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
                       Confirm Update
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+              <Button
+                onClick={() => window.print()}
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+              >
                 Print
               </Button>
             </div>

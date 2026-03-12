@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface CoursesLoaderProps {
   rowCount: number;
@@ -18,11 +18,10 @@ const CoursesLoader: React.FC<CoursesLoaderProps> = ({ rowCount, columnCount }) 
             {Array(columnCount)
               .fill(null)
               .map((_, colIndex) => (
-                <td
-                  key={colIndex}
-                  className="p-4 align-middle"
-                >
-                  <div className={`h-4 ${colIndex === 0 ? "w-40" : "w-24"} bg-purple-200 rounded animate-pulse`}></div>
+                <td key={colIndex} className="p-4 align-middle">
+                  <div
+                    className={`h-4 ${colIndex === 0 ? "w-40" : "w-24"} bg-purple-200 rounded animate-pulse`}
+                  ></div>
                 </td>
               ))}
           </tr>
@@ -31,4 +30,4 @@ const CoursesLoader: React.FC<CoursesLoaderProps> = ({ rowCount, columnCount }) 
   );
 };
 
-export default CoursesLoader; 
+export default CoursesLoader;

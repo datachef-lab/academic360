@@ -19,7 +19,10 @@ export async function GET() {
     return NextResponse.json({ success: true, data: academicSubjects });
   } catch (error) {
     console.error("Error fetching academic subjects:", error);
-    return NextResponse.json({ success: false, error: "Failed to fetch academic subjects" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch academic subjects" },
+      { status: 500 },
+    );
   }
 }
 

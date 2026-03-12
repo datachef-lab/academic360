@@ -91,7 +91,10 @@ export async function doAssignExam(
       } else if (examGroupData.examGroupMode === "existing") {
         // For existing group, will be handled separately
         // Backend will fetch the group by ID
-        formData.append("selectedExistingGroupId", examGroupData.selectedExistingGroupId?.toString() || "");
+        formData.append(
+          "selectedExistingGroupId",
+          examGroupData.selectedExistingGroupId?.toString() || "",
+        );
         examGroup = {
           name: `Existing Group ${examGroupData.selectedExistingGroupId}`,
           examCommencementDate: new Date().toISOString(), // Placeholder, will be overridden by backend
@@ -118,7 +121,8 @@ export async function doAssignExam(
     console.error("Error assigning exam:", error);
     const axiosError = error as { response?: { data?: { message?: string }; status?: number } };
     const backendMessage = axiosError.response?.data?.message;
-    const message = backendMessage || (error instanceof Error ? error.message : "Failed to assign exam");
+    const message =
+      backendMessage || (error instanceof Error ? error.message : "Failed to assign exam");
     throw new Error(message);
   }
 }
@@ -147,7 +151,14 @@ export async function allotExamRoomsAndStudents(
   examId: number,
   params: AllotExamParams,
   file: File | null,
-): Promise<ApiResponse<{ examId: number; totalStudentsAssigned: number; roomsAssigned: number; message: string }>> {
+): Promise<
+  ApiResponse<{
+    examId: number;
+    totalStudentsAssigned: number;
+    roomsAssigned: number;
+    message: string;
+  }>
+> {
   try {
     const formData = new FormData();
 

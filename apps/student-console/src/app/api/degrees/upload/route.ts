@@ -19,6 +19,9 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Error uploading degrees:", error);
-    return NextResponse.json({ success: false, error: "Failed to upload degrees" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to upload degrees" },
+      { status: 500 },
+    );
   }
 }

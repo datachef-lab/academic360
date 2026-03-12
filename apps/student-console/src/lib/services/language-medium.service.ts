@@ -10,17 +10,29 @@ export type LanguageMediumResult = {
 };
 
 export async function getAllLanguageMediums() {
-  return await dbPostgres.select().from(languageMedium).where(eq(languageMedium.disabled, false)).orderBy(languageMedium.name);
+  return await dbPostgres
+    .select()
+    .from(languageMedium)
+    .where(eq(languageMedium.disabled, false))
+    .orderBy(languageMedium.name);
 }
 
 export async function getLanguageMediumById(id: number) {
-  const result = await dbPostgres.select().from(languageMedium).where(eq(languageMedium.id, id)).limit(1);
+  const result = await dbPostgres
+    .select()
+    .from(languageMedium)
+    .where(eq(languageMedium.id, id))
+    .limit(1);
   return result[0];
 }
 
 export async function createLanguageMedium(name: string): Promise<LanguageMediumResult> {
   try {
-    const existingMedium = await dbPostgres.select().from(languageMedium).where(ilike(languageMedium.name, name)).limit(1);
+    const existingMedium = await dbPostgres
+      .select()
+      .from(languageMedium)
+      .where(ilike(languageMedium.name, name))
+      .limit(1);
 
     if (existingMedium.length > 0) {
       return { success: false, error: "Language medium with this name already exists." };
@@ -34,15 +46,26 @@ export async function createLanguageMedium(name: string): Promise<LanguageMedium
   }
 }
 
-export async function updateLanguageMedium(id: number, name: string): Promise<LanguageMediumResult> {
+export async function updateLanguageMedium(
+  id: number,
+  name: string,
+): Promise<LanguageMediumResult> {
   try {
-    const existingMedium = await dbPostgres.select().from(languageMedium).where(ilike(languageMedium.name, name)).limit(1);
+    const existingMedium = await dbPostgres
+      .select()
+      .from(languageMedium)
+      .where(ilike(languageMedium.name, name))
+      .limit(1);
 
     if (existingMedium.length > 0 && existingMedium[0].id !== id) {
       return { success: false, error: "Language medium with this name already exists." };
     }
 
-    const [updatedMedium] = await dbPostgres.update(languageMedium).set({ name, updatedAt: new Date().toISOString() }).where(eq(languageMedium.id, id)).returning();
+    const [updatedMedium] = await dbPostgres
+      .update(languageMedium)
+      .set({ name, updatedAt: new Date().toISOString() })
+      .where(eq(languageMedium.id, id))
+      .returning();
 
     if (!updatedMedium) {
       return { success: false, error: "Language medium not found." };
@@ -62,11 +85,19 @@ export async function toggleLanguageMediumStatus(id: number): Promise<LanguageMe
       return { success: false, error: "Language medium not found." };
     }
 
-    const [updatedMedium] = await dbPostgres.update(languageMedium).set({ disabled: !currentMedium.disabled, updatedAt: new Date().toISOString() }).where(eq(languageMedium.id, id)).returning();
+    const [updatedMedium] = await dbPostgres
+      .update(languageMedium)
+      .set({ disabled: !currentMedium.disabled, updatedAt: new Date().toISOString() })
+      .where(eq(languageMedium.id, id))
+      .returning();
 
-    return { success: true, message: `Language medium ${updatedMedium?.disabled ? "disabled" : "enabled"} successfully.`, data: updatedMedium };
+    return {
+      success: true,
+      message: `Language medium ${updatedMedium?.disabled ? "disabled" : "enabled"} successfully.`,
+      data: updatedMedium,
+    };
   } catch (error) {
     console.error("Error toggling language medium status:", error);
     return { success: false, error: "Failed to toggle language medium status." };
   }
-} 
+}

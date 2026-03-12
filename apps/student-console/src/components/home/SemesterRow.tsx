@@ -1,7 +1,4 @@
-import {
-  MarksheetSummary,
-  SubjectMetadataType,
-} from "@/types/academics/marksheet-summary";
+import { MarksheetSummary, SubjectMetadataType } from "@/types/academics/marksheet-summary";
 import { AlertCircle, Award, CheckCircle2, XCircle } from "lucide-react";
 import React from "react";
 
@@ -10,10 +7,7 @@ type SemesterRowProps = {
   onBacklogsClick: (failedSubjects: SubjectMetadataType[]) => void;
 };
 
-export default function SemesterRow({
-  semester,
-  onBacklogsClick,
-}: SemesterRowProps) {
+export default function SemesterRow({ semester, onBacklogsClick }: SemesterRowProps) {
   return (
     <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
       <td className="px-3 py-3 text-sm font-medium">{semester.semester}</td>

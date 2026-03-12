@@ -1,6 +1,12 @@
 // @ts-nocheck
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AcademicClass } from "@/types/academics/academic-class";
 import { Course } from "@/types/academics/course";
 import { Download, Filter } from "lucide-react";

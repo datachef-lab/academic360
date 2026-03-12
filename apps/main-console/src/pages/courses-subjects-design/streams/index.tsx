@@ -3,8 +3,21 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Layers, Download, Upload, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -14,7 +27,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import type { Stream } from "@repo/db/index";
-import { getAllStreams, createStream, updateStream, bulkUploadStreams, BulkUploadResult } from "@/services/stream.api";
+import {
+  getAllStreams,
+  createStream,
+  updateStream,
+  bulkUploadStreams,
+  BulkUploadResult,
+} from "@/services/stream.api";
 import { deleteStream, DeleteResult } from "@/services/course-design.api";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -142,7 +161,9 @@ const StreamsPage = () => {
         toast.error(`${result.summary.failed} streams failed to upload`);
       }
     } catch (error: unknown) {
-      toast.error(`Bulk upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(
+        `Bulk upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setIsBulkUploading(false);
     }
@@ -259,7 +280,9 @@ const StreamsPage = () => {
               <Layers className="mr-2 h-6 w-6 sm:h-8 sm:w-8 border rounded-md p-1 border-slate-400 flex-shrink-0" />
               <span className="truncate">Streams</span>
             </CardTitle>
-            <div className="text-xs sm:text-sm text-muted-foreground mt-1">A list of all available streams.</div>
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1">
+              A list of all available streams.
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -307,7 +330,9 @@ const StreamsPage = () => {
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div className="text-center p-3 bg-gray-50 rounded-lg">
                             <div className="font-semibold text-gray-900">Total</div>
-                            <div className="text-2xl font-bold text-blue-600">{bulkUploadResult.summary.total}</div>
+                            <div className="text-2xl font-bold text-blue-600">
+                              {bulkUploadResult.summary.total}
+                            </div>
                           </div>
                           <div className="text-center p-3 bg-green-50 rounded-lg">
                             <div className="font-semibold text-green-900">Successful</div>
@@ -317,7 +342,9 @@ const StreamsPage = () => {
                           </div>
                           <div className="text-center p-3 bg-red-50 rounded-lg">
                             <div className="font-semibold text-red-900">Failed</div>
-                            <div className="text-2xl font-bold text-red-600">{bulkUploadResult.summary.failed}</div>
+                            <div className="text-2xl font-bold text-red-600">
+                              {bulkUploadResult.summary.failed}
+                            </div>
                           </div>
                         </div>
 
@@ -337,7 +364,10 @@ const StreamsPage = () => {
                             </div>
                             <div className="max-h-40 overflow-y-auto space-y-2">
                               {bulkUploadResult.errors.map((error, index) => (
-                                <div key={index} className="text-xs p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <div
+                                  key={index}
+                                  className="text-xs p-3 bg-red-50 border border-red-200 rounded-lg"
+                                >
                                   <span className="font-medium text-red-800">Row {error.row}:</span>
                                   <span className="text-red-700 ml-1">{error.error}</span>
                                 </div>
@@ -350,7 +380,11 @@ const StreamsPage = () => {
                   )}
 
                   <div className="flex gap-2">
-                    <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading} className="flex-1">
+                    <Button
+                      onClick={handleBulkUpload}
+                      disabled={!bulkFile || isBulkUploading}
+                      className="flex-1"
+                    >
                       {isBulkUploading ? "Uploading..." : "Upload"}
                     </Button>
                     <Button variant="outline" onClick={handleCloseBulkUpload}>
@@ -362,7 +396,10 @@ const StreamsPage = () => {
             </Dialog>
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
-                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0">
+                <Button
+                  onClick={handleAddNew}
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+                >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Add Stream</span>
                   <span className="sm:hidden">Add</span>
@@ -370,7 +407,9 @@ const StreamsPage = () => {
               </AlertDialogTrigger>
               <AlertDialogContent className="w-[95vw] sm:w-full max-w-lg">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedStream ? "Edit Stream" : "Add New Stream"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedStream ? "Edit Stream" : "Add New Stream"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <StreamForm
                   initialData={selectedStream}
@@ -390,7 +429,11 @@ const StreamsPage = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" className="flex items-center gap-2 flex-shrink-0" onClick={handleDownloadAll}>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 flex-shrink-0"
+              onClick={handleDownloadAll}
+            >
               <Download className="h-4 w-4" /> <span className="hidden sm:inline">Download</span>
             </Button>
           </div>
@@ -400,15 +443,33 @@ const StreamsPage = () => {
               <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: "fixed" }}>
                 <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
-                    <TableHead style={{ width: 200, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Code</TableHead>
-                    <TableHead style={{ width: 150, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>UG Prefix</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>PG Prefix</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Sequence</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
-                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>
+                      ID
+                    </TableHead>
+                    <TableHead style={{ width: 200, background: "#f3f4f6", color: "#374151" }}>
+                      Name
+                    </TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>
+                      Code
+                    </TableHead>
+                    <TableHead style={{ width: 150, background: "#f3f4f6", color: "#374151" }}>
+                      Short Name
+                    </TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>
+                      UG Prefix
+                    </TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>
+                      PG Prefix
+                    </TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>
+                      Sequence
+                    </TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>
+                      Status
+                    </TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -444,7 +505,9 @@ const StreamsPage = () => {
                           {!stream.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">
+                              Active
+                            </Badge>
                           )}
                         </TableCell>
                         <TableCell style={{ width: 120 }}>

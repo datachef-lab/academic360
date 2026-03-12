@@ -9,24 +9,29 @@ import onlyWarn from "eslint-plugin-only-warn";
  *
  * @type {import("eslint").Linter.Config[]}
  * */
-export const config = [
+export default [
     js.configs.recommended,
     eslintConfigPrettier,
     ...tseslint.configs.recommended,
     {
         plugins: {
             turbo: turboPlugin,
+            "only-warn": onlyWarn,
         },
         rules: {
             "turbo/no-undeclared-env-vars": "warn",
+            "@typescript-eslint/no-unused-vars": "error",
+            "no-unused-vars": "warn",
+			"no-undef": "warn",
+            "no-useless-assignment": "error",
+            semi: "error",
+			"prefer-const": "error",
         },
     },
     {
-        plugins: {
-            onlyWarn,
-        },
-    },
-    {
-        ignores: ["dist/**"],
+        ignores: ["**/.next/**",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**"],
     },
 ];

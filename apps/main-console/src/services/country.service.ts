@@ -13,12 +13,12 @@ import {
 
 /**
  * Country Service
- * 
+ *
  * This service handles all CRUD operations for the Country module.
  * It provides type-safe API communication with the backend.
  */
 
-const BASE_URL = '/api/countries';
+const BASE_URL = "/api/countries";
 
 // ============================================================================
 // GET OPERATIONS
@@ -33,7 +33,7 @@ export async function getAllCountries(): Promise<Country[]> {
     const response = await axiosInstance.get<MultipleCountryResponse>(BASE_URL);
     return response.data.payload || [];
   } catch (error) {
-    console.error('Error fetching countries:', error);
+    console.error("Error fetching countries:", error);
     throw error;
   }
 }
@@ -46,7 +46,7 @@ export async function getAllCountries(): Promise<Country[]> {
 export async function getCountryById(id: number): Promise<Country> {
   try {
     if (!id) {
-      throw new Error('Country ID is required');
+      throw new Error("Country ID is required");
     }
 
     const response = await axiosInstance.get<SingleCountryResponse>(`${BASE_URL}/${id}`);
@@ -66,7 +66,7 @@ export async function getActiveCountries(): Promise<Country[]> {
     const response = await axiosInstance.get<MultipleCountryResponse>(`${BASE_URL}?disabled=false`);
     return response.data.payload || [];
   } catch (error) {
-    console.error('Error fetching active countries:', error);
+    console.error("Error fetching active countries:", error);
     throw error;
   }
 }
@@ -83,13 +83,13 @@ export async function getActiveCountries(): Promise<Country[]> {
 export async function createCountry(payload: CreateCountryPayload): Promise<Country> {
   try {
     if (!payload.name || payload.name.trim().length === 0) {
-      throw new Error('Country name is required');
+      throw new Error("Country name is required");
     }
 
     const response = await axiosInstance.post<SingleCountryResponse>(BASE_URL, payload);
     return response.data.payload;
   } catch (error) {
-    console.error('Error creating country:', error);
+    console.error("Error creating country:", error);
     throw error;
   }
 }
@@ -107,11 +107,11 @@ export async function createCountry(payload: CreateCountryPayload): Promise<Coun
 export async function updateCountry(id: number, payload: UpdateCountryPayload): Promise<Country> {
   try {
     if (!id) {
-      throw new Error('Country ID is required');
+      throw new Error("Country ID is required");
     }
 
     if (payload.name !== undefined && payload.name.trim().length === 0) {
-      throw new Error('Country name cannot be empty');
+      throw new Error("Country name cannot be empty");
     }
 
     const response = await axiosInstance.put<SingleCountryResponse>(`${BASE_URL}/${id}`, payload);
@@ -134,7 +134,7 @@ export async function updateCountry(id: number, payload: UpdateCountryPayload): 
 export async function deleteCountry(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('Country ID is required');
+      throw new Error("Country ID is required");
     }
 
     await axiosInstance.delete(`${BASE_URL}/${id}`);
@@ -160,11 +160,11 @@ export async function searchCountries(searchTerm: string): Promise<Country[]> {
     }
 
     const response = await axiosInstance.get<MultipleCountryResponse>(
-      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
+      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
     return response.data.payload || [];
   } catch (error) {
-    console.error('Error searching countries:', error);
+    console.error("Error searching countries:", error);
     throw error;
   }
 }
@@ -185,11 +185,11 @@ export async function checkCountryExists(name: string): Promise<boolean> {
     }
 
     const response = await axiosInstance.get<MultipleCountryResponse>(
-      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
+      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`,
     );
     return (response.data.payload || []).length > 0;
   } catch (error) {
-    console.error('Error checking country existence:', error);
+    console.error("Error checking country existence:", error);
     return false;
   }
 }
@@ -203,19 +203,19 @@ export const countryService = {
   getAllCountries,
   getCountryById,
   getActiveCountries,
-  
+
   // Create operations
   createCountry,
-  
+
   // Update operations
   updateCountry,
-  
+
   // Delete operations
   deleteCountry,
-  
+
   // Search and filter operations
   searchCountries,
-  
+
   // Utility functions
   checkCountryExists,
-}; 
+};
