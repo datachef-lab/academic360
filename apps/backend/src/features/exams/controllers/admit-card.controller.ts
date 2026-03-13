@@ -41,14 +41,14 @@ export async function searchCandidate(req: Request, res: Response) {
 
 export async function distributeAdmitCard(req: Request, res: Response) {
   try {
-    const { examCandidateId } = req.body as {
-      examCandidateId?: number;
+    const { studentId } = req.body as {
+      studentId?: number;
     };
 
-    if (!examCandidateId || !Number.isFinite(Number(examCandidateId))) {
+    if (!studentId || !Number.isFinite(Number(studentId))) {
       return res
         .status(400)
-        .json({ message: "examCandidateId is required and must be a number." });
+        .json({ message: "studentId is required and must be a number." });
     }
 
     const user = req.user as { id?: number } | undefined;
@@ -61,7 +61,7 @@ export async function distributeAdmitCard(req: Request, res: Response) {
     }
 
     const record = await distributeAdmitCardService(
-      Number(examCandidateId),
+      Number(studentId),
       distributedByUserId,
     );
 

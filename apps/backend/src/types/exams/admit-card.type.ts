@@ -35,5 +35,5 @@ export interface AdmitCardSearchResponse {
 }
 
 export interface DistributeAdmitCardRequest {
-  examCandidateId: number;
+  studentId: number;
 }

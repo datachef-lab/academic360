@@ -49,7 +49,7 @@ const AdmitCardDistributions: React.FC = () => {
 
     try {
       await distributeMutation.mutateAsync({
-        examCandidateId: candidate.id,
+        studentId: candidate.studentId,
       });
       await refetchCandidate();
       toast({ title: "Success", description: "Admit card distributed successfully" });
