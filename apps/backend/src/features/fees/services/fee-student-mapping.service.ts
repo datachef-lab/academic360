@@ -5,13 +5,30 @@ import {
   feeStructureModel,
   feeGroupPromotionMappingModel,
   feeGroupModel,
+  studentModel,
+  academicYearModel,
+  sessionModel,
+  userModel,
+  personalDetailsModel,
+  classModel,
+  programCourseModel,
+  shiftModel,
+  feeStructureComponentModel,
+  feeHeadModel,
+  receiptTypeModel,
 } from "@repo/db/schemas";
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
 import * as feeStructureService from "./fee-structure.service.js";
 import * as feeGroupPromotionMappingService from "./fee-group-promotion-mapping.service.js";
 import * as feeStructureInstallmentService from "./fee-structure-installment.service.js";
 import * as userService from "@/features/user/services/user.service.js";
+import { pdfGenerationService } from "@/services/pdf-generation.service.js";
+import {
+  formatIndianNumber,
+  numberToWords,
+  toSentenceCase,
+} from "@/utils/helper.js";
 
 /**
  * Converts a FeeStudentMapping model to FeeStudentMappingDto
@@ -183,3 +200,102 @@ export const deleteFeeStudentMapping = async (
 
   return await modelToDto(deleted ?? null);
 };
+
+export async function generateFeeReceiptByFeeStructureIdAndStudentId(
+  feeStructureId: number,
+  studentId: number,
+) {
+  console.log(feeStructureId, studentId);
+  if (!feeStructureId || !studentId) {
+    throw Error("feeStructureId or studentId is not valid");
+  }
+
+  const result = await db
+    .select({
+      receiptName: receiptTypeModel.name,
+      session: sessionModel.name,
+      name: userModel.name,
+      uid: studentModel.uid,
+      dob: personalDetailsModel.dateOfBirth,
+      phone: userModel.phone,
+      semester: classModel.name,
+      programCourse: programCourseModel.name,
+      shift: shiftModel.name,
+      feeHead: feeHeadModel.name,
+      feeComponentAmount: feeStructureComponentModel.amount,
+      totalPayableAmount: feeStudentMappingModel.totalPayable,
+    })
+    .from(feeStudentMappingModel)
+    .leftJoin(
+      feeStructureModel,
+      eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
+    )
+    .leftJoin(
+      academicYearModel,
+      eq(academicYearModel.id, feeStructureModel.academicYearId),
+    )
+    .leftJoin(
+      sessionModel,
+      eq(sessionModel.academicYearId, academicYearModel.id),
+    )
+    .leftJoin(
+      studentModel,
+      eq(studentModel.id, feeStudentMappingModel.studentId),
+    )
+    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      personalDetailsModel,
+      eq(personalDetailsModel.userId, userModel.id),
+    )
+    .leftJoin(classModel, eq(classModel.id, feeStructureModel.classId))
+    .leftJoin(
+      programCourseModel,
+      eq(programCourseModel.id, feeStructureModel.programCourseId),
+    )
+    .leftJoin(shiftModel, eq(shiftModel.id, feeStructureModel.shiftId))
+    .leftJoin(
+      feeStructureComponentModel,
+      eq(feeStructureComponentModel.feeStructureId, feeStructureModel.id),
+    )
+    .leftJoin(
+      feeHeadModel,
+      eq(feeHeadModel.id, feeStructureComponentModel.feeHeadId),
+    )
+    .leftJoin(
+      receiptTypeModel,
+      eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
+    )
+    .where(
+      and(
+        eq(feeStudentMappingModel.studentId, studentId),
+        eq(feeStudentMappingModel.feeStructureId, feeStructureId),
+      ),
+    )
+    .orderBy(asc(feeStructureComponentModel.id));
+
+  if (!result.length) {
+    return null;
+  }
+
+  const pdfBuffer = await pdfGenerationService.generateFeeReceiptPdfBuffer({
+    session: result[0].session!,
+    name: result[0].name!,
+    dob: result[0].dob ?? "",
+    phone: result[0].phone ?? "",
+    programCourse: result[0].programCourse!,
+    semester: toSentenceCase(result[0].semester!),
+    shift: result[0].shift!,
+    uid: result[0].uid!,
+    totalPayableAmount: formatIndianNumber(result[0].totalPayableAmount),
+    totalPayableAmountInWords: numberToWords(result[0].totalPayableAmount),
+    challanNumber: "N/A",
+    feeComponents: result.map((fc) => ({
+      amount: fc.feeComponentAmount!.toString(),
+      name: fc.feeHead!.toString(),
+    })),
+  });
+
+  const { session, semester, programCourse, receiptName, uid } = result[0];
+
+  return { pdfBuffer, session, semester, programCourse, receiptName, uid };
+}

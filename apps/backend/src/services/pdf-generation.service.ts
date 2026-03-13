@@ -531,6 +531,80 @@ export class PdfGenerationService {
     }
   }
 
+  public async generateFeeReceiptPdfBuffer(formData: {
+    session: string;
+    name: string;
+    uid: string;
+    dob: string; // dd/mm/yyyy
+    phone: string;
+    semester: string;
+    programCourse: string;
+    shift: string;
+    challanNumber: string;
+    feeComponents: Array<{
+      name: string;
+      amount: string;
+    }>;
+    totalPayableAmount: string;
+    totalPayableAmountInWords: string;
+  }): Promise<Buffer> {
+    try {
+      console.info(
+        "[PDF GENERATION] Starting Fee Receipt PDF generation in memory",
+        formData.uid,
+      );
+
+      // Read the EJS template
+      const templatePath = path.join(__dirname, "../templates/fee-receipt.ejs");
+      const templateContent = await fs.readFile(templatePath, "utf-8");
+
+      // Render the template with data
+      const htmlContent = ejs.render(templateContent, formData);
+
+      // Get browser instance
+      const browser = await this.getBrowser();
+      const page = await browser.newPage();
+
+      // Set content and wait for resources to load
+      await page.setContent(htmlContent, {
+        waitUntil: "networkidle0",
+        timeout: 0, // optional but recommended
+      });
+      page.setDefaultNavigationTimeout(0);
+      page.setDefaultTimeout(0);
+
+      // Generate PDF buffer
+      const pdfUint8Array = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        landscape: true,
+        margin: {
+          //   top: "0.3in",
+          //   right: "0.3in",
+          //   bottom: "0.3in",
+          //   left: "0.3in",
+        },
+      });
+
+      // Convert Uint8Array to Buffer
+      const pdfBuffer = Buffer.from(pdfUint8Array);
+
+      await page.close();
+
+      console.info(
+        "[PDF GENERATION] Fee Receipt PDF generated successfully in memory",
+        {
+          bufferSize: pdfBuffer.length,
+        },
+      );
+
+      return pdfBuffer;
+    } catch (error) {
+      console.error("[PDF GENERATION] PDF generation failed:", error);
+      throw error;
+    }
+  }
+
   public async close(): Promise<void> {
     if (this.browser) {
       await this.browser.close();
