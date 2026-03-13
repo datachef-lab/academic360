@@ -55,8 +55,12 @@ import {
 import { StudentDto } from "@repo/db/dtos/user";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { UserAvatar } from "@/hooks/UserAvatar";
+import { downloadFeeReceipt } from "@/services/fee-student-mapping.service";
 
 const StudentFeesPage: React.FC = () => {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  const { accessToken } = useAuth();
+  const [downloading, setDownloading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<StudentDto | null>(null);
   const [mappings, setMappings] = useState<FeeStudentMappingDto[]>([]);
@@ -369,6 +373,39 @@ const StudentFeesPage: React.FC = () => {
     }
   };
 
+  const handleDownloadReceipt = async (feeStructureId: number, studentId: number) => {
+    console.log(`feeStructureId: ${feeStructureId}, studentId: ${studentId}`);
+    if (!feeStructureId || !studentId) return;
+    feeStructureId = Number(feeStructureId);
+    studentId = Number(studentId);
+    if (isNaN(feeStructureId) || feeStructureId <= 0 || isNaN(studentId) || studentId <= 0) return;
+
+    setDownloading(true);
+
+    try {
+      setDownloading(true);
+      const blob = await downloadFeeReceipt(feeStructureId, studentId);
+
+      // Create a download link
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const newTab = window.open(url, "_blank");
+
+      if (newTab) {
+        newTab.addEventListener("load", () => window.URL.revokeObjectURL(url));
+      } else {
+        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      }
+    } catch (err) {
+      toast({
+        title: "Download failed",
+        description: "Failed to download admit card. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const handleNotificationSubmit = async () => {
     if (!notificationItem || !selectedStudent) {
       toast.error("Missing notification information");
@@ -614,6 +651,17 @@ const StudentFeesPage: React.FC = () => {
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
                                   Record Payment
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    handleDownloadReceipt(
+                                      mapping.feeStructure.id,
+                                      mapping.studentId,
+                                    );
+                                  }}
+                                >
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  Download Receipt
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {

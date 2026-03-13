@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { AnyColumn, count, desc, eq, SQLWrapper, SQL } from "drizzle-orm";
+import { AnyColumn, count, desc, SQL } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { PaginatedResponse } from "./PaginatedResponse.js";
 // import { Marksheet } from "@/features/academics/models/marksheet.model.js";
@@ -9,11 +9,11 @@ import { PaginatedResponse } from "./PaginatedResponse.js";
 // import { SubjectType } from "@/types/academics/subject.js";
 // import { Subject } from "@/features/academics/models/subject.model.js";
 // import { findSubjectMetdataById } from "@/features/academics/services/subjectMetadata.service.js";
-import { Degree } from "@/features/resources/models/degree.model.js";
-import {
-  findSemesterNumberbyClassId,
-  processClassBySemesterNumber,
-} from "@/features/academics/services/class.service.js";
+// import { Degree } from "@/features/resources/models/degree.model.js";
+// import {
+//   findSemesterNumberbyClassId,
+//   processClassBySemesterNumber,
+// } from "@/features/academics/services/class.service.js";
 // import { StreamType } from "@/types/academics/stream.js";
 
 export async function findAll<T>(
@@ -481,3 +481,88 @@ export async function findAllByFormatted<T, K>({
 
 //   return totalCredit;
 // }
+
+export function numberToWords(amount: number): string {
+  const ones = [
+    "",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
+  ];
+  const tens = [
+    "",
+    "",
+    "Twenty",
+    "Thirty",
+    "Forty",
+    "Fifty",
+    "Sixty",
+    "Seventy",
+    "Eighty",
+    "Ninety",
+  ];
+
+  if (amount === 0) return "Zero Rupees Only";
+
+  function convertHundreds(n: number): string {
+    let result = "";
+    if (n >= 100) {
+      result += ones[Math.floor(n / 100)] + " Hundred ";
+      n %= 100;
+    }
+    if (n >= 20) {
+      result += tens[Math.floor(n / 10)] + " ";
+      n %= 10;
+    }
+    if (n > 0) result += ones[n] + " ";
+    return result;
+  }
+
+  function convertToWords(n: number): string {
+    if (n >= 10000000)
+      return (
+        convertHundreds(Math.floor(n / 10000000)) +
+        "Crore " +
+        convertToWords(n % 10000000)
+      );
+    if (n >= 100000)
+      return (
+        convertHundreds(Math.floor(n / 100000)) +
+        "Lakh " +
+        convertToWords(n % 100000)
+      );
+    if (n >= 1000)
+      return (
+        convertHundreds(Math.floor(n / 1000)) +
+        "Thousand " +
+        convertToWords(n % 1000)
+      );
+    return convertHundreds(n);
+  }
+
+  return convertToWords(amount).trim() + " Only";
+}
+
+export function formatIndianNumber(amount: number): string {
+  const str = amount.toString();
+  const lastThree = str.slice(-3);
+  const rest = str.slice(0, -3);
+  const formatted = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
+  return rest ? formatted + "," + lastThree : lastThree;
+}
