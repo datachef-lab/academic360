@@ -24,7 +24,11 @@ import * as feeGroupPromotionMappingService from "./fee-group-promotion-mapping.
 import * as feeStructureInstallmentService from "./fee-structure-installment.service.js";
 import * as userService from "@/features/user/services/user.service.js";
 import { pdfGenerationService } from "@/services/pdf-generation.service.js";
-import { formatIndianNumber, numberToWords } from "@/utils/helper.js";
+import {
+  formatIndianNumber,
+  numberToWords,
+  toSentenceCase,
+} from "@/utils/helper.js";
 
 /**
  * Converts a FeeStudentMapping model to FeeStudentMappingDto
@@ -279,7 +283,7 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
     dob: result[0].dob ?? "",
     phone: result[0].phone ?? "",
     programCourse: result[0].programCourse!,
-    semester: result[0].semester!,
+    semester: toSentenceCase(result[0].semester!),
     shift: result[0].shift!,
     uid: result[0].uid!,
     totalPayableAmount: formatIndianNumber(result[0].totalPayableAmount),

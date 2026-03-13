@@ -566,3 +566,20 @@ export function formatIndianNumber(amount: number): string {
   const formatted = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
   return rest ? formatted + "," + lastThree : lastThree;
 }
+export function toSentenceCase(str: string): string {
+  let result = str
+    .replace(/_/g, " ") // Replace underscores with spaces
+    .replace(/([a-z])([A-Z])/g, "$1 $2") // Add space before capital letters
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+
+  // Remove "Student" prefix from registration and roll number headers
+  result = result.replace(
+    /^Student Registration Number$/,
+    "Registration Number",
+  );
+  result = result.replace(/^Student Roll Number$/, "Roll Number");
+
+  return result;
+}
