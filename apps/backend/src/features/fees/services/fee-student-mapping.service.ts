@@ -17,11 +17,12 @@ import {
   feeHeadModel,
   receiptTypeModel,
 } from "@repo/db/schemas";
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
 import * as feeStructureService from "./fee-structure.service.js";
 import * as feeGroupPromotionMappingService from "./fee-group-promotion-mapping.service.js";
 import * as feeStructureInstallmentService from "./fee-structure-installment.service.js";
+import * as feeHeadService from "./fee-head.service.js";
 import * as userService from "@/features/user/services/user.service.js";
 import { pdfGenerationService } from "@/services/pdf-generation.service.js";
 import {
@@ -205,63 +206,66 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
   feeStructureId: number,
   studentId: number,
 ) {
-  console.log(feeStructureId, studentId);
   if (!feeStructureId || !studentId) {
     throw Error("feeStructureId or studentId is not valid");
   }
 
+  // Fetch all data with joins
   const result = await db
     .select({
-      receiptName: receiptTypeModel.name,
-      session: sessionModel.name,
-      name: userModel.name,
-      uid: studentModel.uid,
-      dob: personalDetailsModel.dateOfBirth,
-      phone: userModel.phone,
-      semester: classModel.name,
-      programCourse: programCourseModel.name,
-      shift: shiftModel.name,
-      feeHead: feeHeadModel.name,
-      feeComponentAmount: feeStructureComponentModel.amount,
-      totalPayableAmount: feeStudentMappingModel.totalPayable,
+      feeStudentMapping: feeStudentMappingModel,
+      feeStructure: feeStructureModel,
+      student: studentModel,
+      user: userModel,
+      personalDetails: personalDetailsModel,
+      session: sessionModel,
+      feeGroup: feeGroupModel,
+      academicYear: academicYearModel,
+      class: classModel,
+      shift: shiftModel,
+      programCourse: programCourseModel,
+      receiptType: receiptTypeModel,
     })
     .from(feeStudentMappingModel)
-    .leftJoin(
+    .innerJoin(
       feeStructureModel,
       eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
     )
-    .leftJoin(
-      academicYearModel,
-      eq(academicYearModel.id, feeStructureModel.academicYearId),
-    )
-    .leftJoin(
-      sessionModel,
-      eq(sessionModel.academicYearId, academicYearModel.id),
-    )
-    .leftJoin(
+    .innerJoin(
       studentModel,
       eq(studentModel.id, feeStudentMappingModel.studentId),
     )
-    .leftJoin(userModel, eq(userModel.id, studentModel.userId))
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
     .leftJoin(
       personalDetailsModel,
       eq(personalDetailsModel.userId, userModel.id),
     )
-    .leftJoin(classModel, eq(classModel.id, feeStructureModel.classId))
-    .leftJoin(
+    .innerJoin(
+      feeGroupPromotionMappingModel,
+      eq(
+        feeGroupPromotionMappingModel.id,
+        feeStudentMappingModel.feeGroupPromotionMappingId,
+      ),
+    )
+    .innerJoin(
+      feeGroupModel,
+      eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+    )
+    .innerJoin(
+      academicYearModel,
+      eq(academicYearModel.id, feeStructureModel.academicYearId),
+    )
+    .innerJoin(
+      sessionModel,
+      eq(sessionModel.academicYearId, academicYearModel.id),
+    )
+    .innerJoin(classModel, eq(classModel.id, feeStructureModel.classId))
+    .innerJoin(shiftModel, eq(shiftModel.id, feeStructureModel.shiftId))
+    .innerJoin(
       programCourseModel,
       eq(programCourseModel.id, feeStructureModel.programCourseId),
     )
-    .leftJoin(shiftModel, eq(shiftModel.id, feeStructureModel.shiftId))
-    .leftJoin(
-      feeStructureComponentModel,
-      eq(feeStructureComponentModel.feeStructureId, feeStructureModel.id),
-    )
-    .leftJoin(
-      feeHeadModel,
-      eq(feeHeadModel.id, feeStructureComponentModel.feeHeadId),
-    )
-    .leftJoin(
+    .innerJoin(
       receiptTypeModel,
       eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
     )
@@ -270,32 +274,94 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
         eq(feeStudentMappingModel.studentId, studentId),
         eq(feeStudentMappingModel.feeStructureId, feeStructureId),
       ),
-    )
-    .orderBy(asc(feeStructureComponentModel.id));
+    );
 
   if (!result.length) {
     return null;
   }
 
+  const {
+    feeStudentMapping,
+    feeStructure,
+    student,
+    user,
+    personalDetails,
+    session,
+    feeGroup,
+    class: classRecord,
+    shift,
+    programCourse,
+    receiptType,
+  } = result[0];
+
+  // Fetch fee structure components and filter by student's assigned slab
+  const components = await db
+    .select()
+    .from(feeStructureComponentModel)
+    .where(eq(feeStructureComponentModel.feeStructureId, feeStructure.id));
+
+  const componentDtos: Array<{
+    amount: string;
+    name: string;
+  }> = await Promise.all(
+    components
+      .filter((component) => component.feeSlabId === feeGroup.feeSlabId)
+      .map(async (component) => {
+        const feeHead = await feeHeadService.getFeeHeadById(
+          component.feeHeadId,
+        );
+        return {
+          amount: component.amount!.toString(),
+          name: feeHead?.name || "Unknown",
+        };
+      }),
+  );
+
+  // Generate challan number
+  const romanMap: Record<string, number> = {
+    I: 1,
+    II: 2,
+    III: 3,
+    IV: 4,
+    V: 5,
+    VI: 6,
+    VII: 7,
+    VIII: 8,
+  };
+
+  const semesterName = toSentenceCase(classRecord.name);
+  const semRoman = semesterName.replace("Semester ", "");
+  const semNum = romanMap[semRoman] ?? semRoman;
+
+  const challanNumber = `${student.uid}/${semNum}`;
+
+  const pageTitle = `${student.uid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
+
+  // Generate PDF buffer
   const pdfBuffer = await pdfGenerationService.generateFeeReceiptPdfBuffer({
-    session: result[0].session!,
-    name: result[0].name!,
-    dob: result[0].dob ?? "",
-    phone: result[0].phone ?? "",
-    programCourse: result[0].programCourse!,
-    semester: toSentenceCase(result[0].semester!),
-    shift: result[0].shift!,
-    uid: result[0].uid!,
-    totalPayableAmount: formatIndianNumber(result[0].totalPayableAmount),
-    totalPayableAmountInWords: numberToWords(result[0].totalPayableAmount),
-    challanNumber: "N/A",
-    feeComponents: result.map((fc) => ({
-      amount: fc.feeComponentAmount!.toString(),
-      name: fc.feeHead!.toString(),
-    })),
+    session: session.name,
+    name: user.name,
+    dob: personalDetails?.dateOfBirth
+      ? new Date(personalDetails.dateOfBirth).toLocaleDateString("en-GB")
+      : "",
+    phone: user.phone ?? "",
+    programCourse: programCourse.name ?? "",
+    semester: semesterName,
+    shift: shift.name ?? "",
+    uid: student.uid,
+    totalPayableAmount: formatIndianNumber(feeStudentMapping.totalPayable),
+    totalPayableAmountInWords: numberToWords(feeStudentMapping.totalPayable),
+    challanNumber,
+    feeComponents: componentDtos,
+    pageTitle,
   });
 
-  const { session, semester, programCourse, receiptName, uid } = result[0];
-
-  return { pdfBuffer, session, semester, programCourse, receiptName, uid };
+  return {
+    pdfBuffer,
+    session: session.name,
+    semester: semesterName,
+    programCourse: programCourse.name,
+    receiptName: receiptType.name,
+    uid: student.uid,
+  };
 }

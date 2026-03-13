@@ -1421,7 +1421,7 @@ const FeeStructureMaster: React.FC<FeeStructureMasterProps> = ({
                 >
                   <h3 className="text-lg font-semibold">Step 1 : Select Fee Head / Components</h3>
                   <div className="flex gap-2">
-                    {isCreateMode && activeSection === "components" && (
+                    {activeSection === "components" && (
                       <Button
                         size="sm"
                         onClick={() => {

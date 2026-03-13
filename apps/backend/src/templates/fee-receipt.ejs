@@ -4,7 +4,7 @@
 
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>fee-challan-prototype.pdf</title>
+  <title><%= pageTitle %></title>
   <style type="text/css">
     * {
       margin: 0;
@@ -134,7 +134,7 @@
       justify-content: space-between;
       font-weight: bold;
       padding: 2px 6px 2px 0;
-      width: 70px;
+      min-width: 70px;
       font-size: 10px;
     }
 
@@ -225,6 +225,9 @@
     .footer-content {
       margin-top: auto;
     }
+    .course-value {
+  white-space: nowrap;
+}
 
     .signature-row {
       margin-top: 12px;
@@ -391,14 +394,15 @@
                   <span>Course</span>
                   <span>:</span>
                 </div>
-                <span class="student-info-value">
+                <span class="student-info-value course-value">
                   <%= programCourse %> (<%= shift %>)
                 </span>
               </div>
             </div>
             <div class="challan-barcode-block">
-              <span class="challan-no-value">Challan No : <%= challanNumber %></span>
-              <svg class="challan-barcode" data-challan="<%= challanNumber %>"></svg>
+              
+              <span class=" challan-no-value">Challan No : <%= challanNumber %></span>
+                  <svg class="challan-barcode" data-challan="<%= challanNumber %>"></svg>
             </div>
           </div>
           <table class="fee-table">
@@ -436,7 +440,7 @@
           <div class="footer-content">
             <div class="signature-row" style="border-bottom: 1px solid black;">
               <span style="font-weight: bolder;">Date: <span style="font-weight: normal;margin-left: 10px;">
-                  <%= new Date().toLocaleDateString() %>
+                  <%= new Date().toLocaleDateString('en-GB') %>
                 </span></span>
               <span style="font-weight:bolder;" class="sig-right">Bank Official's Signature</span>
             </div>

@@ -1,5 +1,5 @@
 {
-  "id": "5a4c0fbc-389d-48f3-ae54-480d7e308f4e",
+  "id": "028c5816-296e-445a-a617-8d0fe59b8b3b",
   "prevId": "46e88236-5603-405d-8cdc-9f8361df5882",
   "version": "7",
   "dialect": "postgresql",
@@ -17046,8 +17046,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "exam_candidate_id_fk": {
-          "name": "exam_candidate_id_fk",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -17075,12 +17075,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "temp_admit_card_distributions_exam_candidate_id_fk_exam_candidates_id_fk": {
-          "name": "temp_admit_card_distributions_exam_candidate_id_fk_exam_candidates_id_fk",
+        "temp_admit_card_distributions_student_id_fk_students_id_fk": {
+          "name": "temp_admit_card_distributions_student_id_fk_students_id_fk",
           "tableFrom": "temp_admit_card_distributions",
-          "tableTo": "exam_candidates",
+          "tableTo": "students",
           "columnsFrom": [
-            "exam_candidate_id_fk"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"

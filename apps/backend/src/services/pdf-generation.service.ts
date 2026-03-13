@@ -533,6 +533,7 @@ export class PdfGenerationService {
 
   public async generateFeeReceiptPdfBuffer(formData: {
     session: string;
+    pageTitle: string;
     name: string;
     uid: string;
     dob: string; // dd/mm/yyyy
