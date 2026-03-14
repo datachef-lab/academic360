@@ -566,13 +566,20 @@ export class PdfGenerationService {
       const browser = await this.getBrowser();
       const page = await browser.newPage();
 
-      // Set content and wait for resources to load
+      // Set content and wait for resources to load (CDN script + barcode render)
       await page.setContent(htmlContent, {
         waitUntil: "networkidle0",
-        timeout: 0, // optional but recommended
+        timeout: 30000,
       });
-      page.setDefaultNavigationTimeout(0);
-      page.setDefaultTimeout(0);
+      page.setDefaultNavigationTimeout(30000);
+      page.setDefaultTimeout(15000);
+
+      // Wait for JsBarcode to render barcodes before capturing PDF (avoids blank barcodes)
+      await page
+        .waitForSelector(".challan-barcode path", { timeout: 10000 })
+        .catch(() => {
+          // If selector never appears, continue anyway to avoid blocking
+        });
 
       // Generate PDF buffer
       const pdfUint8Array = await page.pdf({

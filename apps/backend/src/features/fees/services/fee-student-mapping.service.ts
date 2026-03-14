@@ -32,6 +32,16 @@ import {
 } from "@/utils/helper.js";
 
 /**
+ * Normalizes a challan number for lookup. Barcodes encode slash as hyphen for
+ * scanner compatibility; this converts back to canonical "uid/semNum" form.
+ * Use when processing scanned barcode values (e.g. fee update by challan).
+ */
+export function normalizeChallanNumber(scanned: string): string {
+  if (!scanned || typeof scanned !== "string") return scanned;
+  return scanned.trim().replace(/-/g, "/");
+}
+
+/**
  * Converts a FeeStudentMapping model to FeeStudentMappingDto
  */
 async function modelToDto(

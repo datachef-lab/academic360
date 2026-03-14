@@ -38,7 +38,7 @@
       border-right: 1px dotted #000;
       padding: 12px;
       flex: 1;
-      min-width: 0;
+      min-width: 88mm;
       display: flex;
       flex-direction: column;
     }
@@ -94,26 +94,24 @@
     }
 
     .bank-details {
-
       font-size: 10px;
     }
-
-    .bank-details p {}
 
     .bank-staff-note {
       margin: 4px 0;
       margin-bottom: 9px;
-      /* smaller so the full line fits comfortably */
       font-size: 7pt;
-      white-space: nowrap;
       text-align: center;
+      white-space: normal;
+      word-spacing: normal;
+      line-height: 1.2;
     }
 
     .student-info-wrapper {
       display: flex;
       gap: 16px;
       margin-bottom: 8px;
-      align-items: center;
+      align-items: flex-end;
     }
 
     .student-info {
@@ -142,24 +140,55 @@
       display: table-cell;
       padding: 2px 0;
       font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .student-info-value.course-value {
+      white-space: normal;
     }
 
     .challan-barcode-block {
       flex-shrink: 0;
-      min-width: 100px;
+      min-width: 130px;
+      width: 175px;
+      min-height: 58px;
+      margin-bottom: 30px;
+      margin-right: 4px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-start;
+      text-align: left;
     }
 
     .challan-no-value {
       display: block;
       font-size: 8pt;
       font-weight: bold;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
+      padding-left: 5px;
+      flex-shrink: 0;
+      width: 100%;
+      text-align: left;
+      box-sizing: border-box;
+    }
+
+    .challan-barcode-wrap {
+      flex-shrink: 0;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      width: 100%;
     }
 
     .challan-barcode {
       display: block;
-      width: 100%;
-      height: 28px;
+      width: auto !important;
+      height: 36px !important;
+      min-height: 36px;
+      max-width: 100%;
+      flex-shrink: 0;
     }
 
     .fee-table {
@@ -400,9 +429,10 @@
               </div>
             </div>
             <div class="challan-barcode-block">
-              
-              <span class=" challan-no-value">Challan No : <%= challanNumber %></span>
-                  <svg class="challan-barcode" data-challan="<%= challanNumber %>"></svg>
+              <span class="challan-no-value">Challan No : <%= challanNumber %></span>
+              <div class="challan-barcode-wrap">
+                <svg class="challan-barcode" data-challan="<%= challanNumber %>" preserveAspectRatio="xMidYMid meet"></svg>
+              </div>
             </div>
           </div>
           <table class="fee-table">
@@ -466,27 +496,37 @@
         <% }) %>
   </div>
   <script>
-    // Generate real, scannable barcodes for each challan
+    // Generate barcodes that decode to exactly the challan number (no garbage)
     document.addEventListener('DOMContentLoaded', function () {
+      function sanitizeChallanForBarcode(str) {
+        if (str == null || typeof str !== 'string') return '';
+        var s = str.trim().replace(/[\x00-\x1F\x7F]/g, '');
+        return s.replace(/[^\d\/\-A-Za-z]/g, '');
+      }
       var barcodeEls = document.querySelectorAll('.challan-barcode');
       barcodeEls.forEach(function (el) {
         var value = el.getAttribute('data-challan');
-        if (!value && el.previousElementSibling && el.previousElementSibling.classList.contains('challan-no-value')) {
-          // Fallback: parse from "Challan No : 1004240156/02"
-          var text = el.previousElementSibling.textContent || '';
-          var parts = text.split(':');
-          if (parts.length > 1) {
-            value = parts[1].trim();
+        if (!value) {
+          var wrap = el.closest('.challan-barcode-block');
+          if (wrap) {
+            var label = wrap.querySelector('.challan-no-value');
+            if (label) {
+              var parts = (label.textContent || '').split(':');
+              if (parts.length > 1) value = parts[1].trim();
+            }
           }
         }
+        value = sanitizeChallanForBarcode(value || '');
         if (value) {
           JsBarcode(el, value, {
             format: 'CODE128',
             lineColor: '#000',
-            width: 1,
-            height: 28,
+            width: 1.5,
+            height: 36,
             displayValue: false,
-            margin: 0
+            margin: 8,
+            marginTop: 2,
+            marginBottom: 2
           });
         }
       });
