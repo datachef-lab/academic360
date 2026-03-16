@@ -66,7 +66,12 @@ const AdmitCardDistributions: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "admit-card-distributions.csv";
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+        now.getDate(),
+      )}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      link.download = `admit-card-distributions_${timestamp}.csv`;
       document.body.appendChild(link);
       link.click();
       link.remove();
