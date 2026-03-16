@@ -673,6 +673,13 @@
       "when": 1773409460201,
       "tag": "0095_mighty_flatman",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1773653928902,
+      "tag": "0096_lucky_gamora",
+      "breakpoints": true
     }
   ]
 }

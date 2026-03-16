@@ -94,9 +94,10 @@ export const paperModeTypeEnum = pgEnum("paper_mode_type", [
 export const paymentStatusEnum = pgEnum("payment_status", [
     "PENDING",
     "COMPLETED",
+    "SUCCESS",
     "FAILED",
     "REFUNDED",
-    "CANCELLED"
+    "CANCELLED",
 ])
 
 export const paymentModeEnum = pgEnum("payment_mode", [

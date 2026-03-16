@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/index.js";
-import { feeStudentMappingModel } from "@repo/db/schemas";
+import { feeStudentMappingModel, studentModel } from "@repo/db/schemas";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
@@ -432,41 +432,79 @@ export const paymentCallbackHandler = async (
       return;
     }
 
-    if (status === "TXN_SUCCESS") {
-      await updatePaymentByOrderId(orderId, {
-        status: "SUCCESS",
-        transactionId: txnId,
-        bankTxnId,
-        txnDate: txnDate ? new Date(txnDate) : undefined,
-        gatewayResponse: body,
-      });
-    } else if (status === "TXN_FAILURE") {
-      await updatePaymentByOrderId(orderId, {
-        status: "FAILED",
-        transactionId: txnId,
-        bankTxnId,
-        gatewayResponse: body,
-      });
-    }
-
-    let studentId = "";
-    if (payment.feeStudentMappingId) {
-      const [mapping] = await db
-        .select({ studentId: feeStudentMappingModel.studentId })
-        .from(feeStudentMappingModel)
-        .where(eq(feeStudentMappingModel.id, payment.feeStudentMappingId));
-      if (mapping?.studentId) studentId = String(mapping.studentId);
+    try {
+      if (status === "TXN_SUCCESS") {
+        await updatePaymentByOrderId(orderId, {
+          status: "SUCCESS",
+          transactionId: txnId,
+          bankTxnId,
+          txnDate: txnDate ? new Date(txnDate) : undefined,
+          gatewayResponse: body,
+        });
+      } else if (status === "TXN_FAILURE") {
+        await updatePaymentByOrderId(orderId, {
+          status: "FAILED",
+          transactionId: txnId,
+          bankTxnId,
+          gatewayResponse: body,
+        });
+      }
+    } catch (updateError) {
+      console.error(
+        `Failed to update payment for orderId ${orderId}:`,
+        updateError,
+      );
+      // Continue to redirect even if update fails - the payment exists
     }
 
     const frontendUrl = process.env.CORS_ORIGIN || "http://localhost:5173";
     const paymentResult = status === "TXN_SUCCESS" ? "success" : "failed";
-    const redirectUrl = `${frontendUrl}/dashboard/fees/student-fees?payment=${paymentResult}&orderId=${orderId}${studentId ? `&studentId=${studentId}` : ""}`;
+
+    let redirectUrl = `${frontendUrl}/dashboard/fees/student-fees`;
+    let studentUid = "";
+
+    // For FEE payments: get student UID for search param
+    if (payment.feeStudentMappingId) {
+      try {
+        const [mapping] = await db
+          .select({ studentId: feeStudentMappingModel.studentId })
+          .from(feeStudentMappingModel)
+          .where(eq(feeStudentMappingModel.id, payment.feeStudentMappingId));
+
+        if (mapping?.studentId) {
+          const [student] = await db
+            .select({ uid: studentModel.uid })
+            .from(studentModel)
+            .where(eq(studentModel.id, mapping.studentId));
+
+          if (student?.uid) {
+            studentUid = student.uid;
+            redirectUrl = `${redirectUrl}?search=${encodeURIComponent(student.uid)}`;
+          }
+        }
+      } catch (mappingError) {
+        console.error("Failed to fetch student UID:", mappingError);
+      }
+    }
+
+    // Append payment status if no search param was added
+    if (!studentUid) {
+      redirectUrl = `${redirectUrl}?payment=${paymentResult}&orderId=${orderId}`;
+    }
+
     res.setHeader("Content-Type", "text/html");
     res.status(200).send(
       `<!DOCTYPE html><html><body>
         <script>
           if (window.opener) {
-            try { window.opener.postMessage({ type: "PAYTM_PAYMENT_RESULT", payment: "${paymentResult}", orderId: "${orderId}", studentId: "${studentId}" }, "${frontendUrl}"); } catch(e) {}
+            try { 
+              window.opener.postMessage({ 
+                type: "PAYTM_PAYMENT_RESULT", 
+                payment: "${paymentResult}", 
+                orderId: "${orderId}", 
+                studentUid: "${studentUid}" 
+              }, "${frontendUrl}"); 
+            } catch(e) {}
             window.close();
           } else {
             window.location.href = "${redirectUrl}";
