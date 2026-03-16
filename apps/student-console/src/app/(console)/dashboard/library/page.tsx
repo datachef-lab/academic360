@@ -50,7 +50,9 @@ export default function LibraryPage() {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/student/library?studentId=${student.legacyStudentId}`);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_URL!}/api/student/library?studentId=${student.legacyStudentId}`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch library data");
       }
@@ -69,7 +71,7 @@ export default function LibraryPage() {
     try {
       setLoading(true);
       const response = await fetch(
-        `/api/student/library/visit?studentId=${student.legacyStudentId}`,
+        `${process.env.NEXT_PUBLIC_URL!}/api/student/library/visit?studentId=${student.legacyStudentId}`,
       );
       if (!response.ok) {
         throw new Error("Failed to fetch library data");
