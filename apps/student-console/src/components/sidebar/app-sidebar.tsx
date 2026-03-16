@@ -303,12 +303,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     //   icon: IndianRupee,
     //   isActive: pathname === "/dashboard/enrollment-fees",
     // },
-    // {
-    //   title: "Library",
-    //   url: "/dashboard/library",
-    //   icon: Library,
-    //   isActive: pathname === "/dashboard/library",
-    // },
+    {
+      title: "Library",
+      url: "/dashboard/library",
+      icon: Library,
+      isActive: pathname === "/dashboard/library",
+    },
     {
       title: "Profile",
       url: "/dashboard/profile",

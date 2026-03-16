@@ -43,14 +43,14 @@ export default function LibraryPage() {
   useEffect(() => {
     fetchLibraryData();
     fetchLibraryVisits();
-  }, [student?.id]);
+  }, [student?.legacyStudentId]);
 
   const fetchLibraryData = async () => {
     if (!student?.id) return;
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/student/library?studentId=${student.id}`);
+      const response = await fetch(`/api/student/library?studentId=${student.legacyStudentId}`);
       if (!response.ok) {
         throw new Error("Failed to fetch library data");
       }
@@ -68,7 +68,9 @@ export default function LibraryPage() {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/student/library/visit?studentId=${student.id}`);
+      const response = await fetch(
+        `/api/student/library/visit?studentId=${student.legacyStudentId}`,
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch library data");
       }
