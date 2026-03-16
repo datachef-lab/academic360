@@ -15,7 +15,11 @@
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
     "release:alpha": "standard-version --prerelease alpha",
-    "release:beta": "standard-version --prerelease beta"
+    "release:beta": "standard-version --prerelease beta",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,scss,md}": [

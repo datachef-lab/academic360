@@ -1,6 +1,6 @@
 import { UserT, Family, AddressT, CountryT } from "../../schemas";
 import { BloodGroupDto } from "../resources";
-import { AccommodationT, AnnualIncomeT, ApplicationFormT, BoardResultStatusT, CategoryT, CityT, ClassT, districtT, FamilyT, HealthT, LanguageMediumT, NationalityT, OccupationT, PersonalDetailsT, PersonT, PickupPointT, PromotionStatusT, PromotionT, QualificationT, ReligionT, SectionT, SessionT, ShiftT, SpecializationT, StateT, TransportT } from "../../schemas/models";
+import { AccommodationT, AnnualIncomeT, ApplicationFormT, CategoryT, CityT, districtT, FamilyT, HealthT, LanguageMediumT, NationalityT, OccupationT, PersonalDetailsT, PersonT, PickupPointT, QualificationT, ReligionT,  ShiftT, SpecializationT, StateT, TransportT } from "../../schemas/models";
 import { DisabilityCodeT, EmergencyContactT, StaffT, TransportDetailsT, } from "../../schemas/models/user";
 import { StudentT } from "../../schemas/models/user/student.model";
 import { ProgramCourseDto } from "../course-design";

@@ -1,4 +1,4 @@
-import { academic360ApplicationDomainEnum } from "@/schemas/enums";
+
 import { boolean, varchar, pgTable, serial, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";

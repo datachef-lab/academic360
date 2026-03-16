@@ -1,80 +1,39 @@
-# syntax=docker/dockerfile:1
+FROM node:20-alpine AS base
+RUN npm install -g pnpm turbo
 
-# ---------- Base builder ----------
-FROM node:20-alpine AS builder
+# ── Prune stage ───────────────────────────────────────────────────────
+FROM base AS pruner
+WORKDIR /app
+COPY . .
+RUN turbo prune --scope=backend --docker
 
-ENV CI=true
-ENV PNPM_HOME=/root/.local/share/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-
-RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
-
+# ── Installer stage ───────────────────────────────────────────────────
+FROM base AS installer
 WORKDIR /app
 
-# Copy workspace manifests for better cache
-COPY pnpm-workspace.yaml ./
-COPY turbo.json ./
-COPY package.json ./
-COPY pnpm-lock.yaml ./
+# Copy pruned lockfile + package.jsons
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
-# Copy app and shared packages manifests
-COPY apps/backend/package.json apps/backend/package.json
-COPY packages/db/package.json packages/db/package.json
-COPY packages/utils/package.json packages/utils/package.json
-COPY packages/ui/package.json packages/ui/package.json
-COPY packages/typescript-config/package.json packages/typescript-config/package.json
-COPY packages/eslint-config/package.json packages/eslint-config/package.json
-
-# Install with full deps to keep drizzle-kit available for migrations
 RUN pnpm install --frozen-lockfile
 
-# Copy full repo (honors .dockerignore if present)
-COPY . .
+# Copy pruned source
+COPY --from=pruner /app/out/full/ .
 
-# Build only required shared packages to satisfy backend imports (now that sources exist)
-RUN pnpm --filter @repo/db... build || (cd packages/db && pnpm run build)
+RUN pnpm turbo run build --filter=backend
 
-# Build DB package explicitly before backend
-RUN pnpm -C packages/db build && pnpm --filter backend... build
-
-# Normalize build output location to /app/dist so runtime stage can COPY consistently
-# Some setups may emit to apps/backend/dist; unify to /app/dist if needed
-RUN set -e \
-    && if [ -d "dist" ]; then \
-         echo "Using root dist directory"; \
-       elif [ -d "apps/backend/dist" ]; then \
-         echo "Syncing apps/backend/dist to root dist"; \
-         mkdir -p dist; \
-         cp -r apps/backend/dist/* dist/; \
-       else \
-         echo "Error: No dist directory produced by build"; \
-         ls -la; \
-         ls -la apps/backend || true; \
-         exit 1; \
-       fi
-
-# ---------- Runtime ----------
-FROM node:20-alpine AS runtime
-ENV NODE_ENV=production
-ENV PNPM_HOME=/root/.local/share/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
-
+# ── Runner stage ──────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Copy full build output and runtime deps
-COPY --from=builder /app/dist /app/dist
-COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/package.json /app/package.json
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 backend
+USER backend
 
-# Copy templates folder from source (since it's not compiled)
-COPY --from=builder /app/apps/backend/src/templates /app/dist/apps/backend/src/templates
+COPY --from=installer --chown=backend:nodejs /app/apps/backend/dist ./dist
+COPY --from=installer --chown=backend:nodejs /app/node_modules ./node_modules
+COPY --from=installer --chown=backend:nodejs /app/apps/backend/package.json .
 
-# Drop privileges: use non-root node user
-USER node
-
-ENV PORT=8080
-EXPOSE 8080
-
-# Default command: start the compiled server (matches package.json start script)
-CMD ["node", "dist/apps/backend/src/index.js"]
+EXPOSE 5000
+CMD ["node", "dist/index.js"]

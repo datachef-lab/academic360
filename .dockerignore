@@ -30,3 +30,9 @@ apps/**/logs
 coverage
 **/uploads
 **/public/temp
+
+
+dist
+.env*
+logs
+.turbo

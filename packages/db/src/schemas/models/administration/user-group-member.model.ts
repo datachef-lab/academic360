@@ -1,4 +1,4 @@
-import { integer, pgEnum, pgTable, serial, timestamp, unique } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, timestamp, unique } from "drizzle-orm/pg-core";
 import { userGroupModel } from "./user-group.model";
 import { userTypeEnum } from "../../../schemas/enums";
 import { createInsertSchema } from "drizzle-zod";

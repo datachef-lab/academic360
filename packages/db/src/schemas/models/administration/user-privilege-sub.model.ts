@@ -1,8 +1,8 @@
 import { boolean, integer, pgTable, serial, timestamp, unique } from "drizzle-orm/pg-core";
 import { userPrivilegeModel } from "./user-privilege.model";
 import { appModuleModel } from "./app-module.model";
-import { programCourseModel } from "../course-design";
-import { departmentModel } from "./department.model";
+// import { programCourseModel } from "../course-design";
+// import { departmentModel } from "./department.model";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 

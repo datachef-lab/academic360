@@ -1,0 +1,47 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      args:
+        PORT: ${BACKEND_PORT:-5000}
+    container_name: academic360-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    volumes:
+      - ./apps/backend/.env:/app/.env
+    networks:
+      - academic360
+
+  main-console:
+    build:
+      context: .
+      dockerfile: apps/main-console/Dockerfile
+      args:
+        PORT: ${MAIN_CONSOLE_PORT:-5173}
+    container_name: academic360-main-console
+    restart: unless-stopped
+    ports:
+      - "${MAIN_CONSOLE_PORT:-5173}:5173"
+    networks:
+      - academic360
+
+  student-console:
+    build:
+      context: .
+      dockerfile: apps/student-console/Dockerfile
+      args:
+        PORT: ${STUDENT_CONSOLE_PORT:-3000}
+    container_name: academic360-student-console
+    restart: unless-stopped
+    ports:
+      - "${STUDENT_CONSOLE_PORT:-3000}:3000"
+    volumes:
+      - ./apps/student-console/.env.local:/app/.env.local # ← was .env
+    networks:
+      - academic360
+
+networks:
+  academic360:
+    driver: bridge

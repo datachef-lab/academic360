@@ -1,58 +1,27 @@
-# syntax=docker/dockerfile:1
+FROM node:20-alpine AS base
+RUN npm install -g pnpm turbo
 
-# ---------- Build stage ----------
-FROM node:20-alpine AS builder
-ENV CI=true
-ARG VITE_APP_BACKEND_URL
-ARG VITE_APP_PREFIX
-ARG VITE_STUDENT_PROFILE_URL
-ARG VITE_GOOGLE_CLIENT_ID
-ENV VITE_APP_BACKEND_URL=$VITE_APP_BACKEND_URL
-ENV VITE_APP_PREFIX=$VITE_APP_PREFIX
-ENV VITE_STUDENT_PROFILE_URL=$VITE_STUDENT_PROFILE_URL
-ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
-ENV PNPM_HOME=/root/.local/share/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
+FROM base AS pruner
 WORKDIR /app
-
-COPY pnpm-workspace.yaml ./
-COPY turbo.json ./
-COPY package.json ./
-COPY pnpm-lock.yaml ./
-COPY apps/main-console/package.json apps/main-console/package.json
-COPY packages/db/package.json packages/db/package.json
-COPY packages/ui/package.json packages/ui/package.json
-COPY packages/typescript-config/package.json packages/typescript-config/package.json
-COPY packages/eslint-config/package.json packages/eslint-config/package.json
-
-RUN pnpm install --frozen-lockfile
-
 COPY . .
+RUN turbo prune --scope=main-console --docker
 
-# Build only required shared packages before main-console build (after sources copied)
-RUN pnpm --filter @repo/db... build || (cd packages/db && pnpm run build)
+FROM base AS installer
+WORKDIR /app
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
+RUN pnpm install --frozen-lockfile
+COPY --from=pruner /app/out/full/ .
 
-# Debug: verify @repo/db presence and build output
-RUN set -e \
-  && echo "Verifying @repo/db sources and build artifacts" \
-  && ls -la packages/db || true \
-  && ls -la packages/db/src || true \
-  && ls -la packages/db/dist || true \
-  && node -v && pnpm -v && npx tsc -v || true
+# ← .env.local must exist before build (Vite bakes it in)
+COPY apps/main-console/.env.local ./apps/main-console/.env.local
 
-# Build DB package explicitly, then main-console (ensures @repo/db types are available)
-RUN pnpm -C packages/db build && pnpm -C apps/main-console build
+RUN pnpm turbo run build --filter=main-console
 
-# ---------- Nginx runtime ----------
-FROM nginx:1.27-alpine AS runtime
-
-# Copy built static assets from builder
-COPY --from=builder /app/apps/main-console/dist /usr/share/nginx/html
-
-# Run nginx as non-root user (101)
-RUN chown -R 101:101 /usr/share/nginx/html
-USER 101
-
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+FROM node:20-alpine AS runner
+WORKDIR /app
+RUN npm install -g serve
+COPY --from=installer /app/apps/main-console/dist ./dist
+EXPOSE 5173
+CMD ["serve", "-s", "dist", "-l", "5173"]

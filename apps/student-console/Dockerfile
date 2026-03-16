@@ -1,51 +1,33 @@
-# syntax=docker/dockerfile:1
+# apps/student-console/Dockerfile
 
-# ---------- Build stage ----------
-FROM node:20-alpine AS builder
-ENV CI=true
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_APP_BASE_URL
-ARG NEXT_PUBLIC_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_APP_BASE_URL=$NEXT_PUBLIC_APP_BASE_URL
-ENV NEXT_PUBLIC_URL=$NEXT_PUBLIC_URL
-ENV PNPM_HOME=/root/.local/share/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
+FROM node:20-alpine AS base
+RUN npm install -g pnpm turbo
+
+FROM base AS pruner
 WORKDIR /app
-
-COPY pnpm-workspace.yaml ./
-COPY turbo.json ./
-COPY package.json ./
-COPY pnpm-lock.yaml ./
-COPY apps/student-console/package.json apps/student-console/package.json
-COPY packages/db/package.json packages/db/package.json
-COPY packages/utils/package.json packages/utils/package.json
-COPY packages/typescript-config/package.json packages/typescript-config/package.json
-COPY packages/eslint-config/package.json packages/eslint-config/package.json
-
-RUN pnpm install --frozen-lockfile
-
 COPY . .
+RUN turbo prune --scope=student-console --docker
 
-# Build only student-console
-RUN pnpm --filter student-console... build
-
-# ---------- Runtime ----------
-FROM node:20-alpine AS runtime
-ENV NODE_ENV=production
-ENV PNPM_HOME=/root/.local/share/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
+FROM base AS installer
 WORKDIR /app
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
+RUN pnpm install --frozen-lockfile
+COPY --from=pruner /app/out/full/ .
+RUN pnpm turbo run build --filter=student-console
 
-# Copy app code and node_modules for runtime
-COPY --from=builder /app/apps/student-console/package.json /app/apps/student-console/package.json
-COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/apps/student-console/.next /app/apps/student-console/.next
-COPY --from=builder /app/apps/student-console/public /app/apps/student-console/public
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
 
-ENV PORT=3008
-EXPOSE 3008
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+USER nextjs
 
-CMD ["pnpm", "--filter", "student-console", "start"]
+COPY --from=installer --chown=nextjs:nodejs /app/apps/student-console/.next/standalone ./
+COPY --from=installer --chown=nextjs:nodejs /app/apps/student-console/.next/static ./apps/student-console/.next/static
+COPY --from=installer --chown=nextjs:nodejs /app/apps/student-console/public ./apps/student-console/public
+
+EXPOSE 3000
+CMD ["node", "apps/student-console/server.js"]
