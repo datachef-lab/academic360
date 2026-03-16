@@ -50,7 +50,7 @@ export default function LibraryPage() {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/student/library?studentId=${student.id}`);
+      const response = await fetch(`/api/student/library?studentId=${student.legacyStudentId}`);
       if (!response.ok) {
         throw new Error("Failed to fetch library data");
       }
