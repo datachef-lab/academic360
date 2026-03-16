@@ -341,7 +341,9 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
 
   const semesterName = toSentenceCase(classRecord.name);
   const semRoman = semesterName.replace("Semester ", "");
-  const semNum = romanMap[semRoman] ?? semRoman;
+  const semIndex = romanMap[semRoman];
+  const semNum =
+    typeof semIndex === "number" ? String(semIndex).padStart(2, "0") : semRoman;
 
   const challanNumber = `${student.uid}/${semNum}`;
 
