@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useCallback, useEffect } from "react";
 import { Wallet, Edit, Trash2, Search, Eye, CreditCard, Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,8 +57,6 @@ import { UserAvatar } from "@/hooks/UserAvatar";
 import { downloadFeeReceipt } from "@/services/fee-student-mapping.service";
 
 const StudentFeesPage: React.FC = () => {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
-  const { accessToken } = useAuth();
   const [downloading, setDownloading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<StudentDto | null>(null);
@@ -191,7 +188,7 @@ const StudentFeesPage: React.FC = () => {
           await fetchStudentMappings(student.id);
           return;
         }
-      } catch (uidError) {
+      } catch {
         // UID search failed, try general search
       }
 
@@ -211,7 +208,7 @@ const StudentFeesPage: React.FC = () => {
             }
           }
         }
-      } catch (searchError) {
+      } catch {
         // General search failed, try roll number specific search
       }
 
@@ -224,7 +221,7 @@ const StudentFeesPage: React.FC = () => {
           await fetchStudentMappings(student.id);
           return;
         }
-      } catch (rollError) {
+      } catch {
         // Roll number search failed
       }
 
@@ -396,11 +393,7 @@ const StudentFeesPage: React.FC = () => {
         setTimeout(() => window.URL.revokeObjectURL(url), 10000);
       }
     } catch (err) {
-      toast({
-        title: "Download failed",
-        description: "Failed to download admit card. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to download admit card. Please try again.");
     } finally {
       setDownloading(false);
     }
@@ -654,10 +647,12 @@ const StudentFeesPage: React.FC = () => {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    handleDownloadReceipt(
-                                      mapping.feeStructure.id,
-                                      mapping.studentId,
-                                    );
+                                    if (mapping.feeStructure?.id && mapping.studentId) {
+                                      handleDownloadReceipt(
+                                        Number(mapping.feeStructure.id),
+                                        Number(mapping.studentId),
+                                      );
+                                    }
                                   }}
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
@@ -894,6 +889,32 @@ const StudentFeesPage: React.FC = () => {
                       {selectedSummaryItem.paymentStatus || "PENDING"}
                     </Badge>
                   </div>
+                  <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gradient-to-r from-slate-50 to-slate-100 px-3 py-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200">
+                      <CreditCard className="h-4 w-4 text-slate-700" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
+                        Payment Mode
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {selectedSummaryItem.paymentMode || "-"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border border-indigo-200 bg-gradient-to-r from-indigo-50 to-blue-50 px-3 py-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100">
+                      <CreditCard className="h-4 w-4 text-indigo-700" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
+                        Gateway Type
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {selectedSummaryItem.paymentMode === "ONLINE" ? "PAYTM" : "-"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -931,33 +952,19 @@ const StudentFeesPage: React.FC = () => {
                             {selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup?.feeSlab
                               ?.name || "N/A"}
                             {(() => {
-                              // Find the matching concession rate from feeStructureSlabs
-                              const connectedSlabId =
+                              const connectedSlabName =
                                 selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup
-                                  ?.feeSlab?.id;
-                              if (!connectedSlabId) return "";
-                              const matchingSlab =
-                                selectedSummaryItem.feeStructure?.feeStructureSlabs?.find(
-                                  (fs) => fs.feeSlab.id === connectedSlabId,
-                                );
-                              return matchingSlab
-                                ? ` (${(matchingSlab.concessionRate || 0).toFixed(2)}%)`
-                                : "";
+                                  ?.feeSlab?.name;
+                              if (!connectedSlabName) return "";
+                              return "";
                             })()}
                           </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {(() => {
-                          // Filter components to only show those matching the student's assigned slab
-                          const connectedSlabId =
-                            selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup?.feeSlab
-                              ?.id;
-
                           const filteredComponents =
-                            selectedSummaryItem.feeStructure.components.filter(
-                              (component) => component.feeSlab?.id === connectedSlabId,
-                            );
+                            selectedSummaryItem.feeStructure.components ?? [];
 
                           if (filteredComponents.length === 0) {
                             return (
@@ -972,14 +979,6 @@ const StudentFeesPage: React.FC = () => {
                           return filteredComponents.map((component, index) => {
                             const assignedSlabAmount = component.amount || 0;
 
-                            // Find Slab F amount for this fee head (for Allocation column)
-                            const slabFComponent = selectedSummaryItem.feeStructure.components.find(
-                              (comp) =>
-                                comp.feeHead?.id === component.feeHead?.id &&
-                                comp.feeSlab?.name?.toUpperCase() === "SLAB F",
-                            );
-                            const slabFAmount = slabFComponent?.amount || 0;
-
                             return (
                               <TableRow
                                 key={component.id || index}
@@ -992,10 +991,10 @@ const StudentFeesPage: React.FC = () => {
                                   {index + 1}
                                 </TableCell>
                                 <TableCell className="text-center border-r-2 border-gray-400 p-2 font-medium bg-green-50">
-                                  {component.feeHead?.name || "-"}
+                                  {component.feeHead?.name ?? "-"}
                                 </TableCell>
                                 <TableCell className="text-center border-r-2 border-gray-400 p-2 font-semibold bg-yellow-50">
-                                  ₹{slabFAmount.toLocaleString()}
+                                  ₹{assignedSlabAmount.toLocaleString()}
                                 </TableCell>
                                 <TableCell className="text-center p-2 font-semibold bg-orange-50">
                                   ₹{assignedSlabAmount.toLocaleString()}
@@ -1014,36 +1013,14 @@ const StudentFeesPage: React.FC = () => {
                           </TableCell>
                           <TableCell className="text-center border-r-2 border-gray-400 p-2 font-bold text-base bg-yellow-50">
                             {(() => {
-                              // Sum of Slab F amounts (full fees)
-                              const slabFComponents =
-                                selectedSummaryItem.feeStructure.components.filter(
-                                  (component) =>
-                                    component.feeSlab?.name?.toUpperCase() === "SLAB F",
-                                );
-
-                              const slabFTotal = slabFComponents.reduce(
-                                (sum, comp) => sum + (comp.amount || 0),
-                                0,
-                              );
-                              return `₹${slabFTotal.toLocaleString()}`;
+                              const total = (selectedSummaryItem.totalPayable || 0) as number;
+                              return `₹${total.toLocaleString()}`;
                             })()}
                           </TableCell>
                           <TableCell className="text-center p-2 font-bold text-base bg-orange-50">
                             <div className="flex flex-col items-center gap-1">
                               {(() => {
-                                const connectedSlabId =
-                                  selectedSummaryItem.feeGroupPromotionMappings?.[0]?.feeGroup
-                                    ?.feeSlab?.id;
-
-                                const filteredComponents =
-                                  selectedSummaryItem.feeStructure.components.filter(
-                                    (component) => component.feeSlab?.id === connectedSlabId,
-                                  );
-
-                                const calculatedTotal = filteredComponents.reduce(
-                                  (sum, comp) => sum + (comp.amount || 0),
-                                  0,
-                                );
+                                const calculatedTotal = selectedSummaryItem.totalPayable || 0;
                                 const totalPayable = selectedSummaryItem.totalPayable || 0;
 
                                 // Show strike-through if waived off amount exists and it differs from calculated
@@ -1306,7 +1283,7 @@ const StudentFeesPage: React.FC = () => {
                             </TableCell>
                             <TableCell className="text-center">
                               ₹
-                              {(installment.baseAmount || 0).toLocaleString("en-IN", {
+                              {(installment.amount || 0).toLocaleString("en-IN", {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
                               })}
@@ -1469,10 +1446,13 @@ const StudentFeesPage: React.FC = () => {
 
               {paymentForm.paymentMode === "ONLINE" && (
                 <div className="space-y-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm font-medium text-blue-900 mb-3">
-                      Complete payment through Paytm
-                    </p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-blue-700" />
+                      <p className="text-sm font-medium text-blue-900">
+                        Complete payment through Paytm
+                      </p>
+                    </div>
                     <Button
                       type="button"
                       disabled={paytmLoading}
@@ -1495,7 +1475,7 @@ const StudentFeesPage: React.FC = () => {
                           studentId: selectedStudent.id,
                           studentName: selectedStudent.name ?? undefined,
                           studentEmail: selectedStudent.personalEmail ?? undefined,
-                          studentMobile: selectedStudent.mobile ?? undefined,
+                          studentMobile: selectedStudent.personalDetails?.mobileNumber ?? undefined,
                           onBeforeInvoke: () => {
                             setShowPaymentModal(false);
                             setPaymentItem(null);
@@ -1519,8 +1499,9 @@ const StudentFeesPage: React.FC = () => {
                       {paytmLoading ? "Opening Paytm..." : "Proceed to Paytm"}
                     </Button>
                     <p className="text-xs text-blue-700 mt-2">
-                      After completing payment, the transaction details will be automatically
-                      recorded
+                      After completing payment,{" "}
+                      <span className="font-semibold">transaction and gateway details</span> will be
+                      recorded automatically.
                     </p>
                   </div>
                 </div>

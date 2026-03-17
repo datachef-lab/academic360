@@ -164,7 +164,7 @@ export async function findByStudentId(
   const offset = (page - 1) * pageSize;
 
   /**
-   * STEP 1: Get DISTINCT examGroupIds for this student
+   *
    */
   const groupIdRows = await db
     .select({
@@ -300,7 +300,7 @@ export async function deleteExamGroupByIdIfUpcoming(
       .from(examModel)
       .where(eq(examModel.examGroupId, examGroupId));
     if (exams.length === 0) return null;
-
+    // jb
     const admitCardStart = exams[0].admitCardStartDownloadDate;
     if (!admitCardStart) {
       throw new Error(

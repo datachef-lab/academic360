@@ -1683,7 +1683,7 @@ export async function createExamAssignment(
 
     if (!exam) throw new Error("Failed to create exam");
 
-    // Emit socket event for exam creation
+    // Emit
     const io = socketService.getIO();
     if (io) {
       io.emit("exam_created", {
