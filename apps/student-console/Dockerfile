@@ -15,7 +15,8 @@ COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
-RUN pnpm turbo run build --filter=student-console
+
+RUN pnpm turbo run build --filter=student-console...
 
 FROM node:20-alpine AS runner
 WORKDIR /app

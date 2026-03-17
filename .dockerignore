@@ -36,3 +36,4 @@ dist
 .env*
 logs
 .turbo
+!packages/db/dist

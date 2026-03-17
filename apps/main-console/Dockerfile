@@ -4,6 +4,7 @@ RUN npm install -g pnpm turbo
 FROM base AS pruner
 WORKDIR /app
 COPY . .
+COPY packages/db/dist ./packages/db/dist
 RUN turbo prune --scope=main-console --docker
 
 FROM base AS installer
@@ -14,10 +15,13 @@ COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
 
+# ← copy pre-built dist, skip rebuilding @repo/db
+COPY packages/db/dist ./packages/db/dist
+
 # ← .env.local must exist before build (Vite bakes it in)
 COPY apps/main-console/.env.local ./apps/main-console/.env.local
 
-RUN pnpm turbo run build --filter=main-console
+RUN pnpm turbo run build --filter=main-console...
 
 FROM node:20-alpine AS runner
 WORKDIR /app

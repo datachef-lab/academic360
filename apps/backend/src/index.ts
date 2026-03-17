@@ -78,7 +78,7 @@
 // })();
 
 import "dotenv/config";
-import { app, httpServer } from "@/app.js";
+import { httpServer } from "@/app.js";
 import { connectToDatabase, connectToMySQL } from "@/db/index.js";
 import { createLogger } from "@/config/logger.js"; // not createLogger
 const log = createLogger("db");

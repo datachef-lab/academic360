@@ -21,7 +21,7 @@ RUN pnpm install --frozen-lockfile
 # Copy pruned source
 COPY --from=pruner /app/out/full/ .
 
-RUN pnpm turbo run build --filter=backend
+RUN pnpm turbo run build --filter=backend...
 
 # ── Runner stage ──────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
