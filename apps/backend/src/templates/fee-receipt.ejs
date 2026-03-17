@@ -166,12 +166,13 @@
       font-size: 9pt;
       font-weight: bold;
       margin-bottom: 1px;
-      padding-left: 0;
+      padding-left: 5px; /* align with first bar (quiet zone) */
       flex-shrink: 0;
       width: 100%;
       text-align: left;
       line-height: 1.05;
       box-sizing: border-box;
+      white-space: nowrap;
     }
 
     .challan-barcode-wrap {
@@ -185,12 +186,11 @@
 
     .challan-barcode {
       display: block;
-      width: 100% !important;
-      max-width: 160px;
-      height: 36px !important;
-      min-height: 36px;
+      max-width: 200px;
+      height: 41px;
       margin: 0;
       flex-shrink: 0;
+      align-self: flex-start;
     }
 
     .fee-table {
@@ -432,9 +432,9 @@
             </div>
             <div class="challan-barcode-block">
               <span class="challan-no-value">Challan No : <%= challanNumber %></span>
-              <div class="challan-barcode-wrap">
-                <svg class="challan-barcode" data-challan="<%= challanNumber %>" preserveAspectRatio="xMidYMid meet"></svg>
-              </div>
+            <div class="challan-barcode-wrap">
+              <canvas class="challan-barcode" data-challan="<%= challanNumber %>"></canvas>
+            </div>
             </div>
           </div>
           <table class="fee-table">
@@ -562,7 +562,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return s;
   }
 
-  // Find all barcode elements
+  // Find all barcode canvas elements
   var barcodeEls = document.querySelectorAll(".challan-barcode");
 
   barcodeEls.forEach(function (el) {
@@ -593,16 +593,16 @@ document.addEventListener("DOMContentLoaded", function () {
     // stop if nothing found
     if (!value) return;
 
-    // Generate Barcode
+    // Generate barcode onto canvas for better PDF/print rendering
     JsBarcode(el, value, {
       format: "CODE128",
       lineColor: "#000",
-      width: 3,
-      height: 45,
+      width: 2,
+      height: 50,
       displayValue: false,
-      margin: 0,
-      marginTop: 0,
-      marginBottom: 0
+      margin: 10,
+      marginTop: 10,
+      marginBottom: 10
     });
 
   });

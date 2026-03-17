@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useCallback, useEffect } from "react";
-import { Wallet, Edit, Trash2, Search, Eye, CreditCard, Bell } from "lucide-react";
+import { Wallet, Edit, Trash2, Search, Eye, CreditCard, Bell, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -655,7 +655,11 @@ const StudentFeesPage: React.FC = () => {
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm">
-                                  <Edit className="h-4 w-4" />
+                                  {downloading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Edit className="h-4 w-4" />
+                                  )}
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -683,7 +687,9 @@ const StudentFeesPage: React.FC = () => {
                                   Record Payment
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
+                                  disabled={downloading}
                                   onClick={() => {
+                                    if (downloading) return;
                                     handleDownloadReceipt(
                                       mapping.feeStructure.id,
                                       mapping.studentId,
@@ -691,7 +697,7 @@ const StudentFeesPage: React.FC = () => {
                                   }}
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
-                                  Download Receipt
+                                  {downloading ? "Generating receipt..." : "Download Receipt"}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {
