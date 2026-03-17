@@ -374,3 +374,11 @@ export const academic360ApplicationDomainEnum = pgEnum("academic360_application_
     "ID_CARD_GENERATOR",
     "EVENT_GATEKEEPER",
 ]);
+
+export const appModuleIconEnum = pgEnum("app_module_icon_type", [
+    "emoji",
+    "lucide",
+    "svg",
+    "url",
+ ]);
+ 

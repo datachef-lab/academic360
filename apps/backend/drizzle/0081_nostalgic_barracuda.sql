@@ -36,6 +36,8 @@ CREATE TABLE "user_status_master_level" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
 --> statement-breakpoint
 CREATE TABLE "user_statuses_master" (
 	"id" serial PRIMARY KEY NOT NULL,

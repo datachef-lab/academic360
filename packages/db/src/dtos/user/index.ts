@@ -8,7 +8,7 @@ import { BatchDto, PromotionDto } from "../batches";
 import { AdmissionAcademicInfoDto, AdmissionCourseDetailsDto, ApplicationFormDto } from "../admissions";
 import { PoliceStationT } from "@/schemas/models/user/police-station.model";
 import { PostOfficeT } from "@/schemas/models/user/post-office.model";
-import { UserPrivilegeDto } from "../administration";
+
 
 
 
@@ -32,7 +32,6 @@ export interface StaffDto extends Omit<StaffT, "shiftId"> {
 
 export interface UserDto extends UserT {
     payload: StudentDto | StaffDto;
-    privileges?: UserPrivilegeDto[];
 }
 
 export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "cityId" | "districtId" | "previousCountryId" | "previousStateId" | "previousCityId" | "previousDistrictId" | "postofficeId" | "policeStationId"> {

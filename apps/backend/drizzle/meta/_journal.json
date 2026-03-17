@@ -680,6 +680,20 @@
       "when": 1773653928902,
       "tag": "0096_lucky_gamora",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1773729336429,
+      "tag": "0097_yellow_whiplash",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1773731542687,
+      "tag": "0098_short_butterfly",
+      "breakpoints": true
     }
   ]
 }
