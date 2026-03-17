@@ -1,1 +1,0 @@
-ALTER TABLE "user_groups" RENAME COLUMN "short_name" TO "description";
