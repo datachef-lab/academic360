@@ -233,15 +233,44 @@ CREATE TABLE IF NOT EXISTS "user_status_mapping" (
 );
 
 
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_user_status_master_id_fk_user_statuses_master_id_fk" FOREIGN KEY ("user_status_master_id_fk") REFERENCES "public"."user_statuses_master"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_user_id_fk_users_id_fk" FOREIGN KEY ("user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_staff_id_fk_staffs_id_fk" FOREIGN KEY ("staff_id_fk") REFERENCES "public"."staffs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_promotion_id_fk_promotions_id_fk" FOREIGN KEY ("promotion_id_fk") REFERENCES "public"."promotions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_by_user_id_fk_users_id_fk" FOREIGN KEY ("by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD COLUMN "session_id_fk" integer NOT NULL;--> statement-breakpoint
-ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_session_id_fk_sessions_id_fk" FOREIGN KEY ("session_id_fk") REFERENCES "public"."sessions"("id") ON DELETE no action ON UPDATE no action;
-ALTER TABLE "user_status_mapping" ADD COLUMN "is_active" boolean DEFAULT true NOT NULL;
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_user_status_master_id_fk_user_statuses_master_id_fk" FOREIGN KEY ("user_status_master_id_fk") REFERENCES "public"."user_statuses_master"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_user_id_fk_users_id_fk" FOREIGN KEY ("user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_staff_id_fk_staffs_id_fk" FOREIGN KEY ("staff_id_fk") REFERENCES "public"."staffs"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_promotion_id_fk_promotions_id_fk" FOREIGN KEY ("promotion_id_fk") REFERENCES "public"."promotions"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_by_user_id_fk_users_id_fk" FOREIGN KEY ("by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD COLUMN "session_id_fk" integer NOT NULL;
+EXCEPTION
+    WHEN duplicate_column THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD CONSTRAINT "user_status_mapping_session_id_fk_sessions_id_fk" FOREIGN KEY ("session_id_fk") REFERENCES "public"."sessions"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+DO $$ BEGIN
+    ALTER TABLE "user_status_mapping" ADD COLUMN "is_active" boolean DEFAULT true NOT NULL;
+EXCEPTION
+    WHEN duplicate_column THEN null;
+END $$;
 --> statement-breakpoint
 DROP TABLE IF EXISTS "user_status_mapping" CASCADE;--> statement-breakpoint
 DROP TABLE IF EXISTS "user_statuses_master_domain" CASCADE;--> statement-breakpoint
