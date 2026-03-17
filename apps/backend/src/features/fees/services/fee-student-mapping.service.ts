@@ -147,6 +147,16 @@ export const updateFeeStudentMapping = async (
     return null;
   }
 
+  // Prevent changing challan transaction date once set
+  if (
+    existing.transactionDate &&
+    Object.prototype.hasOwnProperty.call(data, "transactionDate")
+  ) {
+    // Ignore any attempt to modify transactionDate to keep challan date immutable
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    delete (data as any).transactionDate;
+  }
+
   // If waived off details are being updated, recalculate totalPayable
   if (data.isWaivedOff !== undefined || data.waivedOffAmount !== undefined) {
     // Get fee structure and fee group promotion mapping to calculate base totalPayable
@@ -290,7 +300,7 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
     return null;
   }
 
-  const {
+  let {
     feeStudentMapping,
     feeStructure,
     student,
@@ -327,6 +337,18 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
       }),
   );
 
+  // Ensure challan date is set once, then treated as immutable
+  if (!feeStudentMapping.transactionDate) {
+    const [updatedMapping] = await db
+      .update(feeStudentMappingModel)
+      .set({ transactionDate: new Date() })
+      .where(eq(feeStudentMappingModel.id, feeStudentMapping.id))
+      .returning();
+    if (updatedMapping) {
+      feeStudentMapping = updatedMapping;
+    }
+  }
+
   // Generate challan number
   const romanMap: Record<string, number> = {
     I: 1,
@@ -361,6 +383,9 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
     semester: semesterName,
     shift: shift.name ?? "",
     uid: student.uid,
+    challanDate: (
+      feeStudentMapping.transactionDate || new Date()
+    ).toLocaleDateString("en-GB"),
     totalPayableAmount: formatIndianNumber(feeStudentMapping.totalPayable),
     totalPayableAmountInWords: numberToWords(feeStudentMapping.totalPayable),
     challanNumber,
