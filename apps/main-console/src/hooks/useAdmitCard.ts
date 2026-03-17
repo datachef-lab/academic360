@@ -24,9 +24,9 @@ export const useSearchCandidate = (searchTerm: string) => {
 
 export const useDistributeAdmitCard = () => {
   return useMutation({
-    mutationFn: async (params: { examCandidateId: number }) => {
+    mutationFn: async (params: { studentId: number }) => {
       const response = await distributeAdmitCardApi({
-        examCandidateId: params.examCandidateId,
+        studentId: params.studentId,
       });
       return response;
     },

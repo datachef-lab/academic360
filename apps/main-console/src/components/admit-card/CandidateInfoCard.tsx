@@ -67,9 +67,14 @@ export const CandidateInfoCard: React.FC<Props> = ({
               </AvatarFallback>
             </Avatar>
 
-            {/* Name and Exam */}
+            {/* Name, Appear Type and Exam */}
             <div>
-              <CardTitle className="text-2xl font-bold text-slate-900">{candidate.name}</CardTitle>
+              <CardTitle className="flex items-center flex-wrap gap-2">
+                <span className="text-2xl font-bold text-slate-900">{candidate.name}</span>
+                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-full px-3 py-1 flex items-center gap-1">
+                  🎓 APPEAR TYPE | <span className="font-bold">REGULAR 🎓</span>
+                </Badge>
+              </CardTitle>
               {candidate.examName && (
                 <p className="text-sm text-slate-600 mt-1">{candidate.examName}</p>
               )}
@@ -184,14 +189,6 @@ export const CandidateInfoCard: React.FC<Props> = ({
               <p className="text-base font-bold text-slate-900">{candidate.shift}</p>
             </div>
           )}
-
-          {/* 8. Appear type */}
-          <div className="flex-shrink-0 min-w-[140px] border-l-4 border-l-orange-500 bg-orange-50 p-4 rounded-r-lg">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-              Appear type
-            </p>
-            <p className="text-base font-bold text-slate-900">Regular</p>
-          </div>
 
           {/* 7. Exam
           {candidate.examName && (

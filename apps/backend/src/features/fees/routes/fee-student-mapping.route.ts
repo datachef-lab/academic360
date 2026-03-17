@@ -2,6 +2,7 @@ import { Request, Response, NextFunction, Router } from "express";
 import {
   createFeeStudentMappingHandler,
   deleteFeeStudentMappingHandler,
+  downloadFeeReceiptController,
   getAllFeeStudentMappingsHandler,
   getFeeStudentMappingByIdHandler,
   getFeeStudentMappingsByStudentIdHandler,
@@ -19,6 +20,7 @@ function asyncHandler(
 }
 
 router.get("/", asyncHandler(getAllFeeStudentMappingsHandler));
+router.get("/download-receipt", asyncHandler(downloadFeeReceiptController));
 router.get(
   "/student/:studentId",
   asyncHandler(getFeeStudentMappingsByStudentIdHandler),

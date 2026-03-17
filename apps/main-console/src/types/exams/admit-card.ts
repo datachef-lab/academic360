@@ -33,11 +33,11 @@ export interface AdmitCardSearchResponse {
 }
 
 export interface DistributeAdmitCardRequest {
-  examCandidateId: number;
+  studentId: number;
 }
 
 export interface AdmitCardDistributionRow {
-  examCandidateId: number;
+  studentId: number;
   studentName: string;
   uid: string;
   rollNumber: string | null;

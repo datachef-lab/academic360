@@ -333,9 +333,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <div className="space-y-1">
                       {data.navMain
                         .filter((item) => {
-                          // For temp users, only show "Physical CUReg Marking"
+                          // For temp users, only show Admit Card Distributions and Physical CUReg Marking
                           if (user?.email && TEMP_USER_EMAILS.includes(user.email)) {
-                            return item.title === "Physical CUReg Marking";
+                            return (
+                              item.title === "Physical CUReg Marking" ||
+                              item.title === "Admit Card Distributions"
+                            );
                           }
                           // For non-temp users, show all items
                           return true;

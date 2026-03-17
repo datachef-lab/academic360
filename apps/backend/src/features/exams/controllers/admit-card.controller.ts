@@ -41,14 +41,14 @@ export async function searchCandidate(req: Request, res: Response) {
 
 export async function distributeAdmitCard(req: Request, res: Response) {
   try {
-    const { examCandidateId } = req.body as {
-      examCandidateId?: number;
+    const { studentId } = req.body as {
+      studentId?: number;
     };
 
-    if (!examCandidateId || !Number.isFinite(Number(examCandidateId))) {
+    if (!studentId || !Number.isFinite(Number(studentId))) {
       return res
         .status(400)
-        .json({ message: "examCandidateId is required and must be a number." });
+        .json({ message: "studentId is required and must be a number." });
     }
 
     const user = req.user as { id?: number } | undefined;
@@ -61,7 +61,7 @@ export async function distributeAdmitCard(req: Request, res: Response) {
     }
 
     const record = await distributeAdmitCardService(
-      Number(examCandidateId),
+      Number(studentId),
       distributedByUserId,
     );
 
@@ -144,6 +144,13 @@ export async function downloadAdmitCardDistributions(
       return s;
     };
 
+    // Ensure Excel treats ID-like fields as text to avoid unwanted conversions
+    const asExcelText = (value: unknown): string => {
+      const s = value == null ? "" : String(value);
+      if (!s) return "";
+      return `="${s}"`;
+    };
+
     const lines: string[] = [];
     lines.push(headers.join(","));
 
@@ -157,9 +164,9 @@ export async function downloadAdmitCardDistributions(
       lines.push(
         [
           row.studentName,
-          row.uid,
-          row.rollNumber ?? "",
-          row.registrationNumber ?? "",
+          asExcelText(row.uid),
+          asExcelText(row.rollNumber ?? ""),
+          asExcelText(row.registrationNumber ?? ""),
           row.programCourse ?? "",
           row.semester ?? "",
           row.shift ?? "",
@@ -174,11 +181,25 @@ export async function downloadAdmitCardDistributions(
 
     const csv = lines.join("\n");
 
+    // Build a more descriptive, unique filename
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+      now.getDate(),
+    )}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const examSuffix = examGroupId ? `_exam-${examGroupId}` : "";
+    const filename = `admit-card-distributions${examSuffix}_${timestamp}.csv`;
+
+    // Always return a fresh, non-cached CSV snapshot
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader(
-      "Content-Disposition",
-      'attachment; filename="admit-card-distributions.csv"',
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
     );
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
     return res.send(csv);
   } catch (error) {
     // eslint-disable-next-line no-console

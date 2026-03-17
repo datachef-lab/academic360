@@ -21,91 +21,83 @@ import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import { defaultUserStatusesMastersDtos } from "../default-user-statuses-data";
 
 export async function loadDefaultUserStatusMaster() {
-  for (let i = 0; i < defaultUserStatusesMastersDtos.length; i++) {
-    const { levels, frequencies, domains, ...rest } =
-      defaultUserStatusesMastersDtos[i];
-
-    let [foundUserStatusMaster] = await db
-      .select()
-      .from(userStatusMasterModel)
-      .where(ilike(userStatusMasterModel.tag, rest.tag));
-
-    if (!foundUserStatusMaster) {
-      [foundUserStatusMaster] = await db
-        .insert(userStatusMasterModel)
-        .values(rest)
-        .returning();
-    }
-
-    for (let j = 0; j < levels.length; j++) {
-      const [foundLevel] = await db
-        .select()
-        .from(userStatusMasterLevelModel)
-        .where(
-          and(
-            eq(
-              userStatusMasterLevelModel.userStatusMasterId,
-              foundUserStatusMaster.id,
-            ),
-            eq(userStatusMasterLevelModel.level, levels[j].level),
-          ),
-        );
-
-      if (!foundLevel) {
-        await db.insert(userStatusMasterLevelModel).values({
-          ...levels[j],
-          userStatusMasterId: foundUserStatusMaster.id!,
-        });
-      }
-    }
-
-    for (let j = 0; j < domains.length; j++) {
-      const [foundDomain] = await db
-        .select()
-        .from(userStatusMasterDomainModel)
-        .where(
-          and(
-            eq(
-              userStatusMasterDomainModel.userStatusMasterId,
-              foundUserStatusMaster.id,
-            ),
-            eq(userStatusMasterDomainModel.domain, domains[j].domain),
-          ),
-        );
-
-      if (!foundDomain) {
-        await db.insert(userStatusMasterDomainModel).values({
-          ...domains[j],
-          userStatusMasterId: foundUserStatusMaster.id!,
-        });
-      }
-    }
-
-    for (let j = 0; j < frequencies.length; j++) {
-      const [foundFrequency] = await db
-        .select()
-        .from(userStatusMasterFrequencyModel)
-        .where(
-          and(
-            eq(
-              userStatusMasterFrequencyModel.userStatusMasterId,
-              foundUserStatusMaster.id,
-            ),
-            eq(
-              userStatusMasterFrequencyModel.frequency,
-              frequencies[j].frequency,
-            ),
-          ),
-        );
-
-      if (!foundFrequency) {
-        await db.insert(userStatusMasterFrequencyModel).values({
-          ...frequencies[j],
-          userStatusMasterId: foundUserStatusMaster.id!,
-        });
-      }
-    }
-  }
+  // for (let i = 0; i < defaultUserStatusesMastersDtos.length; i++) {
+  //   const { levels, frequencies, domains, ...rest } =
+  //     defaultUserStatusesMastersDtos[i];
+  //   let [foundUserStatusMaster] = await db
+  //     .select()
+  //     .from(userStatusMasterModel)
+  //     .where(ilike(userStatusMasterModel.tag, rest.tag));
+  //   if (!foundUserStatusMaster) {
+  //     [foundUserStatusMaster] = await db
+  //       .insert(userStatusMasterModel)
+  //       .values(rest)
+  //       .returning();
+  //   }
+  //   for (let j = 0; j < levels.length; j++) {
+  //     const [foundLevel] = await db
+  //       .select()
+  //       .from(userStatusMasterLevelModel)
+  //       .where(
+  //         and(
+  //           eq(
+  //             userStatusMasterLevelModel.userStatusMasterId,
+  //             foundUserStatusMaster.id,
+  //           ),
+  //           eq(userStatusMasterLevelModel.level, levels[j].level),
+  //         ),
+  //       );
+  //     if (!foundLevel) {
+  //       await db.insert(userStatusMasterLevelModel).values({
+  //         ...levels[j],
+  //         userStatusMasterId: foundUserStatusMaster.id!,
+  //       });
+  //     }
+  //   }
+  //   for (let j = 0; j < domains.length; j++) {
+  //     const [foundDomain] = await db
+  //       .select()
+  //       .from(userStatusMasterDomainModel)
+  //       .where(
+  //         and(
+  //           eq(
+  //             userStatusMasterDomainModel.userStatusMasterId,
+  //             foundUserStatusMaster.id,
+  //           ),
+  //           eq(userStatusMasterDomainModel.domain, domains[j].domain),
+  //         ),
+  //       );
+  //     if (!foundDomain) {
+  //       await db.insert(userStatusMasterDomainModel).values({
+  //         ...domains[j],
+  //         userStatusMasterId: foundUserStatusMaster.id!,
+  //       });
+  //     }
+  //   }
+  //   for (let j = 0; j < frequencies.length; j++) {
+  //     const [foundFrequency] = await db
+  //       .select()
+  //       .from(userStatusMasterFrequencyModel)
+  //       .where(
+  //         and(
+  //           eq(
+  //             userStatusMasterFrequencyModel.userStatusMasterId,
+  //             foundUserStatusMaster.id,
+  //           ),
+  //           eq(
+  //             userStatusMasterFrequencyModel.frequency,
+  //             frequencies[j].frequency,
+  //           ),
+  //         ),
+  //       );
+  //     if (!foundFrequency) {
+  //       await db.insert(userStatusMasterFrequencyModel).values({
+  //         ...frequencies[j],
+  //         userStatusMasterId: foundUserStatusMaster.id!,
+  //       });
+  //     }
+  //   }
+  // }
 }
 
 export async function mapUserStatuses() {

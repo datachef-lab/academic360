@@ -1,6 +1,6 @@
 {
-  "id": "028c5816-296e-445a-a617-8d0fe59b8b3b",
-  "prevId": "46e88236-5603-405d-8cdc-9f8361df5882",
+  "id": "361b4bff-41ed-499e-b605-c3463cc3b95c",
+  "prevId": "028c5816-296e-445a-a617-8d0fe59b8b3b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -17677,6 +17677,7 @@
       "values": [
         "PENDING",
         "COMPLETED",
+        "SUCCESS",
         "FAILED",
         "REFUNDED",
         "CANCELLED"

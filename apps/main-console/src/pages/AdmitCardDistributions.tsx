@@ -49,7 +49,7 @@ const AdmitCardDistributions: React.FC = () => {
 
     try {
       await distributeMutation.mutateAsync({
-        examCandidateId: candidate.id,
+        studentId: candidate.studentId,
       });
       await refetchCandidate();
       toast({ title: "Success", description: "Admit card distributed successfully" });
@@ -66,7 +66,12 @@ const AdmitCardDistributions: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "admit-card-distributions.csv";
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+        now.getDate(),
+      )}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      link.download = `admit-card-distributions_${timestamp}.csv`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -116,6 +121,39 @@ const AdmitCardDistributions: React.FC = () => {
     }
 
     if (!candidateData) return null;
+
+    if (candidateData.isUserInactive) {
+      return (
+        <Card className="mt-10 border-0 shadow-lg bg-red-50 border-l-8 border-l-red-500">
+          <CardContent className="pt-8 pb-8">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <svg
+                  className="w-8 h-8 text-red-600 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4v2M7.5 7.5a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-red-900">Student is Inactive</p>
+                <p className="text-red-800 mt-2">
+                  This student is marked as inactive in the system, so admit card distribution is
+                  not allowed.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
 
     return (
       <div className="mt-10 animate-in fade-in slide-in-from-bottom-4 duration-300">
