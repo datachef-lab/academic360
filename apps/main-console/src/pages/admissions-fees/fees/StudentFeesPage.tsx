@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Wallet, Edit, Trash2, Search, Eye, CreditCard, Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSearchParams } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -55,9 +56,14 @@ import {
 import { StudentDto } from "@repo/db/dtos/user";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { UserAvatar } from "@/hooks/UserAvatar";
+import { downloadFeeReceipt } from "@/services/fee-student-mapping.service";
 
 const StudentFeesPage: React.FC = () => {
-  const [searchText, setSearchText] = useState("");
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  const { accessToken } = useAuth();
+  const [downloading, setDownloading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchText, setSearchText] = useState(searchParams.get("search") || "");
   const [selectedStudent, setSelectedStudent] = useState<StudentDto | null>(null);
   const [mappings, setMappings] = useState<FeeStudentMappingDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -91,6 +97,22 @@ const StudentFeesPage: React.FC = () => {
   const { showError } = useError();
   const { user } = useAuth();
   const { openPaytmCheckout, loading: paytmLoading } = usePaytmCheckout();
+
+  const query = searchParams.get("search") ?? ""; // source of truth
+
+  // Load student data when query params change
+  useEffect(() => {
+    const searchQuery = searchParams.get("search");
+    if (searchQuery && searchQuery.trim()) {
+      setSearchText(searchQuery);
+      handleStudentSearch(searchQuery);
+    } else {
+      setSelectedStudent(null);
+      setMappings([]);
+      setSearchText("");
+    }
+  }, [searchParams]);
+
   // Fetch all fee-student-mappings for a student
   const fetchStudentMappings = useCallback(
     async (studentId: number) => {
@@ -167,76 +189,88 @@ const StudentFeesPage: React.FC = () => {
   }, [selectedStudent?.id, fetchStudentMappings]);
 
   // Search for student by UID, roll number, or registration number
-  const handleStudentSearch = useCallback(async () => {
-    if (!searchText.trim()) {
-      setSelectedStudent(null);
-      setMappings([]);
-      return;
-    }
+  const handleStudentSearch = useCallback(
+    async (searchValue?: string) => {
+      const valueToSearch = (searchValue ?? searchText).trim();
 
-    try {
-      setSearching(true);
-      const searchValue = searchText.trim();
-
-      // Try to find student by UID first (most reliable)
-      try {
-        const student = await fetchStudentByUid(searchValue);
-        if (student && student.id) {
-          setSelectedStudent(student);
-          // Fetch all fee-student-mappings for this student
-          await fetchStudentMappings(student.id);
-          return;
-        }
-      } catch (uidError) {
-        // UID search failed, try general search
+      if (!valueToSearch) {
+        setSelectedStudent(null);
+        setMappings([]);
+        setSearchParams({});
+        return;
       }
 
-      // Try general student search (searches across multiple fields)
       try {
-        const searchResults = await getSearchedStudents(searchValue, 1, 10);
-        if (searchResults.content && searchResults.content.length > 0) {
-          // Get the first matching student's full details
-          const firstMatch = searchResults.content[0];
-          if (firstMatch && firstMatch.id) {
-            const student = await getStudentById(firstMatch.id);
-            if (student && student.id) {
-              setSelectedStudent(student);
-              // Fetch all fee-student-mappings for this student
-              await fetchStudentMappings(student.id);
-              return;
+        setSearching(true);
+
+        // Try to find student by UID first (most reliable)
+        try {
+          const student = await fetchStudentByUid(valueToSearch);
+          if (student && student.id) {
+            setSelectedStudent(student);
+            setSearchParams({ search: valueToSearch });
+            // Fetch all fee-student-mappings for this student
+            await fetchStudentMappings(student.id);
+            return;
+          }
+        } catch (uidError) {
+          // UID search failed, try general search
+        }
+
+        // Try general student search (searches across multiple fields)
+        try {
+          const searchResults = await getSearchedStudents(valueToSearch, 1, 10);
+          if (searchResults.content && searchResults.content.length > 0) {
+            // Get the first matching student's full details
+            const firstMatch = searchResults.content[0];
+            if (firstMatch && firstMatch.id) {
+              const student = await getStudentById(firstMatch.id);
+              if (student && student.id) {
+                setSelectedStudent(student);
+                setSearchParams({ search: valueToSearch });
+                // Fetch all fee-student-mappings for this student
+                await fetchStudentMappings(student.id);
+                return;
+              }
             }
           }
+        } catch (searchError) {
+          // General search failed, try roll number specific search
         }
-      } catch (searchError) {
-        // General search failed, try roll number specific search
-      }
 
-      // Try to find student by roll number (specific endpoint)
-      try {
-        const student = await getSearchedStudentsByRollNumber(searchValue);
-        if (student && student.id) {
-          setSelectedStudent(student);
-          // Fetch all fee-student-mappings for this student
-          await fetchStudentMappings(student.id);
-          return;
+        // Try to find student by roll number (specific endpoint)
+        try {
+          const student = await getSearchedStudentsByRollNumber(valueToSearch);
+          if (student && student.id) {
+            setSelectedStudent(student);
+            setSearchParams({ search: valueToSearch });
+            // Fetch all fee-student-mappings for this student
+            await fetchStudentMappings(student.id);
+            return;
+          }
+        } catch (rollError) {
+          // Roll number search failed
         }
-      } catch (rollError) {
-        // Roll number search failed
-      }
 
-      // If all searches failed, show error
-      toast.error("Student not found. Please check the UID, Roll Number, or Registration Number.");
-      setSelectedStudent(null);
-      setMappings([]);
-    } catch (error) {
-      console.error("Error searching for student:", error);
-      toast.error("Failed to search for student. Please try again.");
-      setSelectedStudent(null);
-      setMappings([]);
-    } finally {
-      setSearching(false);
-    }
-  }, [searchText, fetchStudentMappings]);
+        // If all searches failed, show error
+        toast.error(
+          "Student not found. Please check the UID, Roll Number, or Registration Number.",
+        );
+        setSelectedStudent(null);
+        setMappings([]);
+        setSearchParams({});
+      } catch (error) {
+        console.error("Error searching for student:", error);
+        toast.error("Failed to search for student. Please try again.");
+        setSelectedStudent(null);
+        setMappings([]);
+        setSearchParams({});
+      } finally {
+        setSearching(false);
+      }
+    },
+    [searchText, fetchStudentMappings, setSearchParams],
+  );
 
   // Handle search on Enter key or when search button is clicked
   const handleSearchSubmit = (e?: React.FormEvent) => {
@@ -366,6 +400,39 @@ const StudentFeesPage: React.FC = () => {
       toast.error("Failed to record payment. Please try again.");
     } finally {
       setProcessingPayment(false);
+    }
+  };
+
+  const handleDownloadReceipt = async (feeStructureId: number, studentId: number) => {
+    console.log(`feeStructureId: ${feeStructureId}, studentId: ${studentId}`);
+    if (!feeStructureId || !studentId) return;
+    feeStructureId = Number(feeStructureId);
+    studentId = Number(studentId);
+    if (isNaN(feeStructureId) || feeStructureId <= 0 || isNaN(studentId) || studentId <= 0) return;
+
+    setDownloading(true);
+
+    try {
+      setDownloading(true);
+      const blob = await downloadFeeReceipt(feeStructureId, studentId);
+
+      // Create a download link
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const newTab = window.open(url, "_blank");
+
+      if (newTab) {
+        newTab.addEventListener("load", () => window.URL.revokeObjectURL(url));
+      } else {
+        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      }
+    } catch (err) {
+      toast({
+        title: "Download failed",
+        description: "Failed to download admit card. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -614,6 +681,17 @@ const StudentFeesPage: React.FC = () => {
                                 >
                                   <CreditCard className="h-4 w-4 mr-2" />
                                   Record Payment
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    handleDownloadReceipt(
+                                      mapping.feeStructure.id,
+                                      mapping.studentId,
+                                    );
+                                  }}
+                                >
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  Download Receipt
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {

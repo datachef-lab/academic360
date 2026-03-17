@@ -81,6 +81,11 @@ const data = {
     { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: Users },
     {
+      title: "Admit Card Distributions",
+      url: "/dashboard/admit-card-distributions",
+      icon: ClipboardList,
+    },
+    {
       title: "Physical CUReg Marking",
       url: "/dashboard/cu-reg/physical-marking",
       icon: CheckSquare,
@@ -326,9 +331,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <div className="space-y-1">
                       {data.navMain
                         .filter((item) => {
-                          // For temp users, only show "Physical CUReg Marking"
+                          // For temp users, only show Admit Card Distributions and Physical CUReg Marking
                           if (user?.email && TEMP_USER_EMAILS.includes(user.email)) {
-                            return item.title === "Physical CUReg Marking";
+                            return (
+                              item.title === "Physical CUReg Marking" ||
+                              item.title === "Admit Card Distributions"
+                            );
                           }
                           // For non-temp users, show all items
                           return true;

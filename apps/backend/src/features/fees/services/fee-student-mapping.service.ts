@@ -5,13 +5,41 @@ import {
   feeStructureModel,
   feeGroupPromotionMappingModel,
   feeGroupModel,
+  studentModel,
+  academicYearModel,
+  sessionModel,
+  userModel,
+  personalDetailsModel,
+  classModel,
+  programCourseModel,
+  shiftModel,
+  feeStructureComponentModel,
+  feeHeadModel,
+  receiptTypeModel,
 } from "@repo/db/schemas";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { FeeStudentMappingDto } from "@repo/db/dtos/fees";
 import * as feeStructureService from "./fee-structure.service.js";
 import * as feeGroupPromotionMappingService from "./fee-group-promotion-mapping.service.js";
 import * as feeStructureInstallmentService from "./fee-structure-installment.service.js";
+import * as feeHeadService from "./fee-head.service.js";
 import * as userService from "@/features/user/services/user.service.js";
+import { pdfGenerationService } from "@/services/pdf-generation.service.js";
+import {
+  formatIndianNumber,
+  numberToWords,
+  toSentenceCase,
+} from "@/utils/helper.js";
+
+/**
+ * Normalizes a challan number for lookup. Barcodes encode slash as hyphen for
+ * scanner compatibility; this converts back to canonical "uid/semNum" form.
+ * Use when processing scanned barcode values (e.g. fee update by challan).
+ */
+export function normalizeChallanNumber(scanned: string): string {
+  if (!scanned || typeof scanned !== "string") return scanned;
+  return scanned.trim().replace(/-/g, "/");
+}
 
 /**
  * Converts a FeeStudentMapping model to FeeStudentMappingDto
@@ -183,3 +211,169 @@ export const deleteFeeStudentMapping = async (
 
   return await modelToDto(deleted ?? null);
 };
+
+export async function generateFeeReceiptByFeeStructureIdAndStudentId(
+  feeStructureId: number,
+  studentId: number,
+) {
+  if (!feeStructureId || !studentId) {
+    throw Error("feeStructureId or studentId is not valid");
+  }
+
+  // Fetch all data with joins
+  const result = await db
+    .select({
+      feeStudentMapping: feeStudentMappingModel,
+      feeStructure: feeStructureModel,
+      student: studentModel,
+      user: userModel,
+      personalDetails: personalDetailsModel,
+      session: sessionModel,
+      feeGroup: feeGroupModel,
+      academicYear: academicYearModel,
+      class: classModel,
+      shift: shiftModel,
+      programCourse: programCourseModel,
+      receiptType: receiptTypeModel,
+    })
+    .from(feeStudentMappingModel)
+    .innerJoin(
+      feeStructureModel,
+      eq(feeStructureModel.id, feeStudentMappingModel.feeStructureId),
+    )
+    .innerJoin(
+      studentModel,
+      eq(studentModel.id, feeStudentMappingModel.studentId),
+    )
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      personalDetailsModel,
+      eq(personalDetailsModel.userId, userModel.id),
+    )
+    .innerJoin(
+      feeGroupPromotionMappingModel,
+      eq(
+        feeGroupPromotionMappingModel.id,
+        feeStudentMappingModel.feeGroupPromotionMappingId,
+      ),
+    )
+    .innerJoin(
+      feeGroupModel,
+      eq(feeGroupModel.id, feeGroupPromotionMappingModel.feeGroupId),
+    )
+    .innerJoin(
+      academicYearModel,
+      eq(academicYearModel.id, feeStructureModel.academicYearId),
+    )
+    .innerJoin(
+      sessionModel,
+      eq(sessionModel.academicYearId, academicYearModel.id),
+    )
+    .innerJoin(classModel, eq(classModel.id, feeStructureModel.classId))
+    .innerJoin(shiftModel, eq(shiftModel.id, feeStructureModel.shiftId))
+    .innerJoin(
+      programCourseModel,
+      eq(programCourseModel.id, feeStructureModel.programCourseId),
+    )
+    .innerJoin(
+      receiptTypeModel,
+      eq(receiptTypeModel.id, feeStructureModel.receiptTypeId),
+    )
+    .where(
+      and(
+        eq(feeStudentMappingModel.studentId, studentId),
+        eq(feeStudentMappingModel.feeStructureId, feeStructureId),
+      ),
+    );
+
+  if (!result.length) {
+    return null;
+  }
+
+  const {
+    feeStudentMapping,
+    feeStructure,
+    student,
+    user,
+    personalDetails,
+    session,
+    feeGroup,
+    class: classRecord,
+    shift,
+    programCourse,
+    receiptType,
+  } = result[0];
+
+  // Fetch fee structure components and filter by student's assigned slab
+  const components = await db
+    .select()
+    .from(feeStructureComponentModel)
+    .where(eq(feeStructureComponentModel.feeStructureId, feeStructure.id));
+
+  const componentDtos: Array<{
+    amount: string;
+    name: string;
+  }> = await Promise.all(
+    components
+      .filter((component) => component.feeSlabId === feeGroup.feeSlabId)
+      .map(async (component) => {
+        const feeHead = await feeHeadService.getFeeHeadById(
+          component.feeHeadId,
+        );
+        return {
+          amount: component.amount!.toString(),
+          name: feeHead?.name || "Unknown",
+        };
+      }),
+  );
+
+  // Generate challan number
+  const romanMap: Record<string, number> = {
+    I: 1,
+    II: 2,
+    III: 3,
+    IV: 4,
+    V: 5,
+    VI: 6,
+    VII: 7,
+    VIII: 8,
+  };
+
+  const semesterName = toSentenceCase(classRecord.name);
+  const semRoman = semesterName.replace("Semester ", "");
+  const semIndex = romanMap[semRoman];
+  const semNum =
+    typeof semIndex === "number" ? String(semIndex).padStart(2, "0") : semRoman;
+
+  const challanNumber = `${student.uid}/${semNum}`;
+
+  const pageTitle = `${student.uid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
+
+  // Generate PDF buffer
+  const pdfBuffer = await pdfGenerationService.generateFeeReceiptPdfBuffer({
+    session: session.name,
+    name: user.name,
+    dob: personalDetails?.dateOfBirth
+      ? new Date(personalDetails.dateOfBirth).toLocaleDateString("en-GB")
+      : "",
+    phone: user.phone ?? "",
+    programCourse: programCourse.name ?? "",
+    semester: semesterName,
+    shift: shift.name ?? "",
+    uid: student.uid,
+    totalPayableAmount: formatIndianNumber(feeStudentMapping.totalPayable),
+    totalPayableAmountInWords: numberToWords(feeStudentMapping.totalPayable),
+    challanNumber,
+    feeComponents: componentDtos,
+    pageTitle,
+  });
+
+  return {
+    pdfBuffer,
+    session: session.name,
+    semester: semesterName,
+    programCourse: programCourse.name,
+    receiptName: receiptType.name,
+    uid: student.uid,
+  };
+}

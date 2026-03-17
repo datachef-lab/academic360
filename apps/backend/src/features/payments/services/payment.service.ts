@@ -101,16 +101,39 @@ export async function updatePaymentByOrderId(
     gatewayResponse?: object;
   },
 ) {
+  // First, fetch the existing payment to check for duplicate callbacks
+  const [existingPayment] = await db
+    .select()
+    .from(paymentModel)
+    .where(eq(paymentModel.orderId, orderId));
+
+  if (!existingPayment) {
+    throw new Error(`Payment not found for orderId: ${orderId}`);
+  }
+
+  // If this is a duplicate callback (same transactionId), skip the update
+  if (
+    existingPayment.transactionId &&
+    existingPayment.transactionId === updates.transactionId
+  ) {
+    console.log(
+      `Duplicate payment callback detected for orderId: ${orderId}, skipping update`,
+    );
+    return existingPayment;
+  }
+
   const dbStatus = updates.status === "SUCCESS" ? "COMPLETED" : "FAILED";
   const [updated] = await db
     .update(paymentModel)
     .set({
       status: updates.status,
       paymentStatus: dbStatus,
-      transactionId: updates.transactionId ?? null,
-      bankTxnId: updates.bankTxnId ?? null,
-      txnDate: updates.txnDate ?? null,
-      gatewayResponse: updates.gatewayResponse ?? null,
+      transactionId:
+        updates.transactionId ?? existingPayment.transactionId ?? null,
+      bankTxnId: updates.bankTxnId ?? existingPayment.bankTxnId ?? null,
+      txnDate: updates.txnDate ?? existingPayment.txnDate ?? null,
+      gatewayResponse:
+        updates.gatewayResponse ?? existingPayment.gatewayResponse ?? null,
     })
     .where(eq(paymentModel.orderId, orderId))
     .returning();
