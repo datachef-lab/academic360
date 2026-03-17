@@ -15,8 +15,6 @@ export const userModel = pgTable('users', {
     whatsappNumber: varchar({ length: 255 }),
     image: varchar({ length: 255 }),
     type: userTypeEnum().notNull(),
-    userTypeId: integer("user_type_id_fk")
-        .references(() => userTypeModel.id),
     isSuspended: boolean().default(false),
     suspendedReason: text(),
     suspendedTillDate: timestamp(),
