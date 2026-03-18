@@ -381,4 +381,17 @@ export const appModuleIconEnum = pgEnum("app_module_icon_type", [
     "svg",
     "url",
  ]);
- 
+
+ export const appModulePermissionEnum = pgEnum("app_module_permission_type", [
+    "CREATE",
+    "READ",
+    "UPDATE",
+    "DELETE",
+    "UPLOAD",
+ ]);
+
+ export const accessGroupTypeEnum = pgEnum("access_group_type", [
+    "BASIC",
+    "ADD-ON",
+    "SPECIAL",
+ ]);

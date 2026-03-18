@@ -3,7 +3,6 @@ import { AnyPgColumn, boolean, integer, pgTable, serial, timestamp, varchar } fr
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 
-
 export const appModuleModel = pgTable("app_modules", {
    id: serial().primaryKey(),
    parentAppModuleId: integer("parent_app_module_id_fk")
@@ -21,11 +20,8 @@ export const appModuleModel = pgTable("app_modules", {
    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-
 export const createAppModuleSchema = createInsertSchema(appModuleModel);
 
-
 export type AppModule = z.infer<typeof createAppModuleSchema>;
-
 
 export type AppModuleT = typeof createAppModuleSchema._type;
