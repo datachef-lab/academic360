@@ -1,0 +1,1 @@
+ALTER TABLE "fee_student_mappings" ADD COLUMN "challan_generated_at" timestamp with time zone;

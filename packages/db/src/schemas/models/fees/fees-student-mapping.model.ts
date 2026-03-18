@@ -38,6 +38,7 @@ export const feeStudentMappingModel = pgTable("fee_student_mappings", {
     transactionRef: text(),
     transactionDate: timestamp({withTimezone: true}),
     receiptNumber: varchar({ length: 2555 }),
+    challanGeneratedAt: timestamp({withTimezone: true}),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),
     updatedAt: timestamp({withTimezone: true}).notNull().defaultNow().$onUpdate(() => new Date()),
 });

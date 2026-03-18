@@ -542,6 +542,7 @@ export class PdfGenerationService {
     programCourse: string;
     shift: string;
     challanNumber: string;
+    challanDate: string; // dd/mm/yyyy — immutable generation date
     feeComponents: Array<{
       name: string;
       amount: string;
