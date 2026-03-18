@@ -78,6 +78,8 @@ import {
   examTypeRouter,
   examScheduleRouter,
 } from "./exams/routes/index.js";
+import departmentRouter from "./administration/routes/department.route.js";
+import appModuleRouter from "./administration/routes/appModule.route.js";
 // import {
 //   departmentRouter,
 //   designationRouter,
@@ -158,7 +160,8 @@ export {
   roomRouter,
   examTypeRouter,
   examScheduleRouter,
-  // departmentRouter,
+  departmentRouter,
+  appModuleRouter,
   // designationRouter,
   // appModuleRouter,
   // userGroupRouter,

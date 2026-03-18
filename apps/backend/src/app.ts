@@ -49,7 +49,8 @@ import {
   cityRouter,
   countryRouter,
   degreeRouter,
-  // departmentRouter,
+  departmentRouter,
+  appModuleRouter,
   // designationRouter,
   documentRouter,
   emergencyContactRouter,
@@ -434,9 +435,11 @@ app.use("/api/institutions", institutionRouter);
 
 app.use("/api/qualifications", qualificationRouter);
 
-// app.use("/api/administration/departments", departmentRouter);
+app.use("/api/administration/departments", departmentRouter);
+app.use("/api/administration/app-modules", appModuleRouter);
 
 // app.use("/api/administration/designations", designationRouter);
+//
 
 // app.use("/api/administration/sub-departments", subDepartmentRouter);
 
