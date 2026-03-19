@@ -347,6 +347,16 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
 
   const challanNumber = `${student.uid}/${semNum}`;
 
+  // Set challanGeneratedAt once (immutable) — persist if not already set
+  let challanGeneratedAt = feeStudentMapping.challanGeneratedAt;
+  if (!challanGeneratedAt) {
+    challanGeneratedAt = new Date();
+    await db
+      .update(feeStudentMappingModel)
+      .set({ challanGeneratedAt })
+      .where(eq(feeStudentMappingModel.id, feeStudentMapping.id));
+  }
+
   const pageTitle = `${student.uid} | ${receiptType.name} - ${semesterName} | ${programCourse.name} (${session.name})`;
 
   // Generate PDF buffer
@@ -364,6 +374,7 @@ export async function generateFeeReceiptByFeeStructureIdAndStudentId(
     totalPayableAmount: formatIndianNumber(feeStudentMapping.totalPayable),
     totalPayableAmountInWords: numberToWords(feeStudentMapping.totalPayable),
     challanNumber,
+    challanDate: challanGeneratedAt.toLocaleDateString("en-GB"),
     feeComponents: componentDtos,
     pageTitle,
   });

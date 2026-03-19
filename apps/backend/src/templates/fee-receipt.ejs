@@ -128,22 +128,16 @@
     }
 
     .student-info-label {
-      display: flex;
-      justify-content: space-between;
       font-weight: bold;
       padding: 2px 6px 2px 0;
-      min-width: 70px;
-      font-size: 10px;
-    }
-
-    .student-info-value {
-      display: table-cell;
-      padding: 2px 0;
       font-size: 10px;
       white-space: nowrap;
     }
 
-    .student-info-value.course-value {
+    .student-info-value {
+      display: inline;
+      padding: 2px 0;
+      font-size: 10px;
       white-space: nowrap;
     }
 
@@ -185,12 +179,11 @@
 
     .challan-barcode {
       display: block;
-      width: 100% !important;
-      max-width: 160px;
-      height: 36px !important;
-      min-height: 36px;
+      width: 160px;
+      height: 40px;
       margin: 0;
       flex-shrink: 0;
+      padding: 4px 0 0 0px;
     }
 
     .fee-table {
@@ -256,16 +249,13 @@
     .footer-content {
       margin-top: auto;
     }
-    .course-value {
-  white-space: nowrap;
-}
 
     .signature-row {
       margin-top: 12px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      font-size: 8pt;
+      font-size: 9.5pt;
     }
 
     .signature-row .sig-right {
@@ -343,8 +333,6 @@
       }
     }
   </style>
-  <!-- JsBarcode for real, scannable barcodes -->
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 </head>
 
 <body>
@@ -376,64 +364,34 @@
           <div class="student-info-wrapper">
             <div class="student-info">
               <div class="student-info-row">
-                <div class="student-info-label">
-                  <span>Name</span>
-                  <span>:</span>
-                </div>
-                <span class="student-info-value">
-                  <%= name %>
-                </span>
+                <div class="student-info-label">Name :</div>
+                <span class="student-info-value"><%= name %></span>
               </div>
               <div class="student-info-row">
-                <div class="student-info-label">
-                  <span>UID</span>
-                  <span>:</span>
-                </div>
-                <span class="student-info-value">
-                  <%= uid %>
-                </span>
+                <div class="student-info-label">UID :</div>
+                <span class="student-info-value"><%= uid %></span>
               </div>
               <div class="student-info-row">
-                <div class="student-info-label">
-                  <span>DOB</span>
-                  <span>:</span>
-                </div>
-                <span class="student-info-value">
-                  <%= dob %>
-                </span>
+                <div class="student-info-label">DOB :</div>
+                <span class="student-info-value"><%= dob %></span>
               </div>
               <div class="student-info-row">
-                <div class="student-info-label">
-                  <span>Mob No.</span>
-                  <span>:</span>
-                </div>
-                <span class="student-info-value">
-                  <%= phone %>
-                </span>
+                <div class="student-info-label">Mob No. :</div>
+                <span class="student-info-value"><%= phone %></span>
               </div>
               <div class="student-info-row">
-                <div class="student-info-label">
-                  <span>Year</span>
-                  <span>:</span>
-                </div>
-                <span class="student-info-value">
-                  <%= semester %>
-                </span>
+                <div class="student-info-label">Year :</div>
+                <span class="student-info-value"><%= semester %></span>
               </div>
               <div class="student-info-row">
-                <div class="student-info-label">
-                  <span>Course</span>
-                  <span>:</span>
-                </div>
-                <span class="student-info-value course-value">
-                  <%= programCourse %> (<%= shift %>)
-                </span>
+                <div class="student-info-label">Course :</div>
+                <span class="student-info-value"><%= programCourse %> (<%= shift %>)</span>
               </div>
             </div>
             <div class="challan-barcode-block">
               <span class="challan-no-value">Challan No : <%= challanNumber %></span>
               <div class="challan-barcode-wrap">
-                <svg class="challan-barcode" data-challan="<%= challanNumber %>" preserveAspectRatio="xMidYMid meet"></svg>
+                <canvas class="challan-barcode" data-challan="<%= challanNumber %>"></canvas>
               </div>
             </div>
           </div>
@@ -471,9 +429,7 @@
           <div style="flex: 1; min-height: 8px;"></div>
           <div class="footer-content">
             <div class="signature-row" style="border-bottom: 1px solid black;">
-              <span style="font-weight: bolder;">Date: <span style="font-weight: normal;margin-left: 10px;">
-                  <%= new Date().toLocaleDateString('en-GB') %>
-                </span></span>
+              <span style="font-weight: bolder;">Date: <span style="font-weight: normal;margin-left: 10px;"><%= challanDate %></span></span>
               <span style="font-weight:bolder;" class="sig-right">Bank Official's Signature</span>
             </div>
             <div class="nb-notes">
@@ -497,114 +453,47 @@
         </div>
         <% }) %>
   </div>
-  <!-- <script>
-    // Generate barcodes that decode to EXACTLY the challan number
-    document.addEventListener('DOMContentLoaded', function () {
-      function sanitizeChallanForBarcode(str) {
-        if (str == null) return '';
-        var s = String(str).trim();
-        // remove control characters
-        s = s.replace(/[\x00-\x1F\x7F]/g, '');
-        // For robustness with typical scanners, encode only digits.
-        // Example: "1504250013/01" -> "150425001301"
-        s = s.replace(/\D/g, '');
-        return s;
-      }
-
-      var barcodeEls = document.querySelectorAll('.challan-barcode');
-      barcodeEls.forEach(function (el) {
-        // Prefer the explicit data attribute which comes directly from the server
-        var raw = el.getAttribute('data-challan') || '';
-        var value = sanitizeChallanForBarcode(raw);
-
-        // Fallback: derive from visible label text if needed
-        if (!value) {
-          var wrap = el.closest('.challan-barcode-block');
-          if (wrap) {
-            var label = wrap.querySelector('.challan-no-value');
-            if (label) {
-              var text = (label.textContent || '').split(':')[1] || '';
-              value = sanitizeChallanForBarcode(text);
-            }
-          }
-        }
-
-        if (!value) return; // nothing valid to encode
-
-        JsBarcode(el, value, {
-          format: 'CODE128',
-          lineColor: '#000',
-          width: 3,
-          height: 44,
-          displayValue: false,
-          margin: 0,
-          marginTop: 0,
-          marginBottom: 0
-        });
-      });
-    });
-  </script> -->
-  <!-- JsBarcode Library -->
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
-  // Clean challan number but keep '/'
   function sanitizeChallanForBarcode(str) {
     if (!str) return "";
-
     var s = String(str).trim();
-
-    // remove control characters only
     s = s.replace(/[\x00-\x1F\x7F]/g, "");
-
     return s;
   }
 
-  // Find all barcode elements
   var barcodeEls = document.querySelectorAll(".challan-barcode");
 
   barcodeEls.forEach(function (el) {
-
-    // 1️⃣ Get challan directly from data attribute
     var raw = el.getAttribute("data-challan") || "";
     var value = sanitizeChallanForBarcode(raw);
 
-    // 2️⃣ Fallback: get from label text
     if (!value) {
       var wrap = el.closest(".challan-barcode-block");
-
       if (wrap) {
         var label = wrap.querySelector(".challan-no-value");
-
         if (label) {
           var text = label.textContent || "";
-
           if (text.includes(":")) {
             text = text.split(":")[1];
           }
-
           value = sanitizeChallanForBarcode(text);
         }
       }
     }
 
-    // stop if nothing found
     if (!value) return;
 
-    // Generate Barcode
     JsBarcode(el, value, {
       format: "CODE128",
       lineColor: "#000",
-      width: 3,
-      height: 45,
+      width: 2,
+      height: 40,
       displayValue: false,
-      margin: 0,
-      marginTop: 0,
-      marginBottom: 0
+      margin: 0
     });
-
   });
 
 });

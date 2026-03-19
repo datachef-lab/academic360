@@ -413,7 +413,6 @@ const StudentFeesPage: React.FC = () => {
     setDownloading(true);
 
     try {
-      setDownloading(true);
       const blob = await downloadFeeReceipt(feeStructureId, studentId);
 
       // Create a download link
@@ -464,6 +463,25 @@ const StudentFeesPage: React.FC = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Download Receipt Loading Overlay */}
+      {downloading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+          {/* Bouncing circles wrapper */}
+          <div className="relative w-[200px] h-[60px]">
+            {/* Circles */}
+            <div className="absolute w-5 h-5 rounded-full bg-white left-[15%] origin-center animate-bounce-circle" />
+            <div className="absolute w-5 h-5 rounded-full bg-white left-[45%] origin-center animate-bounce-circle [animation-delay:0.2s]" />
+            <div className="absolute w-5 h-5 rounded-full bg-white right-[15%] origin-center animate-bounce-circle [animation-delay:0.3s]" />
+            {/* Shadows */}
+            <div className="absolute w-5 h-1 rounded-full bg-white/30 top-[62px] left-[15%] origin-center -z-10 blur-[1px] animate-bounce-shadow" />
+            <div className="absolute w-5 h-1 rounded-full bg-white/30 top-[62px] left-[45%] origin-center -z-10 blur-[1px] animate-bounce-shadow [animation-delay:0.2s]" />
+            <div className="absolute w-5 h-1 rounded-full bg-white/30 top-[62px] right-[15%] origin-center -z-10 blur-[1px] animate-bounce-shadow [animation-delay:0.3s]" />
+          </div>
+          <p className="mt-10 text-white text-sm font-medium tracking-wide">
+            Generating Receipt Please Wait...
+          </p>
+        </div>
+      )}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

@@ -1,5 +1,5 @@
 {
-  "id": "951f2763-e56a-465e-b5d1-00a774cbfba2",
+  "id": "16144501-01d4-496b-8323-87d3821d1d46",
   "prevId": "361b4bff-41ed-499e-b605-c3463cc3b95c",
   "version": "7",
   "dialect": "postgresql",
@@ -8603,6 +8603,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "challan_generated_at": {
+          "name": "challan_generated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -12712,12 +12718,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "user_type_id_fk": {
-          "name": "user_type_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
         "is_suspended": {
           "name": "is_suspended",
           "type": "boolean",
@@ -12767,21 +12767,7 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "users_user_type_id_fk_user_types_id_fk": {
-          "name": "users_user_type_id_fk_user_types_id_fk",
-          "tableFrom": "users",
-          "tableTo": "user_types",
-          "columnsFrom": [
-            "user_type_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "users_email_unique": {
@@ -15467,6 +15453,491 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.user_status_mapping": {
+      "name": "user_status_mapping",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "session_id_fk": {
+          "name": "session_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_status_master_id_fk": {
+          "name": "user_status_master_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id_fk": {
+          "name": "user_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "staff_id_fk": {
+          "name": "staff_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "student_id_fk": {
+          "name": "student_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "promotion_id_fk": {
+          "name": "promotion_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "suspended_reason": {
+          "name": "suspended_reason",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "suspended_till_date": {
+          "name": "suspended_till_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "by_user_id_fk": {
+          "name": "by_user_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_status_mapping_session_id_fk_sessions_id_fk": {
+          "name": "user_status_mapping_session_id_fk_sessions_id_fk",
+          "tableFrom": "user_status_mapping",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_status_mapping_user_status_master_id_fk_user_statuses_master_id_fk": {
+          "name": "user_status_mapping_user_status_master_id_fk_user_statuses_master_id_fk",
+          "tableFrom": "user_status_mapping",
+          "tableTo": "user_statuses_master",
+          "columnsFrom": [
+            "user_status_master_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_status_mapping_user_id_fk_users_id_fk": {
+          "name": "user_status_mapping_user_id_fk_users_id_fk",
+          "tableFrom": "user_status_mapping",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_status_mapping_staff_id_fk_staffs_id_fk": {
+          "name": "user_status_mapping_staff_id_fk_staffs_id_fk",
+          "tableFrom": "user_status_mapping",
+          "tableTo": "staffs",
+          "columnsFrom": [
+            "staff_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_status_mapping_student_id_fk_students_id_fk": {
+          "name": "user_status_mapping_student_id_fk_students_id_fk",
+          "tableFrom": "user_status_mapping",
+          "tableTo": "students",
+          "columnsFrom": [
+            "student_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_status_mapping_promotion_id_fk_promotions_id_fk": {
+          "name": "user_status_mapping_promotion_id_fk_promotions_id_fk",
+          "tableFrom": "user_status_mapping",
+          "tableTo": "promotions",
+          "columnsFrom": [
+            "promotion_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_status_mapping_by_user_id_fk_users_id_fk": {
+          "name": "user_status_mapping_by_user_id_fk_users_id_fk",
+          "tableFrom": "user_status_mapping",
+          "tableTo": "users",
+          "columnsFrom": [
+            "by_user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_statuses_master_domain": {
+      "name": "user_statuses_master_domain",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_status_master_id_fk": {
+          "name": "user_status_master_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "domain": {
+          "name": "domain",
+          "type": "user_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_statuses_master_domain_user_status_master_id_fk_user_statuses_master_id_fk": {
+          "name": "user_statuses_master_domain_user_status_master_id_fk_user_statuses_master_id_fk",
+          "tableFrom": "user_statuses_master_domain",
+          "tableTo": "user_statuses_master",
+          "columnsFrom": [
+            "user_status_master_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_status_master_frequency": {
+      "name": "user_status_master_frequency",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_status_master_id_fk": {
+          "name": "user_status_master_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "frequency": {
+          "name": "frequency",
+          "type": "user_status_master_frequency_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_status_master_frequency_user_status_master_id_fk_user_statuses_master_id_fk": {
+          "name": "user_status_master_frequency_user_status_master_id_fk_user_statuses_master_id_fk",
+          "tableFrom": "user_status_master_frequency",
+          "tableTo": "user_statuses_master",
+          "columnsFrom": [
+            "user_status_master_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_status_master_level": {
+      "name": "user_status_master_level",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_status_master_id_fk": {
+          "name": "user_status_master_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "level": {
+          "name": "level",
+          "type": "user_status_master_level_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_status_master_level_user_status_master_id_fk_user_statuses_master_id_fk": {
+          "name": "user_status_master_level_user_status_master_id_fk_user_statuses_master_id_fk",
+          "tableFrom": "user_status_master_level",
+          "tableTo": "user_statuses_master",
+          "columnsFrom": [
+            "user_status_master_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_statuses_master": {
+      "name": "user_statuses_master",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "user_status_master_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tag": {
+          "name": "tag",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(2000)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "coexistence": {
+          "name": "coexistence",
+          "type": "varchar(2000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enrollment_status": {
+          "name": "enrollment_status",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_academic_records_accessible": {
+          "name": "is_academic_records_accessible",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "has_fee_payment_eligibility": {
+          "name": "has_fee_payment_eligibility",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_form_fillup_inclusive": {
+          "name": "is_form_fillup_inclusive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_exam_inclusive": {
+          "name": "is_exam_inclusive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_statuses_master_tag_unique": {
+          "name": "user_statuses_master_tag_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tag"
+          ]
+        },
+        "user_statuses_master_enrollmentStatus_unique": {
+          "name": "user_statuses_master_enrollmentStatus_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "enrollment_status"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.exam_candidates": {
       "name": "exam_candidates",
       "schema": "",
@@ -16643,193 +17114,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.app_modules": {
-      "name": "app_modules",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "parent_app_module_id_fk": {
-          "name": "parent_app_module_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "varchar(1000)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "module_url": {
-          "name": "module_url",
-          "type": "varchar(1000)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "image": {
-          "name": "image",
-          "type": "varchar(5000)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_master_module": {
-          "name": "is_master_module",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "app_modules_parent_app_module_id_fk_app_modules_id_fk": {
-          "name": "app_modules_parent_app_module_id_fk_app_modules_id_fk",
-          "tableFrom": "app_modules",
-          "tableTo": "app_modules",
-          "columnsFrom": [
-            "parent_app_module_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "app_modules_name_unique": {
-          "name": "app_modules_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.department_designation_mapping": {
-      "name": "department_designation_mapping",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "department_id_fk": {
-          "name": "department_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "designation_id_fk": {
-          "name": "designation_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "department_designation_mapping_department_id_fk_departments_id_fk": {
-          "name": "department_designation_mapping_department_id_fk_departments_id_fk",
-          "tableFrom": "department_designation_mapping",
-          "tableTo": "departments",
-          "columnsFrom": [
-            "department_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "department_designation_mapping_designation_id_fk_designations_id_fk": {
-          "name": "department_designation_mapping_designation_id_fk_designations_id_fk",
-          "tableFrom": "department_designation_mapping",
-          "tableTo": "designations",
-          "columnsFrom": [
-            "designation_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_dept_designation": {
-          "name": "uq_dept_designation",
-          "nullsNotDistinct": false,
-          "columns": [
-            "department_id_fk",
-            "designation_id_fk"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.departments": {
       "name": "departments",
       "schema": "",
@@ -16871,12 +17155,6 @@
           "notNull": false,
           "default": true
         },
-        "parent_department_id_fk": {
-          "name": "parent_department_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -16893,21 +17171,7 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "departments_parent_department_id_fk_departments_id_fk": {
-          "name": "departments_parent_department_id_fk_departments_id_fk",
-          "tableFrom": "departments",
-          "tableTo": "departments",
-          "columnsFrom": [
-            "parent_department_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "departments_name_unique": {
@@ -16995,8 +17259,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.user_group_domains": {
-      "name": "user_group_domains",
+    "public.sub_departments": {
+      "name": "sub_departments",
       "schema": "",
       "columns": {
         "id": {
@@ -17005,84 +17269,27 @@
           "primaryKey": true,
           "notNull": true
         },
-        "user_group_id_fk": {
-          "name": "user_group_id_fk",
+        "department_id_fk": {
+          "name": "department_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "domain": {
-          "name": "domain",
-          "type": "academic360_application_domain_type",
-          "typeSchema": "public",
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_group_domains_user_group_id_fk_user_groups_id_fk": {
-          "name": "user_group_domains_user_group_id_fk_user_groups_id_fk",
-          "tableFrom": "user_group_domains",
-          "tableTo": "user_groups",
-          "columnsFrom": [
-            "user_group_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_user_group_domain": {
-          "name": "uq_user_group_domain",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_group_id_fk",
-            "domain"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_group_designations": {
-      "name": "user_group_designations",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_group_id_fk": {
-          "name": "user_group_id_fk",
-          "type": "integer",
+        "short_name": {
+          "name": "short_name",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
-        "designation_id_fk": {
-          "name": "designation_id_fk",
-          "type": "integer",
+        "description": {
+          "name": "description",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -17095,380 +17302,24 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp with time zone",
+          "type": "timestamp",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "user_group_designations_user_group_id_fk_user_groups_id_fk": {
-          "name": "user_group_designations_user_group_id_fk_user_groups_id_fk",
-          "tableFrom": "user_group_designations",
-          "tableTo": "user_groups",
-          "columnsFrom": [
-            "user_group_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_group_designations_designation_id_fk_designations_id_fk": {
-          "name": "user_group_designations_designation_id_fk_designations_id_fk",
-          "tableFrom": "user_group_designations",
-          "tableTo": "designations",
-          "columnsFrom": [
-            "designation_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_user_group_designation": {
-          "name": "uq_user_group_designation",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_group_id_fk",
-            "designation_id_fk"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_group_members": {
-      "name": "user_group_members",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_group_id_fk": {
-          "name": "user_group_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "member": {
-          "name": "member",
-          "type": "user_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_type_id_fk": {
-          "name": "user_type_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_group_members_user_group_id_fk_user_groups_id_fk": {
-          "name": "user_group_members_user_group_id_fk_user_groups_id_fk",
-          "tableFrom": "user_group_members",
-          "tableTo": "user_groups",
-          "columnsFrom": [
-            "user_group_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_group_members_user_type_id_fk_user_types_id_fk": {
-          "name": "user_group_members_user_type_id_fk_user_types_id_fk",
-          "tableFrom": "user_group_members",
-          "tableTo": "user_types",
-          "columnsFrom": [
-            "user_type_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_user_group_member": {
-          "name": "uq_user_group_member",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_group_id_fk",
-            "member"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_groups": {
-      "name": "user_groups",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "code": {
-          "name": "code",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sequence": {
-          "name": "sequence",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "user_groups_name_unique": {
-          "name": "user_groups_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_privilege_sub_program_courses": {
-      "name": "user_privilege_sub_program_courses",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_privilege_sub_id_fk": {
-          "name": "user_privilege_sub_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "program_course_id_fk": {
-          "name": "program_course_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_accessible": {
-          "name": "is_accessible",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_privilege_sub_program_courses_user_privilege_sub_id_fk_user_privilege_sub_id_fk": {
-          "name": "user_privilege_sub_program_courses_user_privilege_sub_id_fk_user_privilege_sub_id_fk",
-          "tableFrom": "user_privilege_sub_program_courses",
-          "tableTo": "user_privilege_sub",
-          "columnsFrom": [
-            "user_privilege_sub_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_privilege_sub_program_courses_program_course_id_fk_program_courses_id_fk": {
-          "name": "user_privilege_sub_program_courses_program_course_id_fk_program_courses_id_fk",
-          "tableFrom": "user_privilege_sub_program_courses",
-          "tableTo": "program_courses",
-          "columnsFrom": [
-            "program_course_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_privilege_sub_program_course": {
-          "name": "uq_privilege_sub_program_course",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_privilege_sub_id_fk",
-            "program_course_id_fk"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_privilege_sub_scopes": {
-      "name": "user_privilege_sub_scopes",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_privilege_sub_id_fk": {
-          "name": "user_privilege_sub_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "department_id_fk": {
-          "name": "department_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "designation_id_fk": {
-          "name": "designation_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_accessible": {
-          "name": "is_accessible",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_privilege_sub_scopes_user_privilege_sub_id_fk_user_privilege_sub_id_fk": {
-          "name": "user_privilege_sub_scopes_user_privilege_sub_id_fk_user_privilege_sub_id_fk",
-          "tableFrom": "user_privilege_sub_scopes",
-          "tableTo": "user_privilege_sub",
-          "columnsFrom": [
-            "user_privilege_sub_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_privilege_sub_scopes_department_id_fk_departments_id_fk": {
-          "name": "user_privilege_sub_scopes_department_id_fk_departments_id_fk",
-          "tableFrom": "user_privilege_sub_scopes",
+        "sub_departments_department_id_fk_departments_id_fk": {
+          "name": "sub_departments_department_id_fk_departments_id_fk",
+          "tableFrom": "sub_departments",
           "tableTo": "departments",
           "columnsFrom": [
             "department_id_fk"
@@ -17478,702 +17329,16 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "user_privilege_sub_scopes_designation_id_fk_designations_id_fk": {
-          "name": "user_privilege_sub_scopes_designation_id_fk_designations_id_fk",
-          "tableFrom": "user_privilege_sub_scopes",
-          "tableTo": "designations",
-          "columnsFrom": [
-            "designation_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_privilege_sub_scope": {
-          "name": "uq_privilege_sub_scope",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_privilege_sub_id_fk",
-            "department_id_fk",
-            "designation_id_fk"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_privilege_sub": {
-      "name": "user_privilege_sub",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_privilege_id_fk": {
-          "name": "user_privilege_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "app_module_id_fk": {
-          "name": "app_module_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_accessible": {
-          "name": "is_accessible",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_privilege_sub_user_privilege_id_fk_user_privileges_id_fk": {
-          "name": "user_privilege_sub_user_privilege_id_fk_user_privileges_id_fk",
-          "tableFrom": "user_privilege_sub",
-          "tableTo": "user_privileges",
-          "columnsFrom": [
-            "user_privilege_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_privilege_sub_app_module_id_fk_app_modules_id_fk": {
-          "name": "user_privilege_sub_app_module_id_fk_app_modules_id_fk",
-          "tableFrom": "user_privilege_sub",
-          "tableTo": "app_modules",
-          "columnsFrom": [
-            "app_module_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_user_group_app_module_program_course_department": {
-          "name": "uq_user_group_app_module_program_course_department",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_privilege_id_fk",
-            "app_module_id_fk"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_privileges": {
-      "name": "user_privileges",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_group_id_fk": {
-          "name": "user_group_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_status_id_fk": {
-          "name": "user_status_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_privileges_user_group_id_fk_user_groups_id_fk": {
-          "name": "user_privileges_user_group_id_fk_user_groups_id_fk",
-          "tableFrom": "user_privileges",
-          "tableTo": "user_groups",
-          "columnsFrom": [
-            "user_group_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_privileges_user_status_id_fk_user_statuses_id_fk": {
-          "name": "user_privileges_user_status_id_fk_user_statuses_id_fk",
-          "tableFrom": "user_privileges",
-          "tableTo": "user_statuses",
-          "columnsFrom": [
-            "user_status_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_user_group_status": {
-          "name": "uq_user_group_status",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_group_id_fk",
-            "user_status_id_fk"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_staff_designation_mapping": {
-      "name": "user_staff_designation_mapping",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "staff_id_fk": {
-          "name": "staff_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "department_id_fk": {
-          "name": "department_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "designation_id_fk": {
-          "name": "designation_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_primary": {
-          "name": "is_primary",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_staff_designation_mapping_staff_id_fk_staffs_id_fk": {
-          "name": "user_staff_designation_mapping_staff_id_fk_staffs_id_fk",
-          "tableFrom": "user_staff_designation_mapping",
-          "tableTo": "staffs",
-          "columnsFrom": [
-            "staff_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_staff_designation_mapping_department_id_fk_departments_id_fk": {
-          "name": "user_staff_designation_mapping_department_id_fk_departments_id_fk",
-          "tableFrom": "user_staff_designation_mapping",
-          "tableTo": "departments",
-          "columnsFrom": [
-            "department_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_staff_designation_mapping_designation_id_fk_designations_id_fk": {
-          "name": "user_staff_designation_mapping_designation_id_fk_designations_id_fk",
-          "tableFrom": "user_staff_designation_mapping",
-          "tableTo": "designations",
-          "columnsFrom": [
-            "designation_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_staff_designation_dept": {
-          "name": "uq_staff_designation_dept",
-          "nullsNotDistinct": false,
-          "columns": [
-            "staff_id_fk",
-            "designation_id_fk",
-            "department_id_fk"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_status_reasons": {
-      "name": "user_status_reasons",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_status_id_fk": {
-          "name": "user_status_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "varchar(1000)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "remarks": {
-          "name": "remarks",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_terminal": {
-          "name": "is_terminal",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_status_reasons_user_status_id_fk_user_statuses_id_fk": {
-          "name": "user_status_reasons_user_status_id_fk_user_statuses_id_fk",
-          "tableFrom": "user_status_reasons",
-          "tableTo": "user_statuses",
-          "columnsFrom": [
-            "user_status_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_user_status": {
-          "name": "uq_user_status",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_status_id_fk",
-            "name"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_status_session_mapping": {
-      "name": "user_status_session_mapping",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id_fk": {
-          "name": "user_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "session_id_fk": {
-          "name": "session_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_status_reason_id_fk": {
-          "name": "user_status_reason_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "suspended_till_date": {
-          "name": "suspended_till_date",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "remarks": {
-          "name": "remarks",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "by_user_id_fk": {
-          "name": "by_user_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_status_session_mapping_user_id_fk_users_id_fk": {
-          "name": "user_status_session_mapping_user_id_fk_users_id_fk",
-          "tableFrom": "user_status_session_mapping",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_status_session_mapping_session_id_fk_sessions_id_fk": {
-          "name": "user_status_session_mapping_session_id_fk_sessions_id_fk",
-          "tableFrom": "user_status_session_mapping",
-          "tableTo": "sessions",
-          "columnsFrom": [
-            "session_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_status_session_mapping_user_status_reason_id_fk_user_status_reasons_id_fk": {
-          "name": "user_status_session_mapping_user_status_reason_id_fk_user_status_reasons_id_fk",
-          "tableFrom": "user_status_session_mapping",
-          "tableTo": "user_status_reasons",
-          "columnsFrom": [
-            "user_status_reason_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "user_status_session_mapping_by_user_id_fk_users_id_fk": {
-          "name": "user_status_session_mapping_by_user_id_fk_users_id_fk",
-          "tableFrom": "user_status_session_mapping",
-          "tableTo": "users",
-          "columnsFrom": [
-            "by_user_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "uq_user_session_status_reason": {
-          "name": "uq_user_session_status_reason",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_id_fk",
-            "session_id_fk",
-            "user_status_reason_id_fk"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_statuses": {
-      "name": "user_statuses",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "user_statuses_name_unique": {
-          "name": "user_statuses_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_types": {
-      "name": "user_types",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "code": {
-          "name": "code",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_deletable": {
-          "name": "is_deletable",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "user_types_name_unique": {
-          "name": "user_types_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     }
   },
   "enums": {
-    "public.academic360_application_domain_type": {
-      "name": "academic360_application_domain_type",
-      "schema": "public",
-      "values": [
-        "MAIN_CONSOLE",
-        "STUDENT_CONSOLE",
-        "STUDENT_CONSOLE_MOBILE",
-        "EXAM_ATTENDANCE_APP",
-        "ID_CARD_GENERATOR",
-        "EVENT_GATEKEEPER"
-      ]
-    },
     "public.address_type": {
       "name": "address_type",
       "schema": "public",
@@ -18665,6 +17830,34 @@
         "HONOURS",
         "GENERAL",
         "ELECTIVE"
+      ]
+    },
+    "public.user_status_master_frequency_type": {
+      "name": "user_status_master_frequency_type",
+      "schema": "public",
+      "values": [
+        "ALWAYS_NEW_ENTRY",
+        "PER_ACADEMIC_YEAR",
+        "PER_SEMESTER",
+        "ONLY_ONCE",
+        "REQUIRED",
+        "OPTIONAL"
+      ]
+    },
+    "public.user_status_master_level_type": {
+      "name": "user_status_master_level_type",
+      "schema": "public",
+      "values": [
+        "SYSTEM",
+        "ACADEMIC"
+      ]
+    },
+    "public.user_status_master_type": {
+      "name": "user_status_master_type",
+      "schema": "public",
+      "values": [
+        "ACTIVE",
+        "IN_ACTIVE"
       ]
     },
     "public.user_type": {

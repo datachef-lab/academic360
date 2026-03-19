@@ -94,11 +94,32 @@ export default {
         },
         "spinner-fzua35": {
           "0%, 10%, 20%, 30%, 50%, 60%, 70%, 80%, 90%, 100%": {
-            transform: "rotate(calc(var(--rotation) * 1deg)) translate(0, calc(var(--translation) * 1%))",
+            transform:
+              "rotate(calc(var(--rotation) * 1deg)) translate(0, calc(var(--translation) * 1%))",
           },
           "50%": {
-            transform: "rotate(calc(var(--rotation) * 1deg)) translate(0, calc(var(--translation) * 1.5%))",
+            transform:
+              "rotate(calc(var(--rotation) * 1deg)) translate(0, calc(var(--translation) * 1.5%))",
           },
+        },
+        "bounce-circle": {
+          "0%": {
+            top: "60px",
+            height: "5px",
+            borderRadius: "50px 50px 25px 25px",
+            transform: "scaleX(1.7)",
+          },
+          "40%": {
+            height: "20px",
+            borderRadius: "50%",
+            transform: "scaleX(1)",
+          },
+          "100%": { top: "0%" },
+        },
+        "bounce-shadow": {
+          "0%": { transform: "scaleX(1.5)" },
+          "40%": { transform: "scaleX(1)", opacity: "0.7" },
+          "100%": { transform: "scaleX(0.2)", opacity: "0.4" },
         },
       },
       animation: {
@@ -106,6 +127,8 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         "caret-blink": "caret-blink 1.25s ease-out infinite",
         "spinner-fzua35": "spinner-fzua35 1s calc(var(--delay) * 1s) infinite ease",
+        "bounce-circle": "bounce-circle 0.5s alternate infinite ease",
+        "bounce-shadow": "bounce-shadow 0.5s alternate infinite ease",
       },
     },
   },
