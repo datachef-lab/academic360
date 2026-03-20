@@ -15,7 +15,7 @@ export const accessGroupUserTypeModel = pgTable("access_group__user_type", {
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
-    accessGroupUserTypeUq: unique("access_group__user_type_uq").on(
+    accessGroupUserTypeUq: unique("uq_access_group_user_type").on(
         table.accessGroupId,
         table.userTypeId,
     )

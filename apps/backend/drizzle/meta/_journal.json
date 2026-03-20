@@ -687,6 +687,20 @@
       "when": 1773816604917,
       "tag": "0097_jazzy_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1773992006162,
+      "tag": "0098_short_butterfly",
+      "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1773992222127,
+      "tag": "0099_clear_crusher_hogan",
+      "breakpoints": true
     }
   ]
 }

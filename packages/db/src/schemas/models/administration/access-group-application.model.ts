@@ -13,7 +13,7 @@ export const accessGroupApplicationModel = pgTable("access_group_applications", 
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
-    accessGroupUserTypeUq: unique("access_group__user_type_uq").on(
+    accessGroupUserTypeUnique: unique("uq_access_group__user_type").on(
         table.accessGroupId,
         table.type,
     )

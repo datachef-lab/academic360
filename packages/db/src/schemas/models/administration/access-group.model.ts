@@ -1,5 +1,5 @@
 import { accessGroupTypeEnum } from "@/schemas/enums";
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, unique, varchar } from "drizzle-orm/pg-core";
 import { userStatusMasterModel } from "./user-status-master.model";
 import z from "zod";
 import { createInsertSchema } from "drizzle-zod";
@@ -17,7 +17,13 @@ export const accessGroupModel = pgTable("access_groups",  {
     isActive: boolean().default(true).notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+    nameTypeUserStatusUnique: unique("uq_name_user_status").on(
+        table.name,
+        table.type,
+        table.userStatusId,
+    ),
+}));
 
 export const createAccessGroupSchema = createInsertSchema(accessGroupModel);
 

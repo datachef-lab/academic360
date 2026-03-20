@@ -4,6 +4,7 @@ import { pgTable, serial, varchar, boolean, timestamp, text, integer } from "dri
 
 import { userTypeEnum } from "@/schemas/enums";
 import { userTypeModel } from "../administration/user-type.model";
+import { institutionalRoleModel } from "../administration/institutional-role.model";
 // import { personalDetailsModel } from "./personalDetails.model";
 
 export const userModel = pgTable('users', {
@@ -18,6 +19,8 @@ export const userModel = pgTable('users', {
     isSuspended: boolean().default(false),
     suspendedReason: text(),
     suspendedTillDate: timestamp(),
+    institutionalRoleId: integer("institutional_role_id_fk")
+        .references(() => institutionalRoleModel.id),
     isActive: boolean().default(true),
     sendStagingNotifications: boolean().default(false),
     createdAt: timestamp({withTimezone: true}).notNull().defaultNow(),

@@ -17,9 +17,7 @@ export const userStatusMasterModel = pgTable("user_statuses_master", {
    description: varchar({ length: 500 }),
    code: varchar({ length: 255 }),
    isActive: boolean().notNull().default(true),
-    allowedDesignationFiltering: boolean().notNull().default(false),
-    allowedProgramCourseFiltering: boolean().notNull().default(false),
-    allowedSemesterFiltering: boolean().notNull().default(false),
+    
    createdAt: timestamp({ withTimezone: true })
        .notNull()
        .defaultNow(),
