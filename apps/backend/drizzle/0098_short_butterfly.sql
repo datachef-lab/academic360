@@ -1,8 +1,35 @@
 DO $$ BEGIN
+    CREATE TYPE "public"."academic360_application_domain_type" AS ENUM (
+        'MAIN_CONSOLE',
+        'STUDENT_CONSOLE',
+        'STUDENT_CONSOLE_MOBILE',
+        'EXAM_ATTENDANCE_APP',
+        'ID_CARD_GENERATOR',
+        'EVENT_GATEKEEPER'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
     CREATE TYPE "public"."app_module_icon_type" AS ENUM('emoji', 'lucide', 'svg', 'url');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "app_modules" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"parent_app_module_id_fk" integer,
+	"name" varchar(500) NOT NULL,
+	"description" varchar(1000) NOT NULL,
+	"module_url" varchar(1000) NOT NULL,
+	"image" varchar(5000),
+	"is_master_module" boolean DEFAULT false NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "app_modules_name_unique" UNIQUE("name")
+);
 --> statement-breakpoint
 DROP TABLE IF EXISTS "user_statuses_master" CASCADE;
 --> statement-breakpoint
