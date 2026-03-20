@@ -136,17 +136,17 @@ CREATE TABLE "session_statuses" (
 --> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "users" DROP CONSTRAINT "users_user_type_id_fk_user_types_id_fk"; EXCEPTION WHEN undefined_object OR undefined_table THEN null; END $$;
 --> statement-breakpoint
-DO $$ BEGIN ALTER TABLE "fee_student_mappings" ADD COLUMN "challan_generated_at" timestamp with time zone; EXCEPTION WHEN duplicate_column THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "fee_student_mappings" ADD COLUMN "challan_generated_at" timestamp with time zone; EXCEPTION WHEN duplicate_column OR undefined_table THEN null; END $$;
 --> statement-breakpoint
-DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "institutional_role_id_fk" integer; EXCEPTION WHEN duplicate_column THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "institutional_role_id_fk" integer; EXCEPTION WHEN duplicate_column OR undefined_table THEN null; END $$;
 --> statement-breakpoint
-DO $$ BEGIN ALTER TABLE "user_statuses_master" ADD COLUMN "user_type_id_fk" integer; EXCEPTION WHEN duplicate_column THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "user_statuses_master" ADD COLUMN "user_type_id_fk" integer; EXCEPTION WHEN duplicate_column OR undefined_table THEN null; END $$;
 --> statement-breakpoint
-DO $$ BEGIN ALTER TABLE "user_types" ADD COLUMN "parent_user_type_id_fk" integer; EXCEPTION WHEN duplicate_column THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "user_types" ADD COLUMN "parent_user_type_id_fk" integer; EXCEPTION WHEN duplicate_column OR undefined_table THEN null; END $$;
 --> statement-breakpoint
-DO $$ BEGIN ALTER TABLE "user_types" ADD COLUMN "allowed_designation_filtering" boolean DEFAULT false NOT NULL; EXCEPTION WHEN duplicate_column THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "user_types" ADD COLUMN "allowed_designation_filtering" boolean DEFAULT false NOT NULL; EXCEPTION WHEN duplicate_column OR undefined_table THEN null; END $$;
 --> statement-breakpoint
-DO $$ BEGIN ALTER TABLE "user_types" ADD COLUMN "allowed_module_type_filtering" boolean DEFAULT false NOT NULL; EXCEPTION WHEN duplicate_column THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "user_types" ADD COLUMN "allowed_module_type_filtering" boolean DEFAULT false NOT NULL; EXCEPTION WHEN duplicate_column OR undefined_table THEN null; END $$;
 --> statement-breakpoint
 ALTER TABLE "access_group_applications" ADD CONSTRAINT "access_group_applications_access_group_id_fk_access_groups_id_fk" FOREIGN KEY ("access_group_id_fk") REFERENCES "public"."access_groups"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "access_group__designation" ADD CONSTRAINT "access_group__designation_access_group_id_fk_access_groups_id_fk" FOREIGN KEY ("access_group_id_fk") REFERENCES "public"."access_groups"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
