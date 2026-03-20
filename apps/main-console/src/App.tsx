@@ -522,6 +522,7 @@ const router = createBrowserRouter(
             { path: "create", element: <div>TODO: Create User Group</div> },
             { path: "departments", element: <administrationModule.DepartmentPage /> },
             { path: "designations", element: <administrationModule.DesignationPage /> },
+            { path: "user-types", element: <administrationModule.UserTypePage /> },
             { path: "roles", element: <div>TODO: Roles & Permissions Page</div> },
             { path: "reports", element: <div>TODO: User Access Reports Page</div> },
           ],

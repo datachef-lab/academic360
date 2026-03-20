@@ -80,6 +80,8 @@ import {
   studentRouter,
   // subDepartmentRouter,
   transportRouter,
+  userStatusMasterRouter,
+  userTypeRouter,
   userRouter,
   // userStatusMasterDomainRouter,
   // userStatusMasterFrequencyRouter,
@@ -374,8 +376,8 @@ app.use("/api/users", userRouter);
 
 // app.use("/api/user-statuses", userStatusMappingRouter);
 
-// // User status master endpoints
-// app.use("/api/user-status-masters", userStatusMasterRouter);
+// User status master endpoints
+app.use("/api/administration/user-status-masters", userStatusMasterRouter);
 // // User status master level endpoints
 // app.use("/api/user-status-master-levels", userStatusMasterLevelRouter);
 // // User status master domain endpoints
@@ -439,6 +441,7 @@ app.use("/api/qualifications", qualificationRouter);
 // app.use("/api/administration/designations", designationRouter);
 
 // app.use("/api/administration/sub-departments", subDepartmentRouter);
+app.use("/api/administration/user-types", userTypeRouter);
 
 app.use("/api/address", addressRouter);
 
