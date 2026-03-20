@@ -134,7 +134,7 @@ CREATE TABLE "session_statuses" (
 	CONSTRAINT "uq_session_role_user_status" UNIQUE("session_id_fk","user_id_fk","user_status_master_id_fk")
 );
 --> statement-breakpoint
-ALTER TABLE "users" DROP CONSTRAINT "users_user_type_id_fk_user_types_id_fk";
+DO $$ BEGIN ALTER TABLE "users" DROP CONSTRAINT "users_user_type_id_fk_user_types_id_fk"; EXCEPTION WHEN undefined_object OR undefined_table THEN null; END $$;
 --> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "fee_student_mappings" ADD COLUMN "challan_generated_at" timestamp with time zone; EXCEPTION WHEN duplicate_column THEN null; END $$;
 --> statement-breakpoint
