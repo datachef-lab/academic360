@@ -80,7 +80,12 @@ import {
   studentRouter,
   // subDepartmentRouter,
   transportRouter,
+  designationRouter,
+  sessionStatusRouter,
   userStatusMasterRouter,
+  accessGroupApplicationRouter,
+  accessGroupDesignationRouter,
+  accessGroupUserTypeRouter,
   userTypeRouter,
   userRouter,
   // userStatusMasterDomainRouter,
@@ -438,10 +443,23 @@ app.use("/api/qualifications", qualificationRouter);
 
 // app.use("/api/administration/departments", departmentRouter);
 
-// app.use("/api/administration/designations", designationRouter);
+app.use("/api/administration/designations", designationRouter);
+app.use("/api/administration/session-statuses", sessionStatusRouter);
 
 // app.use("/api/administration/sub-departments", subDepartmentRouter);
 app.use("/api/administration/user-types", userTypeRouter);
+app.use(
+  "/api/administration/access-group-applications",
+  accessGroupApplicationRouter,
+);
+app.use(
+  "/api/administration/access-group-designations",
+  accessGroupDesignationRouter,
+);
+app.use(
+  "/api/administration/access-group-user-types",
+  accessGroupUserTypeRouter,
+);
 
 app.use("/api/address", addressRouter);
 
