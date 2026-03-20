@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, timestamp, unique } from "drizzle-orm/pg-core";
 import { accessGroupModel } from "./access-group.model";
 import { designationModel } from "./designation.model";
 import z from "zod";
@@ -14,7 +14,12 @@ export const accessGroupDesignationModel = pgTable("access_group__designation", 
         .notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+    accessGroupDesignationUnique: unique("uq_access_group_designation").on(
+        table.accessGroupId,
+        table.designationId,
+    ),
+}));
 
 export const createAccessGroupDesignationSchema = createInsertSchema(accessGroupDesignationModel);
 

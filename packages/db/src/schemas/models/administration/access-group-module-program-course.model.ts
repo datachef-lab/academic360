@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, unique } from "drizzle-orm/pg-core";
 import { accessGroupModuleModel } from "./access-group-module.model";
 import { programCourseModel } from "../course-design";
 import { createInsertSchema } from "drizzle-zod";
@@ -12,10 +12,15 @@ export const accessGroupModuleProgramCourseModel = pgTable("access_group_module_
     programCourseId: integer("program_course_id_fk")
         .references(() => programCourseModel.id)
         .notNull(),
-    isAvailable: boolean().default(true).notNull(),
+    isAllowed: boolean().default(true).notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+    accessGroupModuleProgramCourseUnique: unique("uq_access_group_module_program_course").on(
+        table.accessGroupModuleId,
+        table.programCourseId,
+    )
+}));
 
 export const createAccessGroupModuleProgramCourseSchema = createInsertSchema(accessGroupModuleProgramCourseModel);
 

@@ -382,7 +382,7 @@ export const appModuleIconEnum = pgEnum("app_module_icon_type", [
     "url",
  ]);
 
- export const appModulePermissionEnum = pgEnum("app_module_permission_type", [
+ export const accessGroupModulePermissionEnum = pgEnum("access_group_module_permission_type", [
     "CREATE",
     "READ",
     "UPDATE",
@@ -395,3 +395,8 @@ export const appModuleIconEnum = pgEnum("app_module_icon_type", [
     "ADD-ON",
     "SPECIAL",
  ]);
+
+export const accessGroupModuleTypeEnum = pgEnum("access_group_module_type", [
+    "STATIC",
+    "CONDITIONAL",
+]);

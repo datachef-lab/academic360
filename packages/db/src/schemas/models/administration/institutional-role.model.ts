@@ -1,21 +1,18 @@
 import { boolean, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { userModel } from "../user";
 import { userTypeModel } from "./user-type.model";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
+import { identityMasterModel } from "./identity-master.model";
 
 export const institutionalRoleModel = pgTable("institutional_roles", {
     id: serial().primaryKey(),
-    userId: integer("user_id_fk")
-        .references(() => userModel.id)
+    identityMasterId: integer("identity_master_id_fk")
+        .references(() => identityMasterModel.id)
         .notNull(),
     userTypeId: integer("user_type_id_fk")
         .references(() => userTypeModel.id)
         .notNull(),
     validTill: timestamp({ withTimezone: true }),
-    approvedByUserId: integer("approved_by_user_id_fk")
-        .references(() => userModel.id)
-        .notNull(),
     isPrimary: boolean().default(true).notNull(),
     isActive: boolean().default(true).notNull(),
     createdAt: timestamp({ withTimezone: true })
