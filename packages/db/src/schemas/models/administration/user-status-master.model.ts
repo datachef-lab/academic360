@@ -14,6 +14,7 @@ export const userStatusMasterModel = pgTable("user_statuses_master", {
        .notNull()
        .unique(),
    color: varchar({ length: 255 }),
+   bgColor: varchar({ length: 255 }),
    description: varchar({ length: 500 }),
    code: varchar({ length: 255 }),
    isActive: boolean().notNull().default(true),

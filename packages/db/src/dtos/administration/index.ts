@@ -1,6 +1,10 @@
 import { AccessGroupApplicationT, AccessGroupDesignationT, AccessGroupModuleClassT, AccessGroupModulePermissionT, AccessGroupModuleProgramCourseT, AccessGroupModuleT, AccessGroupT, AccessGroupUserTypeT, AppModuleT, ClassT, DepartmentT, DesignationT, UserStatusMasterT, UserTypeT } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
 
+export interface UserTypeDto extends Omit<UserTypeT, "parentUserTypeId"> {
+   parentUserType: UserTypeT | null;
+}
+
 export interface DepartmentDto extends Omit<DepartmentT, "parentDepartmentId"> {
    parentDepartment: DepartmentDto | null;
 }
@@ -10,7 +14,7 @@ export interface AppModuleDto extends Omit<AppModuleT, "parentAppModuleId"> {
 }
 
 export interface UserStatusMasterDto extends Omit<UserStatusMasterT, "parentUserStatusMasterId"> {
-   parentUserStatusMasterId: UserStatusMasterDto | null;
+   parentUserStatusMaster: UserStatusMasterT | null;
 }
 
 export interface AccessGroupDesignationDto extends Omit<AccessGroupDesignationT, "designationId"> {
