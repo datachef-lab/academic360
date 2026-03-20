@@ -98,4 +98,4 @@ DO $$ BEGIN ALTER TABLE "app_modules" ADD COLUMN "is_read_only" boolean DEFAULT 
 --> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "user_statuses_master" ADD CONSTRAINT "user_statuses_master_parent_user_status_master_id_fk_user_statuses_master_id_fk" FOREIGN KEY ("parent_user_status_master_id_fk") REFERENCES "public"."user_statuses_master"("id") ON DELETE no action ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN null; END $$;
 --> statement-breakpoint
-DO $$ BEGIN ALTER TABLE "user_types" DROP COLUMN "is_deletable"; EXCEPTION WHEN undefined_column THEN null; END $$;
+DO $$ BEGIN ALTER TABLE "user_types" DROP COLUMN "is_deletable"; EXCEPTION WHEN undefined_column OR undefined_table THEN null; END $$;
