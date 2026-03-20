@@ -123,30 +123,30 @@ const defaultPrimaryUserStatuses: UserStatusMasterT[] = [
   {
     name: PRIMARY_USER_STATUS.Inactive,
     code: "INACTIVE",
-    color: "#64748b",
-    bgColor: "#f1f5f9",
+    color: "#dc2626",
+    bgColor: "#fee2e2",
     description: "User account is inactive and cannot access the system.",
   },
   {
     name: PRIMARY_USER_STATUS.Suspended,
     code: "SUSPENDED",
-    color: "#b91c1c",
-    bgColor: "#fee2e2",
+    color: "#ca8a04",
+    bgColor: "#fef9c3",
     description:
       "User account has been temporarily suspended due to a policy violation or administrative action.",
   },
   {
     name: PRIMARY_USER_STATUS.Applicant,
     code: "APPLICANT",
-    color: "#1d4ed8",
-    bgColor: "#dbeafe",
+    color: "#0284c7",
+    bgColor: "#e0f2fe",
     description: "Prospective student in the admission process.",
   },
 ];
 
 const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
-    name: "Active",
+    name: "Active (Default)",
     code: "ACTIVE",
     color: "#059669",
     bgColor: "#d1fae5",
@@ -182,8 +182,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Semester Break",
     code: "INACT_SEM",
-    color: "#64748b",
-    bgColor: "#e2e8f0",
+    color: "#57534e",
+    bgColor: "#fafaf9",
     description: "User is inactive during an inter-semester break period.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
       (s) => s.code === "INACTIVE",
@@ -205,8 +205,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Disciplinary Suspension",
     code: "SUSP_DISC",
-    color: "#be123c",
-    bgColor: "#ffe4e6",
+    color: "#b91c1c",
+    bgColor: "#fee2e2",
     description:
       "User has been suspended due to a breach of institutional code of conduct.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -238,8 +238,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Examination Debarred",
     code: "SUSP_EXAM",
-    color: "#dc2626",
-    bgColor: "#fee2e2",
+    color: "#991b1b",
+    bgColor: "#fecaca",
     description:
       "User has been debarred from appearing in examinations due to eligibility criteria not being met.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -273,8 +273,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Admission Confirmed",
     code: "APPL_CONF",
-    color: "#047857",
-    bgColor: "#d1fae5",
+    color: "#0f766e",
+    bgColor: "#99f6e4",
     description:
       "Applicant's admission has been confirmed and enrollment is complete.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -284,8 +284,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Admission Cancelled",
     code: "APPL_CANC",
-    color: "#78716c",
-    bgColor: "#f5f5f4",
+    color: "#92400e",
+    bgColor: "#fef3c7",
     description:
       "Applicant's admission has been cancelled either by the institution or the applicant.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(

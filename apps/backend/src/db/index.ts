@@ -39,6 +39,7 @@ import { loadDefaultOtpNotificationMasters } from "@/features/auth/services/otp.
 // import { getIrpNotFoundCourseDesigns } from "@/features/exams/services/exam-schedule.service";
 import { createLogger } from "@/config/logger.js";
 import { loadDefaultUserTypes } from "@/features/administration/services/user-type.service";
+import { loadDefaultUserStatusMasters } from "@/features/administration/services/user-status-master.service";
 const log = createLogger("db");
 // Create a connection pool
 export const pool = new pg.Pool({
@@ -86,7 +87,9 @@ export const connectToDatabase = async () => {
     // Clear existing duplicates and load fresh metas (only in development)
 
     loadDefaultSubjectSelectionMetas();
+
     loadDefaultUserTypes();
+    loadDefaultUserStatusMasters();
     // loadAllStaff();
     // sendAdmRegFormToNotSendStudents();
     // loadDefaultOtpNotificationMaster();

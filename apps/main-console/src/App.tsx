@@ -524,6 +524,7 @@ const router = createBrowserRouter(
             { path: "designations", element: <administrationModule.DesignationPage /> },
             { path: "user-types", element: <administrationModule.UserTypePage /> },
             { path: "roles", element: <div>TODO: Roles & Permissions Page</div> },
+            { path: "user-statuses", element: <administrationModule.UserStatusPage /> },
             { path: "reports", element: <div>TODO: User Access Reports Page</div> },
           ],
         },

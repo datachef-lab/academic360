@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
-import { LayoutDashboard, Shapes } from "lucide-react";
+import { LayoutDashboard, Shapes, UserCheck } from "lucide-react";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const basePath = "/dashboard/user-groups-accesses";
@@ -16,6 +16,7 @@ const masterLinks = [
   // { title: "Designations", url: `${basePath}/designations`, icon: BadgeCheck },
   { title: "User Types", url: `${basePath}/user-types`, icon: Shapes },
   // { title: "Roles & Permissions", url: `${basePath}/roles`, icon: ShieldCheck },
+  { title: "User Statuses & Reasons", url: `${basePath}/user-statuses`, icon: UserCheck },
 ];
 
 export default function UserGroupsAccessLayout() {

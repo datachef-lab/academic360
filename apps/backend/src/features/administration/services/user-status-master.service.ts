@@ -6,6 +6,65 @@ import {
   userStatusMasterModel,
 } from "@repo/db/schemas/models/administration";
 import { UserStatusMasterDto } from "@repo/db/dtos/administration";
+import { userStatusData } from "@/features/default-administration-data";
+
+export async function loadDefaultUserStatusMasters() {
+  for (const userStatusMaster of userStatusData.defaultPrimaryUserStatuses) {
+    const [existingUserStatusMaster] = await db
+      .select()
+      .from(userStatusMasterModel)
+      .where(ilike(userStatusMasterModel.name, userStatusMaster.name.trim()));
+    if (existingUserStatusMaster) continue;
+    await db.insert(userStatusMasterModel).values(userStatusMaster).returning();
+  }
+  for (const userStatusMaster of userStatusData.defaultSubUserStatuses) {
+    if (!userStatusMaster.parentUserStatusMaster) {
+      throw new Error(
+        `Primary user status master not found for ${userStatusMaster.name}`,
+      );
+    }
+
+    const [primaryUserStatusMaster] = await db
+      .select()
+      .from(userStatusMasterModel)
+      .where(
+        eq(
+          userStatusMasterModel.name,
+          userStatusMaster.parentUserStatusMaster.name,
+        ),
+      );
+
+    if (!primaryUserStatusMaster) {
+      throw new Error(
+        `Primary user status master "${userStatusMaster.parentUserStatusMaster.name}" not found in database`,
+      );
+    }
+
+    const [existingUserStatusMaster] = await db
+      .select()
+      .from(userStatusMasterModel)
+      .where(
+        and(
+          ilike(userStatusMasterModel.name, userStatusMaster.name.trim()),
+          eq(
+            userStatusMasterModel.parentUserStatusMasterId,
+            primaryUserStatusMaster.id,
+          ),
+        ),
+      );
+    if (existingUserStatusMaster) continue;
+
+    const { parentUserStatusMaster: _, ...rest } = userStatusMaster;
+    const userStatusMasterPayload = {
+      ...rest,
+      parentUserStatusMasterId: primaryUserStatusMaster.id,
+    };
+    await db
+      .insert(userStatusMasterModel)
+      .values(userStatusMasterPayload)
+      .returning();
+  }
+}
 
 function normaliseUserStatusMasterPayload<
   T extends Partial<UserStatusMaster | UserStatusMasterT>,
