@@ -1,29 +1,21 @@
 import { Outlet, useLocation } from "react-router-dom";
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
-import {
-  LayoutDashboard,
-  Users2,
-  BadgeCheck,
-  Building2,
-  ShieldCheck,
-  UserCog,
-  Shapes,
-} from "lucide-react";
+import { LayoutDashboard, Shapes } from "lucide-react";
 import { useRestrictTempUsers } from "@/hooks/use-restrict-temp-users";
 
 const basePath = "/dashboard/user-groups-accesses";
 
 const quickLinks = [
   { title: "Home", url: `${basePath}`, icon: LayoutDashboard },
-  { title: "User Directory", url: `${basePath}/faculties`, icon: Users2 },
+  // { title: "User Directory", url: `${basePath}/faculties`, icon: Users2 },
 ];
 
 const masterLinks = [
-  { title: "User Groups", url: `${basePath}/user-groups`, icon: UserCog },
-  { title: "Departments", url: `${basePath}/departments`, icon: Building2 },
-  { title: "Designations", url: `${basePath}/designations`, icon: BadgeCheck },
+  // { title: "User Groups", url: `${basePath}/user-groups`, icon: UserCog },
+  // { title: "Departments", url: `${basePath}/departments`, icon: Building2 },
+  // { title: "Designations", url: `${basePath}/designations`, icon: BadgeCheck },
   { title: "User Types", url: `${basePath}/user-types`, icon: Shapes },
-  { title: "Roles & Permissions", url: `${basePath}/roles`, icon: ShieldCheck },
+  // { title: "Roles & Permissions", url: `${basePath}/roles`, icon: ShieldCheck },
 ];
 
 export default function UserGroupsAccessLayout() {

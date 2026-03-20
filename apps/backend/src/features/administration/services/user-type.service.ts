@@ -5,6 +5,41 @@ import {
   UserTypeT,
   userTypeModel,
 } from "@repo/db/schemas/models/administration";
+import { userTypeData } from "@/features/default-administration-data";
+
+export async function loadDefaultUserTypes() {
+  // Load primary user types
+  for (const primaryUserType of userTypeData.defaultPrimaryUserTypes) {
+    const [existingPrimaryUserType] = await db
+      .select()
+      .from(userTypeModel)
+      .where(ilike(userTypeModel.name, primaryUserType.name.trim()));
+    if (existingPrimaryUserType) continue;
+    await db.insert(userTypeModel).values(primaryUserType).returning();
+  }
+  // Load sub user types
+  for (const subUserType of userTypeData.defaultSubUserTypes) {
+    const [existingSubUserType] = await db
+      .select()
+      .from(userTypeModel)
+      .where(ilike(userTypeModel.name, subUserType.name.trim()));
+    if (existingSubUserType) continue;
+    const [primaryUserType] = await db
+      .select()
+      .from(userTypeModel)
+      .where(eq(userTypeModel.name, subUserType.parentUserType!.name));
+    if (!primaryUserType) {
+      throw new Error(
+        `Primary user type ${subUserType.parentUserType!.name} not found`,
+      );
+    }
+    const subUserTypePayload = {
+      ...subUserType,
+      parentUserTypeId: primaryUserType.id,
+    };
+    await db.insert(userTypeModel).values(subUserTypePayload).returning();
+  }
+}
 
 function normaliseUserTypePayload<T extends Partial<UserType | UserTypeT>>(
   data: T,

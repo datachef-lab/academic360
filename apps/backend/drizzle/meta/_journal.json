@@ -708,6 +708,13 @@
       "when": 1774004988210,
       "tag": "0100_flowery_vertigo",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1774006698303,
+      "tag": "0101_pretty_starbolt",
+      "breakpoints": true
     }
   ]
 }

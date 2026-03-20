@@ -5,7 +5,6 @@ import {
   AccessGroupApplication,
   AccessGroupApplicationT,
 } from "@repo/db/schemas/models/administration";
-import { AccessGroupApplicationDto } from "@repo/db/dtos/administration";
 
 async function ensureUniqueAccessGroupIdAndType(
   accessGroupId: number,
@@ -34,7 +33,7 @@ async function ensureUniqueAccessGroupIdAndType(
 
 export async function createAccessGroupApplication(
   data: AccessGroupApplication,
-): Promise<AccessGroupApplicationDto> {
+): Promise<AccessGroupApplicationT> {
   const {
     id: _id,
     createdAt: _createdAt,
@@ -64,32 +63,32 @@ export async function createAccessGroupApplication(
     .values(payload)
     .returning();
 
-  return created as AccessGroupApplicationDto;
+  return created as AccessGroupApplicationT;
 }
 
 export async function getAllAccessGroupApplications(): Promise<
-  AccessGroupApplicationDto[]
+  AccessGroupApplicationT[]
 > {
   const rows = await db.select().from(accessGroupApplicationModel);
-  return rows as AccessGroupApplicationDto[];
+  return rows as AccessGroupApplicationT[];
 }
 
 export async function findAccessGroupApplicationById(
   id: number,
-): Promise<AccessGroupApplicationDto | null> {
+): Promise<AccessGroupApplicationT | null> {
   const [row] = await db
     .select()
     .from(accessGroupApplicationModel)
     .where(eq(accessGroupApplicationModel.id, id))
     .limit(1);
 
-  return row as AccessGroupApplicationDto | null;
+  return row as AccessGroupApplicationT | null;
 }
 
 export async function updateAccessGroupApplication(
   id: number,
   data: Partial<AccessGroupApplicationT> | Partial<AccessGroupApplication>,
-): Promise<AccessGroupApplicationDto | null> {
+): Promise<AccessGroupApplicationT | null> {
   const {
     id: _id,
     createdAt: _createdAt,
@@ -110,7 +109,7 @@ export async function updateAccessGroupApplication(
 
   // Allow empty updates: keep existing values untouched.
   if (payloadKeys.length === 0) {
-    return existing as AccessGroupApplicationDto;
+    return existing as AccessGroupApplicationT;
   }
 
   const finalAccessGroupId = payload.accessGroupId ?? existing.accessGroupId;
@@ -131,7 +130,7 @@ export async function updateAccessGroupApplication(
     .where(eq(accessGroupApplicationModel.id, id))
     .returning();
 
-  return updated as AccessGroupApplicationDto | null;
+  return updated as AccessGroupApplicationT | null;
 }
 
 export async function deleteAccessGroupApplicationSafe(

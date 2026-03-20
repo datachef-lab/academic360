@@ -70,6 +70,8 @@ async function modelToDto(
   if (!model) return null;
   if (seen.has(model.id)) return null;
 
+  let parentUserStatusMaster: UserStatusMasterT | null = null;
+
   let parentUserStatusMasterId: UserStatusMasterDto | null = null;
   if (model.parentUserStatusMasterId) {
     seen.add(model.id);
@@ -77,13 +79,13 @@ async function modelToDto(
       .select()
       .from(userStatusMasterModel)
       .where(eq(userStatusMasterModel.id, model.parentUserStatusMasterId));
-    parentUserStatusMasterId = await modelToDto(parent ?? null, seen);
+    parentUserStatusMaster = await modelToDto(parent ?? null, seen);
     seen.delete(model.id);
   }
 
   return {
     ...model,
-    parentUserStatusMasterId,
+    parentUserStatusMaster,
   };
 }
 

@@ -10,6 +10,8 @@ export const userTypeModel = pgTable("user_types", {
    name: varchar({ length: 255 }).notNull().unique(),
    description: varchar({ length: 500 }),
    code: varchar({ length: 255 }),
+   color: varchar({ length: 255 }),
+   bgColor: varchar({ length: 255 }),
    allowedDesignationFiltering: boolean().notNull().default(false),
    allowedModuleTypeFiltering: boolean().notNull().default(false),
    isActive: boolean().default(true).notNull(),

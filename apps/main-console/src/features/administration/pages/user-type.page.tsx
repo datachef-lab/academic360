@@ -15,9 +15,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Pagination } from "@/components/ui/pagination";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -43,8 +50,6 @@ import {
 } from "../services/user-type.service";
 import * as XLSX from "xlsx";
 
-const DEFAULT_ITEMS_PER_PAGE = 10;
-
 const userTypeSchema = z.object({
   name: z
     .string()
@@ -58,6 +63,11 @@ const userTypeSchema = z.object({
     .string()
     .optional()
     .transform((value) => (value ? value.trim() : "")),
+  parentUserTypeId: z
+    .union([z.number(), z.string(), z.null()])
+    .transform((v) =>
+      v === "" || v === undefined || v === null || v === "__none__" ? null : Number(v),
+    ),
   isActive: z.boolean().default(true),
 });
 
@@ -65,12 +75,19 @@ type UserTypeFormValues = z.infer<typeof userTypeSchema>;
 
 interface UserTypeFormProps {
   initialData: UserTypeT | null;
+  parentUserTypes: UserTypeT[];
   onSubmit: (payload: UserTypePayload) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
 }
 
-function UserTypeForm({ initialData, onSubmit, onCancel, isSubmitting }: UserTypeFormProps) {
+function UserTypeForm({
+  initialData,
+  parentUserTypes,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: UserTypeFormProps) {
   const {
     control,
     handleSubmit,
@@ -83,6 +100,7 @@ function UserTypeForm({ initialData, onSubmit, onCancel, isSubmitting }: UserTyp
       name: initialData?.name ?? "",
       code: initialData?.code ?? "",
       description: initialData?.description ?? "",
+      parentUserTypeId: initialData?.parentUserTypeId ?? null,
       isActive: initialData?.isActive ?? true,
     },
   });
@@ -92,6 +110,7 @@ function UserTypeForm({ initialData, onSubmit, onCancel, isSubmitting }: UserTyp
       name: initialData?.name ?? "",
       code: initialData?.code ?? "",
       description: initialData?.description ?? "",
+      parentUserTypeId: initialData?.parentUserTypeId ?? null,
       isActive: initialData?.isActive ?? true,
     });
   }, [initialData, reset]);
@@ -101,6 +120,7 @@ function UserTypeForm({ initialData, onSubmit, onCancel, isSubmitting }: UserTyp
       name: values.name,
       code: values.code || null,
       description: values.description || null,
+      parentUserTypeId: values.parentUserTypeId ?? null,
       isActive: values.isActive,
     });
   };
@@ -118,7 +138,32 @@ function UserTypeForm({ initialData, onSubmit, onCancel, isSubmitting }: UserTyp
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
-        <Input id="description" {...register("description")} />
+        <Textarea id="description" className="min-h-[80px] resize-y" {...register("description")} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="parentUserTypeId">Base</Label>
+        <Controller
+          name="parentUserTypeId"
+          control={control}
+          render={({ field }) => (
+            <Select
+              value={field.value != null ? String(field.value) : "__none__"}
+              onValueChange={(v) => field.onChange(v === "__none__" ? null : Number(v))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select base user type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None (primary user type)</SelectItem>
+                {parentUserTypes.map((p) => (
+                  <SelectItem key={p.id} value={String(p.id!)}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
       </div>
       <div className="flex items-center gap-2">
         <Controller
@@ -152,9 +197,6 @@ export default function UserTypePage() {
   const [deleteTarget, setDeleteTarget] = useState<UserTypeT | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
-
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -174,32 +216,38 @@ export default function UserTypePage() {
     void loadData();
   }, [loadData]);
 
+  const primaryUserTypes = useMemo(
+    () => items.filter((item) => item.parentUserTypeId == null),
+    [items],
+  );
+
+  const subUserTypes = useMemo(
+    () => items.filter((item) => item.parentUserTypeId != null),
+    [items],
+  );
+
+  const parentUserTypeMap = useMemo(() => {
+    const map = new Map<number, (typeof items)[0]>();
+    for (const item of items) {
+      if (item.id != null) map.set(item.id, item);
+    }
+    return map;
+  }, [items]);
+
   const filtered = useMemo(() => {
-    if (!search) return items;
+    if (!search) return subUserTypes;
     const s = search.toLowerCase();
-    return items.filter(
-      (item) =>
+    return subUserTypes.filter((item) => {
+      const parent =
+        item.parentUserTypeId != null ? parentUserTypeMap.get(item.parentUserTypeId) : null;
+      return (
         item.name?.toLowerCase().includes(s) ||
         item.code?.toLowerCase().includes(s) ||
-        item.description?.toLowerCase().includes(s),
-    );
-  }, [items, search]);
-
-  const totalItems = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages);
-  }, [currentPage, totalPages]);
-
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(start, start + itemsPerPage);
-  }, [filtered, currentPage, itemsPerPage]);
+        item.description?.toLowerCase().includes(s) ||
+        parent?.name?.toLowerCase().includes(s)
+      );
+    });
+  }, [subUserTypes, search, parentUserTypeMap]);
 
   const onSave = async (payload: UserTypePayload) => {
     setIsSubmitting(true);
@@ -240,13 +288,18 @@ export default function UserTypePage() {
   };
 
   const handleDownloadAll = () => {
-    const rows = items.map((item) => ({
-      id: item.id,
-      name: item.name,
-      code: item.code,
-      description: item.description,
-      isActive: item.isActive ? "Active" : "Inactive",
-    }));
+    const rows = subUserTypes.map((item) => {
+      const parent =
+        item.parentUserTypeId != null ? parentUserTypeMap.get(item.parentUserTypeId) : null;
+      return {
+        id: item.id,
+        name: item.name,
+        variant: parent?.name ?? "—",
+        code: item.code,
+        description: item.description,
+        isActive: item.isActive ? "Active" : "Inactive",
+      };
+    });
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "UserTypes");
@@ -263,7 +316,8 @@ export default function UserTypePage() {
               <span className="truncate">User Types</span>
             </CardTitle>
             <div className="text-xs sm:text-sm text-muted-foreground mt-1">
-              A list of all user types for administration and access mapping.
+              A list of sub user types (Administrator, Teaching, College Student, etc.) for
+              administration and access mapping.
             </div>
           </div>
 
@@ -286,6 +340,7 @@ export default function UserTypePage() {
                 </AlertDialogHeader>
                 <UserTypeForm
                   initialData={selected}
+                  parentUserTypes={primaryUserTypes}
                   onSubmit={onSave}
                   onCancel={() => setIsDialogOpen(false)}
                   isSubmitting={isSubmitting}
@@ -323,8 +378,8 @@ export default function UserTypePage() {
                     <TableHead style={{ width: 80, background: "#f3f4f6", color: "#374151" }}>
                       ID
                     </TableHead>
-                    <TableHead style={{ width: 260, background: "#f3f4f6", color: "#374151" }}>
-                      Name
+                    <TableHead style={{ width: 280, background: "#f3f4f6", color: "#374151" }}>
+                      User Type
                     </TableHead>
                     <TableHead style={{ width: 180, background: "#f3f4f6", color: "#374151" }}>
                       Code
@@ -335,7 +390,7 @@ export default function UserTypePage() {
                     <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>
                       Status
                     </TableHead>
-                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>
                       Actions
                     </TableHead>
                   </TableRow>
@@ -353,20 +408,101 @@ export default function UserTypePage() {
                         {error}
                       </TableCell>
                     </TableRow>
-                  ) : paginated.length === 0 ? (
+                  ) : filtered.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center">
-                        No user types found.
+                        No sub user types found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginated.map((item, idx) => (
+                    filtered.map((item, idx) => (
                       <TableRow key={item.id ?? idx}>
-                        <TableCell style={{ width: 80 }}>
-                          {(currentPage - 1) * itemsPerPage + idx + 1}
+                        <TableCell style={{ width: 80 }}>{idx + 1}.</TableCell>
+                        <TableCell style={{ width: 280 }}>
+                          <div className="flex flex-col gap-1.5">
+                            <span className="font-medium">{item.name}</span>
+                            {(() => {
+                              const parent =
+                                item.parentUserTypeId != null
+                                  ? parentUserTypeMap.get(item.parentUserTypeId)
+                                  : null;
+                              if (!parent) return null;
+                              // Fallback colors when DB lacks color/bgColor (e.g. pre-seed records)
+                              const staffColor = "#6366f1";
+                              const staffBg = "#e0e7ff";
+                              const studentColor = "#059669";
+                              const studentBg = "#d1fae5";
+                              const parentColor =
+                                parent.color ??
+                                (parent.name?.toLowerCase() === "staff"
+                                  ? staffColor
+                                  : parent.name?.toLowerCase() === "student"
+                                    ? studentColor
+                                    : "#64748b");
+                              const parentBg =
+                                parent.bgColor ??
+                                (parent.name?.toLowerCase() === "staff"
+                                  ? staffBg
+                                  : parent.name?.toLowerCase() === "student"
+                                    ? studentBg
+                                    : "#f1f5f9");
+                              return (
+                                <Badge
+                                  className="w-fit font-medium border text-xs"
+                                  style={{
+                                    backgroundColor: parentBg,
+                                    color: parentColor,
+                                    borderColor: parentColor,
+                                  }}
+                                >
+                                  {parent.name}
+                                </Badge>
+                              );
+                            })()}
+                          </div>
                         </TableCell>
-                        <TableCell style={{ width: 260 }}>{item.name}</TableCell>
-                        <TableCell style={{ width: 180 }}>{item.code ?? "—"}</TableCell>
+                        <TableCell style={{ width: 180 }}>
+                          {item.code
+                            ? (() => {
+                                const parent =
+                                  item.parentUserTypeId != null
+                                    ? parentUserTypeMap.get(item.parentUserTypeId)
+                                    : null;
+                                const staffColor = "#6366f1";
+                                const staffBg = "#e0e7ff";
+                                const studentColor = "#059669";
+                                const studentBg = "#d1fae5";
+                                const codeColor =
+                                  item.color ??
+                                  parent?.color ??
+                                  (parent?.name?.toLowerCase() === "staff"
+                                    ? staffColor
+                                    : parent?.name?.toLowerCase() === "student"
+                                      ? studentColor
+                                      : "#64748b");
+                                const codeBg =
+                                  item.bgColor ??
+                                  parent?.bgColor ??
+                                  (parent?.name?.toLowerCase() === "staff"
+                                    ? staffBg
+                                    : parent?.name?.toLowerCase() === "student"
+                                      ? studentBg
+                                      : "#f1f5f9");
+                                return (
+                                  <Badge
+                                    className="w-fit font-medium border text-xs"
+                                    style={{
+                                      backgroundColor: codeBg,
+                                      color: codeColor,
+                                      borderColor: codeColor,
+                                    }}
+                                  >
+                                    {item.code}
+                                  </Badge>
+                                );
+                              })()
+                            : "—"}
+                        </TableCell>
                         <TableCell style={{ width: 260 }}>{item.description ?? "—"}</TableCell>
                         <TableCell style={{ width: 120 }}>
                           {item.isActive ? (
@@ -433,20 +569,6 @@ export default function UserTypePage() {
               </Table>
             </div>
           </div>
-
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={itemsPerPage}
-            startIndex={(currentPage - 1) * itemsPerPage}
-            endIndex={(currentPage - 1) * itemsPerPage + itemsPerPage}
-            onPageChange={(page) => setCurrentPage(page)}
-            onItemsPerPageChange={(nextPerPage) => {
-              setItemsPerPage(nextPerPage);
-              setCurrentPage(1);
-            }}
-          />
         </CardContent>
       </Card>
     </div>

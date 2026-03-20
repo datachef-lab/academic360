@@ -4,7 +4,10 @@ import type { UserTypeT } from "@repo/db/schemas/models/administration";
 
 const BASE_URL = "/api/administration/user-types";
 
-export type UserTypePayload = Pick<UserTypeT, "name" | "code" | "description" | "isActive">;
+export type UserTypePayload = Pick<
+  UserTypeT,
+  "name" | "code" | "description" | "isActive" | "parentUserTypeId"
+>;
 
 export async function getAllUserTypes() {
   const { data } = await axiosInstance.get<ApiResponse<UserTypeT[]>>(BASE_URL);

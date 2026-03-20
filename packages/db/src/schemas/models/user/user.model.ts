@@ -3,7 +3,6 @@ import { createInsertSchema } from "drizzle-zod";
 import { pgTable, serial, varchar, boolean, timestamp, text, integer } from "drizzle-orm/pg-core";
 
 import { userTypeEnum } from "@/schemas/enums";
-import { userTypeModel } from "../administration/user-type.model";
 import { institutionalRoleModel } from "../administration/institutional-role.model";
 // import { personalDetailsModel } from "./personalDetails.model";
 

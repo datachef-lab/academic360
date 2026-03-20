@@ -13,6 +13,8 @@ const defaultPrimaryUserTypes: UserTypeT[] = [
     code: "STAFF",
     description:
       "An institutional staff member with administrative or academic responsibilities.",
+    color: "#6366f1",
+    bgColor: "#e0e7ff",
     allowedDesignationFiltering: true,
     allowedModuleTypeFiltering: false,
   },
@@ -21,6 +23,8 @@ const defaultPrimaryUserTypes: UserTypeT[] = [
     code: "STD",
     description:
       "A registered student enrolled in one or more academic programs at the institution.",
+    color: "#059669",
+    bgColor: "#d1fae5",
     allowedDesignationFiltering: false,
     allowedModuleTypeFiltering: true,
   },
@@ -33,6 +37,8 @@ const defaultSubUserTypes: UserTypeDto[] = [
     code: "ADMIN",
     description:
       "A staff member with elevated administrative access for managing institutional processes.",
+    color: "#7c3aed",
+    bgColor: "#ede9fe",
     allowedDesignationFiltering: true,
     allowedModuleTypeFiltering: true,
     parentUserType: defaultPrimaryUserTypes.find(
@@ -44,6 +50,8 @@ const defaultSubUserTypes: UserTypeDto[] = [
     code: "TCH",
     description:
       "A faculty member responsible for delivering academic instruction and course content.",
+    color: "#b45309",
+    bgColor: "#fef3c7",
     allowedDesignationFiltering: true,
     allowedModuleTypeFiltering: true,
     parentUserType: defaultPrimaryUserTypes.find(
@@ -55,6 +63,8 @@ const defaultSubUserTypes: UserTypeDto[] = [
     code: "NTCH",
     description:
       "A staff member supporting institutional operations in a non-academic capacity.",
+    color: "#64748b",
+    bgColor: "#f1f5f9",
     allowedDesignationFiltering: true,
     allowedModuleTypeFiltering: true,
     parentUserType: defaultPrimaryUserTypes.find(
@@ -68,6 +78,8 @@ const defaultSubUserTypes: UserTypeDto[] = [
     code: "CSTD",
     description:
       "An actively enrolled student pursuing a degree or diploma program at the college.",
+    color: "#0891b2",
+    bgColor: "#cffafe",
     allowedDesignationFiltering: false,
     allowedModuleTypeFiltering: true,
     parentUserType: defaultPrimaryUserTypes.find(
@@ -79,6 +91,8 @@ const defaultSubUserTypes: UserTypeDto[] = [
     code: "APPL",
     description:
       "A prospective student who has initiated or submitted an application for admission.",
+    color: "#0284c7",
+    bgColor: "#e0f2fe",
     allowedDesignationFiltering: false,
     allowedModuleTypeFiltering: false,
     parentUserType: defaultPrimaryUserTypes.find(
@@ -101,25 +115,32 @@ const defaultPrimaryUserStatuses: UserStatusMasterT[] = [
   {
     name: PRIMARY_USER_STATUS.Active,
     code: "ACTIVE",
-    color: "#16a34a", // green-600
-    bgColor: "#dcfce7", // green-100
+    color: "#059669",
+    bgColor: "#d1fae5",
     description:
       "User account is active and has full access to permitted modules.",
   },
   {
     name: PRIMARY_USER_STATUS.Inactive,
     code: "INACTIVE",
-    color: "#475569", // slate-600
-    bgColor: "#f1f5f9", // slate-100
+    color: "#64748b",
+    bgColor: "#f1f5f9",
     description: "User account is inactive and cannot access the system.",
   },
   {
     name: PRIMARY_USER_STATUS.Suspended,
     code: "SUSPENDED",
-    color: "#dc2626", // red-600
-    bgColor: "#fee2e2", // red-100
+    color: "#b91c1c",
+    bgColor: "#fee2e2",
     description:
       "User account has been temporarily suspended due to a policy violation or administrative action.",
+  },
+  {
+    name: PRIMARY_USER_STATUS.Applicant,
+    code: "APPLICANT",
+    color: "#1d4ed8",
+    bgColor: "#dbeafe",
+    description: "Prospective student in the admission process.",
   },
 ];
 
@@ -127,8 +148,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Active",
     code: "ACTIVE",
-    color: "#16a34a", // green-600
-    bgColor: "#dcfce7", // green-100
+    color: "#059669",
+    bgColor: "#d1fae5",
     description:
       "User account is active and has full access to permitted modules.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -139,8 +160,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Leave of Absence",
     code: "INACT_LOA",
-    color: "#475569",
-    bgColor: "#f1f5f9",
+    color: "#6366f1",
+    bgColor: "#e0e7ff",
     description:
       "User is temporarily inactive due to an approved leave of absence.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -150,8 +171,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Medical Leave",
     code: "INACT_MED",
-    color: "#475569",
-    bgColor: "#f1f5f9",
+    color: "#7c3aed",
+    bgColor: "#ede9fe",
     description:
       "User is temporarily inactive due to a medical condition or health-related leave.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -161,8 +182,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Semester Break",
     code: "INACT_SEM",
-    color: "#475569",
-    bgColor: "#f1f5f9",
+    color: "#64748b",
+    bgColor: "#e2e8f0",
     description: "User is inactive during an inter-semester break period.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
       (s) => s.code === "INACTIVE",
@@ -184,8 +205,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Disciplinary Suspension",
     code: "SUSP_DISC",
-    color: "#dc2626",
-    bgColor: "#fee2e2",
+    color: "#be123c",
+    bgColor: "#ffe4e6",
     description:
       "User has been suspended due to a breach of institutional code of conduct.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -206,8 +227,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Attendance Shortage",
     code: "SUSP_ATT",
-    color: "#c2410c",
-    bgColor: "#ffedd5",
+    color: "#ea580c",
+    bgColor: "#fff7ed",
     description:
       "User has been suspended due to attendance falling below the required threshold.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -230,8 +251,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Applied",
     code: "APPL_APLD",
-    color: "#2563eb", // blue-600
-    bgColor: "#dbeafe", // blue-100
+    color: "#0284c7",
+    bgColor: "#e0f2fe",
     description:
       "Applicant has submitted an application and is awaiting review.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -241,8 +262,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Provisionally Admitted",
     code: "APPL_PROV",
-    color: "#d97706", // amber-600
-    bgColor: "#fef3c7", // amber-100
+    color: "#b45309",
+    bgColor: "#fef3c7",
     description:
       "Applicant has received a provisional admission offer pending document verification.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -252,8 +273,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Admission Confirmed",
     code: "APPL_CONF",
-    color: "#16a34a", // green-600
-    bgColor: "#dcfce7", // green-100
+    color: "#047857",
+    bgColor: "#d1fae5",
     description:
       "Applicant's admission has been confirmed and enrollment is complete.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
@@ -263,8 +284,8 @@ const defaultSubUserStatuses: UserStatusMasterDto[] = [
   {
     name: "Admission Cancelled",
     code: "APPL_CANC",
-    color: "#dc2626", // red-600
-    bgColor: "#fee2e2", // red-100
+    color: "#78716c",
+    bgColor: "#f5f5f4",
     description:
       "Applicant's admission has been cancelled either by the institution or the applicant.",
     parentUserStatusMaster: defaultPrimaryUserStatuses.find(
