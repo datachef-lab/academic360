@@ -46,6 +46,22 @@ CREATE TABLE "user_statuses_master" (
 	CONSTRAINT "user_statuses_master_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "user_types" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"parent_user_type_id_fk" integer,
+	"name" varchar(255) NOT NULL,
+	"description" varchar(500),
+	"code" varchar(255),
+	"color" varchar(255),
+	"bg_color" varchar(255),
+	"allowed_designation_filtering" boolean DEFAULT false NOT NULL,
+	"allowed_module_type_filtering" boolean DEFAULT false NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "user_types_name_unique" UNIQUE("name")
+);
+--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "department_designation_mapping" DISABLE ROW LEVEL SECURITY; EXCEPTION WHEN undefined_table THEN null; END $$;
 --> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "designations" DISABLE ROW LEVEL SECURITY; EXCEPTION WHEN undefined_table THEN null; END $$;
